@@ -780,6 +780,71 @@ html[data-g="saucerfulfill"] .sub {
     padding: clamp(16px, 2vw, 24px);
 }
 
+/* 施工中占位：四个数据区块下线，换成一块告示板 */
+.wip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: clamp(200px, 30vw, 300px);
+    padding: clamp(34px, 5vw, 60px) clamp(16px, 3vw, 34px);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.wip::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        -45deg,
+        var(--acc) 0 10px,
+        transparent 10px 22px
+    );
+    opacity: 0.045;
+    pointer-events: none;
+}
+.wip-ico {
+    display: flex;
+    gap: 7px;
+    position: relative;
+}
+.wip-ico i {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    background: var(--acc);
+    box-shadow: 0 0 12px var(--acc);
+    animation: wipBlink 1.4s ease-in-out infinite;
+}
+.wip-ico i:nth-child(2) { animation-delay: 0.18s; }
+.wip-ico i:nth-child(3) { animation-delay: 0.36s; }
+.wip-t {
+    position: relative;
+    margin: 0;
+    font-size: clamp(15px, 1.6vw, 19px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    line-height: 1.6;
+}
+.wip-s {
+    position: relative;
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--ink3);
+}
+@keyframes wipBlink {
+    0%, 100% { opacity: 0.28; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .wip-ico i { animation: none; opacity: 0.75; }
+}
+
 /* timeline */
 .strip {
     display: flex;
