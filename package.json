@@ -1,0 +1,15 @@
+{
+  "name": "beyond-jubeat",
+  "version": "4.0.0",
+  "private": true,
+  "description": "jubeat 音乐魔方中文资料站",
+  "scripts": {
+    "data": "node src/_build/build-data.cjs",
+    "build": "node src/_build/build.cjs && node src/_build/pack.cjs",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.42.0"
+  }
+}

@@ -2,7 +2,9 @@
 
 jubeat（音乐魔方）中文资料站。纯静态单页，零运行时依赖，构建工具只用 Node 内置模块。
 
-![deploy](https://img.shields.io/badge/Cloudflare_Workers-planned-F38020) ![size](https://img.shields.io/badge/static-17192_bytes-3ee6ff)
+![deploy](https://img.shields.io/badge/Cloudflare_Workers-live-F38020) ![size](https://img.shields.io/badge/static-17192_bytes-3ee6ff) ![repo](https://img.shields.io/badge/GitHub-Beyond__JUBEAT-181717)
+
+线上地址：<https://jubeat-wiki-home.1945743455.workers.dev>
 
 ---
 
@@ -28,6 +30,7 @@ Beyond_JUBEAT/
 │  └─ _build/                 构建工具链（不参与部署）
 │     ├─ build.cjs            模板 + 数据 → ../index.html
 │     ├─ build-data.cjs       songs.json → data.json
+│     ├─ pack.cjs             组装部署产物 → ../dist/（index.html + theme.css + assets/）
 │     └─ data.json            页面所需的聚合数据（10834 字节）
 │
 ├─ assets/                    静态资源（按类型分组，部署时要一起上传）
@@ -48,8 +51,11 @@ Beyond_JUBEAT/
 │  ├─ materials/              候选素材：曲绘原图、更新情报、版本资料
 │  └─ legacy/                 jubeat-wiki / -v2 / -v3 / -v4 四代旧项目
 │
+├─ wrangler.jsonc             Cloudflare Workers 配置（静态资源托管 ./dist）
+├─ package.json               只有 wrangler 一个 devDependency
+├─ dist/                      打包产物，gitignore，部署时上传的就是它
 ├─ .dsh-meow/  .dsh-ops/      本地工具数据（已 gitignore，勿提交）
-├─ .gitignore
+├─ .gitignore  .gitattributes
 └─ README.md
 ```
 
@@ -71,6 +77,14 @@ cd src/_build
 node build-data.cjs      # songs.json → data.json，并把曲绘复制到 assets/images/jackets/
 node build.cjs           # data.json + ../template.html → ../index.html（线上版，17192 字节）
 node build.cjs 11        # 可选：换用旧模板 template11，深青配色（29543 字节）
+node pack.cjs            # 组装部署产物 ../dist/（index.html + theme.css + assets/）
+```
+
+在仓库根目录还有两条捷径（已封装上面前三步）：
+
+```bash
+npm run build            # build.cjs + pack.cjs
+npm run deploy           # build + wrangler deploy
 ```
 
 - 只依赖 Node 内置模块（`fs` / `path`），**没有 npm 依赖，不用装包**。
@@ -79,22 +93,30 @@ node build.cjs 11        # 可选：换用旧模板 template11，深青配色（
 
 ## 部署
 
-目标：**GitHub 仓库 + Cloudflare Workers（后续可能接 D1 数据库）**。
+仓库：<https://github.com/SnowindMe/Beyond_JUBEAT>（main 分支）
+线上：<https://jubeat-wiki-home.1945743455.workers.dev>
 
-部署时只需要两份：
+用的 **Cloudflare Workers 静态资源托管**（Workers Assets），没有 Worker 脚本逻辑：
 
+- `wrangler.jsonc` 指向 `assets.directory = "./dist"`，`not_found_handling = "404-page"`。
+- `pack.cjs` 把 `src/index.html`、`src/theme.css` 与整棵 `assets/` 复制进 `dist/`，于是页面里的 `../assets/...` 在站点根位置解析成 `/assets/...`，与原目录层级天然对齐，**不需要改 HTML 里的引用**。
+- `dist/` 与 `node_modules/` 都在 `.gitignore`，构建产物流水线生成，不进仓库。
+
+首次部署（已完成）：
+
+```bash
+npm install              # 只装 wrangler
+npm run deploy           # build + pack + wrangler deploy
 ```
-src/      → 站点文件（index.html / theme.css）
-assets/   → 静态资源
-```
 
-`_build/`、`scripts/`、`archive/`、`.dsh-*/` 都不上线。
+日常改动上线：改完 `src/` 里的文件后 `npm run deploy` 即可，约 15 秒。
 
-### 待办（尚未落地）
+### 待办
 
-- [ ] 建 GitHub 仓库并推首次提交（当前工作区**还没有 `.git`**）
-- [ ] `wrangler.jsonc` 配置：静态资源用 Workers Assets 托管，把 `src` 与 `assets` 挂到同一路由下
-- [ ] 页面对 `assets/` 的引用是 `../assets/...`，与线上 URL 层级需对齐——要么保持同样的两目录结构，要么构建时改写前缀
+- [x] 建 GitHub 仓库并推首次提交 —— `SnowindMe/Beyond_JUBEAT`，304 文件 / 3.44 MB
+- [x] `wrangler.jsonc` 配置 Workers Assets 托管 `dist/`
+- [x] 解决 `../assets/...` 与线上 URL 层级的对齐（打包到 `dist/` 同层，不改引用）
+- [ ] 自定义域名（当前只挂在 `*.workers.dev` 子域）
 - [ ] 若要接 D1：把 `data.json` 迁到数据库表，页面改为 fetch 接口，同时保留 `file://` 直开的退化路径
 - [ ] GitHub Actions（可选）：push 时跑 `node build.cjs` 校验产物与提交一致
 
