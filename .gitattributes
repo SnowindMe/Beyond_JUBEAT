@@ -1,0 +1,8 @@
+# 统一换行，避免 Windows 上 CRLF 警告与跨平台 diff 噪音
+* text=auto eol=lf
+
+# 二进制资源不做换行转换
+*.webp binary
+*.png  binary
+*.jpg  binary
+*.woff2 binary

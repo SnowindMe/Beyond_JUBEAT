@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN" data-g="ave" data-font="A">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>jubeat 音乐魔方 · 中文资料站</title>
+<link rel="stylesheet" href="./theme.css">
+</head>
+<body>
+<div class="bgv" aria-hidden="true"><div class="bgv-l"></div><div class="bgv-l"></div></div>
+<div class="wrap">
+
+  <header class="top">
+    <div class="mark"><i></i><div class="mark-x"><b>Beyond ! JUBEAT ~</b><span>Not Only Jubeat Wiki</span></div></div>
+    <nav>
+      <a href="#">曲目</a><a href="#">谱面</a><a href="#">世代</a><a href="#">定数表</a><a href="#">关于</a>
+      <div class="tsw">
+        <button type="button" class="tsw-btn" id="tswBtn" aria-expanded="false" aria-haspopup="true" aria-controls="tswPop" aria-label="切换世代主题" title="切换世代主题">
+          <svg class="tsw-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="3.6" width="7" height="7" rx="1.7"/><rect x="13.4" y="3.6" width="7" height="7" rx="3.5"/><rect x="3.6" y="13.4" width="7" height="7" rx="3.5"/><rect x="13.4" y="13.4" width="7" height="7" rx="1.7"/></svg>
+          <svg class="tsw-car" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="tsw-pop" id="tswPop" data-open="0" role="group" aria-label="切换世代主题">
+          <div class="tsw-g" id="genDock"></div>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <div class="chip"><i></i>音乐魔方，经典重现</div>
+      <h1 class="word" id="wordMark"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true"><img class="lg lg-ave" src="../assets/images/logo/ave.png" alt=""><img class="lg lg-bta" src="../assets/images/logo/bta.png" alt=""><img class="lg lg-knit" src="../assets/images/logo/knit.png" alt=""><img class="lg lg-copious" src="../assets/images/logo/copious.png" alt=""><img class="lg lg-saucer" src="../assets/images/logo/saucer.png" alt=""><img class="lg lg-saucerfulfill" src="../assets/images/logo/saucerfulfill.png" alt=""><img class="lg lg-prop" src="../assets/images/logo/prop.png" alt=""><img class="lg lg-qubell" src="../assets/images/logo/qubell.png" alt=""><img class="lg lg-clan" src="../assets/images/logo/clan.png" alt=""><img class="lg lg-festo" src="../assets/images/logo/festo.png" alt=""></span></h1>
+      <div class="sub"><i></i>音乐魔方</div>
+            <div class="stats">
+        <div class="st"><span>曲目</span><b>{{N1}}</b></div>
+        <div class="st"><span>谱面</span><b>{{N2}}</b></div>
+        <div class="st"><span>世代</span><b>{{N3}}</b></div>
+        <div class="st"><span>EXT ≥ 10</span><b>{{N4}}</b></div>
+      </div>
+    </div>
+    <div class="cubewrap"><div class="cube">{{CUBE}}</div></div>
+  </section>
+
+  <section class="band">
+    <div class="band-h"><h2>世代的层</h2><em>15 generations</em></div>
+    <div class="panel"><div class="strip">{{STRIP}}</div><div class="glegend">{{GLEG}}</div></div>
+  </section>
+
+  <section class="band">
+    <div class="band-h"><h2>定数顶格</h2><em>ext 10.9 / 10.8 / 10.7</em></div>
+    <div class="panel"><div class="rank">{{RANK}}</div></div>
+  </section>
+
+  <section class="band">
+    <div class="band-h"><h2>定数分布</h2><em>by ext level</em></div>
+    <div class="panel"><div class="dist">{{DIST}}</div></div>
+  </section>
+
+  <section class="band">
+    <div class="band-h"><h2>最近收录</h2><em>latest additions</em></div>
+    <div class="panel"><div class="lat">{{LAT}}</div></div>
+  </section>
+
+  <footer class="foot mono">
+    <span><b>jubeat 音乐魔方 · 中文资料站</b></span>
+    <span>曲目 {{N1}} / 谱面 {{N2}} / 世代 {{N3}}</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var GEN=[
+    {k:'ave',n:'ave',f:'F',c:'#2ee8e8'},
+    {k:'bta',n:'bta',f:'F',c:'#ffa23c'},
+    {k:'clan_blue',n:'clan_blue',f:'C',c:'#5c8dff'},
+    {k:'clan_green',n:'clan_green',f:'C',c:'#57d98a'},
+    {k:'clan_purple',n:'clan_purple',f:'C',c:'#b07dff'},
+    {k:'clan_red',n:'clan_red',f:'C',c:'#ff6b6b'},
+    {k:'copious',n:'copious',f:'F',c:'#8fa6ff'},
+    {k:'festo',n:'festo',f:'G',c:'#ffd166'},
+    {k:'knit',n:'knit',f:'D',c:'#e0a92e'},
+    {k:'prop',n:'prop',f:'E',c:'#e0338f'},
+    {k:'qubell',n:'qubell',f:'D',c:'#c98a3c'},
+    {k:'saucer',n:'saucer',f:'F',c:'#3aa8c8'},
+    {k:'saucerfulfill',n:'saucerfulfill',f:'F',c:'#c9d2d6'}
+  ];
+  var root=document.documentElement, dock=document.getElementById('genDock');
+  var btns={}, cur=null;
+  // 色块 + 文字：色块取该世代的 --acc，文字是世代名（不再只有小色点，选哪个一目了然）
+  GEN.forEach(function(g){
+    var b=document.createElement('button');
+    b.type='button'; b.title=g.n;
+    b.style.setProperty('--sw',g.c);
+    b.innerHTML='<i></i><span>'+g.n+'</span>';
+    b.addEventListener('click',function(){apply(g);});
+    dock.appendChild(b); btns[g.k]=b;
+  });
+
+  /* 主题切换动画：背景交叉淡入。
+     body::after 的 background-image 本身不可过渡（浏览器把它当离散值，切图即硬跳），
+     所以另起 .bgv 两层背景板：旧图留在 A/B 中当前那张，新图铺到另一张再淡入，
+     opacity 走 GPU 合成，切主题时图是「渐变过去」而不是「闪一下」。 */
+  var bgv=document.querySelectorAll('.bgv-l'), vf=0;
+  function paint(g){
+    var url='url("../assets/images/bg/'+g.k+'.webp")';
+    var nx=bgv[(vf+1)%bgv.length];
+    nx.style.backgroundImage=url;
+    nx.style.opacity='1';
+    bgv[vf].style.opacity='0';
+    vf=(vf+1)%bgv.length;
+  }
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function apply(g,instant){
+    var prev=cur; cur=g;
+    root.setAttribute('data-g',g.k);
+    root.setAttribute('data-font',g.f);
+    root.style.removeProperty('--bgimg');
+    root.style.removeProperty('--bgop');
+    for(var k in btns){btns[k].setAttribute('aria-pressed',k===g.k?'true':'false');}
+    if(instant||reduce||!prev){
+      // 首屏直接落图，不要从空白淡进来
+      for(var i=0;i<bgv.length;i++){bgv[i].style.transition='none';}
+      bgv[0].style.backgroundImage=bgv[1].style.backgroundImage='url("../assets/images/bg/'+g.k+'.webp")';
+      bgv[0].style.opacity='1'; bgv[1].style.opacity='0';
+      vf=0;
+      // 关键：必须把 transition 还回去，否则首屏这一下会把「永不过渡」写死在元素上，
+      // 之后每次切主题都是硬跳（这正是要修的那个闪一下）。
+      void bgv[0].offsetWidth;
+      for(var j=0;j<bgv.length;j++){bgv[j].style.transition='';}
+    }else{
+      paint(g);
+    }
+    try{localStorage.setItem('jubeat-gen',g.k);}catch(e){}
+  }
+
+  var saved='ave';
+  try{saved=localStorage.getItem('jubeat-gen')||'ave';}catch(e){}
+  var hit=GEN.filter(function(g){return g.k===saved;})[0]||GEN[0];
+  apply(hit,true);
+
+  var tswBtn=document.getElementById('tswBtn'), tswPop=document.getElementById('tswPop'), tsw=tswBtn.parentNode;
+  function setOpen(v){
+    tswPop.setAttribute('data-open',v?'1':'0');
+    tswBtn.setAttribute('aria-expanded',v?'true':'false');
+  }
+  tswBtn.addEventListener('click',function(ev){
+    ev.stopPropagation();
+    setOpen(tswPop.getAttribute('data-open')!=='1');
+  });
+  document.addEventListener('click',function(ev){
+    if(!tsw.contains(ev.target)) setOpen(false);
+  });
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape') setOpen(false);
+  });
+})();
+</script>
+</body>
+</html>

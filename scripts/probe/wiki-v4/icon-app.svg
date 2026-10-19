@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="jubeat app icon"><title>jubeat</title>
+<defs>
+<linearGradient id="t" x1=".15" y1="0" x2=".85" y2="1">
+  <stop offset="0" stop-color="#9dfffb"/><stop offset=".42" stop-color="#54f8f5"/><stop offset="1" stop-color="#36dbf4"/>
+</linearGradient>
+<linearGradient id="tA" x1=".15" y1="0" x2=".85" y2="1">
+  <stop offset="0" stop-color="#f6ffa4"/><stop offset=".45" stop-color="#eefe2b"/><stop offset="1" stop-color="#c9d400"/>
+</linearGradient>
+<linearGradient id="gl" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+</linearGradient>
+<filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+  <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#05121c" flood-opacity=".45"/>
+</filter>
+</defs>
+<linearGradient id="plate" x1=".2" y1="0" x2=".8" y2="1">
+  <stop offset="0" stop-color="#1b3a8f"/><stop offset=".5" stop-color="#112167"/><stop offset="1" stop-color="#070d2c"/></linearGradient>
+<rect width="512" height="512" rx="112" fill="url(#plate)"/>
+<g filter="url(#sh)"><g transform="rotate(90 256 256) translate(256 256) scale(0.7801) translate(-256 -256)"><rect x="44.5" y="44.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="54.4" y="52.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="153.5" y="44.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="163.4" y="52.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="262.5" y="44.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="272.4" y="52.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="371.5" y="44.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="381.4" y="52.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="44.5" y="153.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="54.4" y="161.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="153.5" y="153.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="163.4" y="161.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="262.5" y="153.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="272.4" y="161.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="371.5" y="153.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="381.4" y="161.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="44.5" y="262.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="54.4" y="270.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="153.5" y="262.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="163.4" y="270.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="262.5" y="262.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="272.4" y="270.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="371.5" y="262.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="381.4" y="270.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="44.5" y="371.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="54.4" y="379.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="153.5" y="371.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="163.4" y="379.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="262.5" y="371.5" width="96" height="96" rx="18" fill="url(#t)"/><rect x="272.4" y="379.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)"/><rect x="371.5" y="371.5" width="96" height="96" rx="18" fill="url(#tA)"/><rect x="381.4" y="379.18" width="76.2" height="24.96" rx="11.16" fill="url(#gl)" opacity=".5"/></g></g>
+<rect x=".75" y=".75" width="510.5" height="510.5" rx="111.5" fill="none" stroke="#54f8f5" stroke-opacity=".22" stroke-width="1.5"/>
+</svg>

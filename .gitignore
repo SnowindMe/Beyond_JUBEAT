@@ -1,0 +1,22 @@
+# 记忆库（误删不可恢复，勿提交）
+.dsh-meow/
+.dsh-ops/
+
+# 探测脚本产物
+scripts/screenshots/
+scripts/logs/
+scripts/tmp/
+
+# 依赖与构建产物
+node_modules/
+dist/
+build/
+.next/
+.cache/
+
+# 系统与编辑器
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
