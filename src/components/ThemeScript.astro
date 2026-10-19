@@ -20,7 +20,10 @@
     {k:'saucerfulfill',n:'saucerfulfill',f:'F',c:'#c9d2d6'}
   ];
   var BG='/assets/images/bg/';
+  // 字标：首屏只加载当前世代那一张，切主题时才换 src（原先 10 张一起下载，浪费 ~150KB）
+  var LOGO='/assets/images/logo/';
   var root=document.documentElement, dock=document.getElementById('genDock');
+  var wordLogo=document.getElementById('wordLogo');
   var btns={}, cur=null;
   GEN.forEach(function(g){
     var b=document.createElement('button');
@@ -49,6 +52,11 @@
     var prev=cur; cur=g;
     root.setAttribute('data-g',g.k);
     root.setAttribute('data-font',g.f);
+    if(wordLogo){
+      // 四个 clan_* 世代共用同一张 clan 字标
+      var next=LOGO+(g.k.indexOf('clan_')===0?'clan':g.k)+'.webp';
+      if(wordLogo.getAttribute('src')!==next) wordLogo.setAttribute('src',next);
+    }
     root.style.removeProperty('--bgimg');
     root.style.removeProperty('--bgop');
     for(var k in btns){btns[k].setAttribute('aria-pressed',k===g.k?'true':'false');}

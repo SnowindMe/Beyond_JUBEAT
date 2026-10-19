@@ -8,7 +8,16 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
 <section class="hero">
   <div>
     <div class="chip"><i></i>音乐魔方，经典重现</div>
-    <h1 class="word" id="wordMark"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true">{LOGOS.map((k) => <img class={`lg lg-${k}`} src={`/assets/images/logo/${k}.webp`} alt="" />)}</span></h1>
+    <h1 class="word" id="wordMark"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" decoding="async" fetchpriority="high" /></span></h1>
+    {/* 字标图紧跟 img 就地设 src：HTML 里不写 src 就不会先下 ave，再由主题脚本换成保存的世代。
+        这段必须紧贴 img（is:inline 同步执行），否则浏览器已按空 src 判定过一次。 */}
+    <script is:inline>
+      (function () {
+        var g = document.documentElement.getAttribute('data-g') || 'ave';
+        var el = document.getElementById('wordLogo');
+        if (el) el.src = '/assets/images/logo/' + (g.indexOf('clan_') === 0 ? 'clan' : g) + '.webp';
+      })();
+    </script>
     <div class="sub"><i></i>音乐魔方</div>
     <div class="stats">
       <div class="st"><span>曲目</span><b>{data.stat.songs}</b></div>

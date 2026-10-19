@@ -392,8 +392,8 @@ html[data-font="G"] .glegend b {
     overflow: visible;
     line-height: 0;
 }
-.word-l .lg {
-    display: none;
+.word-l #wordLogo {
+    display: block;
     /* 切世代时字标是整张换图（硬切），淡入一下让「换代」有过渡感：
        display 由 none 变 block 会重新触发动画，不需要 JS 监听。 */
     animation: logoIn 0.4s ease both;
@@ -408,45 +408,6 @@ html[data-font="G"] .glegend b {
 }
 /* 所有字标都已裁掉透明留白并左对齐到 chip / 统计卡的同一条竖线，
    视框随图自身尺寸撑开，不再有 object-position / align-self 的人工补偿。 */
-html[data-g="ave"] .word-l .lg-ave {
-    display: block;
-}
-html[data-g="bta"] .word-l .lg-bta {
-    display: block;
-}
-html[data-g="knit"] .word-l .lg-knit {
-    display: block;
-}
-html[data-g="copious"] .word-l .lg-copious {
-    display: block;
-}
-html[data-g="saucer"] .word-l .lg-saucer {
-    display: block;
-}
-html[data-g="saucerfulfill"] .word-l .lg-saucerfulfill {
-    display: block;
-}
-html[data-g="prop"] .word-l .lg-prop {
-    display: block;
-}
-html[data-g="qubell"] .word-l .lg-qubell {
-    display: block;
-}
-html[data-g="clan_blue"] .word-l .lg-clan {
-    display: block;
-}
-html[data-g="clan_green"] .word-l .lg-clan {
-    display: block;
-}
-html[data-g="clan_purple"] .word-l .lg-clan {
-    display: block;
-}
-html[data-g="clan_red"] .word-l .lg-clan {
-    display: block;
-}
-html[data-g="festo"] .word-l .lg-festo {
-    display: block;
-}
 html[data-g="ave"] .word-l {
     display: flex;
 }
@@ -540,17 +501,17 @@ html[data-g="festo"] .sub {
 }
 
 /* 纯黑线稿世代（Ave / BTA）在深色背景上不可见：只做反相提亮，不加投影（主人要求去阴影） */
-html[data-g="ave"] .lg-ave,
-html[data-g="bta"] .lg-bta {
+html[data-g="ave"] #wordLogo,
+html[data-g="bta"] #wordLogo {
     filter: invert(1) brightness(1.12);
 }
 /* festo 深藏青字在斑驳彩底上看不清，反相成亮字；同样不加投影 */
-html[data-g="festo"] .lg-festo {
+html[data-g="festo"] #wordLogo {
     filter: invert(1) hue-rotate(180deg) brightness(1.35) saturate(1.5);
 }
 /* knit 世代背景是浅米黄波浪，字标同为亮黄会融进背景：加深一档并提一点饱和，
    PNG 本身保持原色，只在渲染时压亮度（不加任何阴影）。 */
-html[data-g="knit"] .lg-knit {
+html[data-g="knit"] #wordLogo {
     filter: brightness(0.78) saturate(1.25);
 }
 

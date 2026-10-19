@@ -31,6 +31,33 @@ const {
   <meta name="description" content={description} />
   <meta name="theme-color" content="#0b1a22" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  {/* 首屏主题预热：在 CSS 应用前就把世代写回 <html>，避免老用户刷新时先闪一下 ave；
+      同时提前 preload 该世代背景图（背景由 JS 设 background-image，浏览器发现得晚）。 */}
+  <script is:inline>
+    (function () {
+      var FONT = { ave: 'F', bta: 'F', clan_blue: 'C', clan_green: 'C', clan_purple: 'C', clan_red: 'C', copious: 'F', festo: 'G', knit: 'D', prop: 'E', qubell: 'D', saucer: 'F', saucerfulfill: 'F' };
+      var g = 'ave';
+      try { g = localStorage.getItem('jubeat-gen') || 'ave'; } catch (e) {}
+      if (!FONT[g]) g = 'ave';
+      var el = document.documentElement;
+      el.setAttribute('data-g', g);
+      el.setAttribute('data-font', FONT[g]);
+      var FONTFILE = { F: 'jost-500.woff2', C: 'rye-400.woff2', D: 'playfair-700.woff2', E: 'caveat-700.woff2', G: 'shrikhand-400.woff2' };
+      function pre(href, as, type) {
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = as;
+        if (type) l.type = type;
+        // as=font 的 preload 必须带 crossorigin（同源也一样），否则字体会被下载两次
+        if (as === 'font') l.crossOrigin = 'anonymous';
+        l.href = href;
+        document.head.appendChild(l);
+      }
+      pre('/assets/images/bg/' + g + '.webp', 'image');
+      var ff = FONTFILE[FONT[g]];
+      if (ff) pre('/assets/fonts/' + ff, 'font', 'font/woff2');
+    })();
+  </script>
 </head>
 <body>
   <div class="bgv" aria-hidden="true"><div class="bgv-l"></div><div class="bgv-l"></div></div>

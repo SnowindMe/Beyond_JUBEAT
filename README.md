@@ -34,10 +34,10 @@ Beyond_JUBEAT/
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/
-│  │  ├─ images/bg/           13 张世代主题背景 webp（517 KB）
-│  │  ├─ images/jackets/      78 张曲绘 webp（594 KB，168px）
-│  │  ├─ images/logo/         10 张世代站标 webp（179 KB）
-│  │  ├─ fonts/               7 个 woff2 主题/装饰字体（168 KB）
+│  │  ├─ images/bg/           13 张世代主题背景 webp（362 KB，1440 宽）
+│  │  ├─ images/jackets/      78 张曲绘 webp（438 KB，144px）
+│  │  ├─ images/logo/         10 张世代站标 webp（179 KB，360 宽）
+│  │  ├─ fonts/               7 个 woff2 主题/装饰字体（113 KB，拉丁子集）
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
 │  └─ favicon.svg             站点图标
@@ -45,6 +45,8 @@ Beyond_JUBEAT/
 ├─ scripts/                   工具脚本（不部署）
 │  ├─ build-data.cjs          songs.json → src/data/data.json + 同步曲绘
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
+│  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
+│  ├─ subset-fonts.py         字体子集化（woff2 只留拉丁字符）
 │  ├─ probe/                  历史探测脚本（Playwright 时代留下的）
 │  ├─ screenshots/ logs/ tmp/ 过程产物
 │  └─ README.md
@@ -53,11 +55,11 @@ Beyond_JUBEAT/
 │  ├─ materials/              候选素材：曲绘原图、更新情报、版本资料
 │  └─ legacy/                 jubeat-wiki / -v2 / -v3 / -v4 四代旧项目
 │
-├─ .github/workflows/        build-check.yml（校验构建）+ deploy.yml（push 即上线）
+├─ .github/workflows/        build-check.yml（push/PR 校验构建与引用完整性）
 ├─ astro.config.mjs          Astro 配置（output: static，无 adapter）
 ├─ tsconfig.json
 ├─ wrangler.jsonc            Cloudflare Workers 配置（静态资源托管 ./dist）
-├─ package.json              devDependencies：astro、wrangler
+├─ package.json              devDependencies：astro、wrangler、sharp
 ├─ dist/                     构建产物，gitignore，部署时上传的就是它
 ├─ .dsh-meow/  .dsh-ops/      本地工具数据（已 gitignore，勿提交）
 ├─ .gitignore  .gitattributes
@@ -82,6 +84,8 @@ npm run dev              # 本地开发服务器（热更新）
 npm run data             # 重新生成 src/data/data.json 并同步曲绘
 npm run build            # 构建到 dist/
 npm run check            # 校验源码与 dist 的引用完整性
+npm run opt              # 压缩 public/assets/images 下的图片
+npm run fonts            # woff2 字体子集化（需 python + fonttools）
 ```
 
 改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`，改数据改 `scripts/build-data.cjs` 的 `META` 或源头 `songs.json`。
@@ -144,7 +148,9 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | --- | --- |
 | `/*` | nosniff、SAMEORIGIN、strict-origin-when-cross-origin、收紧 Permissions-Policy |
 | `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
-| `/index.html`、`/_astro/*` | `max-age=0, must-revalidate` |
+| `/_astro/*` | `max-age=31536000, immutable`（文件名带内容 hash，天然不可变） |
+| `/index.html`、`/404.html` | `max-age=0, must-revalidate`（每次都回源确认） |
+| `/favicon.svg` | `max-age=86400` |
 
 ### CI（GitHub Actions）
 
@@ -153,6 +159,24 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `build-check.yml` | push / PR | `npm ci` → `npm run build` → 校验源码与 dist 的引用完整性 |
 
 部署不再走 GitHub Actions，交给 Cloudflare Workers Builds。
+
+## 性能
+
+首屏（1280x800，本地构建产物，无压缩）约 **20 个请求 / 158 KB**，FCP ≈ 0.44 s。做过这几件事：
+
+| 项 | 做法 | 效果 |
+| --- | --- | --- |
+| 字标 | 10 张世代站标原本全部渲染、靠 CSS 隐藏 → 改成单个 `<img id="wordLogo">` 按当前世代设 src | 少下 9 张，约 -150 KB |
+| 曲绘 | 78 张缩到 144x144（显示 84 CSS px，够了） | 1344 → 438 KB |
+| 背景 | 13 张缩到 1440 宽 q62 | 988 → 362 KB |
+| 站标 | PNG → WebP，360 宽 q88 | 421 → 179 KB |
+| 字体 | woff2 子集化到拉丁区（U+0020-007E） | 168 → 113 KB |
+| 缓存 | `_headers` 给 `/_astro/*` 加一年 immutable | 二次访问不再回源取 CSS |
+| 主题 | head 里内联预热脚本，先读 localStorage 再渲染 | 老用户刷新不闪 ave |
+
+压缩用 `npm run opt`（sharp）、子集化用 `npm run fonts`（fonttools）。注意两个脚本都是**原地覆盖**，重复跑会越压越糊；要重压先从 git 历史取原图（`91e698e` 是最后一批原图）。
+
+图片是体积大头，压缩前占 81%；现在整站资源约 1.1 MB，其中只有当前世代的 1 张站标 + 1 张背景 + 9 张曲绘会进首屏。
 
 ## 本地预览构建产物
 
