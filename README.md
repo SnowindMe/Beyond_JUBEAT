@@ -4,7 +4,7 @@ jubeat（音乐魔方）中文资料站。纯静态单页，零运行时依赖�
 
 ![deploy](https://img.shields.io/badge/Cloudflare_Workers-live-F38020) ![size](https://img.shields.io/badge/static-17192_bytes-3ee6ff) ![repo](https://img.shields.io/badge/GitHub-Beyond__JUBEAT-181717)
 
-线上地址：<https://jubeat-wiki-home.1945743455.workers.dev>
+线上地址：<https://wiki.byd-ub.top>（自定义域名） · <https://jubeat-wiki-home.1945743455.workers.dev>（workers.dev）
 
 ---
 
@@ -27,6 +27,7 @@ Beyond_JUBEAT/
 │  ├─ index.html              构建产物，线上页面（17192 字节）
 │  ├─ template.html           页面模板，含 {{占位符}}（7525 字节）
 │  ├─ theme.css               全站样式（37147 字节）
+│  ├─ _headers                Cloudflare 静态资源响应头（缓存与安全头）
 │  └─ _build/                 构建工具链（不参与部署）
 │     ├─ build.cjs            模板 + 数据 → ../index.html
 │     ├─ build-data.cjs       songs.json → data.json
@@ -51,6 +52,8 @@ Beyond_JUBEAT/
 │  ├─ materials/              候选素材：曲绘原图、更新情报、版本资料
 │  └─ legacy/                 jubeat-wiki / -v2 / -v3 / -v4 四代旧项目
 │
+├─ .github/workflows/        build-check.yml（校验产物）+ deploy.yml（push 即上线）
+├─ scripts/ci/check-refs.cjs  CI 用的引用完整性检查
 ├─ wrangler.jsonc             Cloudflare Workers 配置（静态资源托管 ./dist）
 ├─ package.json               只有 wrangler 一个 devDependency
 ├─ dist/                      打包产物，gitignore，部署时上传的就是它
@@ -94,7 +97,8 @@ npm run deploy           # build + wrangler deploy
 ## 部署
 
 仓库：<https://github.com/SnowindMe/Beyond_JUBEAT>（main 分支）
-线上：<https://jubeat-wiki-home.1945743455.workers.dev>
+线上：<https://wiki.byd-ub.top>（自定义域名，绑在 `byd-ub.top` zone 下）
+备用：<https://jubeat-wiki-home.1945743455.workers.dev>
 
 用的 **Cloudflare Workers 静态资源托管**（Workers Assets），没有 Worker 脚本逻辑：
 
@@ -110,6 +114,43 @@ npm run deploy           # build + pack + wrangler deploy
 ```
 
 日常改动上线：改完 `src/` 里的文件后 `npm run deploy` 即可，约 15 秒。
+
+### 自定义域名
+
+已把 `wiki.byd-ub.top` 挂到 worker（Workers Custom Domain，证书与 DNS 记录自动生成）：
+
+```bash
+PUT /accounts/{account_id}/workers/domains
+{"environment":"production","hostname":"wiki.byd-ub.top","service":"jubeat-wiki-home","zone_id":"..."}
+```
+
+注意：这个 zone 开着 Browser Integrity Check / 安全级别，用 curl 裸请求（不带 UA）访问自定义域名会被 CF 拦成 403 `Cf-Mitigated: challenge`；带浏览器 UA 就是正常 200。浏览器访问不受影响。
+
+### 响应头（`src/_headers`）
+
+Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
+
+| 路径 | 策略 |
+| --- | --- |
+| `/*` | nosniff、SAMEORIGIN、strict-origin-when-cross-origin、收紧 Permissions-Policy |
+| `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
+| `/index.html`、`/theme.css` | `max-age=0, must-revalidate`（随时会改，每次校验） |
+
+### CI（GitHub Actions）
+
+| 工作流 | 触发 | 做什么 |
+| --- | --- | --- |
+| `build-check.yml` | push / PR | 重跑 `build.cjs`，产物与提交不一致就报错；再跑 `scripts/ci/check-refs.cjs` 校验 69 处引用 |
+| `deploy.yml` | push main / 手动 | `npm ci` → 构建打包 → `wrangler-action` 部署 |
+
+`deploy.yml` 需要两个仓库 Secret，未配置时会打 warning 并跳过部署，不会报红：
+
+| Secret | 值 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare 控制台 → My Profile → API Tokens → Create Token，模板选 Edit Cloudflare Workers |
+| `CLOUDFLARE_ACCOUNT_ID` | `6327ccf25660e1b2bde4a731ff9d68c0` |
+
+配置好之后 push 到 main 就自动上线，不用再本地跑 `npm run deploy`。
 
 ### 待办
 
