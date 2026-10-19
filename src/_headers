@@ -1,0 +1,20 @@
+# Cloudflare Workers static asset headers, read automatically from dist root
+# Syntax: a path line, then two-space indented "Name: value" lines
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/images/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/theme.css
+  Cache-Control: public, max-age=0, must-revalidate

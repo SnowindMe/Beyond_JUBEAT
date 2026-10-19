@@ -1,0 +1,32 @@
+name: build-check
+
+# 校验提交的 index.html 与构建产物逐字节一致，防止手改产物后回退
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 重新构建
+        run: node src/_build/build.cjs
+
+      - name: 产物必须与提交一致
+        run: |
+          if ! git diff --quiet -- src/index.html; then
+            echo "::error::src/index.html 与构建产物不一致，请本地跑 node src/_build/build.cjs 后重新提交"
+            git diff --stat -- src/index.html
+            exit 1
+          fi
+          echo "产物一致：$(wc -c < src/index.html) 字节"
+
+      - name: 引用完整性（本地文件）
+        run: node scripts/ci/check-refs.cjs

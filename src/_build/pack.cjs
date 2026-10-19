@@ -16,9 +16,11 @@ fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(DIST, { recursive: true });
 
 // 1) 站点自身的文件（不含 template.html 与 _build/）
-const SITE = ['index.html', 'theme.css'];
+//    _headers / _redirects 是 Cloudflare 静态资源的约定文件，原样带到 dist 根
+const SITE = ['index.html', 'theme.css', '_headers', '_redirects'];
 for (const f of SITE) {
-  fs.copyFileSync(path.join(SRC, f), path.join(DIST, f));
+  const p = path.join(SRC, f);
+  if (fs.existsSync(p)) fs.copyFileSync(p, path.join(DIST, f));
 }
 
 // 2) 静态资源整棵树
