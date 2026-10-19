@@ -34,9 +34,9 @@ Beyond_JUBEAT/
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/
-│  │  ├─ images/bg/           13 张世代主题背景 webp（988 KB）
-│  │  ├─ images/jackets/      78 张曲绘 webp（1344 KB）
-│  │  ├─ images/logo/         10 张世代站标 png（421 KB）
+│  │  ├─ images/bg/           13 张世代主题背景 webp（517 KB）
+│  │  ├─ images/jackets/      78 张曲绘 webp（594 KB，168px）
+│  │  ├─ images/logo/         10 张世代站标 webp（179 KB）
 │  │  ├─ fonts/               7 个 woff2 主题/装饰字体（168 KB）
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
@@ -164,7 +164,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 - [x] 自定义域名 `wiki.byd-ub.top`
 - [x] GitHub Actions 自动部署
 - [x] 迁移到 Astro 7（多页可扩展）
-- [ ] 图片优化：曲绘按显示尺寸降到 168px、背景缩到 1600 宽转 WebP、站标 PNG→WebP（预计首屏体积减半）
+- [x] 图片优化：曲绘降到 168px、背景缩到 1600 宽转 WebP、站标 PNG→WebP（2275 KB → 1111 KB，脚本 `scripts/optimize-images.cjs`）
 - [ ] 接回四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）
 - [ ] 若要接 D1：把 `data.json` 迁到数据库表，页面改走接口
 - [ ] 补曲目列表 / 谱面详情 / 定数表等子页面

@@ -9,7 +9,8 @@
     "build": "astro build",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
-    "check": "node scripts/ci/check-refs.cjs && node scripts/ci/check-refs.cjs dist"
+    "check": "node scripts/ci/check-refs.cjs && node scripts/ci/check-refs.cjs dist",
+    "opt": "node scripts/optimize-images.cjs"
   },
   "devDependencies": {
     "astro": "^7.4.0",
