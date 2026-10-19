@@ -260,6 +260,28 @@ html[data-font="G"] .mark b {
     font-size: 22px;
     letter-spacing: 0;
 }
+/* 品牌字标里的符号（↑ ♪ ~）：世代字体都是拉丁装饰体，大多没有 ↑ 和 ♪ 的字形
+   （实测只有 Playfair 带 ↑，七个字体全都没有 ♪），落到系统字体就必然是另一个
+   气质。所以这三个符号单独剥出来：改用系统符号字体、上移基线、染色、字号补偿，
+   让它们看着像「刻意的小装饰」而不是字体缺字。 */
+.mark b .sym,
+.mark b .til {
+    font-family:
+        "Segoe UI Symbol", "Apple Symbols", "Segoe UI", system-ui, sans-serif;
+    color: var(--acc);
+    font-weight: 600;
+    letter-spacing: 0;
+}
+.mark b .sym {
+    font-size: 0.95em;
+    padding: 0 2px;
+    vertical-align: 0.02em;
+}
+.mark b .til {
+    font-size: 0.95em;
+    opacity: 0.72;
+    padding-left: 1px;
+}
 /* 小号 UI 文字（切换面板 11.5px / 导航链接 12.5px）在装饰字体下会又小又糊，
    按档补偿：手写/气泡 +3px，Rye/Playfair +2px，Jost +1px。主人 2026-10-19 截图反馈。 */
 html[data-font="E"] .tsw-g button,
@@ -1519,7 +1541,8 @@ html[data-g="saucerfulfill"] {
     .top {
         height: 62px;
     }
-    .mark span {
+    /* 只藏副标：字标里的 ↑ ♪ ~ 也是 span，别一起藏掉了 */
+    .mark-x > span {
         display: none;
     }
     /* 移动端隐藏导航链接，但保留世代切换：整块 nav 都不显示的话，
