@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "jubeat-wiki-home",
+  "name": "beyond-jubeat",
   "compatibility_date": "2025-09-24",
   "assets": {
     "directory": "./dist",

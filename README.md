@@ -92,25 +92,28 @@ npm run check            # 校验源码与 dist 的引用完整性
 
 仓库：<https://github.com/SnowindMe/Beyond_JUBEAT>（main 分支）
 线上：<https://wiki.byd-ub.top>（自定义域名，绑在 `byd-ub.top` zone 下）
-备用：<https://jubeat-wiki-home.1945743455.workers.dev>
+备用：<https://beyond-jubeat.1945743455.workers.dev>
 
-用的 **Cloudflare Workers 静态资源托管**（Workers Assets），没有 Worker 脚本逻辑：
+用的是 **Cloudflare Workers 静态资源托管**（Workers Assets），没有 Worker 脚本逻辑：
 
+- Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
 - `wrangler.jsonc` 指向 `assets.directory = "./dist"`，`not_found_handling = "404-page"`。
-- Astro 以 `output: "static"` 构建，产物就是纯静态文件，`wrangler deploy` 直接上传。
-- `dist/` 与 `node_modules/`、`.astro/`、`.wrangler/` 都在 `.gitignore`，产物由流水线生成。
+- Astro 以 `output: "static"` 构建，产物就是纯静态文件。
+- `dist/` 与 `node_modules/`、`.astro/`、`.wrangler/` 都在 `.gitignore`，产物由云端构建生成。
 
-日常改动上线：
+也就是说：**只需要 push，剩下的云端自己干**。
 
 ```bash
-git push                 # GitHub Actions 自动构建 + 部署（约 20 秒）
+git push                 # Cloudflare 自动构建 + 部署
 ```
 
-或本地手动：
+本地手动部署（一般用不到，等价于云端做的事）：
 
 ```bash
 npm run deploy           # build + wrangler deploy
 ```
+
+> 旧的 `jubeat-wiki-home` worker 已删除；GitHub Actions 的 `deploy.yml` 也已移除，避免和 Cloudflare 的自动构建重复部署。
 
 ### 为什么没有 `@astrojs/cloudflare` 适配器
 
@@ -124,11 +127,11 @@ Fatal uncaught kj::Exception: kj/filesystem-disk-win32.c++:773: failed: CreateDi
 
 ### 自定义域名
 
-已把 `wiki.byd-ub.top` 挂到 worker（Workers Custom Domain，证书与 DNS 记录自动生成）：
+已把 `wiki.byd-ub.top` 挂到 worker（Workers Custom Domain，证书与 DNS 记录自动生成；当前 `service` 已指向 `beyond-jubeat`）：
 
 ```bash
 PUT /accounts/{account_id}/workers/domains
-{"environment":"production","hostname":"wiki.byd-ub.top","service":"jubeat-wiki-home","zone_id":"..."}
+{"environment":"production","hostname":"wiki.byd-ub.top","service":"beyond-jubeat","zone_id":"..."}
 ```
 
 注意：这个 zone 开着 Browser Integrity Check，用 curl 裸请求（不带 UA）访问自定义域名会被 CF 拦成 403 `Cf-Mitigated: challenge`；带浏览器 UA 就是正常 200。浏览器访问不受影响。
@@ -148,26 +151,8 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | 工作流 | 触发 | 做什么 |
 | --- | --- | --- |
 | `build-check.yml` | push / PR | `npm ci` → `npm run build` → 校验源码与 dist 的引用完整性 |
-| `deploy.yml` | push main / 手动 | `npm ci` → 构建 → `wrangler-action` 部署 |
 
-`deploy.yml` 需要两个仓库 Secret，未配置时会打 warning 并跳过部署，不会报红：
-
-| Secret | 值 |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare 控制台 → My Profile → API Tokens → Create Token，模板选 Edit Cloudflare Workers |
-| `CLOUDFLARE_ACCOUNT_ID` | `6327ccf25660e1b2bde4a731ff9d68c0` |
-
-### 待办
-
-- [x] 建 GitHub 仓库并推首次提交 —— `SnowindMe/Beyond_JUBEAT`
-- [x] `wrangler.jsonc` 配置 Workers Assets 托管 `dist/`
-- [x] 自定义域名 `wiki.byd-ub.top`
-- [x] GitHub Actions 自动部署
-- [x] 迁移到 Astro 7（多页可扩展）
-- [x] 图片优化：曲绘降到 168px、背景缩到 1600 宽转 WebP、站标 PNG→WebP（2275 KB → 1111 KB，脚本 `scripts/optimize-images.cjs`）
-- [ ] 接回四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）
-- [ ] 若要接 D1：把 `data.json` 迁到数据库表，页面改走接口
-- [ ] 补曲目列表 / 谱面详情 / 定数表等子页面
+部署不再走 GitHub Actions，交给 Cloudflare Workers Builds。
 
 ## 本地预览构建产物
 
