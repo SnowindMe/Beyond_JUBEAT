@@ -1,0 +1,47 @@
+---
+// 全站外壳：<head> + 世代背景板 + 正文插槽
+// data-g / data-font 是世代主题的初始值，客户端脚本接管后会改这两个属性
+import '../styles/theme.css';
+import Header from '../components/Header.astro';
+import ThemeScript from '../components/ThemeScript.astro';
+import data from '../data/data.json';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** 首屏就带上的世代主题，默认 ave */
+  gen?: string;
+  font?: string;
+}
+
+const {
+  title = 'jubeat 音乐魔方 · 中文资料站',
+  description = 'jubeat 音乐魔方中文资料站：15 个世代、513 首曲目、1512 张谱面，支持 13 套世代主题切换。',
+  gen = 'ave',
+  font = 'F',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN" data-g={gen} data-font={font}>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <meta name="theme-color" content="#0b1a22" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div class="bgv" aria-hidden="true"><div class="bgv-l"></div><div class="bgv-l"></div></div>
+  <div class="wrap">
+    <Header />
+    <slot />
+    <footer class="foot mono">
+      <span><b>jubeat 音乐魔方 · 中文资料站</b></span>
+      <span>曲目 {data.stat.songs} / 谱面 {data.stat.charts} / 世代 {data.stat.gens}</span>
+    </footer>
+  </div>
+  <ThemeScript />
+</body>
+</html>

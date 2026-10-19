@@ -1,0 +1,19 @@
+---
+import Layout from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import data from '../data/data.json';
+---
+
+<Layout
+  description={`jubeat 音乐魔方中文资料站：${data.stat.gens} 个世代、${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 13 套世代主题切换。`}
+>
+  <Hero />
+
+  <section class="band">
+    <div class="panel wip">
+      <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="wip-t">正在施工中，前面的区域以后再来探索吧......</p>
+      <span class="wip-s">under construction</span>
+    </div>
+  </section>
+</Layout>

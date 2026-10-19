@@ -1,0 +1,19 @@
+---
+// 顶栏：品牌标 + 导航 + 世代主题切换（点击弹出 13 个世代）
+---
+
+<header class="top">
+  <div class="mark"><i></i><div class="mark-x"><b>Beyond ! JUBEAT ~</b><span>Not Only Jubeat Wiki</span></div></div>
+  <nav>
+    <a href="/">曲目</a><a href="/">谱面</a><a href="/">世代</a><a href="/">定数表</a><a href="/">关于</a>
+    <div class="tsw">
+      <button type="button" class="tsw-btn" id="tswBtn" aria-expanded="false" aria-haspopup="true" aria-controls="tswPop" aria-label="切换世代主题" title="切换世代主题">
+        <svg class="tsw-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="3.6" width="7" height="7" rx="1.7"/><rect x="13.4" y="3.6" width="7" height="7" rx="3.5"/><rect x="3.6" y="13.4" width="7" height="7" rx="3.5"/><rect x="13.4" y="13.4" width="7" height="7" rx="1.7"/></svg>
+        <svg class="tsw-car" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="tsw-pop" id="tswPop" data-open="0" role="group" aria-label="切换世代主题">
+        <div class="tsw-g" id="genDock"></div>
+      </div>
+    </div>
+  </nav>
+</header>

@@ -1,0 +1,24 @@
+---
+// 首屏：标语 + 字标 + 数据统计 + 世代曲绘立方体
+import data from '../data/data.json';
+const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo'];
+const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop();
+---
+
+<section class="hero">
+  <div>
+    <div class="chip"><i></i>音乐魔方，经典重现</div>
+    <h1 class="word" id="wordMark"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true">{LOGOS.map((k) => <img class={`lg lg-${k}`} src={`/assets/images/logo/${k}.png`} alt="" />)}</span></h1>
+    <div class="sub"><i></i>音乐魔方</div>
+    <div class="stats">
+      <div class="st"><span>曲目</span><b>{data.stat.songs}</b></div>
+      <div class="st"><span>谱面</span><b>{data.stat.charts}</b></div>
+      <div class="st"><span>世代</span><b>{data.stat.gens}</b></div>
+      <div class="st"><span>EXT ≥ 10</span><b>{data.gen10}</b></div>
+    </div>
+  </div>
+  <div class="cubewrap"><div class="cube">
+    {data.gen.map((g) => <i><img src={jacket(g.rep?.cover)} alt={g.k} /></i>)}
+    <i class="sum"><b>{data.stat.songs}</b><span>曲</span></i>
+  </div></div>
+</section>

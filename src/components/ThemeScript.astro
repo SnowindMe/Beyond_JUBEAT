@@ -1,0 +1,92 @@
+---
+// 世代主题切换：13 套配色 + 背景交叉淡入，选择记在 localStorage
+// 用 is:inline 保持原样（不打包、在解析到此处时立即执行）
+---
+<script is:inline>
+(function(){
+  var GEN=[
+    {k:'ave',n:'ave',f:'F',c:'#2ee8e8'},
+    {k:'bta',n:'bta',f:'F',c:'#ffa23c'},
+    {k:'clan_blue',n:'clan_blue',f:'C',c:'#5c8dff'},
+    {k:'clan_green',n:'clan_green',f:'C',c:'#57d98a'},
+    {k:'clan_purple',n:'clan_purple',f:'C',c:'#b07dff'},
+    {k:'clan_red',n:'clan_red',f:'C',c:'#ff6b6b'},
+    {k:'copious',n:'copious',f:'F',c:'#8fa6ff'},
+    {k:'festo',n:'festo',f:'G',c:'#ffd166'},
+    {k:'knit',n:'knit',f:'D',c:'#e0a92e'},
+    {k:'prop',n:'prop',f:'E',c:'#e0338f'},
+    {k:'qubell',n:'qubell',f:'D',c:'#c98a3c'},
+    {k:'saucer',n:'saucer',f:'F',c:'#3aa8c8'},
+    {k:'saucerfulfill',n:'saucerfulfill',f:'F',c:'#c9d2d6'}
+  ];
+  var BG='/assets/images/bg/';
+  var root=document.documentElement, dock=document.getElementById('genDock');
+  var btns={}, cur=null;
+  GEN.forEach(function(g){
+    var b=document.createElement('button');
+    b.type='button'; b.title=g.n;
+    b.style.setProperty('--sw',g.c);
+    b.innerHTML='<i></i><span>'+g.n+'</span>';
+    b.addEventListener('click',function(){apply(g);});
+    dock.appendChild(b); btns[g.k]=b;
+  });
+
+  /* 主题切换动画：背景交叉淡入。
+     body::after 的 background-image 本身不可过渡（浏览器把它当离散值，切图即硬跳），
+     所以另起 .bgv 两层背景板：旧图留在 A/B 中当前那张，新图铺到另一张再淡入，
+     opacity 走 GPU 合成，切主题时图是「渐变过去」而不是「闪一下」。 */
+  var bgv=document.querySelectorAll('.bgv-l'), vf=0;
+  function paint(g){
+    var url='url("'+BG+g.k+'.webp")';
+    var nx=bgv[(vf+1)%bgv.length];
+    nx.style.backgroundImage=url;
+    nx.style.opacity='1';
+    bgv[vf].style.opacity='0';
+    vf=(vf+1)%bgv.length;
+  }
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function apply(g,instant){
+    var prev=cur; cur=g;
+    root.setAttribute('data-g',g.k);
+    root.setAttribute('data-font',g.f);
+    root.style.removeProperty('--bgimg');
+    root.style.removeProperty('--bgop');
+    for(var k in btns){btns[k].setAttribute('aria-pressed',k===g.k?'true':'false');}
+    if(instant||reduce||!prev){
+      // 首屏直接落图，不要从空白淡进来
+      for(var i=0;i<bgv.length;i++){bgv[i].style.transition='none';}
+      bgv[0].style.backgroundImage=bgv[1].style.backgroundImage='url("'+BG+g.k+'.webp")';
+      bgv[0].style.opacity='1'; bgv[1].style.opacity='0';
+      vf=0;
+      // 关键：必须把 transition 还回去，否则首屏这一下会把「永不过渡」写死在元素上，
+      // 之后每次切主题都是硬跳（这正是要修的那个闪一下）。
+      void bgv[0].offsetWidth;
+      for(var j=0;j<bgv.length;j++){bgv[j].style.transition='';}
+    }else{
+      paint(g);
+    }
+    try{localStorage.setItem('jubeat-gen',g.k);}catch(e){}
+  }
+
+  var saved='ave';
+  try{saved=localStorage.getItem('jubeat-gen')||'ave';}catch(e){}
+  var hit=GEN.filter(function(g){return g.k===saved;})[0]||GEN[0];
+  apply(hit,true);
+
+  var tswBtn=document.getElementById('tswBtn'), tswPop=document.getElementById('tswPop'), tsw=tswBtn.parentNode;
+  function setOpen(v){
+    tswPop.setAttribute('data-open',v?'1':'0');
+    tswBtn.setAttribute('aria-expanded',v?'true':'false');
+  }
+  tswBtn.addEventListener('click',function(ev){
+    ev.stopPropagation();
+    setOpen(tswPop.getAttribute('data-open')!=='1');
+  });
+  document.addEventListener('click',function(ev){
+    if(!tsw.contains(ev.target)) setOpen(false);
+  });
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Escape') setOpen(false);
+  });
+})();
+</script>

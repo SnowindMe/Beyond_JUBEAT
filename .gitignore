@@ -7,12 +7,18 @@ scripts/screenshots/
 scripts/logs/
 scripts/tmp/
 
+# Astro / Cloudflare
+.astro/
+.wrangler/
+
 # 依赖与构建产物
 node_modules/
 dist/
 build/
 .next/
 .cache/
+
+.dsh-ops-update-*.lock
 
 # 系统与编辑器
 Thumbs.db
