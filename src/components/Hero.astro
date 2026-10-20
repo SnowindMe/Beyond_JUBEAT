@@ -7,7 +7,7 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
 
 <section class="hero">
   <div>
-    <h1 class="word" id="wordMark"><a class="word-link" href="/" aria-label="jubeat 音乐魔方 首页"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" decoding="async" fetchpriority="high" /></span></a></h1>
+    <h1 class="word" id="wordMark"><span class="word-t">jubeat</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" decoding="async" fetchpriority="high" /></span></h1>
     {/* 字标图紧跟 img 就地设 src：HTML 里不写 src 就不会先下 ave，再由主题脚本换成保存的世代。
         这段必须紧贴 img（is:inline 同步执行），否则浏览器已按空 src 判定过一次。 */}
     <script is:inline>

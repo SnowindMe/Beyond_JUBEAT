@@ -5,6 +5,7 @@ import '../styles/theme.css';
 import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import data from '../data/data.json';
+import pkg from '../../package.json';
 
 interface Props {
   title?: string;
@@ -32,6 +33,16 @@ const {
 } = Astro.props;
 
 const canonical = canonicalPath ? SITE + canonicalPath : null;
+
+// 页脚「最后一次编辑」：取构建时刻（云端每次 push 自动构建，等价于最后上线时间）。
+// 显式按北京时间算，避免 CI 跑在 UTC 时跨天。
+const BUILD_DATE = (() => {
+  try {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+})();
 ---
 
 <!doctype html>
@@ -96,8 +107,19 @@ const canonical = canonicalPath ? SITE + canonicalPath : null;
     <Header />
     <slot />
     <footer class="foot mono">
-      <span><b>jubeat 音乐魔方 · 中文资料站</b></span>
-      <span>曲目 {data.stat.songs} / 谱面 {data.stat.charts} / 世代 {data.stat.gens}</span>
+      <div class="foot-l">
+        <span class="foot-k">最后一次编辑 <b>{BUILD_DATE}</b></span>
+        <span class="foot-ver">v{pkg.version}</span>
+      </div>
+      <div class="foot-r">
+        <span class="mark mark-sm">
+          <i></i>
+          <span class="mark-x">
+            <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
+          </span>
+        </span>
+        <span class="foot-slogan">Enjoy Yourself</span>
+      </div>
     </footer>
   </div>
   <ThemeScript />

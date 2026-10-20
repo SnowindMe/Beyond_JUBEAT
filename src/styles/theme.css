@@ -474,19 +474,6 @@ html[data-g="qubell"] .welcome em {
 }
 /* 字标：所有世代统一缩放到 285px 宽（原图比例不变，高度随比例走）。
    位置：水平贴 h1 左边（居左），垂直在 h1 内居中（宽为居中）。 */
-/* 字标与 word-t 一起包在回首页的链接里：链接自己当 flex 容器，
-   内部排布和原来的 h1 完全一致，只是多了一层可点击区域。 */
-.word-link {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    /* 宽度跟内容走（字标 285px / word-t 文本宽），别撑满整栏：
-       否则点击字标右边的空白也会回首页，可点击区域看着莫名其妙。 */
-    flex: 0 1 auto;
-    color: inherit;
-    border-radius: var(--r-xs);
-    transition: opacity 0.18s ease;
-}
 .word-l {
     display: none;
     width: 285px;
@@ -1167,12 +1154,13 @@ html[data-g="saucerfulfill"] .sub {
     text-overflow: ellipsis;
 }
 
-/* foot */
+/* foot：左列（编辑时间 / 版本号）+ 右列（品牌字 / Enjoy Yourself） */
 .foot {
     margin-top: clamp(46px, 5.8vw, 76px);
     padding: 26px 0 56px;
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 16px;
     flex-wrap: wrap;
     font-size: 10.5px;
@@ -1180,10 +1168,65 @@ html[data-g="saucerfulfill"] .sub {
     letter-spacing: 0.1em;
     border-top: 1px solid var(--edge);
 }
+.foot-l,
+.foot-r {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.foot-r {
+    align-items: flex-end;
+    text-align: right;
+}
 .foot b {
     color: var(--ink2);
     font-weight: 700;
     letter-spacing: 0.04em;
+}
+.foot-ver {
+    font-size: 10px;
+    opacity: 0.72;
+}
+.foot-slogan {
+    font-size: 10px;
+    color: var(--ink3);
+    letter-spacing: 0.16em;
+}
+/* 页脚品牌字：沿用顶栏 .mark 的世代字体与符号处理，只把尺寸收小一号 */
+.foot .mark-sm {
+    gap: 7px;
+    cursor: default;
+}
+.foot .mark-sm:hover {
+    opacity: 1;
+}
+.foot .mark-sm:hover b {
+    color: inherit;
+}
+.foot .mark-sm > i {
+    width: 7px;
+    height: 7px;
+}
+.foot .mark-sm b {
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    color: var(--ink2);
+}
+/* 世代字体档位把 .mark b 抬到 19–22px，页脚这组只要 13–16px：
+   选择器带 data-font 才能压过，逗号合并成一条，别分散在多处。 */
+html[data-font="C"] .foot .mark-sm b,
+html[data-font="D"] .foot .mark-sm b,
+html[data-font="E"] .foot .mark-sm b,
+html[data-font="F"] .foot .mark-sm b,
+html[data-font="G"] .foot .mark-sm b {
+    font-size: 15px;
+}
+html[data-font="C"] .foot .mark-sm b {
+    font-size: 13px;
+}
+.foot .mark-sm .mark-x {
+    gap: 0;
 }
 
 /* ---------- 世代主题：底色 + 遮罩 + 字标色 ---------- */
@@ -1740,7 +1783,12 @@ html[data-g="ripples"] {
     }
     .foot {
         flex-direction: column;
-        gap: 6px;
+        align-items: flex-start;
+        gap: 14px;
         padding-bottom: 40px;
+    }
+    .foot-r {
+        align-items: flex-start;
+        text-align: left;
     }
 }
