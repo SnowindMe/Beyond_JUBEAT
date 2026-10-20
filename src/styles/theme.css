@@ -313,10 +313,15 @@ html[data-g="knit"] .mark b .til {
     color: var(--ink);
     align-items: center;
 }
+.nav-txt {
+    display: flex;
+    align-items: center;
+    gap: clamp(1px, 0.6vw, 6px);
+}
 /* 导航不再用 12.5px 的次要灰字：提到 15px / 700，颜色直接用正文 --ink。
    主人 2026-10-20：「导航栏的字体加大加粗，不用小灰字」。 */
 .top nav a {
-    padding: 7px 13px;
+    padding: 7px 12px;
     border-radius: var(--pill);
     font-size: 15px;
     font-weight: 700;
@@ -329,6 +334,46 @@ html[data-g="knit"] .mark b .til {
 .top nav a:hover {
     color: var(--ink);
     background: color-mix(in srgb, var(--acc) 18%, transparent);
+}
+/* 文字组与图标组之间的竖分隔：18px 高、1px 宽，纯装饰 */
+.nav-sep {
+    width: 1px;
+    height: 18px;
+    margin: 0 clamp(6px, 0.8vw, 10px);
+    border-radius: 1px;
+    background: var(--edge2);
+}
+.nav-ico {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+/* 图标按钮：30px 圆角方块，描边图标，hover 用主题色淡底 */
+.top nav a.nav-i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 10px;
+    color: var(--ink);
+    opacity: 0.72;
+}
+.top nav a.nav-i:hover {
+    color: var(--ink);
+    opacity: 1;
+    background: color-mix(in srgb, var(--acc) 18%, transparent);
+}
+.nav-i svg {
+    display: block;
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* ---------- hero ---------- */
@@ -1605,10 +1650,29 @@ html[data-g="ripples"] {
     .mark-x > span {
         display: none;
     }
-    /* 移动端隐藏导航链接，但保留世代切换：整块 nav 都不显示的话，
-       主题切换在手机上就没入口了。 */
-    .top nav a {
+    /* 品牌字不许折行：图标组占位后 "Beyond ↑ JUBEAT ♪~" 在窄屏会断成两行。
+       选择器要压过 html[data-font="C"/"D"/"E"] .mark b 那几档字号。 */
+    html[data-font] .mark b {
+        white-space: nowrap;
+        font-size: 14px;
+        letter-spacing: 0;
+    }
+    /* 移动端只留图标组 + 世代切换：文字链接太挤，反正手机上没有二级页面 */
+    .nav-txt,
+    .nav-sep {
         display: none;
+    }
+    .nav-ico {
+        margin-right: 4px;
+    }
+    .top nav a.nav-i {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+    }
+    .nav-i svg {
+        width: 16px;
+        height: 16px;
     }
     .tsw {
         margin-left: auto;
