@@ -219,6 +219,15 @@ img {
     display: flex;
     align-items: center;
     gap: 10px;
+    /* 整个品牌字组是回首页的链接 */
+    border-radius: var(--r-xs);
+    transition: opacity 0.18s ease;
+}
+.mark:hover {
+    opacity: 0.86;
+}
+.mark:hover b {
+    color: var(--acc);
 }
 .mark i {
     width: 9px;
@@ -465,6 +474,19 @@ html[data-g="qubell"] .welcome em {
 }
 /* 字标：所有世代统一缩放到 285px 宽（原图比例不变，高度随比例走）。
    位置：水平贴 h1 左边（居左），垂直在 h1 内居中（宽为居中）。 */
+/* 字标与 word-t 一起包在回首页的链接里：链接自己当 flex 容器，
+   内部排布和原来的 h1 完全一致，只是多了一层可点击区域。 */
+.word-link {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    /* 宽度跟内容走（字标 285px / word-t 文本宽），别撑满整栏：
+       否则点击字标右边的空白也会回首页，可点击区域看着莫名其妙。 */
+    flex: 0 1 auto;
+    color: inherit;
+    border-radius: var(--r-xs);
+    transition: opacity 0.18s ease;
+}
 .word-l {
     display: none;
     width: 285px;
