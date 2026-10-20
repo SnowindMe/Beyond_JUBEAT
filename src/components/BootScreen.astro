@@ -19,14 +19,16 @@
       }
     } catch (e) {}
     d.setAttribute('data-boot', 'on');
-    // 首访才放开屏；同一会话里翻页不再整页盖一层
+    // 首访才放开屏；同一会话里翻页不再整页盖一层。
+    // 这里只打标记、不加 boot-run：遮罩必须先以 opacity:0 完成首帧，
+    // 主脚本再用 rAF 加 class，才有「渐入」而不是第一帧就整块糊上来。
     try {
       if (sessionStorage.getItem('jb-boot') !== '1') {
         sessionStorage.setItem('jb-boot', '1');
-        d.className += ' boot-run boot-first';
+        d.className += ' boot-first';
       }
     } catch (e) {
-      d.className += ' boot-run boot-first';
+      d.className += ' boot-first';
     }
   })();
 </script>
@@ -42,17 +44,32 @@
     position: fixed;
     inset: 0;
     z-index: 9999;
-    display: none;
+    /* 常驻 grid：display 不参与过渡，切 none↔grid 会吃掉淡入淡出 */
+    display: grid;
     place-items: center;
     background: #05090c;
     font-family: Bahnschrift, "Bahnschrift SemiCondensed", Consolas, monospace;
     color: #8ff5e4;
     -webkit-tap-highlight-color: transparent;
-    opacity: 1;
-    transition: opacity 0.32s ease, visibility 0s;
+    /* 常驻布局、默认全透明：display 不能做过渡，只有常驻元素才能淡入淡出。
+       visibility 延迟到淡出结束才隐藏，避免渐隐途中被提前摘掉。 */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.32s ease, visibility 0s linear 0.32s;
   }
   html.boot-run .boot {
-    display: grid;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.32s ease, visibility 0s;
+    /* 进场用动画而不是过渡：动画一定会从 0% 播起，
+       而「首帧就挂 class」时浏览器会跳过过渡（没有前一帧的已渲染样式），
+       那才会出现遮罩「啪」地整块出现。退场仍走上面的 opacity 过渡。 */
+    animation: bootIn 0.32s ease;
+  }
+  @keyframes bootIn {
+    from { opacity: 0; }
   }
   /* 遮罩期间锁住滚动：底部内容被拖动会在遮罩边缘露出来 */
   html.boot-run,
@@ -177,14 +194,11 @@
     color: rgba(143, 245, 228, 0.55);
     text-transform: uppercase;
   }
-  /* 退场：淡出后从布局与可达性里摘掉，避免下面的内容提前顶上来 */
-  .boot.is-off {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.32s ease, visibility 0s linear 0.32s;
-  }
+  /* 退场即回到基础态：移除 boot-run 后 opacity 过渡到 0，
+     visibility 在 0.32s 后才变 hidden，命中「淡出」而不是「瞬间消失」。 */
   @media (prefers-reduced-motion: reduce) {
+    .boot,
+    html.boot-run .boot { transition: none; animation: none; }
     .boot-pad i,
     .boot-bar i,
     .boot-dots i {
@@ -213,24 +227,25 @@
   if (!el || d.getAttribute('data-boot') !== 'on') { window.jbBoot = { show: function () {}, hide: function () {}, begin: function () { return function () {}; }, hold: function () { return function () {}; } }; return; }
 
   var firstRun = d.classList.contains('boot-first');
-  // 首访的 boot-run 是上面那段 head 脚本直接加的 class，没走 show()。
-  // 这里必须把 shown 标成 true，否则 hide() 会以为「没亮过」而拒绝收起，
-  // 遮罩就永远盖在页面上（实测踩过：首访整站锁死）。
-  var shown = firstRun;
+  // 遮罩一律经 show() 点亮（head 脚本只留 boot-first 标记），所以 shown 从 false 起。
+  // 曾经 head 脚本直接加 boot-run、这里又要 shown=firstRun 才不会「收不起来」，
+  // 现在改成单一路径，别再往 head 脚本里加 class。
+  var shown = false;
 
   function show(waitMode) {
     if (shown) return;
     shown = true;
-    el.classList.remove('is-off');
     el.classList.toggle('is-wait', !!waitMode);
+    // 加 class 即触发 bootIn 动画（从 opacity 0 播到 1），
+    // 不依赖「上一帧已渲染」这个前提，首访第一帧挂上也照样渐入。
     d.classList.add('boot-run');
   }
   function hide() {
     if (!shown) return;
     shown = false;
+    // 只摘 boot-run：opacity 从 1 过渡回 0，visibility 延迟到过渡结束
     d.classList.remove('boot-run');
     el.classList.remove('is-wait');
-    el.classList.add('is-off');
   }
   /* 延迟显示：调用后 delay 毫秒内结束就完全不出现（缓存命中时就是这条路）。
      返回的 end() 既能「取消这次显示」也能「立刻收起」，两种调用都安全。 */
@@ -254,8 +269,13 @@
 
   // ---- 首访开屏：load 后收，最短 900ms / 最长 3s ----
   if (firstRun) {
+    // head 脚本只加了 boot-first 标记，这里才真正点亮：双 rAF 保证
+    // 「opacity:0」这一帧已经绘制，随后的 boot-run 才会走出渐入过渡。
     var t0 = (window.performance && performance.now) ? performance.now() : 0;
     var closed = false;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { if (!closed) show(false); });
+    });
     function closeBoot() {
       if (closed) return;
       closed = true;
@@ -264,6 +284,7 @@
         el.classList.remove('boot-first');
         d.classList.remove('boot-first');
         hide();
+        d.classList.remove('boot-run');
       }, left);
     }
     if (document.readyState === 'complete') closeBoot();
