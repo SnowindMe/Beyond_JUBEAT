@@ -1,5 +1,6 @@
 ---
-// 世代主题切换：13 套配色 + 背景交叉淡入，选择记在 localStorage
+// 世代主题切换：14 套配色 + 背景交叉淡入，选择记在 localStorage
+// 换图需要现下时才亮 LOADING（由 BootScreen.astro 暴露的 window.jbBoot 控制）
 // 用 is:inline 保持原样（不打包、在解析到此处时立即执行）
 ---
 <script is:inline>
@@ -51,13 +52,56 @@
     vf=(vf+1)%bgv.length;
   }
   var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function apply(g,instant){
+
+  /* 切世代要不要「等」，不靠猜：一律走 bootApi.begin(160)。
+     160ms 内新背景与新字标就位（缓存命中时就是这样），遮罩根本不会出现；
+     真要从网上拉图，160ms 后自动亮起 LOADING，等图铺好再收。 */
+  var bootApi = window.jbBoot;
+
+  /* 本页已经真正拿到过的图。有了这张表，「缓存命中」就不用靠 160ms 猜，
+     可以直接完全跳过遮罩——本地切换世代零闪烁靠的就是它。 */
+  var loaded = {};
+  function logoUrl(g){ return LOGO + (g.k.indexOf('clan_')===0 ? 'clan' : g.k) + '.webp'; }
+  function bgUrl(g){ return BG + g.k + '.webp'; }
+  function sync(g){ loaded[bgUrl(g)] = 1; loaded[logoUrl(g)] = 1; }
+
+  /* 换世代要下载两样东西：背景大图 + 字标。两样都到齐了才撤遮罩，
+     否则会出现「遮罩收了但背景还是空白」的那一下。 */
+  function waitImages(g, done) {
+    var lu = logoUrl(g), bu = bgUrl(g);
+    var left = 2, closed = false;
+    function tick(url) {
+      if (closed) return;
+      loaded[url] = 1;
+      left--;
+      if (left > 0) return;
+      closed = true;
+      // 不包 rAF：图已在内存里，commit 时写进 .bgv 的 backgroundImage 与遮罩收起
+      // 是同一次样式更新，浏览器同一帧提交，不会露出空白。而 rAF 在窗口失焦/后台
+      // 会被节流到 1s 一次，那样遮罩就会多挂一秒——实测踩过这个坑。
+      done();
+    }
+    [bu, lu].forEach(function (url) {
+      var img = new Image();
+      img.onload = function () { tick(url); };
+      img.onerror = function () { tick(url); };
+      img.src = url;
+    });
+    // 兜底：2.6s 还没齐也别把人锁住
+    setTimeout(function () {
+      if (closed) return;
+      closed = true;
+      done();
+    }, 2600);
+  }
+
+  function commit(g,instant){
     var prev=cur; cur=g;
     root.setAttribute('data-g',g.k);
     root.setAttribute('data-font',g.f);
     if(wordLogo){
       // 四个 clan_* 世代共用同一张 clan 字标
-      var next=LOGO+(g.k.indexOf('clan_')===0?'clan':g.k)+'.webp';
+      var next=logoUrl(g);
       if(wordLogo.getAttribute('src')!==next) wordLogo.setAttribute('src',next);
     }
     root.style.removeProperty('--bgimg');
@@ -77,6 +121,23 @@
       paint(g);
     }
     try{localStorage.setItem('jubeat-gen',g.k);}catch(e){}
+  }
+
+  function apply(g,instant){
+    var prev=cur;
+    if(instant||reduce||!prev){ commit(g,true); sync(g); return; }
+    // 这两张图本页已经拿到过：直接换，一点遮罩都不挂（本地切世代就是这条路）
+    if(loaded[bgUrl(g)]===1 && loaded[logoUrl(g)]===1){ commit(g,false); return; }
+    // 真要现下：先挂一个「160ms 后才亮」的遮罩，够快就自动作废
+    var endBoot = bootApi ? bootApi.begin(160) : null;
+    commit(g,false);
+    var closed=false;
+    function stop(){
+      if(closed) return; closed=true;
+      if(endBoot) endBoot();
+    }
+    waitImages(g, stop);
+    setTimeout(stop, 3000);
   }
 
   var saved='ave';

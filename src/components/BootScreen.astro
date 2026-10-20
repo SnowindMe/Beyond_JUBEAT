@@ -1,30 +1,43 @@
 ---
-// 街机开机风的整站开屏遮罩（LOADING......）
-// 只在每个会话的第一次进入时出现（sessionStorage 记一次），之后翻页不再挡：
-// 静态站每次点导航都是整页重载，每页都盖一层会把「快」的观感全吃掉。
-// 尊重 prefers-reduced-motion：设了就直接不启动。
-// 样式与脚本都 is:inline：这段必须在首帧之前就生效，走 Astro 的打包 CSS 会晚一步闪一下。
+// 街机开机风的 LOADING 遮罩。
+// 三种用法共用同一套视觉，但只有「真的要等」时才会亮：
+//   1) 首访开屏：每会话一次，页面 load 后淡出
+//   2) 点导航去下一页：延迟 160ms 才亮，下一页快就直接不出现
+//   3) 切世代主题：新背景/字标没命中缓存时才亮，命中就一点不闪
+// 遮罩的 4×4 方块 + LOADING...... + 进度条 + 扫描线是固定的街机配色，
+// 不跟世代主题走。样式与脚本都 is:inline：必须在首帧之前生效。
 ---
 
 <script is:inline>
   (function () {
     var d = document.documentElement;
-    // 减少动效偏好：直接跳过开屏
+    // 减少动效偏好：整套都不启动
     try {
-      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        d.setAttribute('data-boot', 'off');
+        return;
+      }
     } catch (e) {}
+    d.setAttribute('data-boot', 'on');
+    // 首访才放开屏；同一会话里翻页不再整页盖一层
     try {
-      if (sessionStorage.getItem('jb-boot') === '1') return;
-      sessionStorage.setItem('jb-boot', '1');
+      if (sessionStorage.getItem('jb-boot') !== '1') {
+        sessionStorage.setItem('jb-boot', '1');
+        d.className += ' boot-run boot-first';
+      }
     } catch (e) {
-      // 隐私模式拿不到 sessionStorage：当成首次进入处理，宁可多放一次
+      d.className += ' boot-run boot-first';
     }
-    d.className += ' boot-run';
   })();
 </script>
 
+
 <style is:inline>
-  /* 开屏遮罩：不依赖主题变量，固定街机配色，切换世代时也不变色 */
+  /* 遮罩：不依赖主题变量，固定街机配色，切换世代时也不变色。
+     两种用法共用这一套视觉：
+       1) 首访开屏（每会话一次）
+       2) 真的要等的时候（点导航加载下一页 / 切世代要下新背景与字标）
+     只在「预计超过 ~150ms」时才亮，缓存命中时根本不出现，避免每次点击都闪一下。 */
   .boot {
     position: fixed;
     inset: 0;
@@ -35,6 +48,8 @@
     font-family: Bahnschrift, "Bahnschrift SemiCondensed", Consolas, monospace;
     color: #8ff5e4;
     -webkit-tap-highlight-color: transparent;
+    opacity: 1;
+    transition: opacity 0.32s ease, visibility 0s;
   }
   html.boot-run .boot {
     display: grid;
@@ -128,6 +143,7 @@
     0%, 100% { opacity: 0; }
     1%, 80% { opacity: 1; }
   }
+  /* 进度条：首访是 1s 走满；「等下一页」时是来回扫，不知道多久就不假装知道进度 */
   .boot-bar {
     position: relative;
     width: clamp(168px, 18vw, 210px);
@@ -147,18 +163,26 @@
   @keyframes bootFill {
     to { width: 100%; }
   }
+  .boot.is-wait .boot-bar i {
+    width: 42%;
+    animation: bootSlide 1.05s ease-in-out infinite;
+  }
+  @keyframes bootSlide {
+    0% { transform: translateX(-105%); }
+    100% { transform: translateX(280%); }
+  }
   .boot-meta {
     font-size: 10px;
     letter-spacing: 0.3em;
     color: rgba(143, 245, 228, 0.55);
     text-transform: uppercase;
   }
-  /* 退场：先淡出再移出文档流，避免下面的内容提前顶上来 */
+  /* 退场：淡出后从布局与可达性里摘掉，避免下面的内容提前顶上来 */
   .boot.is-off {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.42s ease, visibility 0s linear 0.42s;
+    transition: opacity 0.32s ease, visibility 0s linear 0.32s;
   }
   @media (prefers-reduced-motion: reduce) {
     .boot-pad i,
@@ -170,8 +194,7 @@
     .boot-bar i { width: 100%; }
   }
 </style>
-
-<div class="boot" id="boot" role="status" aria-label="页面加载中">
+<div class="boot" id="boot" role="status" aria-live="polite" aria-label="页面加载中">
   <div class="boot-in">
     <div class="boot-pad" aria-hidden="true">
       <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
@@ -184,27 +207,90 @@
 </div>
 
 <script is:inline>
-  (function () {
-    var el = document.getElementById('boot');
-    if (!el || !document.documentElement.classList.contains('boot-run')) return;
+(function () {
+  var d = document.documentElement;
+  var el = document.getElementById('boot');
+  if (!el || d.getAttribute('data-boot') !== 'on') { window.jbBoot = { show: function () {}, hide: function () {}, begin: function () { return function () {}; }, hold: function () { return function () {}; } }; return; }
+
+  var firstRun = d.classList.contains('boot-first');
+  // 首访的 boot-run 是上面那段 head 脚本直接加的 class，没走 show()。
+  // 这里必须把 shown 标成 true，否则 hide() 会以为「没亮过」而拒绝收起，
+  // 遮罩就永远盖在页面上（实测踩过：首访整站锁死）。
+  var shown = firstRun;
+
+  function show(waitMode) {
+    if (shown) return;
+    shown = true;
+    el.classList.remove('is-off');
+    el.classList.toggle('is-wait', !!waitMode);
+    d.classList.add('boot-run');
+  }
+  function hide() {
+    if (!shown) return;
+    shown = false;
+    d.classList.remove('boot-run');
+    el.classList.remove('is-wait');
+    el.classList.add('is-off');
+  }
+  /* 延迟显示：调用后 delay 毫秒内结束就完全不出现（缓存命中时就是这条路）。
+     返回的 end() 既能「取消这次显示」也能「立刻收起」，两种调用都安全。 */
+  function begin(delay) {
+    var stopped = false;
+    var t = setTimeout(function () { if (!stopped) show(true); }, delay == null ? 160 : delay);
+    return function end() {
+      stopped = true;
+      clearTimeout(t);
+      hide();
+    };
+  }
+  /* 立刻亮起的等待（用于已经知道一定要等的场景，比如切换世代且图没缓存） */
+  function hold() {
+    show(true);
+    var ended = false;
+    return function end() { if (ended) return; ended = true; hide(); };
+  }
+
+  window.jbBoot = { show: show, hide: hide, begin: begin, hold: hold };
+
+  // ---- 首访开屏：load 后收，最短 900ms / 最长 3s ----
+  if (firstRun) {
     var t0 = (window.performance && performance.now) ? performance.now() : 0;
-    var done = false;
-    function hide() {
-      // 最少停 900ms：太快地闪一下反而像故障，也给进度条走完的时间
-      // 最多 3s：load 事件被慢资源拖住时不能把用户锁在遮罩后面
-      var wait = Math.max(0, 900 - ((window.performance && performance.now ? performance.now() : 0) - t0));
-      if (done) return;
-      done = true;
+    var closed = false;
+    function closeBoot() {
+      if (closed) return;
+      closed = true;
+      var left = Math.max(0, 900 - ((window.performance && performance.now ? performance.now() : 0) - t0));
       setTimeout(function () {
-        el.classList.add('is-off');
-        setTimeout(function () {
-          if (el.parentNode) el.parentNode.removeChild(el);
-          document.documentElement.classList.remove('boot-run');
-        }, 460);
-      }, wait);
+        el.classList.remove('boot-first');
+        d.classList.remove('boot-first');
+        hide();
+      }, left);
     }
-    if (document.readyState === 'complete') hide();
-    else window.addEventListener('load', hide, { once: true });
-    setTimeout(hide, 3000);
-  })();
+    if (document.readyState === 'complete') closeBoot();
+    else window.addEventListener('load', closeBoot, { once: true });
+    setTimeout(closeBoot, 3000);
+  }
+
+  // ---- 点导航去下一页：160ms 内新页没来才亮 ----
+  document.addEventListener('click', function (ev) {
+    if (ev.defaultPrevented || ev.button !== 0) return;
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+    if (!a) return;
+    if (a.target && a.target !== '_self') return;
+    if (a.hasAttribute('download')) return;
+    var href = a.getAttribute('href');
+    if (!href || href.charAt(0) === '#') return;
+    if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+    // 站外链接不挡（新开会自己跳走，同标签也由浏览器接管）
+    var url;
+    try { url = new URL(a.href, location.href); } catch (e) { return; }
+    if (url.origin !== location.origin) return;
+    // 同页只改 hash 不算跳转
+    if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+    begin(160);
+  }, true);
+
+  // ---- 切世代：ThemeScript 会调用 jbBoot.begin() 包住换图过程 ----
+})();
 </script>

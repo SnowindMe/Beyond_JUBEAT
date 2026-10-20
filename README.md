@@ -20,7 +20,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 **/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
-**开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线）。它只在**每个会话的第一次进入**出现（`sessionStorage` 记 `jb-boot`），之后翻页不再挡——静态站每次点导航都是整页重载，每页都盖一层会把「快」的观感全吃掉。最少停 900ms（太快闪一下像故障），最多 3s（`load` 被慢资源拖住时不锁人），退场淡出 460ms 后自摘 DOM 并解锁滚动。设了 `prefers-reduced-motion: reduce` 的用户直接跳过。样式与脚本都是 `is:inline`，必须在首帧前生效。
+**开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线），同一套视觉有**三种触发**，但只有「真的要等」时才亮：①首访开屏——每个会话第一次进入才出现（`sessionStorage` 记 `jb-boot`），最少停 900ms（太快闪一下像故障）、最多 3s（`load` 被慢资源拖住时不锁人）；②点导航去下一页——延迟 160ms 才亮，新页在此之前到达就完全不出现（本地点击到 `pagehide` 约 68ms，正常网速下看不到遮罩）；③切世代主题——先查本页是否已经拿到过这两张图（背景 + 字标），拿到就零延迟直换、一点不闪；没拿到才挂 160ms 延迟遮罩，图到齐立刻收（兜底 2.6s）。遮罩退场是 `opacity 0.32s` + `visibility` 延后，`is-wait` 态进度条改成来回扫（不知道多久就不假装知道进度）。设了 `prefers-reduced-motion: reduce` 的用户整站不启动。样式与脚本都是 `is:inline`，必须在首帧前生效。
 
 页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
