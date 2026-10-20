@@ -4,20 +4,23 @@
 ---
 <script is:inline>
 (function(){
+  // 顺序 = 游戏世代新→旧（主人 2026-10-20 指定）。n 是切换器里显示的正式写法，
+  // k 是内部 key，同时决定 /assets/images/bg/<k>.webp 与 logo/<k>.webp 的文件名。
   var GEN=[
-    {k:'ave',n:'ave',f:'F',c:'#2ee8e8'},
-    {k:'bta',n:'bta',f:'F',c:'#ffa23c'},
-    {k:'clan_blue',n:'clan_blue',f:'C',c:'#5c8dff'},
-    {k:'clan_green',n:'clan_green',f:'C',c:'#57d98a'},
-    {k:'clan_purple',n:'clan_purple',f:'C',c:'#b07dff'},
-    {k:'clan_red',n:'clan_red',f:'C',c:'#ff6b6b'},
-    {k:'copious',n:'copious',f:'F',c:'#8fa6ff'},
-    {k:'festo',n:'festo',f:'G',c:'#ffd166'},
+    {k:'ripples',n:'ripples',f:'F',c:'#70c5b7'},
     {k:'knit',n:'knit',f:'D',c:'#e0a92e'},
-    {k:'prop',n:'prop',f:'E',c:'#e0338f'},
-    {k:'qubell',n:'qubell',f:'D',c:'#c98a3c'},
+    {k:'copious',n:'copious',f:'F',c:'#8fa6ff'},
     {k:'saucer',n:'saucer',f:'F',c:'#3aa8c8'},
-    {k:'saucerfulfill',n:'saucerfulfill',f:'F',c:'#c9d2d6'}
+    {k:'saucerfulfill',n:'saucer fulfill',f:'F',c:'#c9d2d6'},
+    {k:'prop',n:'prop',f:'E',c:'#e0338f'},
+    {k:'qubell',n:'Qubell',f:'D',c:'#c98a3c'},
+    {k:'clan_red',n:'clan Red',f:'C',c:'#ff6b6b'},
+    {k:'clan_blue',n:'clan Blue',f:'C',c:'#5c8dff'},
+    {k:'clan_green',n:'clan Green',f:'C',c:'#57d98a'},
+    {k:'clan_purple',n:'clan Purple',f:'C',c:'#b07dff'},
+    {k:'festo',n:'festo',f:'G',c:'#ffd166'},
+    {k:'ave',n:'Ave.',f:'F',c:'#2ee8e8'},
+    {k:'bta',n:'Beyond the Ave.',f:'F',c:'#ffa23c'}
   ];
   var BG='/assets/images/bg/';
   // 字标：首屏只加载当前世代那一张，切主题时才换 src（原先 10 张一起下载，浪费 ~150KB）

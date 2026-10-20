@@ -124,9 +124,11 @@ body {
     line-height: 1.6;
     min-height: 100vh;
     overflow-x: hidden;
+    /* 世代装饰字体只用于品牌字（顶栏 Beyond ↑ JUBEAT 与字标），
+       正文/导航/面板一律系统默认字体。主人 2026-10-20 要求。 */
     font-family:
-        var(--font-label),
-        "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+        system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei",
+        "Noto Sans SC", sans-serif;
     background: var(--base);
     transition:
         background-color 0.4s ease,
@@ -282,38 +284,14 @@ html[data-font="G"] .mark b {
     opacity: 0.72;
     padding-left: 1px;
 }
-/* 小号 UI 文字（切换面板 11.5px / 导航链接 12.5px）在装饰字体下会又小又糊，
-   按档补偿：手写/气泡 +3px，Rye/Playfair +2px，Jost +1px。主人 2026-10-19 截图反馈。 */
-html[data-font="E"] .tsw-g button,
-html[data-font="G"] .tsw-g button {
-    font-size: 14.5px;
-}
-html[data-font="E"] .top nav a,
-html[data-font="G"] .top nav a {
-    font-size: 14px;
-}
-html[data-font="C"] .tsw-g button,
-html[data-font="D"] .tsw-g button {
-    font-size: 13.5px;
-}
-html[data-font="C"] .top nav a,
-html[data-font="D"] .top nav a {
-    font-size: 13.5px;
-}
-html[data-font="F"] .tsw-g button {
-    font-size: 14px;
-}
-html[data-font="F"] .top nav a {
-    font-size: 13.5px;
-}
-html[data-font="E"] .glegend b,
-html[data-font="G"] .glegend b {
-    font-size: 15px;
-}
-/* 手写体 x 高度小，小号拉丁文字（图例世代名等）补 2px 保可读 */
-html[data-font="E"] .glegend b,
-html[data-font="G"] .glegend b {
-    font-size: 14px;
+/* 浅色世代（ripples / knit）的 --acc 是中等绿，做小符号时在浅底上直接糊掉：
+   符号改用更深的 --ink，并去掉 ~ 的透明度。 */
+html[data-g="ripples"] .mark b .sym,
+html[data-g="ripples"] .mark b .til,
+html[data-g="knit"] .mark b .sym,
+html[data-g="knit"] .mark b .til {
+    color: var(--ink);
+    opacity: 0.86;
 }
 .mark-x {
     display: flex;
@@ -331,21 +309,26 @@ html[data-font="G"] .glegend b {
 }
 .top nav {
     display: flex;
-    gap: clamp(4px, 1.2vw, 10px);
-    color: var(--ink2);
+    gap: clamp(2px, 0.9vw, 8px);
+    color: var(--ink);
     align-items: center;
 }
+/* 导航不再用 12.5px 的次要灰字：提到 15px / 700，颜色直接用正文 --ink。
+   主人 2026-10-20：「导航栏的字体加大加粗，不用小灰字」。 */
 .top nav a {
-    padding: 6px 14px;
+    padding: 7px 13px;
     border-radius: var(--pill);
-    font-size: 12.5px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
     transition:
         color 0.2s,
         background 0.2s;
 }
 .top nav a:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.12);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--acc) 18%, transparent);
 }
 
 /* ---------- hero ---------- */
@@ -364,28 +347,64 @@ html[data-font="G"] .glegend b {
     flex-direction: column;
     min-width: 0;
 }
-.chip {
-    /* 左栏改成 flex 列后 chip 会被 stretch 拉成整栏宽的长条，保持自身内容宽度。 */
+/* 字标下方的一句招呼：WELCOME TO jubeat ~
+   「WELCOME TO」走系统字、宽字距做小标；jubeat 用世代品牌字体 + 强调色，
+   ~ 收在末尾做装饰。主人 2026-10-20 要求放在 logo 下面。 */
+.welcome {
     align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    height: 28px;
-    padding: 0 14px 0 11px;
-    border-radius: var(--pill);
-    border: 1px solid var(--edge2);
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    font-size: 11.5px;
-    letter-spacing: 0.16em;
-    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 0.62em;
+    margin-top: clamp(13px, 1.6vw, 19px);
+    font-size: clamp(11.5px, 1.1vw, 13px);
+    font-weight: 700;
+    letter-spacing: 0.32em;
+    color: var(--ink2);
+    animation: welcomeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.chip i {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--acc);
-    box-shadow: 0 0 8px var(--acc);
+.welcome i {
+    align-self: center;
+    width: clamp(18px, 2.2vw, 30px);
+    height: 2px;
+    border-radius: 2px;
+    flex: none;
+    background: linear-gradient(90deg, transparent, var(--acc));
+}
+.welcome b {
+    font-family: var(--font-label);
+    font-size: 1.5em;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--acc);
+    text-shadow: 0 2px 14px color-mix(in srgb, var(--acc) 35%, transparent);
+}
+.welcome em {
+    font-style: normal;
+    font-weight: 700;
+    font-size: 1.3em;
+    line-height: 1;
+    letter-spacing: 0;
+    margin-left: -0.2em;
+    color: var(--acc2);
+}
+/* 浅底世代（knit / saucer / Qubell）的 --acc2 是奶油色/淡青，
+   做 ~ 装饰时直接融进背景，改为跟 jubeat 字同色。 */
+html[data-g="knit"] .welcome em,
+html[data-g="saucer"] .welcome em,
+html[data-g="qubell"] .welcome em {
+    color: var(--acc);
+    opacity: 0.9;
+}
+@keyframes welcomeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 .word {
     font-family: var(--font-label);
@@ -428,7 +447,7 @@ html[data-font="G"] .glegend b {
        视框被 max-width 压窄时按比例整体缩小（object-fit:none 会按原始像素绘制、
        右半边被裁掉，窄屏就只剩半个字标）。 */
 }
-/* 所有字标都已裁掉透明留白并左对齐到 chip / 统计卡的同一条竖线，
+/* 所有字标都已裁掉透明留白并左对齐到 WELCOME 行 / 统计卡的同一条竖线，
    视框随图自身尺寸撑开，不再有 object-position / align-self 的人工补偿。 */
 html[data-g="ave"] .word-l {
     display: flex;
@@ -467,6 +486,9 @@ html[data-g="clan_red"] .word-l {
     display: flex;
 }
 html[data-g="festo"] .word-l {
+    display: flex;
+}
+html[data-g="ripples"] .word-l {
     display: flex;
 }
 html[data-g="ave"] .word-t,
@@ -520,6 +542,15 @@ html[data-g="clan_red"] .sub {
 html[data-g="festo"] .word-t,
 html[data-g="festo"] .sub {
     display: none;
+}
+html[data-g="ripples"] .word-t,
+html[data-g="ripples"] .sub {
+    display: none;
+}
+/* ripples 背景压暗后，字标自带的浅薄荷绿在雾面底上偏灰：
+   加深一档并提饱和，PNG 原色不动，只在渲染时滤镜。 */
+html[data-g="ripples"] #wordLogo {
+    filter: brightness(0.82) saturate(1.35);
 }
 
 /* 纯黑线稿世代（Ave / BTA）在深色背景上不可见：只做反相提亮，不加投影（主人要求去阴影） */
@@ -1244,12 +1275,35 @@ html[data-g="saucerfulfill"] {
     --title: #f2f5f6;
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
+/* ripples：底板是白/薄荷浅色，太晃眼。用深墨绿的半透明遮罩把它压暗一档
+   （--veil 由 body::before 铺满视口，压在背景图之上、正文之下），
+   仍保持浅色世代：深字 + 白卡片，只是底子从「白得发光」变成「灰绿雾面」。
+   主色取字标薄荷绿 #70c5b7，粉 #ff9fb2 做次色。 */
+html[data-g="ripples"] {
+    --bgop: 0.9;
+    --veil: linear-gradient(180deg, rgba(18, 52, 47, 0.30) 0%, rgba(18, 52, 47, 0.20) 55%, rgba(18, 52, 47, 0.32) 100%);
+    --scrim: rgba(0, 0, 0, 0.2);
+    --base: #dfeeea;
+    --acc: #4fae9e;
+    --acc2: #ef8ba1;
+    --title: #0f2f2b;
+    --tshadow: none;
+    --lede-shadow: none;
+    --ink: #0c2824;
+    --ink2: #30524c;
+    --ink3: #5c7a75;
+    --edge: rgba(12, 40, 36, 0.16);
+    --edge2: rgba(12, 40, 36, 0.28);
+    --glass: rgba(255, 255, 255, 0.66);
+    --glass2: rgba(255, 255, 255, 0.8);
+}
 
 /* 浅色世代：卡片玻璃偏白、背后是亮底彩图，弹层若只用 --glass2 会和底图糊在一起，
    选项文字看不清，这里给弹层一层更实的底。 */
 html[data-g="knit"],
 html[data-g="prop"],
 html[data-g="qubell"],
+html[data-g="ripples"],
 html[data-g="saucer"] {
     --pop-bg: rgba(255, 255, 255, 0.94);
     --pop-hi: rgba(16, 27, 33, 0.06);
@@ -1296,6 +1350,9 @@ html[data-g="saucer"] {
 }
 html[data-g="saucerfulfill"] {
     --bgauto: url("/assets/images/bg/saucerfulfill.webp");
+}
+html[data-g="ripples"] {
+    --bgauto: url("/assets/images/bg/ripples.webp");
 }
 
 /* 字标贴图（--logo/--logoar/--logow）在 logo.css 里以 data URI 内联，
@@ -1363,7 +1420,9 @@ html[data-g="saucerfulfill"] {
     right: 0;
     top: calc(100% + 10px);
     z-index: 30;
-    width: 296px;
+    /* 世代名有 "Beyond the Ave." 这种长名，两列排布下 296px 会把名字截成省略号，
+       加宽到 320px；窄屏用 calc 兜底，别撑出视口。 */
+    width: min(320px, calc(100vw - 24px));
     padding: 10px;
     border-radius: var(--r-sm);
     border: 1px solid var(--edge2);
@@ -1398,9 +1457,10 @@ html[data-g="saucerfulfill"] {
     border: 1px solid transparent;
     border-radius: var(--r-xs);
     background: transparent;
-    color: var(--ink2);
+    color: var(--ink);
     font: inherit;
-    font-size: 11.5px;
+    font-size: 12.5px;
+    font-weight: 600;
     line-height: 1;
     text-align: left;
     cursor: pointer;

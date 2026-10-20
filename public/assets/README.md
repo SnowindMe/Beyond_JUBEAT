@@ -4,7 +4,7 @@
 
 | 目录 | 内容 | 当前占用 |
 | --- | --- | --- |
-| `images/` | 图片资源，下分 `bg/`（背景）、`jackets/`（曲绘）、`logo/`（站标） | 101 个 / 2.69 MB |
+| `images/` | 图片资源，下分 `bg/`（背景）、`jackets/`（曲绘）、`logo/`（站标） | 103 个 / 2.71 MB |
 | `fonts/` | 字体文件，含各项目的主题字体与装饰字体 | 7 个 / 168 KB |
 | `data/` | 数据文件（json / csv 等） | 空 |
 | `docs/` | 文档、PDF、参考资料 | 空 |
@@ -14,9 +14,9 @@
 
 | 子目录 | 内容 | 使用方 |
 | --- | --- | --- |
-| `bg/` | 13 张世代主题背景 webp | `src/theme.css` 的 `--bgauto` + index.html 脚本切主题 |
+| `bg/` | 14 张世代主题背景 webp（新增 `ripples.webp` = jubeat PROFILE 表去字留底板） | `src/theme.css` 的 `--bgauto` + ThemeScript 交叉淡入 |
 | `jackets/` | 78 张 jubeat 曲绘 webp | `src/index.html` 的 32 处 + `_build/build-data.cjs` 生成 |
-| `logo/` | 10 个世代站标 png | `src/index.html` 的 10 处 |
+| `logo/` | 11 个世代站标 webp（新增 `ripples.webp`，360×108，由生图工具重绘后抠白底） | `Hero.astro` 按世代拼 `/assets/images/logo/<k>.webp` |
 
 ## fonts/ 明细
 
