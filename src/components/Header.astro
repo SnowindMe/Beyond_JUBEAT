@@ -7,7 +7,7 @@
   <nav>
     <div class="nav-txt">
       {/* 二级页面都还没做：指向真实路径，落进自定义 404（施工中）而不是原地不动 */}
-      <a href="/songs/">曲目</a><a href="/jubility/">Jubility</a><a href="/emblem/">Emblem</a><a href="/partners/">伙伴</a><a href="/achievements/">成就</a>
+      <a href="/songs/">曲目</a><a href="/jubility/">Jubility</a><a href="/emblem/">Emblem</a><a href="/partners/">伙伴</a><a href="/achievements/">成就</a><a href="/recent/">最近更改</a>
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
@@ -19,6 +19,10 @@
       </a>
       <a class="nav-i" href="/login/" aria-label="登录" title="登录">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.2" r="3.6"/><path d="M4.8 20c.6-3.5 3.7-5.5 7.2-5.5s6.6 2 7.2 5.5"/></svg>
+      </a>
+      {/* 窄屏 .nav-txt 会整体隐藏，最近更改只留这个图标入口 */}
+      <a class="nav-i nav-i-recent" href="/recent/" aria-label="最近更改" title="最近更改">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg>
       </a>
     </div>
     <div class="tsw">

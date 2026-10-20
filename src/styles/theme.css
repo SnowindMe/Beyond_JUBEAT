@@ -374,6 +374,10 @@ html[data-g="knit"] .mark b .til {
     opacity: 1;
     background: color-mix(in srgb, var(--acc) 18%, transparent);
 }
+/* 最近更改的图标入口只在窄屏出现（宽屏有 .nav-txt 的文字链接） */
+.top nav a.nav-i-recent {
+    display: none;
+}
 .nav-i svg {
     display: block;
     width: 17px;
@@ -1750,6 +1754,9 @@ html[data-g="ripples"] {
     .nav-ico {
         margin-right: 4px;
     }
+    .top nav a.nav-i-recent {
+        display: inline-flex;
+    }
     .top nav a.nav-i {
         width: 28px;
         height: 28px;
@@ -1790,5 +1797,118 @@ html[data-g="ripples"] {
     .foot-r {
         align-items: flex-start;
         text-align: left;
+    }
+}
+
+/* ---------- 最近更改（/recent/） ---------- */
+.rc {
+    padding: clamp(14px, 2vw, 22px);
+}
+.rc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: clamp(28px, 4.5vw, 54px) clamp(14px, 3vw, 30px);
+    text-align: center;
+}
+.rc-note {
+    max-width: 46ch;
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink3);
+}
+.rc-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.rc-item {
+    padding: 12px 14px;
+    border: 1px solid var(--edge);
+    border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--glass2) 72%, transparent);
+}
+.rc-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+.rc-time {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink3);
+    letter-spacing: 0.04em;
+}
+.rc-user {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--acc);
+}
+.rc-target {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+}
+.rc-target:hover {
+    color: var(--acc);
+}
+.rc-sum {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--ink2);
+}
+.rc-diff {
+    margin-top: 8px;
+    font-size: 12.5px;
+}
+.rc-diff > summary {
+    cursor: pointer;
+    color: var(--ink3);
+    letter-spacing: 0.04em;
+}
+.rc-diff > summary:hover {
+    color: var(--ink);
+}
+.rc-diff-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: var(--r-xs);
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--edge);
+}
+.rc-before,
+.rc-after {
+    display: flex;
+    gap: 8px;
+    line-height: 1.6;
+    color: var(--ink2);
+    overflow-wrap: anywhere;
+}
+.rc-before {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in srgb, var(--ink3) 60%, transparent);
+    opacity: 0.8;
+}
+.rc-tag {
+    flex: none;
+    font-family: var(--font-data);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink3);
+    padding-top: 2px;
+}
+@media (max-width: 768px) {
+    .rc-top {
+        flex-wrap: wrap;
+        gap: 6px 10px;
     }
 }

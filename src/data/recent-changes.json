@@ -1,0 +1,4 @@
+{
+  "_comment": "「最近更改」列表数据源。站点目前还没有登录系统与后端，这里保持空数组，页面会显示等待接入的空状态。将来接 Cloudflare D1 + Workers 后，由接口产出同样结构的记录：{ time, user, target:{ label, href }, summary, before, after }。",
+  "changes": []
+}

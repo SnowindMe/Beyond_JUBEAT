@@ -1,0 +1,68 @@
+---
+// 最近更改：已登录用户的编辑记录。
+// 现在站点还没有登录与后端，changes 为空 → 显示等待接入的空状态。
+import Layout from '../layouts/Base.astro';
+import recent from '../data/recent-changes.json';
+import { pageTitle } from '../lib/title';
+
+const changes = recent.changes ?? [];
+const count = changes.length;
+---
+
+<Layout
+  title={pageTitle('最近更改')}
+  canonicalPath="/recent/"
+  description="jubeat 音乐魔方中文资料站的最近更改：记录已登录用户对站点内容的每一次编辑。"
+  noindex
+>
+  <section class="band">
+    <div class="band-h">
+      <h2>最近更改</h2>
+      <em>{count} changes</em>
+    </div>
+
+    <div class="panel rc">
+      {count === 0 ? (
+        <div class="rc-empty">
+          <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
+          <p class="wip-t">还没有任何更改记录</p>
+          <span class="wip-s">awaiting first edit</span>
+          <p class="rc-note">
+            这里会按时间倒序列出已登录用户对站点内容的编辑：谁、什么时候改了哪个页面、改了什么、前后差异。
+            登录与写入接口还没接上，所以列表暂时是空的。
+          </p>
+        </div>
+      ) : (
+        <ol class="rc-list">
+          {changes.map((c) => (
+            <li class="rc-item">
+              <div class="rc-top">
+                <time class="rc-time" datetime={c.time}>{c.time}</time>
+                <span class="rc-user">{c.user}</span>
+              </div>
+              <a class="rc-target" href={c.target.href}>{c.target.label}</a>
+              <p class="rc-sum">{c.summary}</p>
+              {(c.before || c.after) && (
+                <details class="rc-diff">
+                  <summary>前后差异</summary>
+                  <div class="rc-diff-body">
+                    {c.before && <div class="rc-before"><span class="rc-tag">改前</span>{c.before}</div>}
+                    {c.after && <div class="rc-after"><span class="rc-tag">改后</span>{c.after}</div>}
+                  </div>
+                </details>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="panel wip">
+      <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="wip-t">编辑与登录功能还在施工中，前面的区域以后再来探索吧......</p>
+      <span class="wip-s">under construction</span>
+    </div>
+  </section>
+</Layout>

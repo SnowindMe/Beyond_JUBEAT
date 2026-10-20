@@ -2,9 +2,11 @@
 import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import data from '../data/data.json';
+import { pageTitle } from '../lib/title';
 ---
 
 <Layout
+  title={pageTitle('首页')}
   canonicalPath="/"
   description={`jubeat 音乐魔方中文资料站：${data.stat.gens} 个世代、${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 14 套世代主题切换。`}
 >

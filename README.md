@@ -14,7 +14,11 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 >
-> 导航里的「曲目 / Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的是**还没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。
+> 导航里的「曲目 / Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的是**还没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。「最近更改」是已做出来的页面，见下。
+
+页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
+
+**/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
 页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
@@ -27,6 +31,7 @@ Beyond_JUBEAT/
 ├─ src/                       Astro 源码
 │  ├─ pages/
 │  │  ├─ index.astro          首页（Hero + 施工中占位）
+│  │  ├─ recent.astro         最近更改（已登录用户编辑记录，现为空状态）
 │  │  └─ 404.astro            404 页
 │  ├─ components/
 │  │  ├─ Header.astro         顶部导航 + 主题切换按钮
@@ -34,9 +39,11 @@ Beyond_JUBEAT/
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
 │  ├─ styles/theme.css        全站样式（约 38 KB）
+│  ├─ lib/title.ts            页面标题格式「XXX · Beyond ↑ JUBEAT ♪~」
 │  └─ data/
 │     ├─ data.json            页面聚合数据（约 11 KB）
-│     └─ site.json            站点自有版本号（页脚 v X.X.X）
+│     ├─ site.json            站点自有版本号（页脚 v X.X.X）
+│     └─ recent-changes.json  最近更改的记录（现为空数组，待接后端）
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/

@@ -6,6 +6,7 @@ import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import data from '../data/data.json';
 import site from '../data/site.json';
+import { pageTitle, SITE_NAME } from '../lib/title';
 
 interface Props {
   title?: string;
@@ -23,7 +24,7 @@ interface Props {
 const SITE = 'https://wiki.byd-ub.top';
 
 const {
-  title = 'jubeat 音乐魔方 · 中文资料站',
+  title = pageTitle('首页'),
   description = `jubeat 音乐魔方中文资料站：${data.stat.gens} 个世代、${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 14 套世代主题切换。`,
   gen = 'ave',
   font = 'F',
@@ -61,7 +62,7 @@ const BUILD_DATE = (() => {
       被 CF 兜到 404 页后仍被索引成重复内容。 */}
   {canonical && <link rel="canonical" href={canonical} />}
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Beyond ↑ JUBEAT ♪~" />
+  <meta property="og:site_name" content={SITE_NAME} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   {canonical && <meta property="og:url" content={canonical} />}
