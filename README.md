@@ -13,6 +13,8 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 把 jubeat 从 2008 年（jubeat）到 2023 年（jubeat 音乐魔方）**15 个世代 / 513 首曲目 / 1512 个谱面**整理成一个可浏览的资料站。
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
+>
+> 导航里的「曲目 / Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的是**还没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。
 
 页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
@@ -157,6 +159,17 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `/index.html`、`/404.html` | `max-age=0, must-revalidate`（每次都回源确认） |
 | `/favicon.svg` | `max-age=86400` |
 
+### SEO 与站点图标
+
+| 项 | 位置 | 说明 |
+| --- | --- | --- |
+| `robots.txt` / `sitemap.xml` | `public/`（构建时生成） | `npm run build` 先跑 `scripts/gen-seo.cjs`，lastmod 是当天；只收录首页，施工中的二级页不进 sitemap |
+| og:image | `public/assets/images/og/cover.png` | 1200x630，字标反相后压在 ave 背景上；`scripts/gen-brand-assets.cjs` 生成 |
+| apple-touch-icon | `public/apple-touch-icon.png` | 180x180，由 `favicon.svg` 渲染 |
+| canonical / og / twitter | `src/layouts/Base.astro` | 默认拼 `https://wiki.byd-ub.top` + `canonicalPath`；404 页传 `canonicalPath=""` 且 `noindex`，不输出 canonical |
+
+素材（背景/站标/字体）换了之后跑一次 `node scripts/gen-brand-assets.cjs` 重生成分享图。
+
 ### CI（GitHub Actions）
 
 | 工作流 | 触发 | 做什么 |
@@ -167,13 +180,26 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 
 ## 性能
 
-首屏（1280x800，本地构建产物，无压缩）约 **20 个请求 / 158 KB**，FCP ≈ 0.44 s。做过这几件事：
+实测（本机 `dist/` 静态服务器 + ego 浏览器，1280x800，冷加载跑 3 次取中位数）：
+
+| 指标 | 值 |
+| --- | --- |
+| 请求数 | 20 |
+| 解码后总字节 | 160 KB |
+| TTFB | 20 ms |
+| FCP | 440 ms |
+| DOMContentLoaded | 208 ms |
+| load | 470 ms |
+
+字节构成：图片 11 KB + CSS/字体 6 KB（首屏只取当前世代的 1 张背景 + 1 张站标 + 9 张曲绘；背景 32 KB 与站标 11 KB 走 head 里的 preload，和 CSS 并行）。
+
+做过这几件事：
 
 | 项 | 做法 | 效果 |
 | --- | --- | --- |
-| 字标 | 10 张世代站标原本全部渲染、靠 CSS 隐藏 → 改成单个 `<img id="wordLogo">` 按当前世代设 src | 少下 9 张，约 -150 KB |
+| 字标 | 世代站标原本全部渲染、靠 CSS 隐藏 → 改成单个 `<img id="wordLogo">` 按当前世代设 src | 少下 10 张，约 -160 KB |
 | 曲绘 | 78 张缩到 144x144（显示 84 CSS px，够了） | 1344 → 438 KB |
-| 背景 | 13 张缩到 1440 宽 q62 | 988 → 362 KB |
+| 背景 | 世代背景缩到 1440 宽 q62 | 单张 5–62 KB |
 | 站标 | PNG → WebP，360 宽 q88 | 421 → 179 KB |
 | 字体 | woff2 子集化到拉丁区（U+0020-007E） | 168 → 113 KB |
 | 缓存 | `_headers` 给 `/_astro/*` 加一年 immutable | 二次访问不再回源取 CSS |
@@ -181,7 +207,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 
 压缩用 `npm run opt`（sharp）、子集化用 `npm run fonts`（fonttools）。注意两个脚本都是**原地覆盖**，重复跑会越压越糊；要重压先从 git 历史取原图（`91e698e` 是最后一批原图）。
 
-图片是体积大头，压缩前占 81%；现在整站资源约 1.1 MB，其中只有当前世代的 1 张站标 + 1 张背景 + 9 张曲绘会进首屏。
+图片是体积大头；整站素材（14 张背景 + 11 张站标 + 78 张曲绘 + 7 个字体）约 1.1 MB，但首屏只取当前世代的 1 张站标 + 1 张背景 + 9 张曲绘，其余按需。
 
 ## 本地预览构建产物
 

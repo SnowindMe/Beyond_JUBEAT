@@ -7,3 +7,6 @@
 - `screenshots/`：脚本产出的截图（已 gitignore）
 - `logs/`：运行日志（已 gitignore）
 - `tmp/`：临时中间文件，随时可清（已 gitignore）
+## 新增脚本
+- `gen-seo.cjs`：生成 `public/robots.txt` 与 `public/sitemap.xml`（`npm run build` 前自动跑，lastmod 取当天）
+- `gen-brand-assets.cjs`：生成 og 分享图（1200x630）与 apple-touch-icon（180x180）；只在背景/站标/favicon 变动后手跑
