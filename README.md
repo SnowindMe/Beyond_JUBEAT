@@ -20,6 +20,8 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 **/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
+**开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线）。它只在**每个会话的第一次进入**出现（`sessionStorage` 记 `jb-boot`），之后翻页不再挡——静态站每次点导航都是整页重载，每页都盖一层会把「快」的观感全吃掉。最少停 900ms（太快闪一下像故障），最多 3s（`load` 被慢资源拖住时不锁人），退场淡出 460ms 后自摘 DOM 并解锁滚动。设了 `prefers-reduced-motion: reduce` 的用户直接跳过。样式与脚本都是 `is:inline`，必须在首帧前生效。
+
 页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
 页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
@@ -35,6 +37,7 @@ Beyond_JUBEAT/
 │  │  └─ 404.astro            404 页
 │  ├─ components/
 │  │  ├─ Header.astro         顶部导航 + 主题切换按钮
+│  │  ├─ BootScreen.astro     开屏 LOADING 遮罩（每会话一次，is:inline）
 │  │  ├─ Hero.astro           主视觉（站标 / 统计 / 曲绘方块）
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
@@ -49,7 +52,7 @@ Beyond_JUBEAT/
 │  ├─ assets/
 │  │  ├─ images/bg/           14 张世代主题背景 webp（约 300 KB，1440 宽）
 │  │  ├─ images/jackets/      78 张曲绘 webp（438 KB，144px）
-│  │  ├─ images/logo/         11 张世代站标 webp（约 200 KB，360 宽）
+│  │  ├─ images/logo/         11 张世代站标 webp（约 210 KB，570 宽 DPR2）
 │  │  ├─ images/og/           og:image 分享图（1200x630 png）
 │  │  ├─ fonts/               7 个 woff2 主题/装饰字体（113 KB，拉丁子集）
 │  │  └─ data/ docs/ media/   预留空目录

@@ -4,6 +4,7 @@
 import '../styles/theme.css';
 import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
+import BootScreen from '../components/BootScreen.astro';
 import data from '../data/data.json';
 import site from '../data/site.json';
 import { pageTitle, SITE_NAME } from '../lib/title';
@@ -103,6 +104,7 @@ const BUILD_DATE = (() => {
   </script>
 </head>
 <body>
+  <BootScreen />
   <div class="bgv" aria-hidden="true"><div class="bgv-l"></div><div class="bgv-l"></div></div>
   <div class="wrap">
     <Header />

@@ -9,7 +9,8 @@
 //    git worktree add 某个提交（91e698e 是最后一个未压缩提交）。
 //
 // 当前参数（2026-10-20 定稿，依据实际渲染尺寸与 DPR）：
-//   logo    显示 285 CSS px，DPR 2 上限 570 -> 360 宽 webp q88（且只加载当前世代 1 张）
+//   logo    显示 285 CSS px，DPR 2 上限 570 -> 570 宽 webp q90（且只加载当前世代 1 张）
+//           ripples 于 2026-10-20 换成高清抠图（源在 archive/materials/jubeat_bg/logo_raw/ripples_logo_hi.png）
 //   bg      全屏铺满，按 1440 宽压 webp q62
 //   jackets 显示 84 CSS px，DPR 2 上限 168 -> 取 144 webp q78
 const sharp = require('sharp');
@@ -45,7 +46,7 @@ async function convert(dir, filter, handler, outExt) {
 
   // 站标：只加载当前世代那一张（见 Hero.astro + ThemeScript.astro）
   add(await convert('logo', (f) => f.endsWith('.png'),
-    (s) => s.resize({ width: 360, withoutEnlargement: true }).webp({ quality: 88, effort: 6 }).toBuffer(), '.webp'));
+    (s) => s.resize({ width: 570, withoutEnlargement: true }).webp({ quality: 90, alphaQuality: 100, effort: 6 }).toBuffer(), '.webp'));
 
   // 背景：1440 宽 q62
   add(await convert('bg', (f) => f.endsWith('.webp') && !f.endsWith('.tmp'),
