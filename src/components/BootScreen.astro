@@ -40,6 +40,14 @@
        1) 首访开屏（每会话一次）
        2) 真的要等的时候（点导航加载下一页 / 切世代要下新背景与字标）
      只在「预计超过 ~150ms」时才亮，缓存命中时根本不出现，避免每次点击都闪一下。 */
+  /* 中心圆孔半径（百分比 = 到最远角的距离）：
+       -30% 时圆孔不存在 → 遮罩盖满；130% 时圆孔超出四角 → 遮罩完全看不见。
+     注册成可插值的属性，才能让遮罩半径平滑生长（普通自定义属性只能跳变）。 */
+  @property --boot-r {
+    syntax: "<percentage>";
+    inherits: false;
+    initial-value: -30%;
+  }
   .boot {
     position: fixed;
     inset: 0;
@@ -57,6 +65,16 @@
     visibility: hidden;
     pointer-events: none;
     transition: opacity 0.32s ease, visibility 0s linear 0.32s;
+    /* 圆孔遮罩：中心透明、外围不透明。半径缩小时可见区从四角往中心收，
+       半径长大时又从中心往四周退——正是「四周→中间淡入 / 中间→四周淡出」。 */
+    --boot-r: -30%;
+    --boot-soft: 26%;
+    -webkit-mask-image: radial-gradient(circle at 50% 50%,
+      transparent calc(var(--boot-r) - var(--boot-soft)),
+      #000 calc(var(--boot-r) + var(--boot-soft)));
+    mask-image: radial-gradient(circle at 50% 50%,
+      transparent calc(var(--boot-r) - var(--boot-soft)),
+      #000 calc(var(--boot-r) + var(--boot-soft)));
   }
   html.boot-run .boot {
     opacity: 1;
@@ -71,9 +89,36 @@
   @keyframes bootIn {
     from { opacity: 0; }
   }
+  /* 支持圆孔遮罩的浏览器走这套：四周→中间淡入、中间→四周淡出 */
+  html.boot-iris.boot-run .boot {
+    animation: bootIrisIn 0.42s cubic-bezier(0.22, 0.68, 0.28, 1) both;
+    transition: none;
+  }
+  /* 退场：圆孔从中心往四周涨开（--boot-r -30% → 130%），
+     同时把 opacity 一起收到 0。opacity 必须由动画收到 0，
+     否则动画播完摘掉 boot-out 的那一帧会退回基础态（遮罩盖满 + opacity 1），
+     屏幕会黑一下再淡出——那就成了「整块黑幕淡出」而不是圆孔退开。 */
+  html.boot-iris.boot-out .boot {
+    visibility: visible;
+    pointer-events: none;
+    animation: bootIrisOut 0.42s cubic-bezier(0.22, 0.68, 0.28, 1) both;
+    transition: none;
+  }
+  /* 进场：圆孔从「比四角还大」缩到不存在。
+     半径大 = 中间透明区大 = 只剩四角可见，随着半径变小可见区由四周向中心收拢。 */
+  @keyframes bootIrisIn {
+    from { --boot-r: 130%; opacity: 0; }
+    to { --boot-r: -30%; opacity: 1; }
+  }
+  @keyframes bootIrisOut {
+    from { --boot-r: -30%; opacity: 1; }
+    to { --boot-r: 130%; opacity: 0; }
+  }
   /* 遮罩期间锁住滚动：底部内容被拖动会在遮罩边缘露出来 */
   html.boot-run,
-  html.boot-run body {
+  html.boot-run body,
+  html.boot-out,
+  html.boot-out body {
     overflow: hidden;
   }
   /* 扫描线 + 中心辉光：让纯色底看起来像机台屏幕而不是一块黑板 */
@@ -198,7 +243,8 @@
      visibility 在 0.32s 后才变 hidden，命中「淡出」而不是「瞬间消失」。 */
   @media (prefers-reduced-motion: reduce) {
     .boot,
-    html.boot-run .boot { transition: none; animation: none; }
+    html.boot-run .boot,
+    html.boot-iris.boot-out .boot { transition: none; animation: none; }
     .boot-pad i,
     .boot-bar i,
     .boot-dots i {
@@ -226,26 +272,53 @@
   var el = document.getElementById('boot');
   if (!el || d.getAttribute('data-boot') !== 'on') { window.jbBoot = { show: function () {}, hide: function () {}, begin: function () { return function () {}; }, hold: function () { return function () {}; } }; return; }
 
+  // 圆孔遮罩能力检测：需要可插值的自定义属性（@property）+ mask-image。
+  // 两者缺一就退回原来的整体淡入淡出，不让动画变成「啪」地跳。
+  var iris = false;
+  try {
+    var css = window.CSS;
+    var maskOk = !!css && (css.supports('mask-image', 'radial-gradient(#000, transparent)') ||
+      css.supports('-webkit-mask-image', 'radial-gradient(#000, transparent)'));
+    var propOk = !!css && typeof css.registerProperty === 'function' && !!window.CSSPropertyRule;
+    iris = !!(maskOk && propOk);
+  } catch (e) { iris = false; }
+  if (iris) d.classList.add('boot-iris');
+
   var firstRun = d.classList.contains('boot-first');
   // 遮罩一律经 show() 点亮（head 脚本只留 boot-first 标记），所以 shown 从 false 起。
   // 曾经 head 脚本直接加 boot-run、这里又要 shown=firstRun 才不会「收不起来」，
   // 现在改成单一路径，别再往 head 脚本里加 class。
   var shown = false;
 
+  var outT = 0;
   function show(waitMode) {
     if (shown) return;
     shown = true;
     el.classList.toggle('is-wait', !!waitMode);
-    // 加 class 即触发 bootIn 动画（从 opacity 0 播到 1），
-    // 不依赖「上一帧已渲染」这个前提，首访第一帧挂上也照样渐入。
+    if (iris) {
+      // 上一轮退场还没走完就又要亮：先掐掉退场，再重新播进场
+      clearTimeout(outT);
+      d.classList.remove('boot-out');
+    }
+    // 加 class 即触发进场动画（iris 是半径从四周收到中心，
+    // 不支持时退回 bootIn 的整体透明度渐入），不依赖「上一帧已渲染」。
     d.classList.add('boot-run');
   }
   function hide() {
     if (!shown) return;
     shown = false;
-    // 只摘 boot-run：opacity 从 1 过渡回 0，visibility 延迟到过渡结束
-    d.classList.remove('boot-run');
     el.classList.remove('is-wait');
+    if (iris) {
+      // 圆孔从中心向四周退开：--boot-r 过渡到 130%，走完再摘 boot-out。
+      // 退场期间元素已经渲染过多帧，过渡起点是真实的，所以这里能用过渡。
+      d.classList.add('boot-out');
+      d.classList.remove('boot-run');
+      clearTimeout(outT);
+      outT = setTimeout(function () { d.classList.remove('boot-out'); }, 460);
+    } else {
+      // 只摘 boot-run：opacity 从 1 过渡回 0，visibility 延迟到过渡结束
+      d.classList.remove('boot-run');
+    }
   }
   /* 延迟显示：调用后 delay 毫秒内结束就完全不出现（缓存命中时就是这条路）。
      返回的 end() 既能「取消这次显示」也能「立刻收起」，两种调用都安全。 */
@@ -266,6 +339,16 @@
   }
 
   window.jbBoot = { show: show, hide: hide, begin: begin, hold: hold };
+
+  // 前进/后退走 bfcache 恢复时脚本不会重跑，但 class 会原样留着：
+  // 若恢复时正卡在退场里，html.boot-out 的 overflow:hidden 会把滚动永久锁死。
+  window.addEventListener('pageshow', function (ev) {
+    if (!ev.persisted) return;
+    clearTimeout(outT);
+    d.classList.remove('boot-out');
+    if (!shown) d.classList.remove('boot-run');
+    el.classList.remove('is-wait');
+  });
 
   // ---- 首访开屏：load 后收，最短 900ms / 最长 3s ----
   if (firstRun) {
