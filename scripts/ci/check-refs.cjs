@@ -31,6 +31,9 @@ let ok = 0;
 for (const [from, ref] of refs) {
   if (!ref || ref.startsWith('#') || ref.startsWith('data:') || /^[a-z]+:/i.test(ref) || ref.startsWith('//')) continue;
   if (/[<>{}]/.test(ref)) continue; // 注释/模板里的占位文本
+  // 以 / 结尾的是页面路由（导航链接），不是静态资源：它们由 Astro 页面
+  // 或 404 兜底提供，不该拿 public/ 的文件表来校验。
+  if (ref.endsWith('/')) continue;
   // /xxx 是站点绝对路径：源码期从 public/ 找，产物期从 dist/ 找
   const base = ref.startsWith('/') ? (isDist ? target : path.join(ROOT, 'public')) : path.dirname(from);
   const p = path.resolve(base, ref.replace(/^\//, ''));

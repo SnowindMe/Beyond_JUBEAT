@@ -12,14 +12,26 @@ interface Props {
   /** 首屏就带上的世代主题，默认 ave */
   gen?: string;
   font?: string;
+  /** 规范链接：默认拼到 site 上，404 页传空串表示不输出 */
+  canonicalPath?: string;
+  ogImage?: string;
+  /** 404 这类不该被索引的页面传 true */
+  noindex?: boolean;
 }
+
+const SITE = 'https://wiki.byd-ub.top';
 
 const {
   title = 'jubeat 音乐魔方 · 中文资料站',
-  description = 'jubeat 音乐魔方中文资料站：15 个世代、513 首曲目、1512 张谱面，支持 13 套世代主题切换。',
+  description = `jubeat 音乐魔方中文资料站：${data.stat.gens} 个世代、${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 14 套世代主题切换。`,
   gen = 'ave',
   font = 'F',
+  canonicalPath = '/',
+  ogImage = SITE + '/assets/images/og/cover.png',
+  noindex = false,
 } = Astro.props;
+
+const canonical = canonicalPath ? SITE + canonicalPath : null;
 ---
 
 <!doctype html>
@@ -30,7 +42,26 @@ const {
   <title>{title}</title>
   <meta name="description" content={description} />
   <meta name="theme-color" content="#0b1a22" />
+  {noindex && <meta name="robots" content="noindex,follow" />}
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="sitemap" href="/sitemap.xml" />
+  {/* 站点是单页 + 大量施工中的占位导航，canonical 固定到首页，避免 /foo/ 这类
+      被 CF 兜到 404 页后仍被索引成重复内容。 */}
+  {canonical && <link rel="canonical" href={canonical} />}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Beyond ↑ JUBEAT ♪~" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  {canonical && <meta property="og:url" content={canonical} />}
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
   {/* 首屏主题预热：在 CSS 应用前就把世代写回 <html>，避免老用户刷新时先闪一下 ave；
       同时提前 preload 该世代背景图（背景由 JS 设 background-image，浏览器发现得晚）。 */}
   <script is:inline>

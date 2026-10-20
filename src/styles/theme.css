@@ -1403,6 +1403,16 @@ html[data-g="ripples"] {
 /* 字标贴图（--logo/--logoar/--logow）在 logo.css 里以 data URI 内联，
    因为 Chromium 对 file:// 页面的 file:// mask-image 会按 CORS 拦截。 */
 
+/* ---------- 键盘焦点可见性 ----------
+   浏览器默认 outline 是 0.8px 近黑，在 14 套深色主题上几乎看不见；
+   统一换成 --acc 双环（内环带走一圈底色，浅色世代也有对比）。只对键盘生效，
+   鼠标点击不出现光圈。 */
+:where(a, button, [tabindex]):focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+}
+
 /* ---------- 导航右侧：世代背景切换 ---------- */
 .tsw {
     position: relative;
@@ -1477,14 +1487,24 @@ html[data-g="ripples"] {
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
+    /* 关闭态必须真正不可见且不可聚焦：只靠 opacity:0 时里面的 14 个按钮仍在 Tab 序列里，
+       键盘用户会连续 16 次聚焦到「看不见的按钮」上。visibility 负责从无障碍树/焦点序列里摘掉，
+       延迟 0.18s 让它等淡出动画走完；打开时立刻可见。 */
+    visibility: hidden;
     transition:
         opacity 0.18s ease,
-        transform 0.18s ease;
+        transform 0.18s ease,
+        visibility 0s linear 0.18s;
 }
 .tsw-pop[data-open="1"] {
     opacity: 1;
     transform: none;
     pointer-events: auto;
+    visibility: visible;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0s;
 }
 .tsw-g {
     display: grid;

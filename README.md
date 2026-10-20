@@ -14,7 +14,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 
-页面支持 **13 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
+页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
 ## 项目清单
 
@@ -34,17 +34,22 @@ Beyond_JUBEAT/
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/
-│  │  ├─ images/bg/           13 张世代主题背景 webp（362 KB，1440 宽）
+│  │  ├─ images/bg/           14 张世代主题背景 webp（约 300 KB，1440 宽）
 │  │  ├─ images/jackets/      78 张曲绘 webp（438 KB，144px）
-│  │  ├─ images/logo/         10 张世代站标 webp（179 KB，360 宽）
+│  │  ├─ images/logo/         11 张世代站标 webp（约 200 KB，360 宽）
+│  │  ├─ images/og/           og:image 分享图（1200x630 png）
 │  │  ├─ fonts/               7 个 woff2 主题/装饰字体（113 KB，拉丁子集）
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
+│  ├─ apple-touch-icon.png    iOS 主屏图标（180x180，由 favicon 渲染）
+│  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
 │  └─ favicon.svg             站点图标
 │
 ├─ scripts/                   工具脚本（不部署）
 │  ├─ build-data.cjs          songs.json → src/data/data.json + 同步曲绘
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
+│  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
+│  ├─ gen-brand-assets.cjs   生成 og 分享图与 apple-touch-icon（素材变了才跑）
 │  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
 │  ├─ subset-fonts.py         字体子集化（woff2 只留拉丁字符）
 │  ├─ probe/                  历史探测脚本（Playwright 时代留下的）
