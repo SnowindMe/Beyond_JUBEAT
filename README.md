@@ -18,7 +18,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
 
-页脚两列：左边是「最后一次编辑 日期 + 版本号（读 package.json 的 version）」，右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
+页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
 
 ## 项目清单
 
@@ -34,7 +34,9 @@ Beyond_JUBEAT/
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
 │  ├─ styles/theme.css        全站样式（约 38 KB）
-│  └─ data/data.json          页面聚合数据（约 11 KB）
+│  └─ data/
+│     ├─ data.json            页面聚合数据（约 11 KB）
+│     └─ site.json            站点自有版本号（页脚 v X.X.X）
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/

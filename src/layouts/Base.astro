@@ -5,7 +5,7 @@ import '../styles/theme.css';
 import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import data from '../data/data.json';
-import pkg from '../../package.json';
+import site from '../data/site.json';
 
 interface Props {
   title?: string;
@@ -109,7 +109,7 @@ const BUILD_DATE = (() => {
     <footer class="foot mono">
       <div class="foot-l">
         <span class="foot-k">最后一次编辑 <b>{BUILD_DATE}</b></span>
-        <span class="foot-ver">v{pkg.version}</span>
+        <span class="foot-ver">v{site.version}</span>
       </div>
       <div class="foot-r">
         <span class="mark mark-sm">
