@@ -75,7 +75,7 @@ function main() {
         String(s.songId), s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
         genName, 'jp', cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
-        s.alt ? 1 : 0, s.jacketFile || null,
+        s.alt ? 1 : 0, webpCover(s.jacketFile),
         arc.addedAt || null, note
       );
       stat.jp++;
@@ -118,6 +118,12 @@ function jpUnlockNote(arc) {
   if (arc.exchangeCost) parts.push('兑换 ' + arc.exchangeCost);
   if (arc.limited && arc.limitedPeriod && arc.limitedPeriod.endsOn) parts.push('限时至 ' + arc.limitedPeriod.endsOn);
   return parts.length ? parts.join(' / ') : null;
+}
+
+// 曲绘入库即归一化为站点素材名：日服源文件是 idN.gif，build-data 转档产物统一叫 idN.webp。
+function webpCover(v) {
+  const s = String(v || '').trim();
+  return s ? s.replace(/\.gif$/i, '.webp') : null;
 }
 
 function num(v) {
