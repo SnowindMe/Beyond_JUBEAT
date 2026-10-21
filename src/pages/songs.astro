@@ -1,0 +1,245 @@
+---
+// 曲目库：日服 / 国服 同页切换（不换网址），分区按服务器各自的分类，区内再按世代分组。
+// 全部曲目在构建期烘成静态 HTML，切换与筛选是纯前端显隐，不请求接口、不动 URL。
+import Layout from '../layouts/Base.astro';
+import '../styles/songs.css';
+import data from '../data/data.json';
+import songs from '../data/songs.json';
+import { pageTitle } from '../lib/title';
+
+type Song = {
+  id: string; t: string; a: string | null;
+  lv: { bsc: number | null; adv: number | null; ext: number | null };
+  cover: string | null; d: string | null; bpm: string | null;
+  gen: string; srv: string; cat: string; alt: number;
+  unlock: string | null; kind: string;
+};
+
+const ALL = songs as Song[];
+
+// 世代顺序取 data.json 的 GEN_ORDER（日服按年份从旧到新，国服当前唯一世代）
+const GEN_JP = data.gen.filter((g) => g.s === 'jp').sort((a, b) => Number(a.y) - Number(b.y));
+const GEN_CN = data.gen.filter((g) => g.s === 'cn');
+const yearOf = (gen: string, srv: string) =>
+  [...GEN_JP, ...GEN_CN].find((g) => g.k === gen)?.y ?? '';
+
+// 分区顺序：日服 版权 → 原创（版权是外来曲，先列）；国服 KONAMI原创 → 音乐魔方原创 → 音乐魔方流行
+const CATS: Record<string, string[]> = {
+  jp: ['版权', '原创'],
+  cn: ['KONAMI原创', '音乐魔方原创', '音乐魔方流行'],
+};
+const GEN_BY_SRV: Record<string, string[]> = {
+  jp: GEN_JP.map((g) => g.k),
+  cn: GEN_CN.map((g) => g.k),
+};
+
+// 三张服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
+// 国际服暂无独立曲库，与日服共用同一份数据（body 仍是 jp/cn 两套）。
+const SRV_CARDS = [
+  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
+  { id: 'intl', name: '国际服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
+  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
+] as const;
+const bodySrv = (id: string) => (id === 'intl' ? 'jp' : id);
+
+// 按 服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）
+const extOf = (s: Song) => s.lv.ext ?? -1;
+const bucket: Record<string, Record<string, Record<string, Song[]>>> = { jp: {}, cn: {} };
+for (const srv of ['jp', 'cn']) {
+  for (const cat of CATS[srv]) {
+    bucket[srv][cat] = {};
+    for (const gen of GEN_BY_SRV[srv]) bucket[srv][cat][gen] = [];
+  }
+}
+for (const s of ALL) {
+  const g = bucket[s.srv]?.[s.cat]?.[s.gen];
+  if (g) g.push(s);
+}
+for (const srv of ['jp', 'cn']) {
+  for (const cat of CATS[srv]) {
+    for (const gen of GEN_BY_SRV[srv]) {
+      bucket[srv][cat][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
+    }
+  }
+}
+
+const countOf = (srv: string, cat?: string) =>
+  ALL.filter((s) => s.srv === srv && (!cat || s.cat === cat)).length;
+const srvTotal = (srv: string) => ALL.filter((s) => s.srv === srv).length;
+
+// 定数色档：沿用 theme.css 的 --lv6…--lv10h 令牌
+const lvClass = (v: number | null) =>
+  v == null ? 'lv-0' : v >= 10.5 ? 'lv-h' : v >= 10 ? 'lv-10' : v >= 9 ? 'lv-9' : v >= 8 ? 'lv-8' : v >= 7 ? 'lv-7' : 'lv-6';
+const dash = (v: number | null) => (v == null ? '—' : String(v));
+
+const DEFAULT_SRV = 'jp';
+
+// 首屏曲绘：默认视图（日服 · 版权 · 前两个世代）里的前 18 张优先加载，
+// 其余一律 lazy + low，避免一次开 1200+ 请求。
+const EAGER = new Set(
+  GEN_JP.map((g) => bucket.jp['版权'][g.k] ?? [])
+    .reduce((acc, arr) => acc.concat(arr), [])
+    .slice(0, 18)
+    .map((s) => s.id),
+);
+---
+
+<Layout
+  title={pageTitle('曲目')}
+  canonicalPath="/songs/"
+  description={`jubeat 音乐魔方曲目库：日服/国际服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首，按世代分组，同页切换服务器。`}
+>
+  <section class="band songs" id="songsRoot" data-srv={DEFAULT_SRV}>
+    <div class="band-h">
+      <h2>曲目</h2>
+      <em id="scCount">{srvTotal(DEFAULT_SRV)} songs</em>
+    </div>
+
+    <div class="panel sc-tools">
+      <div class="sc-srv" role="group" aria-label="切换服务器">
+        {SRV_CARDS.map((s) => (
+          <button type="button" class={`sc-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`} data-srv={s.id} aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}>
+            <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="120" height="40" loading="eager" decoding="async" />
+            <span class="sc-srv-n">{s.name}</span>
+          </button>
+        ))}
+      </div>
+
+      <div class="sc-cats" role="group" aria-label="按分区筛选">
+        {(['jp', 'cn'] as const).map((srv) => (
+          <div class="sc-cat-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
+            <button type="button" class="sc-chip is-on" data-cat="all" aria-pressed="true">全部分区<b>{srvTotal(srv)}</b></button>
+            {CATS[srv].map((c) => (
+              <button type="button" class="sc-chip" data-cat={c} aria-pressed="false">{c}<b>{countOf(srv, c)}</b></button>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {(['jp', 'cn'] as const).map((srv) => (
+      <div class="sc-body" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
+        {CATS[srv].map((cat) => (
+          <section class="sc-sec" data-cat={cat}>
+            <header class="sc-sec-h">
+              <h3>{cat}</h3>
+              <em>{countOf(srv, cat)} 首</em>
+            </header>
+            {GEN_BY_SRV[srv].map((gen) => {
+              const list = bucket[srv][cat][gen];
+              if (!list.length) return null;
+              return (
+                <div class="sc-gen">
+                  <div class="sc-gen-h">
+                    <b>{gen}</b>
+                    {yearOf(gen, srv) && <span>{yearOf(gen, srv)}</span>}
+                    <i>{list.length}</i>
+                  </div>
+                  <div class="sc-grid">
+                    {list.map((s) => (
+                      <article class="sc-card">
+                        <div class="sc-j">
+                          {s.cover ? (
+                            <img
+                              src={`/assets/images/jackets/${s.cover}`}
+                              alt=""
+                              width="144"
+                              height="144"
+                              loading={EAGER.has(s.id) ? 'eager' : 'lazy'}
+                              fetchpriority={EAGER.has(s.id) ? 'high' : 'low'}
+                              decoding="async"
+                            />
+                          ) : (
+                            <span class="sc-no">no jacket</span>
+                          )}
+                          {s.alt ? <span class="sc-alt">[2]</span> : null}
+                        </div>
+                        <b class="sc-t" title={s.t}>{s.t}</b>
+                        <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
+                        <div class="sc-lv">
+                          <i class={`lv ${lvClass(s.lv.bsc)}`}><u>B</u>{dash(s.lv.bsc)}</i>
+                          <i class={`lv ${lvClass(s.lv.adv)}`}><u>A</u>{dash(s.lv.adv)}</i>
+                          <i class={`lv ${lvClass(s.lv.ext)}`}><u>E</u>{dash(s.lv.ext)}</i>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        ))}
+      </div>
+    ))}
+  </section>
+
+  <script is:inline>
+    // 服务器切换 + 分区筛选：只改 data-srv / hidden，不写 localStorage、不动 URL。
+    // 三张卡里「国际服」与「日服」共用同一份曲库：body 的归属按 bodySrv 映射。
+    (function () {
+      var root = document.getElementById('songsRoot');
+      if (!root) return;
+      var countEl = document.getElementById('scCount');
+      var srvBtns = root.querySelectorAll('.sc-srv-b');
+      var sets = root.querySelectorAll('.sc-cat-set');
+      var bodies = root.querySelectorAll('.sc-body');
+
+      var state = { srv: root.getAttribute('data-srv') || 'jp', cat: 'all' };
+
+      function apply() {
+        root.setAttribute('data-srv', state.srv);
+        var bs = state.srv === 'intl' ? 'jp' : state.srv;
+        for (var i = 0; i < srvBtns.length; i++) {
+          var on = srvBtns[i].getAttribute('data-srv') === state.srv;
+          srvBtns[i].classList.toggle('is-on', on);
+          srvBtns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        for (var j = 0; j < sets.length; j++) {
+          sets[j].hidden = sets[j].getAttribute('data-srv') !== bs;
+        }
+        var total = 0;
+        for (var k = 0; k < bodies.length; k++) {
+          var body = bodies[k];
+          var isMine = body.getAttribute('data-srv') === bs;
+          body.hidden = !isMine;
+          var secs = body.querySelectorAll('.sc-sec');
+          for (var m = 0; m < secs.length; m++) {
+            var show = isMine && (state.cat === 'all' || secs[m].getAttribute('data-cat') === state.cat);
+            secs[m].hidden = !show;
+            if (show) total += secs[m].querySelectorAll('.sc-card').length;
+          }
+        }
+        if (countEl) countEl.textContent = total + ' songs';
+      }
+
+      root.addEventListener('click', function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        var srvB = t.closest('.sc-srv-b');
+        if (srvB) { state.srv = srvB.getAttribute('data-srv'); state.cat = 'all';
+          var chips = document.querySelectorAll('.sc-cat-set .sc-chip');
+          for (var i = 0; i < chips.length; i++) {
+            var on = chips[i].getAttribute('data-cat') === 'all';
+            chips[i].classList.toggle('is-on', on);
+            chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+          }
+          apply(); return; }
+        var chip = t.closest('.sc-chip');
+        if (chip) {
+          var set = chip.closest('.sc-cat-set');
+          if (!set || set.getAttribute('data-srv') !== (state.srv === 'intl' ? 'jp' : state.srv)) return;
+          state.cat = chip.getAttribute('data-cat');
+          var all = set.querySelectorAll('.sc-chip');
+          for (var n = 0; n < all.length; n++) {
+            var sel = all[n] === chip;
+            all[n].classList.toggle('is-on', sel);
+            all[n].setAttribute('aria-pressed', sel ? 'true' : 'false');
+          }
+          apply();
+        }
+      });
+
+      apply();
+    })();
+  </script>
+</Layout>
