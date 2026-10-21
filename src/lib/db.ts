@@ -38,7 +38,9 @@ const rowToSong = (r: D1Row): Song => ({
   t: r.title,
   a: r.artist,
   lv: { bsc: r.bsc, adv: r.adv, ext: r.ext },
-  cover: r.cover,
+  // D1 里日服 cover 存的是源文件原名 idN.gif；站点素材统一转成 .webp（build-data 同名转换）。
+  // 在这里归一化，页面直接拼 URL 就不会 404。
+  cover: r.cover ? String(r.cover).replace(/\.gif$/i, '.webp') : null,
   d: r.added_at,
   bpm: r.bpm,
   gen: r.gen_name,
