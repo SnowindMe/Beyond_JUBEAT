@@ -1,13 +1,19 @@
 ---
 // 顶栏：品牌标 + 导航 + 世代主题切换（点击弹出 13 个世代）
+// 只有真的存在的二级页才标当前项；施工中的条目指向真实路径、落进自定义 404。
+const path = Astro.url.pathname;
 ---
 
 <header class="top">
   <a class="mark" href="/" aria-label="Beyond ↑ JUBEAT 首页"><i></i><div class="mark-x"><b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b><span>Not Only Jubeat Wiki</span></div></a>
   <nav>
+    {/* 窄屏导航入口：≤768px 时 .nav-txt 收起，只留这个汉堡按钮（主人 2026-10-22） */}
+    <button type="button" class="nav-burger" id="navBurger" aria-expanded="false" aria-controls="navDrawer" aria-label="打开导航菜单" title="导航">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <div class="nav-txt">
       {/* 二级页面都还没做：指向真实路径，落进自定义 404（施工中）而不是原地不动 */}
-      <a href="/songs/">曲目</a><a href="/jubility/">Jubility</a><a href="/emblem/">Emblem</a><a href="/partners/">伙伴</a><a href="/achievements/">成就</a><a href="/recent/">最近更改</a>
+      <a href="/songs/" class:list={[{ on: path === '/songs/' }]} aria-current={path === '/songs/' ? 'page' : undefined}>曲目</a><a href="/jubility/">Jubility</a><a href="/emblem/">Emblem</a><a href="/partners/">伙伴</a><a href="/achievements/">成就</a><a href="/recent/" class:list={[{ on: path === '/recent/' }]} aria-current={path === '/recent/' ? 'page' : undefined}>最近更改</a>
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
@@ -35,4 +41,44 @@
       </div>
     </div>
   </nav>
+  {/* 窄屏导航抽屉：与 .nav-txt 同一组链接，展开时覆盖在顶栏下方 */}
+  <div class="nav-drawer" id="navDrawer" data-open="0" role="group" aria-label="站点导航">
+    <a href="/songs/" class:list={[{ on: path === '/songs/' }]}>曲目</a>
+    <a href="/jubility/">Jubility</a>
+    <a href="/emblem/">Emblem</a>
+    <a href="/partners/">伙伴</a>
+    <a href="/achievements/">成就</a>
+    <a href="/recent/" class:list={[{ on: path === '/recent/' }]}>最近更改</a>
+  </div>
+  <script is:inline>
+    // 汉堡菜单：只在窄屏出现。点按钮切 data-open，点链接/点外部/Esc 关闭。
+    (function () {
+      var btn = document.getElementById('navBurger');
+      var drawer = document.getElementById('navDrawer');
+      if (!btn || !drawer) return;
+      function set(open) {
+        drawer.setAttribute('data-open', open ? '1' : '0');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+      }
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        set(drawer.getAttribute('data-open') !== '1');
+      });
+      drawer.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('a')) set(false);
+      });
+      document.addEventListener('click', function (e) {
+        if (drawer.getAttribute('data-open') !== '1') return;
+        if (drawer.contains(e.target) || btn.contains(e.target)) return;
+        set(false);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && drawer.getAttribute('data-open') === '1') {
+          set(false);
+          btn.focus();
+        }
+      });
+    })();
+  </script>
 </header>

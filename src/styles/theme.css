@@ -353,6 +353,64 @@ html[data-g="knit"] .mark b .til {
     background: color-mix(in srgb, var(--acc) 14%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 34%, transparent);
 }
+/* 汉堡菜单按钮：桌面隐藏，≤768px 才出现（见文件末尾移动端段） */
+.nav-burger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: var(--r-xs);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    font: inherit;
+}
+.nav-burger:hover {
+    background: color-mix(in srgb, var(--acc) 18%, transparent);
+}
+.nav-burger svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    fill: none;
+}
+/* 抽屉：默认不渲染，data-open=1 才显示；桌面端永不显示 */
+.nav-drawer {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 3;
+    flex-direction: column;
+    padding: 8px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--edge2);
+    background: var(--glass);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+}
+.nav-drawer[data-open='1'] {
+    display: flex;
+}
+.nav-drawer a {
+    padding: 10px 12px;
+    border-radius: var(--r-xs);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+.nav-drawer a:hover,
+.nav-drawer a.on {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+}
 /* 文字组与图标组之间的竖分隔：18px 高、1px 宽，纯装饰 */
 .nav-sep {
     width: 1px;
@@ -489,8 +547,11 @@ html[data-g="qubell"] .welcome em {
    位置：水平贴 h1 左边（居左），垂直在 h1 内居中（宽为居中）。 */
 .word-l {
     display: none;
-    width: 285px;
-    height: auto;
+    /* 统一口径改为「锁高度」：各世代 logo 宽高比 1.35~3.46 差 2.5 倍，
+       锁宽度会让扁的（knit/ripples）缩成一条、高的（ave/bta）撑满，
+       锁高度则每代字标视觉分量一致，宽度按原图比例自然展开。 */
+    height: clamp(44px, 6.2vw, 78px);
+    width: auto;
     max-width: 100%;
     /* 字标不能参与 flex 伸缩：一旦被 flex:1 拉成整栏宽，图片会跟着被放大/被
        max-width 压窄，视觉大小就随世代乱跳。它只负责占住中段，垂直居中。 */
@@ -505,11 +566,12 @@ html[data-g="qubell"] .welcome em {
     /* 切世代时字标是整张换图（硬切），淡入一下让「换代」有过渡感：
        display 由 none 变 block 会重新触发动画，不需要 JS 监听。 */
     animation: logoIn 0.4s ease both;
-    /* 统一宽 285、高按原图比例算：各世代字标长短差一倍多（knit 3.47:1、ave 1.35:1），
-       只锁宽度才能让它们视觉宽度一致，锁高度会让宽的那个缩成一坨。 */
-    width: 285px;
-    height: auto;
+    /* 高度由容器 clamp 统一控制，宽度按原图比例走：每代字标高度一致，
+       扁的自动变宽、高的自动变窄，不再出现「换主题后字标忽大忽小」。 */
+    height: 100%;
+    width: auto;
     max-width: 100%;
+    object-fit: contain;
     /* 不设 object-fit：width/height 都是 auto，图片按原图像素显示；
        视框被 max-width 压窄时按比例整体缩小（object-fit:none 会按原始像素绘制、
        右半边被裁掉，窄屏就只剩半个字标）。 */
@@ -1824,13 +1886,27 @@ html[data-g="yymf"] {
         font-size: 14px;
         letter-spacing: 0;
     }
-    /* 移动端只留图标组 + 世代切换：文字链接太挤，反正手机上没有二级页面 */
+    /* 移动端：文字链接收进汉堡抽屉，顶栏只留 汉堡 + 图标组 + 世代切换（主人 2026-10-22） */
     .nav-txt,
     .nav-sep {
         display: none;
     }
+    .nav-burger {
+        display: inline-flex;
+        flex: none;
+    }
+    .top {
+        gap: 10px;
+    }
+    /* nav 内只剩图标组 + 世代切换：去掉 flex 拉伸与多余 gap，
+       避免 .nav-txt/.nav-sep 隐藏后留一块点不动的空白 */
+    .top nav {
+        flex: 0 0 auto;
+        gap: 6px;
+    }
     .nav-ico {
-        margin-right: 4px;
+        margin-right: 0;
+        flex: 0 0 auto;
     }
     .top nav a.nav-i-recent {
         display: inline-flex;
@@ -1871,10 +1947,34 @@ html[data-g="yymf"] {
         align-items: flex-start;
         gap: 14px;
         padding-bottom: 40px;
+        /* 品牌字是 nowrap 的长串，容器必须先允许它撑开/换行，否则被 .foot 宽度裁掉 */
+        flex-wrap: wrap;
+        overflow: visible;
+    }
+    .foot-l,
+    .foot-r {
+        width: 100%;
+        max-width: 100%;
     }
     .foot-r {
         align-items: flex-start;
         text-align: left;
+    }
+    /* 页脚品牌字：顶栏那条 html[data-font] .mark b 的 nowrap+14px 会连带压到这里，
+       窄屏放不下就被顶出容器。页脚单独放开换行、字号收到 12px，右列不再溢出。 */
+    html[data-font] .foot .mark-sm b,
+    .foot .mark-sm b {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        font-size: 12px;
+        letter-spacing: 0;
+    }
+    .foot .mark-sm {
+        max-width: 100%;
+        overflow: visible;
+    }
+    .foot .mark-sm .mark-x {
+        max-width: 100%;
     }
 }
 
