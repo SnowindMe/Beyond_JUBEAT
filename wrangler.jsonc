@@ -2,8 +2,32 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "beyond-jubeat",
   "compatibility_date": "2025-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  // Worker 入口用适配器提供的统一入口（官方写法）。
+  // 不能写 dist/server/entry.mjs：构建期的 vite 插件会校验「main 指向的文件必须已存在」，
+  // 而它在构建末尾才产出，必然失败。写成包说明符则交给 vite/esbuild 解析，
+  // 开发与部署共用同一份配置。
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "assets": {
-    "directory": "./dist",
+    "directory": "./dist/client",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
-  }
+  },
+  // 适配器默认会给 Astro Sessions 挂一个名为 SESSION 的 KV 绑定（我们暂未用会话），
+  // 不在这里写死 id 的话，构建产物里的 bindings 会缺 id，wrangler deploy 会失败。
+  "kv_namespaces": [
+    {
+      "binding": "SESSION",
+      "id": "65d684992b4041c6af8b34451a0393c1"
+    }
+  ],
+  // D1 绑定：/songs/ 在运行时从这里读曲目数据。
+  // binding 用下划线形式（beyond_jubeat），Worker 里通过 env.beyond_jubeat 访问。
+  "d1_databases": [
+    {
+      "binding": "beyond_jubeat",
+      "database_name": "beyond-jubeat",
+      "database_id": "91a48a18-62b2-4933-9214-788205926744"
+    }
+  ]
 }

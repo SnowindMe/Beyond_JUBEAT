@@ -1,27 +1,26 @@
 ---
 // 曲目库：日服 / 国服 同页切换（不换网址），分区按服务器各自的分类，区内再按世代分组。
-// 全部曲目在构建期烘成静态 HTML，切换与筛选是纯前端显隐，不请求接口、不动 URL。
+// 数据在运行时从 Cloudflare D1 读取（prerender = false）；切换与筛选仍是纯前端显隐，
+// 不请求接口、不动 URL。D1 查询在 lib/db.ts 里做 isolate 级缓存（60s）。
 import Layout from '../layouts/Base.astro';
 import '../styles/songs.css';
-import data from '../data/data.json';
-import songs from '../data/songs.json';
 import { pageTitle } from '../lib/title';
+import { GEN_JP, GEN_CN } from '../lib/gens';
+import { getAllSongs, type Song } from '../lib/db';
+import { env } from 'cloudflare:workers';
 
-type Song = {
-  id: string; t: string; a: string | null;
-  lv: { bsc: number | null; adv: number | null; ext: number | null };
-  cover: string | null; d: string | null; bpm: string | null;
-  gen: string; srv: string; cat: string; alt: number;
-  unlock: string | null; kind: string;
-};
+// 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
+export const prerender = false;
 
-const ALL = songs as Song[];
+const ALL: Song[] = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
 
-// 世代顺序取 data.json 的 GEN_ORDER（日服按年份从旧到新，国服当前唯一世代）
-const GEN_JP = data.gen.filter((g) => g.s === 'jp').sort((a, b) => Number(a.y) - Number(b.y));
-const GEN_CN = data.gen.filter((g) => g.s === 'cn');
-const yearOf = (gen: string, srv: string) =>
-  [...GEN_JP, ...GEN_CN].find((g) => g.k === gen)?.y ?? '';
+// 数据变化很慢：允许浏览器短缓存，边缘可缓存更久（stale-while-revalidate 兜底）
+Astro.response.headers.set(
+  'cache-control',
+  'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
+);
+
+const yearOf = (gen: string, _srv?: string) => [...GEN_JP, ...GEN_CN].find((g) => g.k === gen)?.y ?? '';
 
 // 分区顺序：日服 版权 → 原创（版权是外来曲，先列）；国服 KONAMI原创 → 音乐魔方原创 → 音乐魔方流行
 const CATS: Record<string, string[]> = {
@@ -83,6 +82,7 @@ const EAGER = new Set(
     .map((s) => s.id),
 );
 ---
+
 
 <Layout
   title={pageTitle('曲目')}

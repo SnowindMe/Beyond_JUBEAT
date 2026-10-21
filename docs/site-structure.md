@@ -16,9 +16,11 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   ├─ 世代主题切换（顶栏 #tswBtn → 15 套主题弹层）
 │   └─ 施工中占位（index.astro:15-21）
 │
-├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0）
+├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0；v1.7.0 起改 SSR 读 D1）
 │   ├─ ✅ 日服 / 国际服 / 国服三卡切换（logo 上、名在下；国际服暂共用日服曲库）
-│   ├─ ✅ 分区筛选（日服：版权/原创；国服：KONAMI原创/音乐魔方原创/音乐魔方流行）+ 世代分组（1241 首全量静态烘入）
+│   ├─ ✅ 分区筛选（日服：版权/原创；国服：KONAMI原创/音乐魔方原创/音乐魔方流行）+ 世代分组
+│   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
+│   │   页面 `prerender = false` 是本站唯一 SSR 页，缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
 │   ├─ 💭 曲目详情 /songs/[songId]/
 │   │   ├─ 曲绘 / 曲名 / 作曲者 / 收录世代 / 收录日期
 │   │   ├─ 三档定数（bsc / adv / ext）+ 定数条
@@ -105,8 +107,8 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 | --- | --- | --- |
 | 首页统计卡 | `stat.songs` `stat.charts` `stat.gens` `gen10` | ✅ 已有 |
 | 首页曲绘方块 | `gen[].rep.cover` `gen[].k` | ✅ 已有 |
-| 曲目列表 | `top` `latest` `gen`（曲名 / 作曲 / 三档定数 / 曲绘 / 收录世代） | ⚠️ 部分已有（`top` 12 条 + `latest` 12 条 + `gen[].rep` 15 条 = 39 条样例，全量 513 首需回 `songs.json` 或扩 `build-data.cjs`） |
-| 曲目详情 | 同上 + `addedAt` + 谱面文件 | ⚠️ 聚合快照不含全量，需 `scripts/build-data.cjs` 扩字段 |
+| 曲目列表 | D1 `songs` 表的全量字段（曲名 / 作曲 / 三档定数 / 曲绘 / 世代 / 分区 / 收录日期） | ✅ 已有（v1.7.0 起运行期读 D1，`src/lib/db.ts` 的 `getAllSongs`） |
+| 曲目详情 | 同上 + `added_at` + `unlock_note` + 谱面文件 | ✅ 字段齐了（谱面预览还缺 mcz 数据） |
 | Jubility 理论值 | 定数 → 理论值映射表 | ❌ `data.json` 无此字段 |
 | Emblem / 伙伴 / 成就 | — | ❌ `data.json` 无此字段 |
 | 定数分布 | `dist` `dots` `gen105` | ✅ 已有（当前无页面消费） |
@@ -136,14 +138,16 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 
 **v2 有、新站导航没列的**：版本沿革 / 玩法与判定 / 隐藏曲充能 / 新手上路 / 段位图鉴 / 更新情报 —— 共 6 个页面在历史项目里存在，新站顶栏没有对应入口。是保留还是砍掉，需要主人拍板。
 
-**新站有、v2 没有的**：世代主题切换（15 套）、开屏 LOADING、最近更改、曲目库三卡切换。
+**新站有、v2 没有的**：世代主题切换（15 套）、开屏 LOADING、最近更改、曲目库三卡切换、曲目页 SSR 读 D1。
+
+**渲染架构（v1.7.0 起）**：`output: 'static'` + `@astrojs/cloudflare` 适配器的混合渲染——没标 `prerender = false` 的页面照旧在构建期预渲染，产物进 `dist/client` 由 Workers Assets 直出；只有 `/songs/` 进 Worker 脚本，请求时查 D1 再渲染。所以 `dist/client/songs/index.html` 不存在，这是有意为之。数据权威源是 `data/jubeat.db`（本地 SQLite）→ `db/seed.sql` 重放进 D1。
 
 ---
 
 ## 五、建议的落地顺序
 
-1. ~~**/songs/ 曲目库**~~ ✅ 已完成（v1.6.0）
-2. **/songs/[songId]/ 曲目详情**（数据已在 songs.json：id / 三档定数 / 曲绘 / 上线日期 / 解禁说明）
+1. ~~**/songs/ 曲目库**~~ ✅ 已完成（v1.6.0；v1.7.0 改成读 D1 的 SSR）
+2. **/songs/[songId]/ 曲目详情**（D1 `songs` 表字段已齐：id / 三档定数 / 曲绘 / 上线日期 / 解禁说明，直接按 `song_id` 查即可）
 3. **/jubility/**（数据需先补进 `data.json`）
 4. **/about/**（纯文案，成本最低，可先做）
 5. **/login/**（需要后端，建议等 D1 + Workers 接入后再做）

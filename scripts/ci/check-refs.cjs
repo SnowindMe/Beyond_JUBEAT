@@ -6,7 +6,12 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const isDist = process.argv[2] === 'dist';
-const target = isDist ? path.join(ROOT, 'dist') : path.join(ROOT, 'src');
+// 接上 Cloudflare 适配器后产物分成 dist/client（静态页 + 资源）和 dist/server（Worker），
+// 绝对路径引用（/assets/…）必须从 dist/client 起算，否则整片报 MISSING。
+const DIST_CLIENT = path.join(ROOT, 'dist', 'client');
+const target = isDist
+  ? (fs.existsSync(DIST_CLIENT) ? DIST_CLIENT : path.join(ROOT, 'dist'))
+  : path.join(ROOT, 'src');
 
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
