@@ -391,9 +391,10 @@ html[data-g="knit"] .mark b .til {
     padding: 8px;
     border-radius: var(--r-sm);
     border: 1px solid var(--edge2);
-    background: var(--glass);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    /* 抽屉必须够实：--glass(0.68) 会让下面的字标/统计数字透上来，字叠字没法读 */
+    background: color-mix(in srgb, var(--base) 94%, transparent);
+    backdrop-filter: blur(20px) saturate(1.1);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
 }
 .nav-drawer[data-open='1'] {
     display: flex;
