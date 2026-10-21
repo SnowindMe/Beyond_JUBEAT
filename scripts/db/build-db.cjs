@@ -48,6 +48,22 @@ function main() {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 
+  // 双服判定（主人 2026-10-22 口径）：国服行与日服行「归一化标题+艺人」完全一致 → 同一首曲子
+  // 两服都有 → server_jp=1（页面会把它挪进 KONAMI原创 分区）。两服 song_id 体系不同，只能按曲名匹配。
+  // 机器移植曲（KONAMI原创 13 首）日服没有，不会命中此规则。
+  const jpKey = new Map();
+  for (const s of jp.songs) {
+    const k = dualKey(s.title) + '|' + dualKey(s.artist);
+    if (!jpKey.has(k)) jpKey.set(k, s.title);
+  }
+  const DUAL_EXTRA = new Map([
+    // 显式补充映射：曲名写法不同但确为同一首时，在这里加 归一化CN曲名 → true
+  ]);
+  const cnIsDual = (r) => jpKey.has(dualKey(r.title) + '|' + dualKey(r.artist)) || DUAL_EXTRA.has(dualKey(r.title));
+  // 反向：国服已读入的命中键，日服循环用它把对应行（含 [ 2 ] 长押行）标 server_cn=1
+  const cnDualKeys = new Set();
+  for (const r of cnRows) if (cnIsDual(r)) cnDualKeys.add(dualKey(r.title) + '|' + dualKey(r.artist));
+
   const ins = db.prepare(`INSERT OR REPLACE INTO songs(
     song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
     bsc, adv, ext, alt, cover, added_at, unlock_note
@@ -75,7 +91,7 @@ function main() {
       if (note) stat.jpNote++;
       ins.run(
         String(s.songId), s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
-        genName, 1, 0, cat,
+        genName, 1, cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
         arc.addedAt || null, note
@@ -87,13 +103,14 @@ function main() {
     for (const r of cnRows) {
       const cat = CN_CATEGORY[r.cnCategory];
       if (!cat) { stat.cnUnmapped++; problems.push(`国服分类未映射: ${r.cnCategory} (${r.title})`); }
-      // 主人 2026-10-22 纠正：音乐魔方的「KONAMI原创」13 首是移植曲（别的机种搬进音乐魔方），
-      // 只有国服有、日服没有 → server_jp=0。双服标志按数据事实判定，不做分类推断。
-      const dual = 0;
-      if (dual) stat.cnDual++;
+      let cat2 = cat || '音乐魔方原创';
+      // 双服标志按数据事实判定：标题+艺人匹配日服才算两服都有；
+      // KONAMI原创 13 首是别的机种移植曲，日服没有 → 不命中（主人 2026-10-22 纠正）。
+      const dual = cnIsDual(r) ? 1 : 0;
+      if (dual) { stat.cnDual++; cat2 = 'KONAMI原创'; }
       ins.run(
         r.songId, 'official', r.title, r.artist || null, dashNull(r.bpm),
-        '音乐魔方', dual, 1, cat || '音乐魔方原创',
+        '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
         /\[\s*2\s*\]/.test(r.title) ? 1 : 0, r.cover || null,
         isoDate(r.date), dashNull(r.pool)
@@ -130,6 +147,15 @@ function jpUnlockNote(arc) {
 function webpCover(v) {
   const s = String(v || '').trim();
   return s ? s.replace(/\.gif$/i, '.webp') : null;
+}
+
+// 归一化：小写、去空格、去长押标记与常见标点（Big Daddy 这类跨服同曲的匹配键）
+function dualKey(v) {
+  return String(v || '')
+    .toLowerCase()
+    .replace(/\[\s*2\s*\]/g, '')
+    .replace(/\s+/g, '')
+    .replace(/[～~—－・·!！?？'’“”「」『』()（）\[\]【】.,、\-]/g, '');
 }
 
 function num(v) {
@@ -196,7 +222,7 @@ function cnCoverFallback(songId) {
 function selfCheck(db, stat, problems) {
   const q = (s) => db.prepare(s).get();
   const total = q('SELECT COUNT(*) c FROM songs').c;
-  const jpN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=0").c;
+  const jpN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1").c;
   const cnN = q("SELECT COUNT(*) c FROM songs WHERE server_cn=1").c;
   const dualN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=1").c;
   const noneN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=0 AND server_cn=0").c;
@@ -208,8 +234,9 @@ function selfCheck(db, stat, problems) {
 
   const rows = [
     ['曲目总数', total, 1241],
-    ['  日服', jpN, 1150],
-    ['  国服', cnN, 91],
+    // 双服曲在两边各有一行谱面（Big Daddy：日服行 + 国服行都标双），所以各 +1
+    ['  日服（含双服行）', jpN, 1151],
+    ['  国服（含双服行）', cnN, 92],
     ['  日服官方 id', stat.jpOfficial, 1140],
     ['  日服占位 id', stat.jpSynthetic, 10],
     ['世代为空的曲目', noGen, 0],
@@ -217,8 +244,7 @@ function selfCheck(db, stat, problems) {
     ['缺 EXT 定数的曲目', noExt, 0],
     ['song_id 重复', dupId, 0],
     ['国服分类未映射', stat.cnUnmapped, 0],
-    ['  双服（两标志全 1）', dualN, 0],
-    ['  国服独有', stat.cn - dualN, 91],
+    ['  双服行（Big Daddy 两行）', dualN, 2],
     ['两服标志全 0 的行', noneN, 0],
   ];
   console.log('=== 一致性自检 ===');

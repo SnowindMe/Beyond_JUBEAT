@@ -45,7 +45,10 @@ const SRV_CARDS = [
 // 按 视图服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）。
 // 行有 jp/cn 两个标志：两服都有的行（KONAMI原创）同时进 jp 和 cn 两个视图。
 const extOf = (s: Song) => s.lv.ext ?? -1;
-const inView = (s: Song, srv: string) => (srv === 'jp' ? s.jp : s.cn);
+// 视图归属：行 = 一份谱面记录，各归各的世代。双服曲（如 Big Daddy）两服各有一行，
+// 国服视图只收「音乐魔方」世代的行，日服视图只收日服世代的行，避免同一首的两行串视图。
+const inView = (s: Song, srv: string) =>
+  srv === 'cn' ? s.cn && s.gen === '音乐魔方' : s.jp && s.gen !== '音乐魔方';
 const bucket: Record<string, Record<string, Record<string, Song[]>>> = { jp: {}, cn: {} };
 for (const srv of ['jp', 'cn']) {
   for (const cat of CATS[srv]) {
