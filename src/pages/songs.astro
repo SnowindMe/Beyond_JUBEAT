@@ -75,9 +75,7 @@ const countOf = (srv: string, cat?: string) =>
   ALL.filter((s) => inView(s, srv) && (!cat || catOf(s, srv) === cat)).length;
 const srvTotal = (srv: string) => ALL.filter((s) => inView(s, srv)).length;
 
-// 定数色档：沿用 theme.css 的 --lv6…--lv10h 令牌
-const lvClass = (v: number | null) =>
-  v == null ? 'lv-0' : v >= 10.5 ? 'lv-h' : v >= 10 ? 'lv-10' : v >= 9 ? 'lv-9' : v >= 8 ? 'lv-8' : v >= 7 ? 'lv-7' : 'lv-6';
+// 徽章颜色按难度固定（主人 2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 
 const DEFAULT_SRV = 'jp';
@@ -166,9 +164,9 @@ const EAGER = new Set(
                         <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
                         <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
                         <div class="sc-lv">
-                          <i class={`lv ${lvClass(s.lv.bsc)}`}><u>B</u>{dash(s.lv.bsc)}</i>
-                          <i class={`lv ${lvClass(s.lv.adv)}`}><u>A</u>{dash(s.lv.adv)}</i>
-                          <i class={`lv ${lvClass(s.lv.ext)}`}><u>E</u>{dash(s.lv.ext)}</i>
+                          <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>B</u>{dash(s.lv.bsc)}</i>
+                          <i class={`lv lv-adv${s.lv.adv == null ? ' lv-0' : ''}`}><u>A</u>{dash(s.lv.adv)}</i>
+                          <i class={`lv lv-ext${s.lv.ext == null ? ' lv-0' : ''}`}><u>E</u>{dash(s.lv.ext)}</i>
                         </div>
                       </article>
                     ))}

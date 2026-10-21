@@ -15,12 +15,6 @@
     --r-sm: 11px;
     --r-xs: 7px;
     --pill: 999px;
-    --lv6: #77a9c9;
-    --lv7: #63c2d6;
-    --lv8: #57e0cf;
-    --lv9: #ecc76a;
-    --lv10: #f08a63;
-    --lv10h: #f7719f;
     --font-data: Bahnschrift, "Bahnschrift SemiCondensed", Consolas, monospace;
     --font-label: var(--font-data);
 }
@@ -329,6 +323,12 @@ html[data-g="knit"] .mark b .til {
     display: flex;
     align-items: center;
     gap: clamp(1px, 0.6vw, 6px);
+    /* 中等宽度下（~900px）导航会被图标组和世代切换挤到没有余量，
+       里面四个汉字会变成竖排。链接一律不换行，宁可让导航整体收字号。 */
+    flex: none;
+}
+.nav-txt a {
+    white-space: nowrap;
 }
 /* 导航不再用 12.5px 的次要灰字：提到 15px / 700，颜色直接用正文 --ink。
    主人 2026-10-20：「导航栏的字体加大加粗，不用小灰字」。 */
@@ -346,6 +346,12 @@ html[data-g="knit"] .mark b .til {
 .top nav a:hover {
     color: var(--ink);
     background: color-mix(in srgb, var(--acc) 18%, transparent);
+}
+/* 当前所在页：只给真实存在的二级页标（目前是曲目 / 最近更改） */
+.top nav a.on {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 34%, transparent);
 }
 /* 文字组与图标组之间的竖分隔：18px 高、1px 宽，纯装饰 */
 .nav-sep {
@@ -1708,6 +1714,38 @@ html[data-g="yymf"] {
 @media (max-width: 1080px) {
     .lat {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+/* 中等宽度（769~1180px）导航先收一档：链接缩进缩号，间距归零 */
+@media (min-width: 769px) and (max-width: 1180px) {
+    .top {
+        gap: 12px;
+    }
+    .top nav a {
+        padding: 6px 8px;
+        font-size: 13.5px;
+    }
+    .nav-txt {
+        gap: 0;
+    }
+    .nav-sep {
+        margin: 0 6px;
+    }
+}
+/* 再窄一档（769~860px）：导航整体继续压缩，图标组不留缝 */
+@media (min-width: 769px) and (max-width: 860px) {
+    .top {
+        gap: 6px;
+    }
+    .top nav {
+        gap: 0;
+    }
+    .top nav a {
+        padding: 6px;
+        font-size: 13px;
+    }
+    .nav-ico {
+        gap: 0;
     }
 }
 /* 双栏区间（769~1080px）左栏变窄后统计卡会折行，左栏比右栏高出一截、两栏底边对不齐；

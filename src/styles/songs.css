@@ -316,29 +316,25 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     letter-spacing: 0.04em;
     opacity: 0.62;
 }
-/* 浅色世代（与 theme.css 弹层白底同组）：--lv6…--lv10h 是为深底调的亮色，
-   白卡片上对比不足，整组压深一档；深色世代不受影响。 */
+/* 难度徽章配色（主人 2026-10-22）：颜色跟难度走，不跟定数走——
+   BSC 绿 / ADV 黄 / EXT 红。深浅两组令牌：浅色世代（白卡片）整组压深保对比度。 */
+.sc-lv {
+    --d-bsc: #3ecf8e;
+    --d-adv: #e8b93a;
+    --d-ext: #f0564f;
+}
 html[data-g="knit"] .sc-lv, html[data-g="prop"] .sc-lv, html[data-g="qubell"] .sc-lv,
 html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"] .sc-lv {
-    --lv6: #3d6d92;
-    --lv7: #15789b;
-    --lv8: #0b8f76;
-    --lv9: #9a6d12;
-    --lv10: #c2542a;
-    --lv10h: #cc3068;
+    --d-bsc: #0f8a55;
+    --d-adv: #9a6d12;
+    --d-ext: #cc2f26;
 }
-.sc-lv .lv-6 { color: var(--lv6); border-color: color-mix(in srgb, var(--lv6) 42%, transparent); }
-.sc-lv .lv-7 { color: var(--lv7); border-color: color-mix(in srgb, var(--lv7) 42%, transparent); }
-.sc-lv .lv-8 { color: var(--lv8); border-color: color-mix(in srgb, var(--lv8) 42%, transparent); }
-.sc-lv .lv-9 { color: var(--lv9); border-color: color-mix(in srgb, var(--lv9) 46%, transparent); }
-.sc-lv .lv-10 { color: var(--lv10); border-color: color-mix(in srgb, var(--lv10) 52%, transparent); }
-.sc-lv .lv-h {
-    color: #fff0f6;
-    border-color: color-mix(in srgb, var(--lv10h) 62%, transparent);
-    background: color-mix(in srgb, var(--lv10h) 24%, transparent);
-}
+.sc-lv .lv-bsc { color: var(--d-bsc); border-color: color-mix(in srgb, var(--d-bsc) 45%, transparent); }
+.sc-lv .lv-adv { color: var(--d-adv); border-color: color-mix(in srgb, var(--d-adv) 45%, transparent); }
+.sc-lv .lv-ext { color: var(--d-ext); border-color: color-mix(in srgb, var(--d-ext) 45%, transparent); }
 .sc-lv .lv-0 {
     color: var(--ink3);
+    border-color: var(--edge);
 }
 
 @media (max-width: 768px) {
