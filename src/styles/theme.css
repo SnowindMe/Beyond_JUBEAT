@@ -548,11 +548,10 @@ html[data-g="qubell"] .welcome em {
    位置：水平贴 h1 左边（居左），垂直在 h1 内居中（宽为居中）。 */
 .word-l {
     display: none;
-    /* 统一口径改为「锁高度」：各世代 logo 宽高比 1.35~3.46 差 2.5 倍，
-       锁宽度会让扁的（knit/ripples）缩成一条、高的（ave/bta）撑满，
-       锁高度则每代字标视觉分量一致，宽度按原图比例自然展开。 */
-    height: clamp(44px, 6.2vw, 78px);
-    width: auto;
+    /* 桌面沿用原口径：统一 285px 宽，高度按原图比例（主人 2026-10-22 反馈锁高度
+       把桌面字标改小了）。尺寸统一只在移动端按高度做，见文件末尾移动端段。 */
+    width: 285px;
+    height: auto;
     max-width: 100%;
     /* 字标不能参与 flex 伸缩：一旦被 flex:1 拉成整栏宽，图片会跟着被放大/被
        max-width 压窄，视觉大小就随世代乱跳。它只负责占住中段，垂直居中。 */
@@ -567,12 +566,11 @@ html[data-g="qubell"] .welcome em {
     /* 切世代时字标是整张换图（硬切），淡入一下让「换代」有过渡感：
        display 由 none 变 block 会重新触发动画，不需要 JS 监听。 */
     animation: logoIn 0.4s ease both;
-    /* 高度由容器 clamp 统一控制，宽度按原图比例走：每代字标高度一致，
-       扁的自动变宽、高的自动变窄，不再出现「换主题后字标忽大忽小」。 */
-    height: 100%;
-    width: auto;
+    /* 统一宽 285、高按原图比例算：各世代字标长短差一倍多（knit 3.47:1、ave 1.35:1），
+       只锁宽度才能让它们视觉宽度一致，锁高度会让宽的那个缩成一坨。 */
+    width: 285px;
+    height: auto;
     max-width: 100%;
-    object-fit: contain;
     /* 不设 object-fit：width/height 都是 auto，图片按原图像素显示；
        视框被 max-width 压窄时按比例整体缩小（object-fit:none 会按原始像素绘制、
        右半边被裁掉，窄屏就只剩半个字标）。 */
@@ -1887,6 +1885,24 @@ html[data-g="yymf"] {
         font-size: 14px;
         letter-spacing: 0;
     }
+    /* 移动端字标：各代 logo 宽高比 1.35~3.46 差 2.5 倍，锁 285px 宽会让扁的
+       （knit/ripples）在窄屏缩成一条、高的（ave/bta）撑满整栏。窄屏改用锁高度，
+       每代视觉分量一致（主人 2026-10-22：「移动端各主题logo没有统一好尺寸」）。 */
+    .word-l,
+    .word-l #wordLogo {
+        width: auto;
+        height: auto;
+    }
+    .word-l {
+        height: clamp(46px, 13vw, 64px);
+    }
+    .word-l #wordLogo {
+        height: 100%;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+    }
+
     /* 移动端：文字链接收进汉堡抽屉，顶栏只留 汉堡 + 图标组 + 世代切换（主人 2026-10-22） */
     .nav-txt,
     .nav-sep {
