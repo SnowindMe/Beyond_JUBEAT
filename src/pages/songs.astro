@@ -22,49 +22,55 @@ Astro.response.headers.set(
 
 const yearOf = (gen: string, _srv?: string) => [...GEN_JP, ...GEN_CN].find((g) => g.k === gen)?.y ?? '';
 
-// 分区顺序：日服 版权 → 原创（版权是外来曲，先列）；国服 KONAMI原创 → 音乐魔方原创 → 音乐魔方流行
+// 分区顺序：日服 版权 → 原创；国服 KONAMI原创 → 音乐魔方原创 → 音乐魔方流行。
 const CATS: Record<string, string[]> = {
   jp: ['版权', '原创'],
   cn: ['KONAMI原创', '音乐魔方原创', '音乐魔方流行'],
 };
-const GEN_BY_SRV: Record<string, string[]> = {
-  jp: GEN_JP.map((g) => g.k),
-  cn: GEN_CN.map((g) => g.k),
+// 分区归属（主人 2026-10-22 口径）：音乐魔方里「两者都有」的曲目显示在 KONAMI原创 分区，
+// 其余按库里的 category。日服视图只走自己的两个分区。
+const catOf = (s: Song, srv: string) => (srv === 'cn' && s.jp && s.cn ? 'KONAMI原创' : s.cat);
+// 每个分区实际会出现的世代
+const CAT_GENS: Record<string, Record<string, string[]>> = {
+  jp: { '版权': GEN_JP.map((g) => g.k), '原创': GEN_JP.map((g) => g.k) },
+  cn: { 'KONAMI原创': GEN_CN.map((g) => g.k), '音乐魔方原创': GEN_CN.map((g) => g.k), '音乐魔方流行': GEN_CN.map((g) => g.k) },
 };
-
-// 三张服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
-// 国际服暂无独立曲库，与日服共用同一份数据（body 仍是 jp/cn 两套）。
+// 服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
+// 国际服已移除（主人 2026-10-22）：曲库没有独立国际服数据，入口留着只会误导。
 const SRV_CARDS = [
   { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
-  { id: 'intl', name: '国际服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
   { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
 ] as const;
-const bodySrv = (id: string) => (id === 'intl' ? 'jp' : id);
 
-// 按 服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）
+// 按 视图服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）。
+// 行有 jp/cn 两个标志：两服都有的行（KONAMI原创）同时进 jp 和 cn 两个视图。
 const extOf = (s: Song) => s.lv.ext ?? -1;
+const inView = (s: Song, srv: string) => (srv === 'jp' ? s.jp : s.cn);
 const bucket: Record<string, Record<string, Record<string, Song[]>>> = { jp: {}, cn: {} };
 for (const srv of ['jp', 'cn']) {
   for (const cat of CATS[srv]) {
     bucket[srv][cat] = {};
-    for (const gen of GEN_BY_SRV[srv]) bucket[srv][cat][gen] = [];
+    for (const gen of CAT_GENS[srv][cat]) bucket[srv][cat][gen] = [];
   }
 }
-for (const s of ALL) {
-  const g = bucket[s.srv]?.[s.cat]?.[s.gen];
-  if (g) g.push(s);
+for (const srv of ['jp', 'cn']) {
+  for (const s of ALL) {
+    if (!inView(s, srv)) continue;
+    const g = bucket[srv]?.[catOf(s, srv)]?.[s.gen];
+    if (g) g.push(s);
+  }
 }
 for (const srv of ['jp', 'cn']) {
   for (const cat of CATS[srv]) {
-    for (const gen of GEN_BY_SRV[srv]) {
+    for (const gen of CAT_GENS[srv][cat]) {
       bucket[srv][cat][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
     }
   }
 }
 
 const countOf = (srv: string, cat?: string) =>
-  ALL.filter((s) => s.srv === srv && (!cat || s.cat === cat)).length;
-const srvTotal = (srv: string) => ALL.filter((s) => s.srv === srv).length;
+  ALL.filter((s) => inView(s, srv) && (!cat || catOf(s, srv) === cat)).length;
+const srvTotal = (srv: string) => ALL.filter((s) => inView(s, srv)).length;
 
 // 定数色档：沿用 theme.css 的 --lv6…--lv10h 令牌
 const lvClass = (v: number | null) =>
@@ -87,7 +93,7 @@ const EAGER = new Set(
 <Layout
   title={pageTitle('曲目')}
   canonicalPath="/songs/"
-  description={`jubeat 音乐魔方曲目库：日服/国际服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首，按世代分组，同页切换服务器。`}
+  description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（KONAMI原创 ${countOf('cn', 'KONAMI原创')} 首、音乐魔方原创 ${countOf('cn', '音乐魔方原创')} 首、音乐魔方流行 ${countOf('cn', '音乐魔方流行')} 首），按世代分组，同页切换服务器。`}
 >
   <section class="band songs" id="songsRoot" data-srv={DEFAULT_SRV}>
     <div class="band-h">
@@ -125,7 +131,7 @@ const EAGER = new Set(
               <h3>{cat}</h3>
               <em>{countOf(srv, cat)} 首</em>
             </header>
-            {GEN_BY_SRV[srv].map((gen) => {
+            {CAT_GENS[srv][cat].map((gen) => {
               const list = bucket[srv][cat][gen];
               if (!list.length) return null;
               return (
@@ -154,7 +160,7 @@ const EAGER = new Set(
                           )}
                           {s.alt ? <span class="sc-alt">[2]</span> : null}
                         </div>
-                        <b class="sc-t" title={s.t}>{s.t}</b>
+                        <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
                         <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
                         <div class="sc-lv">
                           <i class={`lv ${lvClass(s.lv.bsc)}`}><u>B</u>{dash(s.lv.bsc)}</i>
@@ -175,7 +181,6 @@ const EAGER = new Set(
 
   <script is:inline>
     // 服务器切换 + 分区筛选：只改 data-srv / hidden，不写 localStorage、不动 URL。
-    // 三张卡里「国际服」与「日服」共用同一份曲库：body 的归属按 bodySrv 映射。
     (function () {
       var root = document.getElementById('songsRoot');
       if (!root) return;
@@ -188,7 +193,7 @@ const EAGER = new Set(
 
       function apply() {
         root.setAttribute('data-srv', state.srv);
-        var bs = state.srv === 'intl' ? 'jp' : state.srv;
+        var bs = state.srv;
         for (var i = 0; i < srvBtns.length; i++) {
           var on = srvBtns[i].getAttribute('data-srv') === state.srv;
           srvBtns[i].classList.toggle('is-on', on);
@@ -227,7 +232,7 @@ const EAGER = new Set(
         var chip = t.closest('.sc-chip');
         if (chip) {
           var set = chip.closest('.sc-cat-set');
-          if (!set || set.getAttribute('data-srv') !== (state.srv === 'intl' ? 'jp' : state.srv)) return;
+          if (!set || set.getAttribute('data-srv') !== state.srv) return;
           state.cat = chip.getAttribute('data-cat');
           var all = set.querySelectorAll('.sc-chip');
           for (var n = 0; n < all.length; n++) {

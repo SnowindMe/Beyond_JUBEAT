@@ -18,7 +18,9 @@ const outArg = argv.find((a) => a.startsWith('--out='));
 const DB_PATH = outArg ? path.join(ROOT, outArg.slice(6)) : path.join(ROOT, 'data/jubeat.db');
 const SEED_PATH = path.join(ROOT, 'db/seed.sql');
 
-// 世代 → 服务器。日服/国际服 12 代，国服 1 代。
+// 世代 → 服务器归属。日服 12 代（server_jp），国服 1 代（server_cn）；
+// 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI原创」分区；
+// 现有数据两服 song_id 体系不同、暂无重合（移植曲只有国服有，主人 2026-10-22 纠正）。
 const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.'];
 const CN_GENS = ['音乐魔方'];
 
@@ -47,11 +49,11 @@ function main() {
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 
   const ins = db.prepare(`INSERT OR REPLACE INTO songs(
-    song_id, id_kind, title, artist, bpm, gen_name, server, category,
+    song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
     bsc, adv, ext, alt, cover, added_at, unlock_note
-  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0 };
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0 };
   const problems = [];
 
   db.exec('BEGIN');
@@ -73,7 +75,7 @@ function main() {
       if (note) stat.jpNote++;
       ins.run(
         String(s.songId), s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
-        genName, 'jp', cat,
+        genName, 1, 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
         arc.addedAt || null, note
@@ -85,9 +87,13 @@ function main() {
     for (const r of cnRows) {
       const cat = CN_CATEGORY[r.cnCategory];
       if (!cat) { stat.cnUnmapped++; problems.push(`国服分类未映射: ${r.cnCategory} (${r.title})`); }
+      // 主人 2026-10-22 纠正：音乐魔方的「KONAMI原创」13 首是移植曲（别的机种搬进音乐魔方），
+      // 只有国服有、日服没有 → server_jp=0。双服标志按数据事实判定，不做分类推断。
+      const dual = 0;
+      if (dual) stat.cnDual++;
       ins.run(
         r.songId, 'official', r.title, r.artist || null, dashNull(r.bpm),
-        '音乐魔方', 'cn', cat || '音乐魔方原创',
+        '音乐魔方', dual, 1, cat || '音乐魔方原创',
         num(r.bsc), num(r.adv), num(r.ext),
         /\[\s*2\s*\]/.test(r.title) ? 1 : 0, r.cover || null,
         isoDate(r.date), dashNull(r.pool)
@@ -190,13 +196,15 @@ function cnCoverFallback(songId) {
 function selfCheck(db, stat, problems) {
   const q = (s) => db.prepare(s).get();
   const total = q('SELECT COUNT(*) c FROM songs').c;
-  const jpN = q("SELECT COUNT(*) c FROM songs WHERE server='jp'").c;
-  const cnN = q("SELECT COUNT(*) c FROM songs WHERE server='cn'").c;
+  const jpN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=0").c;
+  const cnN = q("SELECT COUNT(*) c FROM songs WHERE server_cn=1").c;
+  const dualN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=1").c;
+  const noneN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=0 AND server_cn=0").c;
   const noGen = q('SELECT COUNT(*) c FROM songs WHERE gen_name IS NULL OR gen_name = \'\'').c;
   const noCat = q('SELECT COUNT(*) c FROM songs WHERE category IS NULL OR category = \'\'').c;
   const noExt = q('SELECT COUNT(*) c FROM songs WHERE ext IS NULL').c;
   const dupId = q('SELECT COUNT(*) c FROM (SELECT song_id FROM songs GROUP BY song_id HAVING COUNT(*) > 1)').c;
-  const gens = db.prepare('SELECT server, gen_name, COUNT(*) n FROM songs GROUP BY server, gen_name ORDER BY server DESC, gen_name').all();
+  const gens = db.prepare('SELECT server_jp, server_cn, gen_name, COUNT(*) n FROM songs GROUP BY server_jp, server_cn, gen_name ORDER BY server_jp DESC, server_cn DESC, gen_name').all();
 
   const rows = [
     ['曲目总数', total, 1241],
@@ -209,6 +217,9 @@ function selfCheck(db, stat, problems) {
     ['缺 EXT 定数的曲目', noExt, 0],
     ['song_id 重复', dupId, 0],
     ['国服分类未映射', stat.cnUnmapped, 0],
+    ['  双服（两标志全 1）', dualN, 0],
+    ['  国服独有', stat.cn - dualN, 91],
+    ['两服标志全 0 的行', noneN, 0],
   ];
   console.log('=== 一致性自检 ===');
   let bad = 0;
@@ -218,7 +229,7 @@ function selfCheck(db, stat, problems) {
     console.log(`  ${ok ? 'ok  ' : 'FAIL'} ${name.padEnd(20)} ${got} (期望 ${want})`);
   }
   console.log('\n=== 各世代曲目数 ===');
-  for (const g of gens) console.log(`  ${g.server}  ${String(g.gen_name).padEnd(20)} ${g.n}`);
+  for (const g of gens) console.log(`  jp${g.server_jp}cn${g.server_cn}  ${String(g.gen_name).padEnd(20)} ${g.n}`);
   if (bad) { console.log(`\n自检未通过项 ${bad} 个`); process.exitCode = 1; }
 }
 

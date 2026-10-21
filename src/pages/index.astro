@@ -3,12 +3,14 @@ import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
+// 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：clan 一个世代拆成 4 套。
+const THEME_COUNT = 14;
 ---
 
 <Layout
   title={pageTitle('首页')}
   canonicalPath="/"
-  description={`jubeat 音乐魔方中文资料站：${data.stat.gens} 个世代、${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 14 套世代主题切换。`}
+  description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，${THEME_COUNT} 套世代主题可切换。`}
 >
   <Hero />
 

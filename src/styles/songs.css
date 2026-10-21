@@ -369,3 +369,16 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         display: none;
     }
 }
+/* 双服标记：曲名后的小徽标（两服都有的 KONAMI 移植曲） */
+.sc-dual {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  font-size: 10px;
+  line-height: 15px;
+  border-radius: 3px;
+  vertical-align: 1px;
+  color: #fff;
+  background: var(--accent, #6c5ce7);
+  opacity: 0.85;
+}

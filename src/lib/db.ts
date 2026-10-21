@@ -14,7 +14,8 @@ export type Song = {
   d: string | null;
   bpm: string | null;
   gen: string;
-  srv: string;
+  jp: boolean;
+  cn: boolean;
   cat: string;
   alt: number;
   unlock: string | null;
@@ -23,7 +24,7 @@ export type Song = {
 
 type D1Row = {
   song_id: string; id_kind: string | null; title: string; artist: string | null;
-  bpm: string | null; gen_name: string; server: string; category: string;
+  bpm: string | null; gen_name: string; server_jp: number; server_cn: number; category: string;
   bsc: number | null; adv: number | null; ext: number | null; alt: number;
   cover: string | null; added_at: string | null; unlock_note: string | null;
 };
@@ -44,18 +45,19 @@ const rowToSong = (r: D1Row): Song => ({
   d: r.added_at,
   bpm: r.bpm,
   gen: r.gen_name,
-  srv: r.server,
+  jp: r.server_jp === 1,
+  cn: r.server_cn === 1,
   cat: r.category,
   alt: r.alt ? 1 : 0,
   unlock: r.unlock_note,
   kind: r.id_kind,
 });
 
-/** 全量曲目（按 server DESC, gen_name, ext DESC 排好序，直接喂给页面分组） */
-const SQL_ALL = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server, category,
+/** 全量曲目（按 gen_name, ext DESC 排好序，直接喂给页面分组） */
+const SQL_ALL = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
               bsc, adv, ext, alt, cover, added_at, unlock_note
          FROM songs
-        ORDER BY server DESC, gen_name, ext DESC`;
+        ORDER BY gen_name, ext DESC`;
 
 export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
   const now = Date.now();
