@@ -298,6 +298,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     align-items: center;
     justify-content: center;
     gap: 3px;
+    white-space: nowrap;
     font-style: normal;
     font-family: var(--font-data);
     font-size: 10.5px;
@@ -311,10 +312,10 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 }
 .sc-lv .lv u {
     text-decoration: none;
-    font-size: 8.5px;
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    opacity: 0.62;
+    font-size: 7.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    opacity: 0.72;
 }
 /* 难度徽章配色（主人 2026-10-22）：颜色跟难度走，不跟定数走——
    BSC 绿 / ADV 黄 / EXT 红。深浅两组令牌：浅色世代（白卡片）整组压深保对比度。 */
@@ -361,8 +362,14 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
         gap: 10px 8px;
     }
+    /* 窄屏卡片只有 ~96px：三枚徽章单行放不下 BSC/ADV/EXT + 定数，改成标签在上、定数在下 */
+    .sc-lv .lv {
+        flex-direction: column;
+        gap: 1px;
+        padding: 3px 0 3px;
+    }
     .sc-lv .lv u {
-        display: none;
+        font-size: 7px;
     }
 }
 /* 双服标记：曲名后的小徽标（两服都有的 KONAMI 移植曲） */

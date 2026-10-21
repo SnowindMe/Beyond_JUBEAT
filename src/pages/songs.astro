@@ -164,9 +164,9 @@ const EAGER = new Set(
                         <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
                         <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
                         <div class="sc-lv">
-                          <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>B</u>{dash(s.lv.bsc)}</i>
-                          <i class={`lv lv-adv${s.lv.adv == null ? ' lv-0' : ''}`}><u>A</u>{dash(s.lv.adv)}</i>
-                          <i class={`lv lv-ext${s.lv.ext == null ? ' lv-0' : ''}`}><u>E</u>{dash(s.lv.ext)}</i>
+                          <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.lv.bsc)}</i>
+                          <i class={`lv lv-adv${s.lv.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(s.lv.adv)}</i>
+                          <i class={`lv lv-ext${s.lv.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(s.lv.ext)}</i>
                         </div>
                       </article>
                     ))}
