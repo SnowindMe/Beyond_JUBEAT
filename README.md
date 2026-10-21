@@ -10,11 +10,11 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 ## 这是什么
 
-把 jubeat 从 2008 年（jubeat）到 2023 年（jubeat 音乐魔方）**15 个世代 / 513 首曲目 / 1512 个谱面**整理成一个可浏览的资料站。
+把 jubeat 从 2008 年（jubeat）到 2023 年（jubeat 音乐魔方）**13 个世代（日服/国际服 12 + 国服 1）/ 1241 首曲目 / 3723 张谱面**整理成一个可浏览的资料站。
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 >
-> 导航里的「曲目 / Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的是**还没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。「最近更改」是已做出来的页面，见下。
+> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的还是**没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。「最近更改」是已做出来的页面，见下。
 
 页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
 
@@ -24,7 +24,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的静态多页�
 
 **遮罩的进出是径向圆孔**：进场「四周→中间」、退场「中间→四周」。实现是 `mask-image: radial-gradient(...)` + 注册成可插值属性的 `--boot-r`（`@property syntax: "<percentage>"`）：`-30%` 时圆孔不存在、遮罩盖满，`130%` 时圆孔超出四角、完全看不见，中间的 `--boot-soft: 26%` 是过渡带（羽化边缘，不然边界是硬圆）。进场 `bootIrisIn` 半径 130%→-30% 且 opacity 0→1，退场 `bootIrisOut` 反过来；**退场的 opacity 必须由动画收到 0**，否则动画播完摘 `boot-out` 那一帧会退回基础态（遮罩盖满 + opacity 1），屏幕会黑一下。基础态是常驻 `display: grid` + `opacity: 0` + `visibility: hidden`（`display` 不参与过渡，切 `none↔grid` 会吃掉淡入），收场 `visibility` 延后 0.32s 才 hidden。浏览器缺 `@property`/`mask-image` 能力时自动退回整体透明度淡入淡出（`bootIn`）。首访的 `boot-run` 由主脚本双 `rAF` 加，head 脚本只留 `boot-first` 标记——早期版本 head 直接加 class，第一帧就是 `opacity:1`，看着像「啪」地糊上来。`is-wait` 态进度条改成来回扫（不知道多久就不假装知道进度）。`pageshow` 的 `persisted` 分支会清掉残留的 `boot-out`/`boot-run`，防止 bfcache 恢复时 `overflow: hidden` 把滚动锁死。设了 `prefers-reduced-motion: reduce` 的用户整站不启动。样式与脚本都是 `is:inline`，必须在首帧前生效。
 
-页面支持 **14 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换），选择存在 localStorage。
+页面支持 **15 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
 
 页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
 
@@ -64,7 +64,7 @@ Beyond_JUBEAT/
 │  └─ favicon.svg             站点图标
 │
 ├─ scripts/                   工具脚本（不部署）
-│  ├─ build-data.cjs          songs.json → src/data/data.json + 同步曲绘
+│  ├─ build-data.cjs          data/jubeat.db → src/data/data.json + songs.json + 同步曲绘
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
 │  ├─ gen-brand-assets.cjs   生成 og 分享图与 apple-touch-icon（素材变了才跑）
@@ -93,7 +93,7 @@ Beyond_JUBEAT/
 
 | 字段 | 来源 |
 | --- | --- |
-| 曲名 / 谱师 / 三档定数 / 曲绘 | `archive/legacy/jubeat-wiki-v3/data/songs.json`（513 曲 / 1512 谱面） |
+| 曲名 / 谱师 / 三档定数 / 曲绘 | `data/jubeat.db`（SQLite，1241 曲 / 3723 谱面；`scripts/db/build-db.cjs` 导入，`db/schema.sql` 建表，`db/seed.sql` 可重放到 D1） |
 | 世代归属与年份 | `scripts/build-data.cjs` 里的 `META` 表（15 条，jubeat → 音乐魔方） |
 | 收录日期 | `songs.json` 的 `addedAt`，缺失则为 `null` |
 
