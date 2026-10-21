@@ -152,8 +152,9 @@ function normalizeJpGen(origin) {
   return JP_GENS.includes(v) ? v : null;
 }
 
-// 国服行取 xlsx sheet2；曲绘 xlsx 里没有，从 archive 快照按 songId 回查（84 首全有）。
-// 7 首 2026.10.15 新曲快照里没有，cover 保持 NULL。
+// 国服行取 xlsx sheet2；曲绘 xlsx 里没有，从 archive 快照按 songId 回查。
+// 快照没有的新曲（2026.10.15 那批）回退查素材库 archive/materials/songjackets/idN.png
+// （转档产物 public/assets/images/jackets/idN.webp 已存在则用同名 webp），再没有才留 NULL。
 function readCnRows(archiveById) {
   const p = path.join(XLSX_DIR, 'sheet2.json');
   if (!fs.existsSync(p)) {
@@ -172,10 +173,18 @@ function readCnRows(archiveById) {
       cnCategory: String(r[7] || '').trim(),
       pool: String(r[8] || '').trim(),
       date: String(r[9] || '').trim(),
-      cover: arc.cover ? String(arc.cover).split('/').pop() : null,
+      cover: arc.cover ? String(arc.cover).split('/').pop() : cnCoverFallback(songId),
     });
   }
   return out;
+}
+
+// 国服新曲的曲绘回退：素材库 png 或已转档的 webp，任一存在即认 idN.webp 为站点名。
+function cnCoverFallback(songId) {
+  const png = path.join(ROOT, 'archive/materials/songjackets', 'id' + songId + '.png');
+  const webp = path.join(ROOT, 'public/assets/images/jackets', 'id' + songId + '.webp');
+  if (fs.existsSync(webp) || fs.existsSync(png)) return 'id' + songId + '.webp';
+  return null;
 }
 
 function selfCheck(db, stat, problems) {
