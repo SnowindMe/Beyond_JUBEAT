@@ -166,10 +166,11 @@ body::after {
 .bgv-l {
     position: absolute;
     inset: 0;
-    /* 图跟着视口走：100% 100% 整幅铺满，不裁切也不留边（主人 2026-10-19 两次强调
-       「背景图大小要适配显示视口大小」）。cover 会按比例裁掉左右，比例一变就少东西。 */
+    /* 填充按视口比例自适应：cover 等比放大铺满视口、不变形，溢出的边裁掉
+       （主人 2026-10-21 拍板，替代 10-19 的 100% 100% 硬拉伸——拉伸会让
+       窄长窗口里的菱形网格全部变形）。背景是纯装饰底图，裁边无信息损失。 */
     background-position: center top;
-    background-size: 100% 100%;
+    background-size: cover;
     background-repeat: no-repeat;
     opacity: 0;
     transition: opacity 0.5s ease;
@@ -297,6 +298,8 @@ html[data-font="G"] .mark b {
    符号改用更深的 --ink，并去掉 ~ 的透明度。 */
 html[data-g="ripples"] .mark b .sym,
 html[data-g="ripples"] .mark b .til,
+html[data-g="yymf"] .mark b .sym,
+html[data-g="yymf"] .mark b .til,
 html[data-g="knit"] .mark b .sym,
 html[data-g="knit"] .mark b .til {
     color: var(--ink);
@@ -549,6 +552,9 @@ html[data-g="festo"] .word-l {
 html[data-g="ripples"] .word-l {
     display: flex;
 }
+html[data-g="yymf"] .word-l {
+    display: flex;
+}
 html[data-g="ave"] .word-t,
 html[data-g="ave"] .sub {
     display: none;
@@ -605,10 +611,19 @@ html[data-g="ripples"] .word-t,
 html[data-g="ripples"] .sub {
     display: none;
 }
+html[data-g="yymf"] .word-t,
+html[data-g="yymf"] .sub {
+    display: none;
+}
 /* ripples 背景压暗后，字标自带的浅薄荷绿在雾面底上偏灰：
    加深一档并提饱和，PNG 原色不动，只在渲染时滤镜。 */
 html[data-g="ripples"] #wordLogo {
     filter: brightness(0.82) saturate(1.35);
+}
+
+/* 音乐魔方字标：白色字身 + 粉青渐变描边，压暗浅底上靠描边认字，提一档饱和 */
+html[data-g="yymf"] #wordLogo {
+    filter: saturate(1.25);
 }
 
 /* 纯黑线稿世代（Ave / BTA）在深色背景上不可见：只做反相提亮，不加投影（主人要求去阴影） */
@@ -1412,13 +1427,35 @@ html[data-g="ripples"] {
     --glass2: rgba(255, 255, 255, 0.8);
 }
 
+/* 音乐魔方（国服）：底板是青→粉糖果亮图，和 ripples 同策——保留浅色主题，
+   用淡薰衣草 veil 把背景压暗一档，保证深字与白卡片的对比。 */
+html[data-g="yymf"] {
+    --bgop: 0.92;
+    --veil: linear-gradient(180deg, rgba(64, 78, 148, 0.34) 0%, rgba(64, 78, 148, 0.22) 55%, rgba(64, 78, 148, 0.36) 100%);
+    --scrim: rgba(30, 34, 80, 0.22);
+    --base: #e9eefb;
+    --acc: #3f6fd8;
+    --acc2: #e06fa8;
+    --title: #16224a;
+    --tshadow: none;
+    --lede-shadow: none;
+    --ink: #101a3a;
+    --ink2: #3a4a72;
+    --ink3: #6d7ba0;
+    --edge: rgba(16, 26, 58, 0.16);
+    --edge2: rgba(16, 26, 58, 0.28);
+    --glass: rgba(255, 255, 255, 0.66);
+    --glass2: rgba(255, 255, 255, 0.8);
+}
+
 /* 浅色世代：卡片玻璃偏白、背后是亮底彩图，弹层若只用 --glass2 会和底图糊在一起，
    选项文字看不清，这里给弹层一层更实的底。 */
 html[data-g="knit"],
 html[data-g="prop"],
 html[data-g="qubell"],
 html[data-g="ripples"],
-html[data-g="saucer"] {
+html[data-g="saucer"],
+html[data-g="yymf"] {
     --pop-bg: rgba(255, 255, 255, 0.94);
     --pop-hi: rgba(16, 27, 33, 0.06);
     --pop-on: rgba(16, 27, 33, 0.1);
@@ -1467,6 +1504,9 @@ html[data-g="saucerfulfill"] {
 }
 html[data-g="ripples"] {
     --bgauto: url("/assets/images/bg/ripples.webp");
+}
+html[data-g="yymf"] {
+    --bgauto: url("/assets/images/bg/yymf.webp");
 }
 
 /* 字标贴图（--logo/--logoar/--logow）在 logo.css 里以 data URI 内联，
