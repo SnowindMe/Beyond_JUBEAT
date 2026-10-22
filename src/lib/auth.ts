@@ -10,13 +10,15 @@
 //   * 全程用 WebCrypto（Workers 原生），不引第三方库——包体不涨、无供应链风险。
 
 /** PBKDF2 迭代次数。
- *  Workers 有 CPU 时间上限（免费计划 10ms/请求、付费 30s），而 PBKDF2 是故意慢的，
+ *  Workers 有 CPU 时间上限（免费计划每请求约 10ms CPU，付费 30s），而 PBKDF2 是故意慢的，
  *  这就是「抗爆破」和「能跑」的取舍点：
- *  - OWASP 对 PBKDF2-SHA256 的建议是 600k，免费 Workers 撑不住（会 1102 超限）；
- *  - 这里取 21 万，配合「密码至少 8 位」的策略；
- *  - 若线上出现 CPU 超限，把这个值调低到 10 万即可，老密码仍能验（迭代次数随 hash 存）。
- *  将来升级：改大这个值，用户下次登录自动按新强度重算。 */
-const PBKDF2_ITER = 210_000;
+ *  - OWASP 对 PBKDF2-SHA256 的建议是 600k，免费 Workers 撑不住（会 1102 CPU 超限）；
+ *  - 本机实测 10 万次 ≈ 150–195ms（Node WebCrypto），免费计划余量本就极小，
+ *    所以取 10 万 —— 配合「密码至少 8 位 + Turnstile + 每用户独立盐」够用；
+ *  - 升级付费计划后把 PBKDF2_ITER 改大即可：迭代次数写进 hash 串，
+ *    老用户下次登录成功时自动按新强度重算（verifyPassword 的 needsRehash）。
+ *  红线：线上若出现 1102 CPU 超限，优先下调此值，绝不能去掉密码哈希。 */
+const PBKDF2_ITER = 100_000;
 const PBKDF2_MIN_ITER = 10_000; // 校验时防御异常值，避免被构造 hash 拖死
 const SALT_BYTES = 16;
 const KEY_BITS = 256;
