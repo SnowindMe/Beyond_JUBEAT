@@ -191,6 +191,28 @@ const EAGER = new Set(
 
       var state = { srv: root.getAttribute('data-srv') || 'jp', cat: 'all' };
 
+      // 错开入场：给当前可见的前 12 张卡打上 .sc-stag 并设延迟（最多只做 12 个，
+      // 一个分区上千张卡不可能全做动画）。每次切换先清掉上一轮的标记与延迟。
+      function stagger() {
+        var old = root.querySelectorAll('.sc-card.sc-stag');
+        for (var i = 0; i < old.length; i++) {
+          old[i].classList.remove('sc-stag');
+          old[i].style.animationDelay = '';
+        }
+        // 同一帧里先删后加，浏览器看不到样式变化、动画不会重播；
+        // 读一次 offsetWidth 强制回流，让「删除」这一笔先落定。
+        void root.offsetWidth;
+        var picked = 0;
+        var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden])');
+        for (var s = 0; s < secs.length && picked < 12; s++) {
+          var cards = secs[s].querySelectorAll('.sc-card');
+          for (var c = 0; c < cards.length && picked < 12; c++, picked++) {
+            cards[c].classList.add('sc-stag');
+            cards[c].style.animationDelay = (picked * 0.03).toFixed(2) + 's';
+          }
+        }
+      }
+
       function apply() {
         root.setAttribute('data-srv', state.srv);
         var bs = state.srv;
@@ -213,6 +235,7 @@ const EAGER = new Set(
             secs[m].hidden = !show;
           }
         }
+        stagger();
       }
 
       root.addEventListener('click', function (e) {

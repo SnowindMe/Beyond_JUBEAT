@@ -157,9 +157,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
    原来靠 hidden 一换就是硬跳。这里利用「display:none → block 会重播 animation」的特性
    做纯 CSS 过渡，JS 逻辑不用改：
    ① 分区整体淡入上浮，替掉瞬切；
-   ② 只有第一个世代的头 12 张卡错开 30ms 出现（错开入场是个「味道」，做一层就够；
-      按分区选会把每个世代的前 12 张都算上，日服 30 个世代就是 360 个动画同时跑，
-      白白掉帧。其余卡片跟着父级一起淡入）；
+   ② 当前可见分区里「头 12 张卡」错开 30ms 出现（.sc-stag 由 JS 按实际可见的卡标上；
+      用 CSS 按世代 nth-child 选会挑错对象——日服分区第一个世代常常只有 1 首，
+      错开就看不出来；而按分区全选又会一次跑几百个动画）；
    ③ 服务器卡与 chips 的选中态加一点回弹，让点击有反馈。
    三条动画都只动 opacity/transform，走合成层，不影响布局。 */
 @keyframes scIn {
@@ -186,28 +186,16 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-sec:not([hidden]) {
     animation: scIn 0.26s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(-n + 12) {
+.sc-card.sc-stag {
     animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(1) { animation-delay: 0.03s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(2) { animation-delay: 0.06s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(3) { animation-delay: 0.09s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(4) { animation-delay: 0.12s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(5) { animation-delay: 0.15s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(6) { animation-delay: 0.18s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(7) { animation-delay: 0.21s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(8) { animation-delay: 0.24s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(9) { animation-delay: 0.27s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(10) { animation-delay: 0.30s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(11) { animation-delay: 0.33s; }
-.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(12) { animation-delay: 0.36s; }
 .sc-srv-b.is-on {
     animation: scPop 0.24s ease-out both;
 }
 /* 系统开了「减少动态效果」就全部收干净：只保留结果，不做过渡 */
 @media (prefers-reduced-motion: reduce) {
     .sc-sec:not([hidden]),
-    .sc-sec:not([hidden]) .sc-card,
+    .sc-card.sc-stag,
     .sc-srv-b.is-on {
         animation: none;
     }
