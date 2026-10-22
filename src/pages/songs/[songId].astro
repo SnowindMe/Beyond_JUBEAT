@@ -42,14 +42,23 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 const SCALE_MAX = 11;
 const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
 
-// 元信息只渲染有值的项：以前六个固定格子里有三个是「—」，
-// 一片空占位比少几条信息更难看，也没信息量。
-const meta: { k: string; v: string; mono?: boolean }[] = song
+// 版面平衡（2026-10-22 第二版）：上一版把所有硬数据都堆在左栏，
+// 左栏出现 7 行往下压得很长，右栏只有曲名 + 定数条，右半大片空白、整体左重右空。
+// 现在按「识别信息」和「事实信息」拆开：
+//   左栏只留 4 项（songId / 世代 / 分区 / 服务器）—— 标识这首是谁；
+//   其余（BPM / 上线 / 解禁 / 备注）做成底板底部的横向信息条 —— 填满宽度、压住版面下缘。
+// 仍然只渲染有值的项，不摆「—」占位。
+type Meta = { k: string; v: string; mono?: boolean };
+const metaAside: Meta[] = song
   ? [
       { k: 'songId', v: song.id, mono: true },
       { k: '世代', v: song.gen + (genMeta ? ` ${genMeta.y}` : '') },
       { k: '分区', v: song.cat },
       { k: '服务器', v: servers },
+    ].filter((m) => m.v)
+  : [];
+const metaFoot: Meta[] = song
+  ? [
       ...(song.bpm ? [{ k: 'BPM', v: song.bpm, mono: true }] : []),
       ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
       ...(song.unlock ? [{ k: '解禁', v: song.unlock }] : []),
@@ -87,7 +96,7 @@ const meta: { k: string; v: string; mono?: boolean }[] = song
         {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
 
         <dl class="sd-meta">
-          {meta.map((m) => (
+          {metaAside.map((m) => (
             <div>
               <dt>{m.k}</dt>
               <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
@@ -117,6 +126,20 @@ const meta: { k: string; v: string; mono?: boolean }[] = song
           ))}
         </div>
       </div>
+
+      {/* 底部横向信息条：BPM / 上线 / 解禁 / 备注。
+          放在底板下缘横铺，既填满右半宽度、又把左栏过长的纵向清单压回去，
+          让整体从「左重右空」变成两栏均衡。只渲染有值的项。 */}
+      {metaFoot.length ? (
+        <dl class="sd-foot">
+          {metaFoot.map((m) => (
+            <div>
+              <dt>{m.k}</dt>
+              <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
   </section>
   )}
