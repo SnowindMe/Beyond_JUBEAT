@@ -8,8 +8,10 @@
 //   ③ 提交时 token 是一次性的，出错重试必须 reset，否则会被判「已使用」。
 //
 // 模式：Managed（主人 2026-10-23 选）——CF 自动判断是否出挑战，多数用户无感。
-// 未配置 site key 时不渲染 widget（本地开发），服务端另有 fail-closed 逻辑。
-const siteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
+// site key 来自 src/lib/turnstile-config.ts（公开值，写死进仓库少一个配置出错点）。
+import { TURNSTILE_SITE_KEY, TURNSTILE_ENABLED } from '../lib/turnstile-config';
+
+const siteKey = TURNSTILE_ENABLED ? TURNSTILE_SITE_KEY : '';
 ---
 
 {siteKey ? (
