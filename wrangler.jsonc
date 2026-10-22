@@ -17,7 +17,9 @@
       "head_sampling_rate": 1,
       "persist": true
     },
-    "issue_detection": {
+    // 实时 Issues 检测：字段名是 issues（wrangler 4.151.x 不认识 issue_detection，
+    // 写错会被静默丢弃并告警）。先关掉，需要时改 true。
+    "issues": {
       "enabled": false
     }
   },
