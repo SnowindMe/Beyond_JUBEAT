@@ -105,9 +105,12 @@ const EAGER = new Set(
       <div class="sc-srv" role="group" aria-label="切换服务器">
         {SRV_CARDS.map((s) => (
           <button type="button" class={`sc-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`} data-srv={s.id} aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}>
-            <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="160" height="54" loading="eager" decoding="async" />
-            <span class="sc-srv-n">{s.name}</span>
-            <span class="sc-srv-c">{srvTotal(s.id)} 首</span>
+            <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
+            {/* 名称与总曲数并排两枚小徽章（主人 2026-10-22：总曲数放到名称右边，两个都做成徽章）。 */}
+            <span class="sc-srv-meta">
+              <b class="sc-tag sc-tag-n">{s.name}</b>
+              <b class="sc-tag sc-tag-c">{srvTotal(s.id)}<i>首</i></b>
+            </span>
           </button>
         ))}
       </div>

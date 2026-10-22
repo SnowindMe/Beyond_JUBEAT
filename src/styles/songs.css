@@ -46,35 +46,65 @@
     transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .sc-srv-logo {
-    height: 48px;
+    height: 64px;
     width: auto;
     max-width: 100%;
     object-fit: contain;
     opacity: 0.85;
     transition: opacity 0.2s;
 }
+/* 名称 + 总曲数两枚并排小徽章 */
+.sc-srv-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.sc-tag {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    padding: 5px 10px;
+    border-radius: var(--pill);
+    border: 1px solid var(--edge);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    color: var(--ink2);
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+/* 计数徽章：数据字体、数字在前，单位小一号压弱 */
+.sc-tag-c {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink3);
+}
+.sc-tag-c i {
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+}
 /* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样 */
 html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-g="ripples"]):not([data-g="saucer"]):not([data-g="yymf"]) .sc-line {
     filter: invert(1);
 }
-.sc-srv-n {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-}
-/* 卡内总曲数：比服务器名弱一档，数据字体，数字与「首」同色 */
-.sc-srv-c {
-    font-family: var(--font-data);
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    color: var(--ink3);
-    transition: color 0.2s;
-}
-.sc-srv-b:hover .sc-srv-c {
+.sc-srv-b:hover .sc-tag-c,
+.sc-srv-b.is-on .sc-tag-c {
     color: var(--ink2);
 }
-.sc-srv-b.is-on .sc-srv-c {
-    color: color-mix(in srgb, var(--acc) 78%, var(--ink));
+.sc-srv-b.is-on .sc-tag {
+    border-color: color-mix(in srgb, var(--acc) 45%, transparent);
+    background: color-mix(in srgb, var(--acc) 20%, transparent);
+}
+.sc-srv-b.is-on .sc-tag-n {
+    color: var(--ink);
+}
+.sc-srv-b.is-on .sc-tag-c {
+    color: color-mix(in srgb, var(--acc) 80%, var(--ink));
 }
 .sc-srv-b:hover {
     color: var(--ink);
@@ -425,14 +455,18 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     .sc-srv-b {
         flex: 1;
         width: auto;
-        gap: 6px;
-        padding: 12px 6px 10px;
+        gap: 8px;
+        padding: 12px 6px 11px;
     }
     .sc-srv-logo {
-        height: 34px;
+        height: 42px;
     }
-    .sc-srv-c {
-        font-size: 10px;
+    .sc-tag {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    .sc-tag-c {
+        font-size: 10.5px;
     }
     .sc-cats,
     .sc-cat-set {
