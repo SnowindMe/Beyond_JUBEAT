@@ -76,13 +76,16 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     outline-offset: 2px;
 }
 
+/* chips 可能换行（国服 4 个分区在窄一点的桌面宽度下会折），换行后每行也要居中 */
 .sc-cats {
     display: flex;
+    justify-content: center;
     gap: 6px;
     flex-wrap: wrap;
 }
 .sc-cat-set {
     display: flex;
+    justify-content: center;
     gap: 6px;
     flex-wrap: wrap;
 }
