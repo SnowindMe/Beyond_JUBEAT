@@ -8,7 +8,6 @@ import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import { getSongById, type Song } from '../../lib/db';
-import ubIndex from '../../data/ub-index.json';
 import { env } from 'cloudflare:workers';
 
 export const prerender = false;
@@ -37,22 +36,6 @@ const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
 const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
-
-// 谱面确认播放器：我们的 songId → ub 曲目 id（scripts/ub/build-ub-index.mjs 生成）。
-// 只有命中时才渲染 iframe——它覆盖 1241 首里的 1169 首（94.2%），
-// 剩下的（国服原创 9900xxxx、拿不到官方 id 的 BTA- 占位曲）在 ub 里没有条目，
-// 显示一个空 iframe 比不显示更糟，所以直接不出这一块。
-const ubSong = song ? (ubIndex as Record<string, string>)[song.id] : undefined;
-// 默认难度：有 EXT 就开 EXT（jubeat 玩家最关心这一档），否则退回有值的最高档。
-const ubChart = song
-  ? (song.lv.ext != null ? 'EXT' : song.lv.adv != null ? 'ADV' : song.lv.bsc != null ? 'BSC' : 'EXT')
-  : 'EXT';
-const ubSrc = ubSong
-  ? `/ub-proxy/?song=${encodeURIComponent(ubSong)}&chart=${ubChart}&paused=1`
-  : null;
-const ubShare = ubSong
-  ? `https://ub.thregren.world/?song=${encodeURIComponent(ubSong)}&chart=${ubChart}`
-  : null;
 
 // 定数刻度：jubeat 定数上限约 11，按比例画条。低于 1 的给个最小可见宽度，
 // 但用 .is-thin 提示「几乎为空」，避免短到看不见又被误读成没加载。
@@ -158,32 +141,6 @@ const metaFoot: Meta[] = song
         </dl>
       ) : null}
     </div>
-
-    {/* 谱面确认播放器：右下角的谱面预览。
-        来源是 ub.thregren.world（Thregren 的 jubeat 谱面查看器，MIT 开源）。
-        它用 X-Frame-Options: SAMEORIGIN 禁止第三方嵌入，所以这里走本站的
-        /ub-proxy 代理转发并剥掉限制头（代理只放行这一个域名与深链接参数）。
-        loading="lazy" 让它滚到可见才加载——播放器本身不轻，别拖慢详情页首屏。 */}
-    {ubSrc ? (
-      <section class="sd-chart">
-        <div class="sd-chart-h">
-          <h2>谱面确认</h2>
-          <a href={ubShare} target="_blank" rel="noopener noreferrer">在谱面确认中打开</a>
-        </div>
-        <div class="sd-chart-f">
-          <iframe
-            src={ubSrc}
-            title={`${song.t} 的谱面预览`}
-            loading="lazy"
-            referrerpolicy="no-referrer"
-            allow="fullscreen"
-          ></iframe>
-        </div>
-        <p class="sd-chart-s">
-          谱面数据与播放器由 <a href="https://ub.thregren.world/" target="_blank" rel="noopener noreferrer">ub.thregren.world</a>（Thregren）提供，经本站代理内嵌。
-        </p>
-      </section>
-    ) : null}
   </section>
   )}
 </Layout>

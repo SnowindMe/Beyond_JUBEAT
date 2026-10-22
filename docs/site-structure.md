@@ -21,12 +21,12 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   ├─ ✅ 分区筛选（日服：版权/原创；国服：KONAMI原创/音乐魔方原创/音乐魔方流行）+ 世代分组
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
 │   │   页面 `prerender = false` 是本站唯一 SSR 页，缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
-│   ├─ 💭 曲目详情 /songs/[songId]/
-│   │   ├─ 曲绘 / 曲名 / 作曲者 / 收录世代 / 收录日期
-│   │   ├─ 三档定数（bsc / adv / ext）+ 定数条
-│   │   ├─ Jubility 理论值
-│   │   ├─ 谱面预览（mcz 数据）
-│   │   └─ 上一首 / 下一首
+│   ├─ ✅ 曲目详情 /songs/[songId]/（2026-10-22 上线，v1.10.0；与 /songs/ 同为 SSR 查 D1）
+│   │   ├─ ✅ 曲绘 / 曲名 / 作曲者 / 三档定数刻度条 / songId / 世代 / 分区 / 服务器 / BPM / 上线 / 解禁
+│   │   ├─ ✅ 不存在的 id 在原 URL 回 404 状态 + noindex
+│   │   ├─ 💭 Jubility 理论值
+│   │   └─ 💭 上一首 / 下一首
+│   │   ⤷ 谱面预览：v1.12.0 曾内嵌 ub.thregren.world 播放器（经 /ub-proxy 代理），v1.13.0 已整体下线
 │   └─ 💭 世代筛选 /songs/gen/[gen]/（15 个世代）
 │
 ├─ 🚧 Jubility /jubility/
@@ -106,7 +106,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 | 首页统计卡 | `stat.songs` `stat.charts` `stat.gens` `gen10` | ✅ 已有 |
 | 首页曲绘方块 | `gen[].rep.cover` `gen[].k` | ✅ 已有 |
 | 曲目列表 | D1 `songs` 表的全量字段（曲名 / 作曲 / 三档定数 / 曲绘 / 世代 / 分区 / 收录日期） | ✅ 已有（v1.7.0 起运行期读 D1，`src/lib/db.ts` 的 `getAllSongs`） |
-| 曲目详情 | 同上 + `added_at` + `unlock_note` + 谱面文件 | ✅ 字段齐了（谱面预览还缺 mcz 数据） |
+| 曲目详情 | 同上 + `added_at` + `unlock_note` | ✅ 已用上；谱面预览功能已于 v1.13.0 下线 |
 | Jubility 理论值 | 定数 → 理论值映射表 | ❌ `data.json` 无此字段 |
 | Emblem / 伙伴 / 成就 | — | ❌ `data.json` 无此字段 |
 | 定数分布 | `dist` `dots` `gen105` | ✅ 已有（当前无页面消费） |
@@ -123,7 +123,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 | --- | --- | --- | --- |
 | `index.astro` | 首页 | ✅ 首页 | 新版改成单屏 Hero + 主题切换 |
 | `songs.astro` | 曲目库 | ✅ /songs/ | 已上线（三卡切换 + 分区筛选） |
-| `songs/[songId].astro` | 曲目详情 | 💭 /songs/[songId]/ | 待实现，含谱面预览 |
+| `songs/[songId].astro` | 曲目详情 | ✅ /songs/[songId]/ | 已上线（v1.10.0）；谱面预览 v1.13.0 下线 |
 | `jubility.astro` | Jubility 理论值 | 💭 /jubility/ | 待实现，导航已撤 |
 | `versions.astro` | 版本沿革 | 💭 /versions/ | 导航未列，候选 |
 | `gameplay.astro` | 玩法与判定 | 💭 /gameplay/ | 导航未列，候选 |
@@ -145,7 +145,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 ## 五、建议的落地顺序
 
 1. ~~**/songs/ 曲目库**~~ ✅ 已完成（v1.6.0；v1.7.0 改成读 D1 的 SSR）
-2. **/songs/[songId]/ 曲目详情**（D1 `songs` 表字段已齐：id / 三档定数 / 曲绘 / 上线日期 / 解禁说明，直接按 `song_id` 查即可）
+2. ~~**/songs/[songId]/ 曲目详情**~~ ✅ 已完成（v1.10.0；谱面预览 v1.13.0 下线）
 3. **/jubility/**（数据需先补进 `data.json`）
 4. **/about/**（纯文案，成本最低，可先做）
 5. **/login/**（需要后端，建议等 D1 + Workers 接入后再做）

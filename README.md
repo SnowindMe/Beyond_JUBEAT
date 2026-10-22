@@ -20,6 +20,10 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
 
+**曲目详情 /songs/[songId]/**（v1.10.0 上线，与曲目页同为 `prerender = false` 的 SSR 页，按 `song_id` 查 D1 单行）：两栏唱片内页式版面——左窄栏曲绘封套 + 识别信息（songId / 世代 / 分区 / 服务器），右栏曲名与艺人，三档定数做成 0–11 刻度的横条，底部横铺 BPM / 上线 / 解禁 / 备注。不存在的 id 在原 URL 返回真正的 404 状态（不 302 跳 /404，否则复制出去的链接会丢 songId）同时 `noindex`。曲目卡整卡可点，实现是卡内一层绝对定位铺满的 `.sc-link`，而不是把整卡包成 `<a>`——点击覆盖全卡，读屏链接名也只有曲名。
+
+> 详情页曾内嵌 ub.thregren.world 的「谱面确认」播放器（v1.12.0–1.12.2，靠 `/ub-proxy` 前缀代理剥掉对方的 X-Frame-Options 才能嵌进同源 iframe）。**该功能已于 v1.13.0 整体下线**：`src/pages/ub-proxy/`、`src/data/ub-index.json`、`scripts/ub/build-ub-index.mjs` 与 `wrangler.jsonc` 的 `/ub-proxy` 运行时路由一并移除。保留的两样东西：①详情页右下角的「在谱面确认中打开」外链去掉后，页面上不再有任何 ub 入口；②`ub-index.json` 映射表（1169 条 songId → ub 曲目 id）与生成脚本留在 `archive/materials/ub/` 备用。以后要重启，把文件搬回原位、恢复 `run_worker_first` 那条路由即可。
+
 **/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
 **开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线），同一套视觉有**三种触发**，但只有「真的要等」时才亮：①首访开屏——每个会话第一次进入才出现（`sessionStorage` 记 `jb-boot`），最少停 900ms（太快闪一下像故障）、最多 3s（`load` 被慢资源拖住时不锁人）；②点导航去下一页——延迟 160ms 才亮，新页在此之前到达就完全不出现（本地点击到 `pagehide` 约 68ms，正常网速下看不到遮罩）；③切世代主题——先查本页是否已经拿到过这两张图（背景 + 字标），拿到就零延迟直换、一点不闪；没拿到才挂 160ms 延迟遮罩，图到齐立刻收（兜底 2.6s）。
@@ -38,6 +42,7 @@ Beyond_JUBEAT/
 │  ├─ pages/
 │  │  ├─ index.astro          首页（Hero + 施工中占位）
 │  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，三卡切换 + 分区筛选）
+│  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
 │  │  ├─ recent.astro         最近更改（已登录用户编辑记录，现为空状态）
 │  │  └─ 404.astro            404 页
 │  ├─ components/

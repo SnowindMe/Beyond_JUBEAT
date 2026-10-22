@@ -17,3 +17,4 @@
 | `legacy/wiki-v4/templates/` | 9 个历史模板 template*.html（build.cjs 引 template11，build2.cjs 引 template12） |
 | `legacy/wiki-v4/style-backup/` | theme.css.bak、theme.css.bak2、logo.css |
 | `legacy/wiki-v4/duplicates/` | 13 张与其他截图内容完全相同的重复图 |
+| `materials/ub/` | `ub-index.json`（本站 songId → ub.thregren.world 曲目 id，1169 条）+ `build-ub-index.mjs`（生成脚本）。谱面确认内嵌功能已于 v1.13.0 下线，映射表留档备用 |
