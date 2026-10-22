@@ -5,16 +5,18 @@
 .songs .panel {
     padding: clamp(12px, 1.6vw, 18px);
 }
+/* 工具条：服务器卡在上、分区 chips 在下，整组水平居中（主人 2026-10-22 要求电脑端也居中）。
+   原来是 space-between 把服务器卡顶在左、chips 推到右，桌面上两边分家看着散。 */
 .sc-tools {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: clamp(16px, 2vw, 22px);
 }
 .sc-srv {
     display: flex;
+    justify-content: center;
     gap: 8px;
 }
 /* 服务器卡：logo 在上、名称在下（主人 2026-10-21 指定三张卡）。
