@@ -1,0 +1,57 @@
+---
+// 登录页。表单直提交到 /api/auth/login，无 JS 也能用。
+import Layout from '../layouts/Base.astro';
+import '../styles/auth.css';
+import Turnstile from '../components/Turnstile.astro';
+import { pageTitle } from '../lib/title';
+import { authError } from '../lib/auth-messages';
+
+// 登录页需要读 locals.user（已登录就跳走），必须走 SSR。
+// 预渲染的话中间件整段被跳过，locals 永远是 null。
+export const prerender = false;
+
+// 已登录就不该再看登录页：直接 303 去账户页。
+// 注意要在页面顶部做，别渲染整页再跳。
+if (Astro.locals.user) return Astro.redirect('/account/');
+
+// 错误码由接口用 ?e= 带回来；同时接受 ?next=（只允许站内相对路径）
+const err = authError(Astro.url.searchParams.get('e'));
+const nextRaw = Astro.url.searchParams.get('next') ?? '';
+// 防开放重定向：只接受以单个 / 开头的站内路径，砍掉 //evil.com 与绝对 URL
+const next = /^\/(?!\/)/.test(nextRaw) ? nextRaw : '/account/';
+---
+
+<Layout title={pageTitle('登录')} canonicalPath="/login/" description="登录 Beyond ↑ JUBEAT，参与站点编辑与活动。" noindex>
+  <section class="band">
+    <div class="band-h">
+      <h2>登录</h2>
+      <em>sign in</em>
+    </div>
+
+    <div class="panel">
+      <form class="au-form" method="post" action="/api/auth/login" novalidate>
+        {err && <p class="au-alert" role="alert">{err}</p>}
+
+        <div class="au-f">
+          <label for="lg-email">邮箱</label>
+          <input id="lg-email" name="email" type="email" autocomplete="username" required maxlength="254" />
+        </div>
+
+        <div class="au-f">
+          <label for="lg-pass">密码</label>
+          <input id="lg-pass" name="password" type="password" autocomplete="current-password" required maxlength="128" />
+        </div>
+
+        <input type="hidden" name="next" value={next} />
+
+        <Turnstile />
+
+        <button class="au-submit" type="submit">登录</button>
+
+        <p class="au-alt">
+          还没有账号？<a href="/register/">注册一个</a>
+        </p>
+      </form>
+    </div>
+  </section>
+</Layout>

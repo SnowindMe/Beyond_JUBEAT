@@ -1,0 +1,74 @@
+---
+// 注册页。注册即得「玩家」身份；维护者要向站长自荐。
+import Layout from '../layouts/Base.astro';
+import '../styles/auth.css';
+import Turnstile from '../components/Turnstile.astro';
+import { pageTitle } from '../lib/title';
+import { authError } from '../lib/auth-messages';
+
+// 同登录页：要读 locals.user，必须 SSR
+export const prerender = false;
+
+if (Astro.locals.user) return Astro.redirect('/account/');
+
+const err = authError(Astro.url.searchParams.get('e'));
+---
+
+<Layout title={pageTitle('注册')} canonicalPath="/register/" description="注册 Beyond ↑ JUBEAT 账号。" noindex>
+  <section class="band">
+    <div class="band-h">
+      <h2>注册</h2>
+      <em>sign up</em>
+    </div>
+
+    <div class="panel">
+      <form class="au-form" method="post" action="/api/auth/register" novalidate>
+        {err && <p class="au-alert" role="alert">{err}</p>}
+
+        <div class="au-f">
+          <label for="rg-email">邮箱</label>
+          <input id="rg-email" name="email" type="email" autocomplete="email" required maxlength="254" />
+          <p class="au-hint">用作登录名，暂不发送验证邮件。</p>
+        </div>
+
+        <div class="au-f">
+          <label for="rg-name">昵称</label>
+          <input id="rg-name" name="name" type="text" autocomplete="nickname" required maxlength="24" />
+          <p class="au-hint">在站内显示的名字，1–24 个字，之后可以改。</p>
+        </div>
+
+        <div class="au-f">
+          <label for="rg-pass">密码</label>
+          <input id="rg-pass" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" />
+          <p class="au-hint">至少 8 位。密码不会以明文保存。</p>
+        </div>
+
+        <div class="au-f">
+          <label for="rg-pass2">再输一次密码</label>
+          <input id="rg-pass2" name="password2" type="password" autocomplete="new-password" required minlength="8" maxlength="128" />
+        </div>
+
+        <Turnstile />
+
+        <button class="au-submit" type="submit">注册</button>
+
+        <p class="au-alt">
+          已经有账号了？<a href="/login/">去登录</a>
+        </p>
+      </form>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="band-h">
+      <h2>四种身份</h2>
+      <em>roles</em>
+    </div>
+    <dl class="au-roles">
+      <div><dt>游客</dt><dd>没登录也能浏览曲库和详情页，只是不能参与编辑。</dd></div>
+      <div><dt>玩家</dt><dd>注册即可，参与站点活动、提交内容。这是你的起始身份。</dd></div>
+      <div><dt>维护者</dt><dd>能编辑曲目、Emblem、伙伴等页面。需要在站内活跃后向站长自荐。</dd></div>
+      <div><dt>站长</dt><dd>最高权限，审批维护者申请。</dd></div>
+    </dl>
+  </section>
+</Layout>

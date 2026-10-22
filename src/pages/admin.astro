@@ -1,0 +1,140 @@
+---
+// 管理面板：站长审批维护者自荐；维护者的编辑入口以后挂这里。
+import Layout from '../layouts/Base.astro';
+import '../styles/auth.css';
+import { pageTitle } from '../lib/title';
+import { isStaff } from '../lib/auth';
+import { authError } from '../lib/auth-messages';
+import { env } from 'cloudflare:workers';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login/?next=/admin/');
+// 维护者也能进：以后维护者要在这里编辑曲目/Emblem。审批只有站长能点（模板里按 role 判断）。
+if (!isStaff(user)) {
+  Astro.response.status = 403;
+}
+
+const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+const err = authError(Astro.url.searchParams.get('e'));
+const okCode = Astro.url.searchParams.get('ok');
+
+type ReqRow = {
+  request_id: number;
+  reason: string;
+  created_at: string;
+  display_name: string;
+  email: string;
+  user_id: string;
+};
+const pending = db && isStaff(user)
+  ? (
+      await db
+        .prepare(
+          `SELECT r.request_id, r.reason, r.created_at, u.display_name, u.email, u.user_id
+             FROM role_requests r JOIN users u ON u.user_id = r.user_id
+            WHERE r.state = 'pending'
+            ORDER BY r.created_at ASC
+            LIMIT 100`
+        )
+        .all<ReqRow>()
+    ).results ?? []
+  : [];
+
+const fmt = (iso: string) => iso.slice(0, 16).replace('T', ' ');
+
+// 最近处理过的（站长回看用，也避免「点完就再也看不到」）
+const decided = db && user.role === 'owner'
+  ? (
+      await db
+        .prepare(
+          `SELECT r.request_id, r.state, r.created_at, r.decided_at, u.display_name
+             FROM role_requests r JOIN users u ON u.user_id = r.user_id
+            WHERE r.state != 'pending'
+            ORDER BY r.decided_at DESC
+            LIMIT 20`
+        )
+        .all<{ request_id: number; state: string; created_at: string; decided_at: string | null; display_name: string }>()
+    ).results ?? []
+  : [];
+---
+
+<Layout title={pageTitle('管理面板')} canonicalPath="/admin/" description="站点管理。" noindex>
+  {!isStaff(user) ? (
+    <section class="band">
+      <div class="panel">
+        <p class="au-alert" role="alert">当前身份（{user.role}）没有管理权限。</p>
+        <p class="au-alt">想参与编辑？在<a href="/account/">账户页</a>提交维护者自荐。</p>
+      </div>
+    </section>
+  ) : (
+    <>
+      <section class="band">
+        <div class="band-h">
+          <h2>维护者自荐</h2>
+          <em>{pending.length} pending</em>
+        </div>
+
+        <div class="panel">
+          {err && <p class="au-alert" role="alert">{err}</p>}
+          {okCode === 'approved' && <p class="au-alert is-ok">已通过，该用户现在是维护者。</p>}
+          {okCode === 'rejected' && <p class="au-alert is-ok">已驳回。</p>}
+
+          {pending.length === 0 ? (
+            <p class="au-alt">没有待审核的申请。</p>
+          ) : (
+            <div class="au-req">
+              {pending.map((r) => (
+                <article class="au-req-i">
+                  <div class="au-req-top">
+                    <div class="au-req-who">
+                      {r.display_name}
+                      <span>{r.email} · 提交于 {fmt(r.created_at)}</span>
+                    </div>
+                  </div>
+                  <p class="au-req-why">{r.reason}</p>
+                  {user.role === 'owner' ? (
+                    <div class="au-req-act">
+                      <form method="post" action="/api/admin/decide">
+                        <input type="hidden" name="request_id" value={r.request_id} />
+                        <input type="hidden" name="action" value="approve" />
+                        <button class="au-btn is-primary" type="submit">通过</button>
+                      </form>
+                      <form method="post" action="/api/admin/decide">
+                        <input type="hidden" name="request_id" value={r.request_id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <button class="au-btn is-danger" type="submit">驳回</button>
+                      </form>
+                    </div>
+                  ) : (
+                    <p class="au-alt">只有站长可以审批。</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {user.role === 'owner' && decided.length > 0 ? (
+        <section class="band">
+          <div class="band-h">
+            <h2>已处理</h2>
+            <em>recent</em>
+          </div>
+          <div class="panel">
+            <dl class="au-kv">
+              {decided.map((d) => (
+                <div>
+                  <dt>{d.state === 'approved' ? '已通过' : '已驳回'}</dt>
+                  <dd>{d.display_name} · {d.decided_at ? fmt(d.decided_at) : '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      ) : null}
+    </>
+  )}
+</Layout>

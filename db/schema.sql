@@ -47,3 +47,80 @@ CREATE TABLE recent_changes (
 );
 
 CREATE INDEX idx_recent_changed_at ON recent_changes(changed_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- 用户系统（2026-10-23，v1.14.0 起）
+--
+-- 身份模型（主人 2026-10-23 定）：
+--   游客   = 没登录，只能看；不是表里的行。
+--   玩家   = 注册即得 role='player'。
+--   维护者 = role='maintainer'，玩家自己自荐（走 role_requests 表），站长审批。
+--   站长   = role='owner'，只有主人一个，直接在 D1 里改，站点不提供提权入口。
+--
+-- 密码不存明文也不存可逆加密：存 PBKDF2-SHA256 派生结果 + 每个用户独立的盐，
+-- 迭代次数一起存进 hash 字符串（算法可随年份升级，老用户下次登录时自动重算）。
+-- 会话同样不存 token 明文：cookie 里放随机 token，表里存它的 SHA-256，
+-- 库被拖走也拿不到能直接用的 cookie。
+-- ---------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+  user_id       TEXT PRIMARY KEY,        -- 内部稳定 id（随机，不暴露邮箱）
+  email         TEXT NOT NULL,           -- 登录名，统一小写后存
+  display_name  TEXT NOT NULL,           -- 站内昵称（可改，不必唯一）
+  pass_hash     TEXT NOT NULL,           -- pbkdf2$<迭代次数>$<salt-b64>$<hash-b64>
+  role          TEXT NOT NULL DEFAULT 'player'
+                CHECK (role IN ('player','maintainer','owner')),
+  status        TEXT NOT NULL DEFAULT 'active'
+                CHECK (status IN ('active','suspended')),
+  created_at    TEXT NOT NULL,           -- ISO 时间
+  updated_at    TEXT NOT NULL,
+  last_login_at TEXT
+);
+-- 邮箱唯一且大小写不敏感：统一在写入前 lower()，这里再兜一道唯一索引。
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+
+DROP TABLE IF EXISTS sessions;
+CREATE TABLE sessions (
+  token_hash   TEXT PRIMARY KEY,         -- sha256(cookie token)，不是 token 本体
+  user_id      TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
+  expires_at   TEXT NOT NULL,            -- ISO 时间，过期即无效（顺手清理）
+  ua_hash      TEXT,                     -- 可选：UA 指纹，变了视为可疑（暂不作废，只记录）
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+CREATE INDEX idx_sessions_user ON sessions(user_id);
+CREATE INDEX idx_sessions_exp  ON sessions(expires_at);
+
+-- 第三方登录（GitHub 等）。二期才接回调，但表先建好：
+-- 一个用户可绑多个第三方账号，(provider, provider_uid) 全局唯一。
+DROP TABLE IF EXISTS oauth_accounts;
+CREATE TABLE oauth_accounts (
+  provider      TEXT NOT NULL,           -- github / （以后可扩展）
+  provider_uid  TEXT NOT NULL,           -- 对方平台上的用户 id
+  user_id       TEXT NOT NULL,
+  linked_at     TEXT NOT NULL,
+  PRIMARY KEY (provider, provider_uid),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+CREATE INDEX idx_oauth_user ON oauth_accounts(user_id);
+
+-- 维护者自荐与审批（主人 2026-10-23：维护者由玩家自己推荐，站长审批）。
+-- 不建独立申请表就只能在 D1 里手工改 role，玩家连申请入口都没有。
+DROP TABLE IF EXISTS role_requests;
+CREATE TABLE role_requests (
+  request_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id      TEXT NOT NULL,
+  want_role    TEXT NOT NULL DEFAULT 'maintainer' CHECK (want_role IN ('maintainer')),
+  reason       TEXT NOT NULL,            -- 玩家写的自荐理由（站长审批时看）
+  state        TEXT NOT NULL DEFAULT 'pending'
+               CHECK (state IN ('pending','approved','rejected')),
+  created_at   TEXT NOT NULL,
+  decided_at   TEXT,
+  decided_by   TEXT,                     -- 审批人 user_id
+  decision_note TEXT,                    -- 驳回理由 / 备注
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+-- 同一用户同时只允许一条待审申请（部分索引：D1/SQLite 都支持 WHERE 子句）
+CREATE UNIQUE INDEX idx_role_req_pending ON role_requests(user_id) WHERE state = 'pending';
+CREATE INDEX idx_role_req_state ON role_requests(state, created_at DESC);

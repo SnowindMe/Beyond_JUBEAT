@@ -35,10 +35,20 @@
     "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    // /songs/ 是运行时路由，dist/client 里没有对应静态文件。
-    // 不写这条的话，not_found_handling 会在资源层直接用 404.html 截住它，不进 Worker。
-    // run_worker_first 让这些路径永远先交给 Worker；其余路径不变。
-    "run_worker_first": ["/songs", "/songs/*"]
+    // 这些是运行时路由（SSR 页 + API 端点），dist/client 里没有对应静态文件。
+    // 不写的话 not_found_handling 会在资源层直接用 404.html 截住它们，不进 Worker。
+    // run_worker_first 让这些路径永远先交给 Worker；其余静态页不受影响。
+    //   /songs*  = 曲目库与详情（查 D1）
+    //   /login /register /account /admin = 需要读会话的用户页（2026-10-23 起）
+    //   /api/*   = 注册/登录/退出/改密/自荐/审批等表单提交端点
+    "run_worker_first": [
+      "/songs", "/songs/*",
+      "/login", "/login/*",
+      "/register", "/register/*",
+      "/account", "/account/*",
+      "/admin", "/admin/*",
+      "/api/*"
+    ]
   },
   // 适配器默认会给 Astro Sessions 挂一个名为 SESSION 的 KV 绑定（我们暂未用会话），
   // 不在这里写死 id 的话，构建产物里的 bindings 会缺 id，wrangler deploy 会失败。
@@ -48,6 +58,12 @@
       "id": "65d684992b4041c6af8b34451a0393c1"
     }
   ],
+  // Turnstile 人机验证（注册/登录）：
+  //   TURNSTILE_SECRET 用 wrangler secret 注入，不写进本文件、不进仓库：
+  //     npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat
+  //   前端 site key 走构建期环境变量 PUBLIC_TURNSTILE_SITE_KEY（Cloudflare 构建设置里配，
+  //   或本地 .env），未配置时不渲染 widget；服务端在缺 secret 时对生产环境 fail-closed。
+  //
   // D1 绑定：/songs/ 在运行时从这里读曲目数据。
   // binding 用下划线形式（beyond_jubeat），Worker 里通过 env.beyond_jubeat 访问。
   "d1_databases": [

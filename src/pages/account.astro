@@ -1,0 +1,157 @@
+---
+// 账户页：看自己的身份、改昵称/密码、退出、自荐维护者。
+import Layout from '../layouts/Base.astro';
+import '../styles/auth.css';
+import { pageTitle } from '../lib/title';
+import { authError, AUTH_ERRORS } from '../lib/auth-messages';
+import { env } from 'cloudflare:workers';
+import type { Role } from '../lib/auth';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login/?next=/account/');
+
+const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+const err = authError(Astro.url.searchParams.get('e'));
+const okCode = Astro.url.searchParams.get('ok');
+const justRegistered = Astro.url.searchParams.get('welcome') === '1';
+
+// 账户详情 + 是否有待审的自荐申请（一次查询解决，避免页面里两三次打库）
+type Row = {
+  email: string;
+  display_name: string;
+  role: Role;
+  created_at: string;
+  last_login_at: string | null;
+  pending_req: number | null;
+};
+const row = db
+  ? await db
+      .prepare(
+        `SELECT u.email, u.display_name, u.role, u.created_at, u.last_login_at,
+                (SELECT COUNT(*) FROM role_requests r
+                  WHERE r.user_id = u.user_id AND r.state = 'pending') AS pending_req
+           FROM users u WHERE u.user_id = ?`
+      )
+      .bind(user.id)
+      .first<Row>()
+  : null;
+
+if (!row) return Astro.redirect('/login/');
+
+const ROLE_LABEL: Record<Role, string> = {
+  player: '玩家',
+  maintainer: '维护者',
+  owner: '站长',
+};
+const badgeClass =
+  row.role === 'owner' ? 'au-badge is-owner' : row.role === 'maintainer' ? 'au-badge is-maintainer' : 'au-badge';
+const fmt = (iso: string | null) => (iso ? iso.slice(0, 16).replace('T', ' ') : '—');
+const hasPending = (row.pending_req ?? 0) > 0;
+---
+
+<Layout title={pageTitle('我的账户')} canonicalPath="/account/" description="管理 Beyond ↑ JUBEAT 账户。" noindex>
+  <section class="band">
+    <div class="band-h">
+      <h2>我的账户</h2>
+      <em>account</em>
+    </div>
+
+    <div class="panel">
+      {justRegistered && <p class="au-alert is-ok">注册成功，欢迎来到 Beyond ↑ JUBEAT。</p>}
+      {err && <p class="au-alert" role="alert">{err}</p>}
+      {okCode === 'profile' && <p class="au-alert is-ok">昵称已更新。</p>}
+      {okCode === 'password' && <p class="au-alert is-ok">密码已更新，其它设备上的登录已退出。</p>}
+      {okCode === 'applied' && <p class="au-alert is-ok">自荐已提交，等站长审核。</p>}
+
+      <dl class="au-kv">
+        <div><dt>昵称</dt><dd>{row.display_name}</dd></div>
+        <div><dt>邮箱</dt><dd>{row.email}</dd></div>
+        <div><dt>身份</dt><dd><span class={badgeClass}>{ROLE_LABEL[row.role]}</span></dd></div>
+        <div><dt>注册于</dt><dd>{fmt(row.created_at)}</dd></div>
+        <div><dt>上次登录</dt><dd>{fmt(row.last_login_at)}</dd></div>
+      </dl>
+
+      <form class="au-form" method="post" action="/api/auth/logout" style="margin-top:18px">
+        <button class="au-submit" type="submit">退出登录</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="band-h">
+      <h2>修改昵称</h2>
+      <em>profile</em>
+    </div>
+    <div class="panel">
+      <form class="au-form" method="post" action="/api/account/profile" novalidate>
+        <div class="au-f">
+          <label for="ac-name">新昵称</label>
+          <input id="ac-name" name="name" type="text" value={row.display_name} required maxlength="24" autocomplete="nickname" />
+          <p class="au-hint">1–24 个字。改完之后最近更改等处的历史记录不会追溯改名。</p>
+        </div>
+        <button class="au-submit" type="submit">保存昵称</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="band-h">
+      <h2>修改密码</h2>
+      <em>password</em>
+    </div>
+    <div class="panel">
+      <form class="au-form" method="post" action="/api/account/password" novalidate>
+        <div class="au-f">
+          <label for="pw-old">当前密码</label>
+          <input id="pw-old" name="old" type="password" autocomplete="current-password" required maxlength="128" />
+        </div>
+        <div class="au-f">
+          <label for="pw-new">新密码</label>
+          <input id="pw-new" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" />
+          <p class="au-hint">至少 8 位。改密后其它设备上的会话会全部失效。</p>
+        </div>
+        <div class="au-f">
+          <label for="pw-new2">再输一次新密码</label>
+          <input id="pw-new2" name="password2" type="password" autocomplete="new-password" required minlength="8" maxlength="128" />
+        </div>
+        <button class="au-submit" type="submit">更新密码</button>
+      </form>
+    </div>
+  </section>
+
+  {row.role === 'player' ? (
+    <section class="band">
+      <div class="band-h">
+        <h2>申请成为维护者</h2>
+        <em>maintainer</em>
+      </div>
+      <div class="panel">
+        {hasPending ? (
+          <p class="au-alert is-ok">你已经提交了自荐申请，站长审核后会在这里看到结果。</p>
+        ) : (
+          <form class="au-form" method="post" action="/api/account/apply" novalidate>
+            <div class="au-f">
+              <label for="ap-why">自荐理由</label>
+              <textarea id="ap-why" name="reason" required minlength="20" maxlength="800"
+                placeholder="说说你在站内的活跃情况：参与过哪些活动、发现过哪些数据问题、想负责哪部分内容……"></textarea>
+              <p class="au-hint">20–800 字。站长按这个判断，写得具体一点更容易过。</p>
+            </div>
+            <button class="au-submit" type="submit">提交自荐</button>
+          </form>
+        )}
+      </div>
+    </section>
+  ) : null}
+
+  {row.role === 'owner' || row.role === 'maintainer' ? (
+    <section class="band">
+      <div class="panel">
+        <p class="au-alt">
+          你是{ROLE_LABEL[row.role]}，可以进入 <a href="/admin/">管理面板</a>。
+        </p>
+      </div>
+    </section>
+  ) : null}
+</Layout>

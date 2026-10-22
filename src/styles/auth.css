@@ -1,0 +1,319 @@
+/* 用户系统（/login/ /register/ /apply/ /admin/）专用样式。
+   单独成文件，避免和 theme.css 混在一起。
+   设计口径沿用全站：不做大圆角玻璃板堆叠，表单是「一列字段 + 细标签」，
+   标签用等宽数据字体做小号大字距，和站内其它标签同一套语言。 */
+
+.au-form {
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* 单字段：标签在上、输入在下，错误信息紧贴输入框 */
+.au-f {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.au-f > label {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--ink3);
+  text-transform: uppercase;
+}
+.au-f input[type="email"],
+.au-f input[type="text"],
+.au-f input[type="password"],
+.au-f textarea {
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border: 1px solid var(--edge2);
+  border-radius: 10px;
+  padding: 11px 13px;
+  width: 100%;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+  /* iOS 上字号 <16px 聚焦会被自动放大页面，15px 已略小但输入框本身较大，
+     真正决定的是 font-size；这里保持 15px 与站内正文一致 */
+  appearance: none;
+}
+.au-f input:focus,
+.au-f textarea:focus {
+  outline: none;
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent);
+}
+.au-f textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.6;
+}
+/* 校验失败态：边框转红并把说明放在输入下方，不改布局高度（reserved space） */
+.au-f.is-bad input,
+.au-f.is-bad textarea {
+  border-color: #ff6b6b;
+}
+.au-f .au-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink3);
+  margin: 0;
+}
+.au-f.is-bad .au-hint {
+  color: #ff9b9b;
+}
+
+/* 提交按钮：主操作实心强调色，与站内 .sc-srv-b 的控件语言一致 */
+.au-submit {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #04222b;
+  background: var(--acc);
+  border: 1px solid var(--acc);
+  border-radius: var(--pill);
+  padding: 12px 26px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s;
+}
+.au-submit:hover {
+  filter: brightness(1.08);
+}
+.au-submit:active {
+  transform: translateY(1px);
+}
+.au-submit:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.au-submit:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* 整表单错误条：放在表单顶部，出错时才有 */
+.au-alert {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #ffb4b4;
+  background: color-mix(in srgb, #ff6b6b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #ff6b6b 38%, transparent);
+  border-radius: 10px;
+  padding: 10px 13px;
+  margin: 0;
+}
+.au-alert.is-ok {
+  color: #a8f0d0;
+  background: color-mix(in srgb, #3ddc97 12%, transparent);
+  border-color: color-mix(in srgb, #3ddc97 38%, transparent);
+}
+
+/* 表单下方的次要链接行（已有账号→去登录 等） */
+.au-alt {
+  font-size: 12px;
+  color: var(--ink3);
+  margin: 0;
+  line-height: 1.8;
+}
+.au-alt a {
+  color: var(--acc);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--acc) 40%, transparent);
+}
+.au-alt a:hover {
+  border-bottom-color: var(--acc);
+}
+
+/* 角色说明小表：注册页说明四种身份 */
+.au-roles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.au-roles > div {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 14px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.au-roles dt {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--acc);
+}
+.au-roles dd {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink2);
+}
+
+/* 当前身份徽章（顶栏/账户页用） */
+.au-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  padding: 5px 9px;
+  border-radius: var(--pill);
+  border: 1px solid var(--edge2);
+  color: var(--ink2);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.au-badge.is-owner {
+  color: var(--acc);
+  border-color: color-mix(in srgb, var(--acc) 46%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
+}
+.au-badge.is-maintainer {
+  color: var(--acc2);
+  border-color: color-mix(in srgb, var(--acc2) 46%, transparent);
+  background: color-mix(in srgb, var(--acc2) 12%, transparent);
+}
+
+/* 账户信息行（/account/ 用） */
+.au-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.au-kv > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  padding: 11px 14px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.au-kv dt {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--ink3);
+  text-transform: uppercase;
+}
+.au-kv dd {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+/* ---- Turnstile 容器 ---- */
+.au-turn {
+  min-height: 65px; /* 占住高度，避免脚本加载完把按钮往下顶 */
+  display: flex;
+  align-items: center;
+}
+
+/* ---- 申请列表（/admin/ 审批页） ---- */
+.au-req {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.au-req-i {
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.au-req-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.au-req-who {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.au-req-who span {
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--ink3);
+  margin-left: 8px;
+}
+.au-req-why {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink2);
+  margin: 0;
+  white-space: pre-wrap;
+}
+.au-req-act {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.au-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 8px 16px;
+  border-radius: var(--pill);
+  border: 1px solid var(--edge2);
+  background: transparent;
+  color: var(--ink2);
+  cursor: pointer;
+  transition: color 0.16s, border-color 0.16s, background 0.16s;
+}
+.au-btn:hover {
+  color: var(--ink);
+  border-color: var(--ink3);
+}
+.au-btn.is-primary {
+  color: #04222b;
+  background: var(--acc);
+  border-color: var(--acc);
+}
+.au-btn.is-primary:hover {
+  filter: brightness(1.08);
+  color: #04222b;
+}
+.au-btn.is-danger:hover {
+  color: #ff9b9b;
+  border-color: #ff6b6b;
+}
+.au-btn:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+  .au-roles > div,
+  .au-kv > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}

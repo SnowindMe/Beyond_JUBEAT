@@ -24,6 +24,27 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 详情页曾内嵌 ub.thregren.world 的「谱面确认」播放器（v1.12.0–1.12.2，靠 `/ub-proxy` 前缀代理剥掉对方的 X-Frame-Options 才能嵌进同源 iframe）。**该功能已于 v1.13.0 整体下线**：`src/pages/ub-proxy/`、`src/data/ub-index.json`、`scripts/ub/build-ub-index.mjs` 与 `wrangler.jsonc` 的 `/ub-proxy` 运行时路由一并移除。保留的两样东西：①详情页右下角的「在谱面确认中打开」外链去掉后，页面上不再有任何 ub 入口；②`ub-index.json` 映射表（1169 条 songId → ub 曲目 id）与生成脚本留在 `archive/materials/ub/` 备用。以后要重启，把文件搬回原位、恢复 `run_worker_first` 那条路由即可。
 
+**用户系统**（v1.14.0 起）：四层身份——**游客**（不登录，只能看）/ **玩家**（注册即得）/ **维护者**（玩家自荐 + 站长审批）/ **站长**（只有主人，在 D1 里直接改 `role`，站点不提供提权入口）。邮箱 + 密码注册，不发送验证邮件（主人 2026-10-23 定：先不做邮件，邮箱只作登录名）。GitHub 等第三方登录二期再接，`oauth_accounts` 表已建好。
+
+安全实现要点（都不要随手改）：
+
+| 项 | 做法 | 为什么 |
+| --- | --- | --- |
+| 密码 | PBKDF2-SHA256，每用户独立盐，迭代次数写进 hash 串（`pbkdf2$sha256$<iter>$<salt>$<hash>`） | 不存明文/可逆加密；迭代次数随身存，将来提强度老用户下次登录自动重算 |
+| 会话 | cookie 放随机 token，库里只存它的 SHA-256 | 库被拖走也拿不到能直接用的 cookie |
+| cookie | `HttpOnly; SameSite=Lax; Secure` | `HttpOnly` 挡 XSS 窃取，`Lax` 挡跨站 POST 类 CSRF |
+| 登录枚举 | 邮箱不存在也跑一次假 hash 校验 | 响应时间一致，不能靠耗时探测「这个邮箱注册过没有」 |
+| 改密 | 验旧密码 + 清空该用户所有会话再发新 token | 防 cookie 被盗后直接改密锁人，并踢掉其它设备 |
+| 人机验证 | Cloudflare Turnstile（Managed 模式），secret 走 `wrangler secret` | 缺 secret 时对生产 fail-closed，宁可拒绝也不裸奔 |
+| 回跳 | `?next=` 只接受单个 `/` 开头的站内路径 | 不做就是开放重定向漏洞 |
+| 审批 | `/api/admin/decide` 服务端复核 `role === 'owner'` | 页面上藏按钮只是体验，接口才是防线 |
+
+路由与文件：`/login/` `/register/` `/account/` `/admin/` 都是 `prerender = false` 的 SSR 页；接口在 `src/pages/api/{auth,account,admin}/`。中间件 `src/middleware.ts` 把 cookie 解成 `Astro.locals.user`。**这些路由必须列进 `wrangler.jsonc` 的 `run_worker_first`**，否则会被资源层的 404.html 截住。
+
+> 一个必须知道的坑：中间件里**不能顶层 `import { env } from 'cloudflare:workers'`**。本机预渲染走 Node（`prerenderEnvironment: 'node'`），Node 的 ESM loader 不认识 `cloudflare:` 协议，会在「预渲染 /404」这步直接崩 `ERR_UNSUPPORTED_ESM_URL_SCHEME`。改成在 SSR 分支里动态 `await import()`。同理，所有 API 端点都要标 `export const prerender = false`。
+
+> 静态页的登录态：本站绝大多数页面是构建期预渲染的，生成时没有会话，顶栏渲染出来永远是「登录」。`/api/auth/me` 接口 + Header 里的内联脚本在客户端把顶栏换成「昵称 / 我的账户 / 管理」。所以**不要在静态页里写死任何按用户变化的文案**。
+
 **/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
 **开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线），同一套视觉有**三种触发**，但只有「真的要等」时才亮：①首访开屏——每个会话第一次进入才出现（`sessionStorage` 记 `jb-boot`），最少停 900ms（太快闪一下像故障）、最多 3s（`load` 被慢资源拖住时不锁人）；②点导航去下一页——延迟 160ms 才亮，新页在此之前到达就完全不出现（本地点击到 `pagehide` 约 68ms，正常网速下看不到遮罩）；③切世代主题——先查本页是否已经拿到过这两张图（背景 + 字标），拿到就零延迟直换、一点不闪；没拿到才挂 160ms 延迟遮罩，图到齐立刻收（兜底 2.6s）。
@@ -43,6 +64,11 @@ Beyond_JUBEAT/
 │  │  ├─ index.astro          首页（Hero + 施工中占位）
 │  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，三卡切换 + 分区筛选）
 │  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
+│  │  ├─ login.astro          登录（SSR）
+│  │  ├─ register.astro       注册（SSR）
+│  │  ├─ account.astro        我的账户：改昵称/改密/自荐维护者（SSR）
+│  │  ├─ admin.astro          管理面板：站长审批维护者自荐（SSR）
+│  │  ├─ api/                 auth(register/login/logout/me) · account(profile/password/apply) · admin(decide)
 │  │  ├─ recent.astro         最近更改（已登录用户编辑记录，现为空状态）
 │  │  └─ 404.astro            404 页
 │  ├─ components/
@@ -51,10 +77,14 @@ Beyond_JUBEAT/
 │  │  ├─ Hero.astro           主视觉（站标 / 统计 / 曲绘方块）
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
-│  ├─ styles/theme.css        全站样式（约 38 KB）
+│  ├─ middleware.ts           全站中间件：会话 cookie → Astro.locals.user
+│  ├─ styles/theme.css        全站样式（约 34 KB）
+│  ├─ styles/auth.css         用户系统样式（登录/注册/账户/管理）
 │  ├─ lib/
 │  │  ├─ title.ts             页面标题格式「XXX · Beyond ↑ JUBEAT ♪~」
 │  │  ├─ db.ts                D1 数据访问层（getAllSongs 全量查询 + isolate 缓存）
+│  │  ├─ auth.ts              认证底层：PBKDF2 / 会话 / Turnstile / 角色
+│  │  ├─ auth-messages.ts     认证错误码 → 中文文案
 │  │  └─ gens.ts              世代顺序表（13 条，含日服 / 国服归属）
 │  └─ data/
 │     ├─ data.json            页面聚合数据（约 11 KB）
@@ -78,7 +108,8 @@ Beyond_JUBEAT/
 ├─ data/
 │  └─ jubeat.db               权威曲库（SQLite 360 KB / 1241 曲 / 3723 谱面，不部署）
 ├─ db/
-│  ├─ schema.sql              D1 建表语句（songs + recent_changes + 索引）
+│  ├─ schema.sql              本地建库全量 DDL（含 DROP，勿对线上跑）
+│  ├─ migrate-users.sql       用户系统增量迁移（IF NOT EXISTS，给线上 D1 用）
 │  ├─ seed.sql                本地导出，可整体重放到 D1（不提交）
 │  └─ seed-parts/             分段导出（D1 单条语句约 100 KB 上限，按段发）
 ├─ scripts/                   工具脚本（不部署）
@@ -149,6 +180,11 @@ npm run fonts            # woff2 字体子集化（需 python + fonttools）
 - Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
 - `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "@astrojs/cloudflare/entrypoints/server"`。
 - 两个绑定必须和 Cloudflare 侧一致，漏了会部署失败：`SESSION`（KV；适配器给 Astro Sessions 自动挂的，暂时没用也得写 id）、`beyond_jubeat`（D1）。
+- **用户系统需要两个 secret**（不写进仓库）：
+  1. `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat` —— Turnstile 服务端校验用；
+  2. 前端 site key 走构建期变量 `PUBLIC_TURNSTILE_SITE_KEY`，在 Cloudflare 的 Workers Builds 环境变量里配（本地开发写 `.env`）。
+  少了 secret 时，生产环境注册/登录会被 fail-closed 拒绝（本地 DEV 放行）。
+- 线上 D1 加表：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql`（幂等，`IF NOT EXISTS`）。**不要拿 `db/schema.sql` 对线上跑**——它开头有 `DROP TABLE songs`。
 - Astro 以 `output: "static"` 构建：没标 `prerender = false` 的页面照旧预渲染成 HTML，只有曲目页进 Worker。所以 `dist/client/songs/index.html` 不存在，这是正常的。
 - `dist/server/wrangler.json` 才是带绑定的那份配置，`wrangler deploy` 通过 `.wrangler/deploy/config.json` 指过去。
 - 曲目页的 HTTP 缓存自己设：`cache-control: public, max-age=30, s-maxage=300, stale-while-revalidate=60`；Worker 内还有 60s 的 isolate 级内存缓存（`src/lib/db.ts`）。
