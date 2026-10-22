@@ -180,10 +180,11 @@ npm run fonts            # woff2 字体子集化（需 python + fonttools）
 - Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
 - `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "@astrojs/cloudflare/entrypoints/server"`。
 - 两个绑定必须和 Cloudflare 侧一致，漏了会部署失败：`SESSION`（KV；适配器给 Astro Sessions 自动挂的，暂时没用也得写 id）、`beyond_jubeat`（D1）。
-- **用户系统需要两个 secret**（不写进仓库）：
-  1. `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat` —— Turnstile 服务端校验用；
-  2. 前端 site key 走构建期变量 `PUBLIC_TURNSTILE_SITE_KEY`，在 Cloudflare 的 Workers Builds 环境变量里配（本地开发写 `.env`）。
-  少了 secret 时，生产环境注册/登录会被 fail-closed 拒绝（本地 DEV 放行）。
+- **Turnstile（人机验证）**：widget 已建好（Managed 模式，域名 `byd-ub.top` 覆盖 `wiki.byd-ub.top`）：
+  1. **secret** 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat`（已写入，值不进仓库）；
+  2. **site key** 是公开值，写在 `src/lib/turnstile-config.ts` 的 `TURNSTILE_SITE_KEY` 常量里——不走构建期环境变量，省掉「控制台忘配 → widget 不渲染 → 注册静默失败」这类坑。
+  少了 secret 时，生产环境注册/登录 fail-closed 拒绝（本地 DEV 放行）。
+  换 widget 时改这两处即可；模式/域名在 Cloudflare 控制台改。
 - 线上 D1 加表：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql`（幂等，`IF NOT EXISTS`）。**不要拿 `db/schema.sql` 对线上跑**——它开头有 `DROP TABLE songs`。
 - Astro 以 `output: "static"` 构建：没标 `prerender = false` 的页面照旧预渲染成 HTML，只有曲目页进 Worker。所以 `dist/client/songs/index.html` 不存在，这是正常的。
 - `dist/server/wrangler.json` 才是带绑定的那份配置，`wrangler deploy` 通过 `.wrangler/deploy/config.json` 指过去。
