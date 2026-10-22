@@ -5,6 +5,7 @@ import '../styles/theme.css';
 import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import BootScreen from '../components/BootScreen.astro';
+import BackTop from '../components/BackTop.astro';
 import data from '../data/data.json';
 import site from '../data/site.json';
 import { pageTitle, SITE_NAME } from '../lib/title';
@@ -38,11 +39,20 @@ const canonical = canonicalPath ? SITE + canonicalPath : null;
 
 // 页脚「最后一次编辑」：取构建时刻（云端每次 push 自动构建，等价于最后上线时间）。
 // 显式按北京时间算，避免 CI 跑在 UTC 时跨天。
+// 主人 2026-10-22 要求加上【时:分】，格式 2026-10-22 14:25。
 const BUILD_DATE = (() => {
+  const d = new Date();
   try {
-    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+    const day = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+    const hm = d.toLocaleTimeString('en-GB', {
+      timeZone: 'Asia/Shanghai',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `${day} ${hm}`;
   } catch {
-    return new Date().toISOString().slice(0, 10);
+    return d.toISOString().slice(0, 16).replace('T', ' ');
   }
 })();
 ---
@@ -125,6 +135,7 @@ const BUILD_DATE = (() => {
       </div>
     </footer>
   </div>
+  <BackTop />
   <ThemeScript />
 </body>
 </html>

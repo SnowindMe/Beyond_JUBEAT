@@ -26,7 +26,7 @@
 .sc-srv {
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: clamp(14px, 2.2vw, 26px);
 }
 /* 服务器卡：logo 在上、名称在下（主人 2026-10-21 指定三张卡）。
    卡片是控件不是内容容器，半径收小、无阴影堆叠。 */
@@ -82,6 +82,8 @@
     font-family: var(--font-data);
     font-size: 11.5px;
     color: var(--ink3);
+    /* 「1150 首」不能被拆成两行 */
+    white-space: nowrap;
 }
 .sc-tag-c i {
     font-style: normal;

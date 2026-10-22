@@ -1,0 +1,151 @@
+---
+// 回到顶部按钮（主人 2026-10-22）：固定在右下角，滚过一屏才出现。
+// 动效：① 火箭/箭头升起 + 进度环随滚动填充；② 点击平滑滚回，且滚动期间按钮做一次「跃起」。
+// 无障碍：真按钮 + aria-label，聚焦可见；系统开了「减少动态效果」就退化成瞬移、不做装饰动画。
+---
+
+<button type="button" id="backTop" class="bt" aria-label="回到顶部" title="回到顶部">
+  <svg class="bt-ring" viewBox="0 0 44 44" aria-hidden="true">
+    <circle class="bt-track" cx="22" cy="22" r="19" />
+    <circle class="bt-bar" cx="22" cy="22" r="19" />
+  </svg>
+  <svg class="bt-ico" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 19V6" />
+    <path d="M6 12l6-6 6 6" />
+  </svg>
+</button>
+
+<style is:global>
+  .bt {
+    position: fixed;
+    right: clamp(14px, 2vw, 26px);
+    bottom: clamp(14px, 2vw, 26px);
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border-radius: 50%;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--base) 82%, transparent);
+    border: 1px solid var(--edge);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    /* 未滚过一屏：淡出并下移，且挪出命中区域 */
+    opacity: 0;
+    transform: translateY(14px) scale(0.9);
+    visibility: hidden;
+    transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.22, 0.7, 0.3, 1),
+      visibility 0.24s, color 0.2s, border-color 0.2s, box-shadow 0.24s;
+  }
+  .bt.is-on {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+  .bt:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+    box-shadow: 0 10px 26px -14px color-mix(in srgb, var(--acc) 80%, transparent);
+  }
+  .bt:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 3px;
+  }
+  /* 进度环：底色轨道 + 用 stroke-dashoffset 表现阅读进度 */
+  .bt-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    pointer-events: none;
+  }
+  .bt-track,
+  .bt-bar {
+    fill: none;
+    stroke-width: 2;
+  }
+  .bt-track {
+    stroke: color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+  .bt-bar {
+    stroke: var(--acc);
+    stroke-linecap: round;
+    /* 2πr ≈ 119.4（r=19） */
+    stroke-dasharray: 119.4;
+    stroke-dashoffset: 119.4;
+    transition: stroke-dashoffset 0.12s linear;
+  }
+  .bt-ico {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s ease;
+  }
+  .bt:hover .bt-ico {
+    transform: translateY(-2px);
+  }
+  /* 点击时整枚跃起一下，给「弹回顶部」一个起跳感 */
+  @keyframes btJump {
+    0% { transform: none; }
+    35% { transform: translateY(-7px) scale(1.06); }
+    100% { transform: none; }
+  }
+  .bt.is-jump {
+    animation: btJump 0.42s cubic-bezier(0.3, 0.8, 0.3, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bt,
+    .bt-ico,
+    .bt-bar {
+      transition: none;
+    }
+    .bt.is-jump {
+      animation: none;
+    }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var btn = document.getElementById('backTop');
+    if (!btn) return;
+    var bar = btn.querySelector('.bt-bar');
+    var LEN = 119.4;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function progress() {
+      var doc = document.documentElement;
+      var h = doc.scrollHeight - window.innerHeight;
+      var p = h > 0 ? Math.min(1, Math.max(0, (window.scrollY || doc.scrollTop) / h)) : 0;
+      if (bar) bar.style.strokeDashoffset = String(LEN * (1 - p));
+      // 滚过约 7 成屏才显形，避免首屏就挂着个按钮
+      btn.classList.toggle('is-on', (window.scrollY || doc.scrollTop) > window.innerHeight * 0.7);
+    }
+
+    btn.addEventListener('click', function () {
+      if (!reduce) {
+        btn.classList.remove('is-jump');
+        void btn.offsetWidth; // 强制回流，连点也能重播起跳
+        btn.classList.add('is-jump');
+      }
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+      btn.blur();
+    });
+
+    var raf = 0;
+    window.addEventListener('scroll', function () {
+      if (raf) return;
+      raf = requestAnimationFrame(function () { raf = 0; progress(); });
+    }, { passive: true });
+    window.addEventListener('resize', progress, { passive: true });
+    progress();
+  })();
+</script>
