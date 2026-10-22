@@ -723,7 +723,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     padding-top: 2px;
 }
 .sd-artist {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
     font-size: 13px;
     letter-spacing: 0.01em;
     color: var(--ink2);
@@ -747,11 +747,12 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     --d-bsc: #3ecf8e;
     --d-adv: #e8b93a;
     --d-ext: #f0564f;
-    margin: clamp(20px, 3vw, 30px) 0 0;
+    margin: clamp(24px, 3.6vw, 38px) 0 0;
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    max-width: 400px;
+    gap: 11px;
+    /* 铺满右栏：定数条是这个页面的信息主体，不该只占左半截留一片空白 */
+    max-width: none;
 }
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
 html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
