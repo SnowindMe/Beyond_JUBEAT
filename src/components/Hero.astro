@@ -27,7 +27,9 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
     </div>
   </div>
   <div class="cubewrap"><div class="cube">
-    {data.gen.map((g) => <i><img src={jacket(g.rep?.cover)} alt={g.k} /></i>)}
+    {/* 没有代表曲的世代（如日服当前世代 beyond the Ave. 快照里暂无曲目）不出这一格：
+        否则 jacket(undefined) 会拼出 /assets/images/jackets/ 目录路径，渲染成一张裂图。 */}
+    {data.gen.filter((g) => g.rep?.cover).map((g) => <i><img src={jacket(g.rep.cover)} alt={g.k} /></i>)}
     <i class="sum"><b>{data.stat.songs}</b><span>曲</span></i>
   </div></div>
 </section>

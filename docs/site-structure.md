@@ -1,6 +1,6 @@
 # Beyond ↑ JUBEAT · 网站层级结构
 
-> 状态图例：**✅ 已上线** · **🚧 规划中**（导航已指向，落进自定义 404） · **💭 候选**（数据已具备，页面未定）
+> 状态图例：**✅ 已上线** · **💭 待做**（含「规划中」与「候选」两类；v1.9.1 起未做的页面**不再挂导航**，没有死链）
 > 生成依据：`src/pages/` 实际文件、`src/components/Header.astro:10` 导航、`src/data/data.json` 字段、`README.md:15-21` 的下线说明、历史项目 `archive/legacy/jubeat-wiki-v2` 的页面清单。
 > 日期：2026-10-21
 
@@ -82,22 +82,20 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 
 ## 二、当前导航实际指向
 
-来源：`src/components/Header.astro:10`（文字链）+ `:14-26`（图标链）
+来源：`src/components/Header.astro` 的 `.nav-txt`（宽屏文字链）、`.nav-drawer`（窄屏抽屉）、`.nav-ico`（图标链）
 
 | 位置 | 链接 | 目标 | 实际状态 |
 | --- | --- | --- | --- |
 | 文字链 1 | 曲目 | `/songs/` | ✅ 已上线 |
-| 文字链 2 | Jubility | `/jubility/` | 🚧 落进 404 |
-| 文字链 3 | Emblem | `/emblem/` | 🚧 落进 404 |
-| 文字链 4 | 伙伴 | `/partners/` | 🚧 落进 404 |
-| 文字链 5 | 成就 | `/achievements/` | 🚧 落进 404 |
-| 文字链 6 | 最近更改 | `/recent/` | ✅ 已上线 |
+| 文字链 2 | 最近更改 | `/recent/` | ✅ 已上线 |
 | 图标 1 | GitHub 仓库 | 外部仓库 | ✅ 外链 |
-| 图标 2 | 关于 | `/about/` | 🚧 落进 404 |
-| 图标 3 | 登录 | `/login/` | 🚧 落进 404 |
-| 图标 4 | 最近更改 | `/recent/` | ✅ 窄屏专用入口 |
+| 图标 2 | 最近更改 | `/recent/` | ✅ 窄屏专用入口 |
 
-**结论**：10 条导航里 4 条通向真实页面（首页 / 曲目 / 最近更改 ×2），其余 6 条内部链落进自定义 404。`README.md:17` 已写明这是「还没做的二级页」的有意行为。
+**结论（v1.9.1 起）**：导航只列真实存在的页面，**没有一条死链**。
+
+Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前挂在顶栏，指向尚未实现的二级页、落进自定义 404。主人 2026-10-22 拍板「先砍死链，以后计划做再加回来」——这六条已从 `.nav-txt`、`.nav-drawer`、`.nav-ico` 三处一并撤下；页面做出来后再同步加回（宽屏 + 抽屉两处都要加）。
+
+> 加新页规则：见记忆里的「导航三处」准则——宽屏 `.nav-txt` + 窄屏 `.nav-drawer` + `.nav-ico`，缺一处手机上进不去。
 
 ---
 
@@ -126,14 +124,14 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 | `index.astro` | 首页 | ✅ 首页 | 新版改成单屏 Hero + 主题切换 |
 | `songs.astro` | 曲目库 | ✅ /songs/ | 已上线（三卡切换 + 分区筛选） |
 | `songs/[songId].astro` | 曲目详情 | 💭 /songs/[songId]/ | 待实现，含谱面预览 |
-| `jubility.astro` | Jubility 理论值 | 🚧 /jubility/ | 待实现 |
+| `jubility.astro` | Jubility 理论值 | 💭 /jubility/ | 待实现，导航已撤 |
 | `versions.astro` | 版本沿革 | 💭 /versions/ | 导航未列，候选 |
 | `gameplay.astro` | 玩法与判定 | 💭 /gameplay/ | 导航未列，候选 |
 | `unlock.astro` | 隐藏曲充能 | 💭 /unlock/ | 导航未列，候选 |
 | `guide.astro` | 新手上路 | 💭 /guide/ | 导航未列，候选 |
 | `dans.astro` | 段位图鉴 | 💭 /dans/ | 导航未列，候选 |
 | `updates.astro` | 更新情报 | 💭 /updates/ | 导航未列，候选 |
-| `about.astro` | 关于本站 | 🚧 /about/ | 导航图标已指向 |
+| `about.astro` | 关于本站 | 💭 /about/ | 待实现，导航图标已撤 |
 | `404.astro` | — | ✅ /404 | 已实现 |
 
 **v2 有、新站导航没列的**：版本沿革 / 玩法与判定 / 隐藏曲充能 / 新手上路 / 段位图鉴 / 更新情报 —— 共 6 个页面在历史项目里存在，新站顶栏没有对应入口。是保留还是砍掉，需要主人拍板。

@@ -14,7 +14,9 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 >
-> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选）。这是唯一 `prerender = false` 的页面：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」指向的还是**没做的二级页**，访问会落到自定义 404（`not_found_handling: "404-page"`）。等页面开做时直接补 `src/pages/*.astro` 即可，链接不用改。「最近更改」是已做出来的页面，见下。
+> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选）。这是唯一 `prerender = false` 的页面：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。
+>
+> **导航只列真实存在的页面，没有死链**（v1.9.1 起）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」六个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已全部撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。「最近更改」是已做出来的页面，见下。
 
 页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
 
