@@ -157,8 +157,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
    原来靠 hidden 一换就是硬跳。这里利用「display:none → block 会重播 animation」的特性
    做纯 CSS 过渡，JS 逻辑不用改：
    ① 分区整体淡入上浮，替掉瞬切；
-   ② 每个分区的前 12 张卡错开 30ms 出现（只做前 12 张——一个分区最多 900+ 张卡，
-      全做动画会掉帧，剩下的跟着父级一起淡入就够了）；
+   ② 只有第一个世代的头 12 张卡错开 30ms 出现（错开入场是个「味道」，做一层就够；
+      按分区选会把每个世代的前 12 张都算上，日服 30 个世代就是 360 个动画同时跑，
+      白白掉帧。其余卡片跟着父级一起淡入）；
    ③ 服务器卡与 chips 的选中态加一点回弹，让点击有反馈。
    三条动画都只动 opacity/transform，走合成层，不影响布局。 */
 @keyframes scIn {
@@ -185,21 +186,21 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-sec:not([hidden]) {
     animation: scIn 0.26s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
-.sc-sec:not([hidden]) .sc-card:nth-child(-n + 12) {
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(-n + 12) {
     animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
-.sc-sec:not([hidden]) .sc-card:nth-child(1) { animation-delay: 0.03s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(2) { animation-delay: 0.06s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(3) { animation-delay: 0.09s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(4) { animation-delay: 0.12s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(5) { animation-delay: 0.15s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(6) { animation-delay: 0.18s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(7) { animation-delay: 0.21s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(8) { animation-delay: 0.24s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(9) { animation-delay: 0.27s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(10) { animation-delay: 0.30s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(11) { animation-delay: 0.33s; }
-.sc-sec:not([hidden]) .sc-card:nth-child(12) { animation-delay: 0.36s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(1) { animation-delay: 0.03s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(2) { animation-delay: 0.06s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(3) { animation-delay: 0.09s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(4) { animation-delay: 0.12s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(5) { animation-delay: 0.15s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(6) { animation-delay: 0.18s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(7) { animation-delay: 0.21s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(8) { animation-delay: 0.24s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(9) { animation-delay: 0.27s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(10) { animation-delay: 0.30s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(11) { animation-delay: 0.33s; }
+.sc-sec:not([hidden]) .sc-gen:first-of-type .sc-card:nth-child(12) { animation-delay: 0.36s; }
 .sc-srv-b.is-on {
     animation: scPop 0.24s ease-out both;
 }
