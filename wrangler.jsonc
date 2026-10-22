@@ -3,6 +3,24 @@
   "name": "beyond-jubeat",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
+  // 可观测性：打开 Workers Logs（请求日志 + 持久化），供 Workers 控制台/Logpush 排查。
+  // traces 与 issue_detection 先关闭，避免额外采样开销；需要时把 enabled 改成 true。
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true
+    },
+    "traces": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "persist": true
+    },
+    "issue_detection": {
+      "enabled": false
+    }
+  },
   // Worker 入口用适配器提供的统一入口（官方写法）。
   // 不能写 dist/server/entry.mjs：构建期的 vite 插件会校验「main 指向的文件必须已存在」，
   // 而它在构建末尾才产出，必然失败。写成包说明符则交给 vite/esbuild 解析，
