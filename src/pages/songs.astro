@@ -98,7 +98,9 @@ const EAGER = new Set(
 >
   <section class="band songs" id="songsRoot" data-srv={DEFAULT_SRV}>
     {/* 主人 2026-10-22 要求：去掉「曲目 + songs 计数」那行标题，也去掉外面那层暗色 panel，
-        服务器卡直接站到页面上并放大，总曲数收进卡里（分区 chips 各自还带自己的计数）。 */}
+        服务器卡直接站到页面上并放大，总曲数收进卡里（分区 chips 各自还带自己的计数）。
+        标题行去掉后页面只剩 h3（分区名），补一个视觉隐藏的 h2 保住标题层级，供读屏与 SEO。 */}
+    <h2 class="sc-hide">曲目库</h2>
     <div class="sc-tools">
       <div class="sc-srv" role="group" aria-label="切换服务器">
         {SRV_CARDS.map((s) => (

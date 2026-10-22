@@ -2,6 +2,18 @@
 #songsRoot ::selection {
     background: color-mix(in srgb, var(--acc) 30%, transparent);
 }
+/* 视觉隐藏的 h2：标题行按主人要求去掉了，但页面仍需要一个 h2 撑住层级（h3 分区名在上面） */
+.sc-hide {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
 /* 工具条：服务器卡在上、分区 chips 在下，整组水平居中（主人 2026-10-22 要求电脑端也居中）。
    原来是 space-between 把服务器卡顶在左、chips 推到右，桌面上两边分家看着散。 */
 .sc-tools {
