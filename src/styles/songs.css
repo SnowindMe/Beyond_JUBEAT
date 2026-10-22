@@ -153,6 +153,65 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     display: none;
 }
 
+/* ---------- 切换过渡（主人 2026-10-22：切换有些生硬） ----------
+   原来靠 hidden 一换就是硬跳。这里利用「display:none → block 会重播 animation」的特性
+   做纯 CSS 过渡，JS 逻辑不用改：
+   ① 分区整体淡入上浮，替掉瞬切；
+   ② 每个分区的前 12 张卡错开 30ms 出现（只做前 12 张——一个分区最多 900+ 张卡，
+      全做动画会掉帧，剩下的跟着父级一起淡入就够了）；
+   ③ 服务器卡与 chips 的选中态加一点回弹，让点击有反馈。
+   三条动画都只动 opacity/transform，走合成层，不影响布局。 */
+@keyframes scIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes scPop {
+    0% {
+        transform: scale(0.96);
+    }
+    60% {
+        transform: scale(1.015);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+.sc-sec:not([hidden]) {
+    animation: scIn 0.26s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+.sc-sec:not([hidden]) .sc-card:nth-child(-n + 12) {
+    animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+.sc-sec:not([hidden]) .sc-card:nth-child(1) { animation-delay: 0.03s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(2) { animation-delay: 0.06s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(3) { animation-delay: 0.09s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(4) { animation-delay: 0.12s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(5) { animation-delay: 0.15s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(6) { animation-delay: 0.18s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(7) { animation-delay: 0.21s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(8) { animation-delay: 0.24s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(9) { animation-delay: 0.27s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(10) { animation-delay: 0.30s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(11) { animation-delay: 0.33s; }
+.sc-sec:not([hidden]) .sc-card:nth-child(12) { animation-delay: 0.36s; }
+.sc-srv-b.is-on {
+    animation: scPop 0.24s ease-out both;
+}
+/* 系统开了「减少动态效果」就全部收干净：只保留结果，不做过渡 */
+@media (prefers-reduced-motion: reduce) {
+    .sc-sec:not([hidden]),
+    .sc-sec:not([hidden]) .sc-card,
+    .sc-srv-b.is-on {
+        animation: none;
+    }
+}
+
 .sc-sec + .sc-sec {
     margin-top: clamp(26px, 3vw, 38px);
 }
