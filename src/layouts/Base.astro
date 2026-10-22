@@ -114,11 +114,18 @@ const BUILD_DATE = (() => {
   </script>
 </head>
 <body>
+  {/* 跳过导航：键盘/读屏用户按 Tab 第一下就能直达正文，不用穿过整个顶栏。
+      放在 body 首个元素，平时视觉隐藏，获得焦点才出现在左上角。 */}
+  <a class="skip" href="#main">跳到主内容</a>
   <BootScreen />
   <div class="bgv" aria-hidden="true"><div class="bgv-l"></div><div class="bgv-l"></div></div>
   <div class="wrap">
     <Header />
-    <slot />
+    {/* main landmark：读屏可用 landmark 快捷键定位正文，也是 skip-link 的落点。
+        tabindex="-1" 让点击 skip 后焦点真的落进 main（否则只滚动、焦点不动）。 */}
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
     <footer class="foot mono">
       <div class="foot-l">
         <span class="foot-k">最后一次编辑 <b>{BUILD_DATE}</b></span>
