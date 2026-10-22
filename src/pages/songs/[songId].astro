@@ -36,6 +36,26 @@ const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
 const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
+
+// 定数刻度：jubeat 定数上限约 11，按比例画条。低于 1 的给个最小可见宽度，
+// 但用 .is-thin 提示「几乎为空」，避免短到看不见又被误读成没加载。
+const SCALE_MAX = 11;
+const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
+
+// 元信息只渲染有值的项：以前六个固定格子里有三个是「—」，
+// 一片空占位比少几条信息更难看，也没信息量。
+const meta: { k: string; v: string; mono?: boolean }[] = song
+  ? [
+      { k: 'songId', v: song.id, mono: true },
+      { k: '世代', v: song.gen + (genMeta ? ` ${genMeta.y}` : '') },
+      { k: '分区', v: song.cat },
+      { k: '服务器', v: servers },
+      ...(song.bpm ? [{ k: 'BPM', v: song.bpm, mono: true }] : []),
+      ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
+      ...(song.unlock ? [{ k: '解禁', v: song.unlock }] : []),
+      ...(song.kind === 'synthetic' ? [{ k: '备注', v: '官方 songId 暂缺，此处为占位 id' }] : []),
+    ].filter((m) => m.v)
+  : [];
 ---
 
 <Layout
@@ -46,42 +66,56 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 >
   {!song ? <NotFound /> : (
   <section class="band sd" id="songRoot">
-    <div class="sd-top">
-      <a class="sd-back" href="/songs/">← 曲目库</a>
+    {/* 顶部不再是「大圆角玻璃面板里塞一堆小方盒」，而是两栏唱片页式布局：
+        左窄栏放曲绘与硬数据（像唱片封套背签），右栏让曲名与定数占据版面。
+        曲绘原图只有 144px，放大必糊——所以不追求大图，做成贴合尺寸的实物感封面。 */}
+    <div class="sd-head">
+      <a class="sd-back" href="/songs/">曲目库</a>
+      <span class="sd-sep" aria-hidden="true"></span>
+      <span class="sd-crumb">{song.gen}</span>
     </div>
 
-    <div class="sd-main">
-      <div class="sd-j">
-        {coverSrc ? (
-          <img src={coverSrc} alt={`${song.t} 曲绘`} width="300" height="300" loading="eager" fetchpriority="high" decoding="async" />
-        ) : (
-          <span class="sd-no">no jacket</span>
-        )}
-        {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
-      </div>
-
-      <div class="sd-info">
-        <h1 class="sd-title">{song.t}</h1>
-        <p class="sd-artist">{song.a ?? '—'}</p>
-
-        {/* 复用曲目卡的 .sc-lv：难度徽章的配色令牌（--d-bsc/--d-adv/--d-ext）、
-            浅色世代压深规则、空值灰都在那里定义好了，不再复制一份。 */}
-        <div class="sc-lv sd-lv">
-          <i class={`lv lv-bsc${song.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(song.lv.bsc)}</i>
-          <i class={`lv lv-adv${song.lv.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(song.lv.adv)}</i>
-          <i class={`lv lv-ext${song.lv.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(song.lv.ext)}</i>
+    <div class="sd-body">
+      <aside class="sd-aside">
+        <div class={`sd-j${song.alt ? ' is-alt' : ''}`}>
+          {coverSrc ? (
+            <img src={coverSrc} alt={`${song.t} 曲绘`} width="144" height="144" loading="eager" fetchpriority="high" decoding="async" />
+          ) : (
+            <span class="sd-no">no jacket</span>
+          )}
         </div>
+        {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
 
         <dl class="sd-meta">
-          <div><dt>songId</dt><dd class="sd-id">{song.id}</dd></div>
-          <div><dt>世代</dt><dd>{song.gen}{genMeta ? `（${genMeta.y}）` : ''}</dd></div>
-          <div><dt>分区</dt><dd>{song.cat}</dd></div>
-          <div><dt>服务器</dt><dd>{servers || '—'}</dd></div>
-          <div><dt>BPM</dt><dd>{song.bpm ?? '—'}</dd></div>
-          <div><dt>上线日期</dt><dd>{song.d ?? '—'}</dd></div>
-          {song.unlock ? <div><dt>解禁</dt><dd>{song.unlock}</dd></div> : null}
-          {song.kind === 'synthetic' ? <div><dt>备注</dt><dd>官方 songId 暂缺，此处为占位 id</dd></div> : null}
+          {meta.map((m) => (
+            <div>
+              <dt>{m.k}</dt>
+              <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
+            </div>
+          ))}
         </dl>
+      </aside>
+
+      <div class="sd-main">
+        <p class="sd-artist">{song.a ?? '—'}</p>
+        <h1 class="sd-title">{song.t}</h1>
+
+        {/* 定数条：三条横条按 0-11 刻度填充，颜色沿用难度三色。
+            定数是这个站最有信息量的字段，之前缩成三个小方盒太浪费——
+            横条让「这首的难度分布」一眼可读（比如 BSC 短、EXT 长 = 高难曲）。 */}
+        <div class="sd-gauge">
+          {([
+            ['bsc', 'BSC', song.lv.bsc],
+            ['adv', 'ADV', song.lv.adv],
+            ['ext', 'EXT', song.lv.ext],
+          ] as const).map(([key, label, val]) => (
+            <div class={`sd-row sd-row-${key}${val == null ? ' is-empty' : ''}`}>
+              <span class="sd-row-k">{label}</span>
+              <span class="sd-bar"><i style={`width:${gauge(val) ?? 0}%`}></i></span>
+              <span class="sd-row-v">{dash(val)}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   </section>

@@ -570,51 +570,85 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
   opacity: 0.85;
 }
 
+
 /* ---------- 曲目详情页 /songs/[songId]/ ----------
-   单曲信息页：左曲绘（300px）、右信息。窄屏上下堆叠。
-   难度徽章直接复用 .sc-lv（配色令牌与浅色压深规则都在上面定义好）。 */
+   设计取向：唱片内页，不是后台仪表盘。
+   上一版是「大圆角玻璃面板 + 六个等大边框小盒」，问题在于：所有元素份量相同、
+   每个值都被框起来（连「—」也框），视线无处落点。
+   这一版把版面分成两栏：左窄栏 = 实物感封面 + 硬数据（像封套背签），
+   右宽栏 = 曲名为主角、定数条为信息重心。曲绘原图仅 144px，不做大图 bluff。 */
 .sd {
-    max-width: 880px;
+    max-width: 940px;
     margin: 0 auto;
 }
-.sd-top {
-    margin: 0 0 14px;
+
+/* 顶部行：返回 + 世代面包屑，用细线收尾而不是做成按钮条 */
+.sd-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 clamp(16px, 2.4vw, 26px);
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 .sd-back {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 7px 13px;
-    font-size: 13px;
-    text-decoration: none;
+    gap: 6px;
     color: var(--ink2);
-    border-radius: var(--r-s);
-    border: 1px solid var(--edge);
-    background: var(--glass);
-    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    text-decoration: none;
+    padding: 4px 0;
+    transition: color 0.18s ease;
+}
+/* 返回箭头用伪元素画，避免在模板里堆无意义的内联 SVG */
+.sd-back::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-left: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.18s ease;
 }
 .sd-back:hover {
-    color: var(--ink);
-    border-color: var(--edge2);
-    background: var(--glass2);
+    color: var(--acc);
 }
-.sd-main {
+.sd-back:hover::before {
+    transform: rotate(45deg) translateX(-2px);
+}
+.sd-sep {
+    width: 1px;
+    height: 12px;
+    background: var(--edge2);
+}
+.sd-crumb {
+    color: var(--ink3);
+}
+
+/* 两栏：窄栏 176px（曲绘 144 + 内边距），宽栏吃掉剩余 */
+.sd-body {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    gap: clamp(18px, 3vw, 34px);
+    grid-template-columns: 176px minmax(0, 1fr);
+    gap: clamp(20px, 3.6vw, 46px);
     align-items: start;
-    padding: clamp(16px, 2.4vw, 26px);
-    border-radius: var(--r-l);
-    border: 1px solid var(--edge);
-    background: var(--glass);
-    backdrop-filter: blur(10px);
 }
+.sd-aside {
+    min-width: 0;
+}
+
+/* 曲绘：实物封套感——外圈细边 + 内阴影，不用大圆角（大圆角让它像 App 图标） */
 .sd-j {
     position: relative;
-    border-radius: var(--r-m);
+    width: 144px;
+    height: 144px;
+    border-radius: 3px;
     overflow: hidden;
     background: color-mix(in srgb, var(--ink) 8%, transparent);
-    aspect-ratio: 1;
+    box-shadow:
+        0 0 0 1px var(--edge2),
+        0 12px 28px -14px rgba(0, 0, 0, 0.7);
 }
 .sd-j img {
     width: 100%;
@@ -622,106 +656,207 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     object-fit: cover;
     display: block;
 }
+/* 长押谱：给封套加一道强调色描边，和原谱区分开（不靠小角标） */
+.sd-j.is-alt {
+    box-shadow:
+        0 0 0 1px var(--acc),
+        0 12px 28px -14px rgba(0, 0, 0, 0.7);
+}
 .sd-no {
     display: grid;
     place-items: center;
     width: 100%;
     height: 100%;
-    font-size: 12px;
+    font-family: var(--font-data);
+    font-size: 9px;
+    letter-spacing: 0.14em;
     color: var(--ink3);
 }
 .sd-alt {
-    position: absolute;
-    left: 8px;
-    top: 8px;
+    display: inline-block;
+    margin-top: 8px;
     padding: 2px 7px;
-    font-size: 11px;
-    line-height: 17px;
-    border-radius: 4px;
-    color: #fff;
-    background: color-mix(in srgb, var(--acc) 82%, #000);
+    font-family: var(--font-data);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    border-radius: 2px;
+    color: var(--acc);
+    border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
 }
-.sd-info {
-    min-width: 0;
-}
-.sd-title {
-    margin: 0 0 6px;
-    font-size: clamp(21px, 2.6vw, 29px);
-    line-height: 1.28;
-    font-weight: 700;
-    color: var(--title);
-    letter-spacing: 0;
-    overflow-wrap: anywhere;
-}
-.sd-artist {
-    margin: 0 0 14px;
-    font-size: 14px;
-    color: var(--ink2);
-    overflow-wrap: anywhere;
-}
-.sd-lv {
-    margin: 0 0 18px;
-    max-width: 340px;
-}
-.sd-lv .lv {
-    padding: 7px 0 6px;
-    font-size: 14px;
-}
-.sd-lv .lv u {
-    font-size: 9px;
-}
+
+/* 硬数据：不逐项框起来，用「标签 / 值」的竖排清单，靠间距分组 */
 .sd-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px 16px;
-    margin: 0;
+    margin: 18px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
 }
 .sd-meta > div {
     min-width: 0;
-    padding: 8px 11px;
-    border-radius: var(--r-s);
-    border: 1px solid var(--edge);
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 .sd-meta dt {
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-family: var(--font-data);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
+    line-height: 1.2;
 }
 .sd-meta dd {
-    margin: 3px 0 0;
-    font-size: 13.5px;
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    line-height: 1.35;
     color: var(--ink);
     overflow-wrap: anywhere;
 }
-/* songId 是等宽数据，用数据字体并禁止折行，避免长 id 被拆断 */
-.sd-meta dd.sd-id {
+/* 数据类值（songId / BPM / 日期）走等宽字体，数字位对齐才好读 */
+.sd-meta dd.sd-num {
     font-family: var(--font-data);
-    letter-spacing: 0.01em;
-    white-space: nowrap;
-    overflow-x: auto;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
 }
+
+/* 右栏：艺人做引子，曲名做主角 */
+.sd-main {
+    min-width: 0;
+    padding-top: 2px;
+}
+.sd-artist {
+    margin: 0 0 8px;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    color: var(--ink2);
+    overflow-wrap: anywhere;
+}
+.sd-title {
+    margin: 0;
+    font-size: clamp(26px, 3.6vw, 42px);
+    line-height: 1.14;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--title);
+    text-shadow: var(--tshadow);
+    overflow-wrap: anywhere;
+}
+
+/* 定数条：三条横条按 0-11 刻度填充。
+   定数是最有信息量的字段，横条让「难度分布」一眼可读；
+   空值给一条虚线空槽，而不是一个写「—」的盒子。 */
+.sd-gauge {
+    --d-bsc: #3ecf8e;
+    --d-adv: #e8b93a;
+    --d-ext: #f0564f;
+    margin: clamp(20px, 3vw, 30px) 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-width: 400px;
+}
+/* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
+html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
+html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="yymf"] .sd-gauge {
+    --d-bsc: #0f8a55;
+    --d-adv: #9a6d12;
+    --d-ext: #cc2f26;
+}
+.sd-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) 40px;
+    align-items: center;
+    gap: 10px;
+}
+.sd-row-k {
+    font-family: var(--font-data);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink3);
+}
+.sd-row-v {
+    font-family: var(--font-data);
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    color: var(--ink);
+}
+.sd-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    overflow: hidden;
+}
+.sd-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.sd-row-bsc .sd-bar i { background: var(--d-bsc); }
+.sd-row-adv .sd-bar i { background: var(--d-adv); }
+.sd-row-ext .sd-bar i { background: var(--d-ext); }
+/* 数值与标签颜色跟难度走，条外再给一次色彩线索（不只靠条的填充长度） */
+.sd-row-bsc .sd-row-v { color: var(--d-bsc); }
+.sd-row-adv .sd-row-v { color: var(--d-adv); }
+.sd-row-ext .sd-row-v { color: var(--d-ext); }
+.sd-row-bsc .sd-row-k { color: var(--d-bsc); opacity: 0.85; }
+.sd-row-adv .sd-row-k { color: var(--d-adv); opacity: 0.85; }
+.sd-row-ext .sd-row-k { color: var(--d-ext); opacity: 0.85; }
+
+/* 空档位：整行降权，条槽改成虚线，不再假装有个数值 */
+.sd-row.is-empty .sd-bar {
+    background: transparent;
+    border: 1px dashed var(--edge2);
+    border-radius: 3px;
+}
+.sd-row.is-empty .sd-row-k,
+.sd-row.is-empty .sd-row-v {
+    color: var(--ink3);
+    opacity: 0.7;
+    font-weight: 500;
+}
+
 @media (max-width: 700px) {
-    .sd-main {
-        grid-template-columns: 1fr;
+    .sd-body {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+    }
+    /* 窄屏：封面与硬数据并排成一条横带，把纵向空间让给曲名与定数 */
+    .sd-aside {
+        display: grid;
+        grid-template-columns: 108px minmax(0, 1fr);
         gap: 16px;
+        align-items: start;
     }
     .sd-j {
-        max-width: 230px;
+        width: 108px;
+        height: 108px;
     }
-    .sd-lv {
+    .sd-meta {
+        margin: 0;
+        gap: 9px;
+    }
+    .sd-title {
+        font-size: clamp(24px, 7vw, 32px);
+    }
+    .sd-gauge {
         max-width: none;
     }
-    /* 详情页的徽章区宽度足够（整行可用），不该继承曲目卡「窄屏竖排」那条规则——
-       那条是为卡片 ~96px 宽、三枚徽章放不下才立的。这里显式改回横排。 */
-    .sd-lv .lv {
-        flex-direction: row;
-        gap: 4px;
-        padding: 7px 0 6px;
+}
+@media (max-width: 380px) {
+    .sd-aside {
+        grid-template-columns: minmax(0, 1fr);
     }
-    .sd-lv .lv u {
-        font-size: 9px;
+    .sd-j {
+        width: 96px;
+        height: 96px;
+    }
+}
+/* 尊重减少动效：定数条不做宽度过渡 */
+@media (prefers-reduced-motion: reduce) {
+    .sd-bar i {
+        transition: none;
     }
 }
 
