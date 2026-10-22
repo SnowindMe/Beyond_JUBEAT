@@ -21,18 +21,21 @@ const song: Song | null = songId ? await getSongById(db, songId) : null;
 // URL 变了之后浏览器地址栏显示的是 /404，用户复制出来的链接就丢了 songId。
 if (!song) {
   Astro.response.status = 404;
-  Astro.response.headers.set('cache-control', 'public, max-age=0, s-maxage=0');
 }
-
+// 404 结果不缓存（避免把「这首不存在」缓存到边缘，之后补数据也还能查到）
 Astro.response.headers.set(
   'cache-control',
-  'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
+  song
+    ? 'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
+    : 'public, max-age=0, s-maxage=0'
 );
 
-const genMeta = GEN_ORDER.find((g) => g.k === song.gen);
+// 注意：以下派生值只在 song 存在时计算。之前漏了这层保护——song 为 null 时
+// 直接读 song.gen 会抛 TypeError，线上表现为 500 而不是 404（真实踩坑）。
+const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
 const dash = (v: number | null) => (v == null ? '—' : String(v));
-const servers = [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ');
-const coverSrc = song.cover ? `/assets/images/jackets/${song.cover}` : null;
+const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
+const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 ---
 
 <Layout
