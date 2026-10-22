@@ -64,11 +64,30 @@ const SIMPLIFY_CSS = `<style id="bj-simplify">
   #nowPlaying .cover-wrap, #nowPlaying #cover { width: 56px !important; height: 56px !important; }
   #nowPlaying .np-side { display: none !important; }
 
-  /* 4) 面板：按可用高度自适应，保持正方形居中 */
+  /* 4) 中间那层 main.stage 是真正的宽度约束（实测 380px），必须一起放开 */
+  #app > main.stage, main.stage {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* 5) 面板：吃满剩余高度并保持正方形。
+     它是 4x4 区块的容器，对方自己的 JS 会按渲染比例算像素尺寸，
+     所以这里只给外框留出空间，不硬设 width/height（硬设会与它的 canvas 计算打架）。 */
   #panel {
-    flex: 0 0 auto !important;
+    flex: 1 1 auto !important;
     align-self: center !important;
-    margin: 4px auto !important;
+    margin: 0 auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* 5) 控制条：贴底横排、不换行 */
