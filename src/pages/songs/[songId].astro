@@ -6,6 +6,7 @@ import Layout from '../../layouts/Base.astro';
 import '../../styles/songs.css';
 import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
+import NotFound from '../../components/NotFound.astro';
 import { getSongById, type Song } from '../../lib/db';
 import { env } from 'cloudflare:workers';
 
@@ -15,9 +16,12 @@ const { songId } = Astro.params;
 const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
 const song: Song | null = songId ? await getSongById(db, songId) : null;
 
-// 不存在的 id 走 404 页（而不是渲染一个空壳详情页被搜索引擎收录）
+// 找不到就渲染 404 内容并回 404 状态码：原 URL 不变，符合 HTTP 语义，
+// 也不会被搜索引擎当成「内容存在但跳走了」。不用 Astro.redirect——那会 302 到 /404，
+// URL 变了之后浏览器地址栏显示的是 /404，用户复制出来的链接就丢了 songId。
 if (!song) {
-  return Astro.redirect('/404', 302);
+  Astro.response.status = 404;
+  Astro.response.headers.set('cache-control', 'public, max-age=0, s-maxage=0');
 }
 
 Astro.response.headers.set(
@@ -32,10 +36,12 @@ const coverSrc = song.cover ? `/assets/images/jackets/${song.cover}` : null;
 ---
 
 <Layout
-  title={pageTitle(song.t)}
-  canonicalPath={`/songs/${song.id}/`}
-  description={`${song.t}${song.a ? ' - ' + song.a : ''}｜jubeat ${song.gen} 世代，BSC ${dash(song.lv.bsc)} / ADV ${dash(song.lv.adv)} / EXT ${dash(song.lv.ext)}。`}
+  title={pageTitle(song ? song.t : '页面不存在')}
+  canonicalPath={song ? `/songs/${song.id}/` : ''}
+  noindex={!song}
+  description={song ? `${song.t}${song.a ? ' - ' + song.a : ''}｜jubeat ${song.gen} 世代，BSC ${dash(song.lv.bsc)} / ADV ${dash(song.lv.adv)} / EXT ${dash(song.lv.ext)}。` : undefined}
 >
+  {!song ? <NotFound /> : (
   <section class="band sd" id="songRoot">
     <div class="sd-top">
       <a class="sd-back" href="/songs/">← 曲目库</a>
@@ -76,4 +82,5 @@ const coverSrc = song.cover ? `/assets/images/jackets/${song.cover}` : null;
       </div>
     </div>
   </section>
+  )}
 </Layout>

@@ -362,6 +362,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     gap: 14px 12px;
 }
 .sc-card {
+    position: relative; /* .sc-link 铺满层的定位参照 */
     display: flex;
     flex-direction: column;
     min-width: 0;
@@ -540,15 +541,20 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         font-size: 7px;
     }
 }
-/* 曲名链接：卡整体悬停已有上浮反馈，链接本身不再加下划线/换色，
-   否则一屏几十张卡全是下划线很吵。键盘聚焦时靠全局 :focus-visible 双环标示。 */
-.sc-tl {
-    color: inherit;
+/* 整卡点击层：绝对定位铺满卡片，让任意位置（曲绘、空白、徽章区）都能进详情，
+   同时链接本身的可访问名只有曲名——卡里的其他内容不被卷进链接名。
+   放在 DOM 末尾 + z-index 保证盖住上层内容；文字仍可选中（不影响读屏）。 */
+.sc-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: var(--r-sm);
     text-decoration: none;
 }
-.sc-tl:hover {
-    color: inherit;
-    text-decoration: none;
+/* 键盘聚焦时给整卡描双环（链接藏着没有文字，靠 outline 标出焦点落在哪张卡） */
+.sc-link:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
 }
 /* 双服标记：曲名后的小徽标（两服都有的 KONAMI 移植曲） */
 .sc-dual {
@@ -706,6 +712,16 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     }
     .sd-lv {
         max-width: none;
+    }
+    /* 详情页的徽章区宽度足够（整行可用），不该继承曲目卡「窄屏竖排」那条规则——
+       那条是为卡片 ~96px 宽、三枚徽章放不下才立的。这里显式改回横排。 */
+    .sd-lv .lv {
+        flex-direction: row;
+        gap: 4px;
+        padding: 7px 0 6px;
+    }
+    .sd-lv .lv u {
+        font-size: 9px;
     }
 }
 

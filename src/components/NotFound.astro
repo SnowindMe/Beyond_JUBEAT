@@ -1,0 +1,12 @@
+---
+// 404 内容块：404 页和「详情页找不到这首曲」共用。
+// 详情页也走它，是为了在原 URL 下直接返回 404 状态码，
+// 而不是 302 跳到 /404（那样 URL 会变，且不符合 HTTP 语义）。
+---
+<section class="band">
+  <div class="panel wip">
+    <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="wip-t">这里还没有铺路，前面的区域以后再来探索吧......</p>
+    <span class="wip-s">404 / not found</span>
+  </div>
+</section>
