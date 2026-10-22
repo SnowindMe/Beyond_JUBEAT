@@ -595,6 +595,10 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     grid-template-areas:
         "aside main"
         "foot  foot";
+    /* 行高按内容收缩：foot 行没有内容时不占位（1241 首里只有 150 首有 BPM/日期，
+       大多曲目底部条是空的，若按 1fr 撑开会留下一块空洞）。 */
+    grid-auto-rows: auto;
+    align-content: start;
     gap: clamp(20px, 3.6vw, 46px) clamp(20px, 3.6vw, 46px);
     align-items: start;
     padding: clamp(18px, 2.6vw, 30px);
@@ -611,6 +615,10 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 }
 .sd-main {
     grid-area: main;
+    /* 左栏（封面 + 4 项硬数据）通常比右栏（艺人 + 曲名 + 定数条）高不少，
+       右下会空出一截。右栏在自身内容有余量时垂直居中，让两栏视觉重心对齐，
+       而不是让内容都堆在上半截、下面空一片。 */
+    align-self: center;
 }
 /* 底部信息条：横铺满宽，用细线上缘和主内容分开，不再逐个加框 */
 .sd-foot {
@@ -923,6 +931,87 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 @media (prefers-reduced-motion: reduce) {
     .sd-bar i {
         transition: none;
+    }
+}
+
+/* ---------- 详情页：谱面确认播放器 ----------
+   内嵌 ub.thregren.world 播放器（经 /ub-proxy 代理）。它自身是深色 UI，
+   这里只负责给容器尺寸与边界，不去改它内部样式（跨域改不到，也没必要）。
+   高度取 70vh 上限 620px：再高会把详情页拉成一条长廊，再低面板就看不清。 */
+.sd-chart {
+    margin: clamp(20px, 3vw, 30px) 0 0;
+}
+.sd-chart-h {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 10px;
+    padding: 0 2px;
+}
+.sd-chart-h h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+/* 竖条标记，和站内其他分节标题同一套语言 */
+.sd-chart-h h2::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 2px;
+    background: var(--acc);
+    margin-right: 9px;
+    flex: none;
+    box-shadow: 0 0 8px var(--acc);
+}
+.sd-chart-h a {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink3);
+    text-decoration: none;
+    transition: color 0.18s ease;
+}
+.sd-chart-h a:hover {
+    color: var(--acc);
+}
+.sd-chart-f {
+    position: relative;
+    height: clamp(420px, 70vh, 620px);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--edge);
+    background: #0a0d14; /* 播放器自身底色，避免加载时闪白 */
+}
+.sd-chart-f iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+.sd-chart-s {
+    margin: 8px 0 0;
+    padding: 0 2px;
+    font-size: 10.5px;
+    color: var(--ink3);
+}
+.sd-chart-s a {
+    color: var(--ink2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--edge2);
+}
+.sd-chart-s a:hover {
+    color: var(--acc);
+}
+@media (max-width: 700px) {
+    .sd-chart-f {
+        /* 手机上没有宽裕的竖向空间，给固定高度让面板（4x4）够大 */
+        height: 500px;
     }
 }
 

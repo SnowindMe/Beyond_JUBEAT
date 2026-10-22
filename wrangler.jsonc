@@ -35,10 +35,11 @@
     "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    // /songs/ 是唯一 prerender=false 的 SSR 页，dist/client 里没有它的静态文件。
-    // 不写这条的话，not_found_handling 会在资源层直接用 404.html 截住它，不进 Worker。
-    // run_worker_first 让 /songs 路径永远先交给 Worker 渲染；其余路径不变。
-    "run_worker_first": ["/songs", "/songs/*"]
+    // /songs/ 与 /ub-proxy/ 都是运行时路由，dist/client 里没有对应静态文件。
+    // 不写这条的话，not_found_handling 会在资源层直接用 404.html 截住它们，不进 Worker。
+    // run_worker_first 让这些路径永远先交给 Worker；其余路径不变。
+    // /ub-proxy 是谱面确认的内嵌代理（见 src/pages/ub-proxy/[...path].ts）。
+    "run_worker_first": ["/songs", "/songs/*", "/ub-proxy", "/ub-proxy/*"]
   },
   // 适配器默认会给 Astro Sessions 挂一个名为 SESSION 的 KV 绑定（我们暂未用会话），
   // 不在这里写死 id 的话，构建产物里的 bindings 会缺 id，wrangler deploy 会失败。
