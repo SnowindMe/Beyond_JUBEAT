@@ -268,39 +268,89 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     content-visibility: auto;
     contain-intrinsic-size: auto 460px;
 }
+/* 世代标题（主人 2026-10-22：原来的全宽玻璃条「好丑」）。
+   改法：不再画一整块底板，改成「强调色小竖条 + 世代名 + 年份 · 曲数 + 渐隐细线」。
+   信息全部聚在左侧成为一个整体，右边用一条渐隐的线收尾——
+   原来的版本名在左、数字甩到最右，中间一大片空，看着像被拉开的横条。
+   吸顶时只用一层自上而下渐隐的底色托住文字（不是整块玻璃板），
+   卡片从下面滑过时是柔和过渡，不会出现一块边界生硬的浮板。 */
 .sc-gen-h {
     position: sticky;
     top: 0;
     z-index: 2;
     display: flex;
-    align-items: baseline;
-    gap: 9px;
-    padding: 12px 8px 10px;
-    /* sticky 后必须垫一层底，否则卡片从下面穿帮；用主题玻璃 + 模糊 */
-    background: color-mix(in srgb, var(--glass2) 82%, transparent);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: var(--r-xs);
+    align-items: center;
+    gap: 10px;
+    padding: 11px 2px 9px;
+    background: none;
+    border-radius: 0;
+}
+/* 吸顶时托底的渐隐层：顶部实、底部完全透明，视觉上「化」进卡片 */
+.sc-gen-h::before {
+    content: "";
+    position: absolute;
+    inset: -8px 0 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--base) 96%, transparent) 0%,
+        color-mix(in srgb, var(--base) 88%, transparent) 62%,
+        transparent 100%
+    );
 }
 .sc-gen-h b {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--acc);
+    white-space: nowrap;
+}
+/* 世代名前的强调色小竖条，替代原来的整条底板来提供视觉锚点 */
+.sc-gen-h b::before {
+    content: "";
+    flex: none;
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: currentColor;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--acc) 60%, transparent);
 }
 .sc-gen-h span {
+    flex: none;
     font-family: var(--font-data);
     font-size: 10px;
     letter-spacing: 0.1em;
     color: var(--ink3);
 }
+/* 曲数紧跟年份，用「·」隔开，不再甩到行尾 */
 .sc-gen-h i {
-    margin-left: auto;
+    flex: none;
     font-style: normal;
     font-family: var(--font-data);
     font-size: 10px;
     letter-spacing: 0.1em;
     color: var(--ink3);
+}
+.sc-gen-h i::before {
+    content: "·";
+    margin-right: 6px;
+    color: color-mix(in srgb, var(--ink3) 70%, transparent);
+}
+/* 行尾渐隐细线：从边界色淡出到透明，替代原来的全宽实心条 */
+.sc-gen-h::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    min-width: 24px;
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--ink) 18%, transparent),
+        transparent 92%
+    );
 }
 
 /* 6 列：宽屏下单卡 ~180px，曲名与作曲者都放得下（主人 2026-10-21 选定） */
