@@ -4,7 +4,7 @@
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   // 可观测性：打开 Workers Logs（请求日志 + 持久化），供 Workers 控制台/Logpush 排查。
-  // traces 与 issue_detection 先关闭，避免额外采样开销；需要时把 enabled 改成 true。
+  // traces 与 issues 先关闭，避免额外采样开销；需要时把对应 enabled 改成 true。
   "observability": {
     // 顶层 enabled 是旧的整体开关，不写时线上会返回 false（虽不影响子项生效，
     // 但控制台会显示成关闭，容易误判）。显式打开，实际采样由下面的子项决定。
