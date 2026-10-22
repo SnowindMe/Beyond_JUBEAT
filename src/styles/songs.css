@@ -340,7 +340,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     margin-right: 6px;
     color: color-mix(in srgb, var(--ink3) 70%, transparent);
 }
-/* 行尾渐隐细线：从边界色淡出到透明，替代原来的全宽实心条 */
+/* 行尾渐隐细线：从强调色淡出到透明，替代原来的全宽实心条。
+   用 --acc 而不是 --ink：暗色主题下 --ink 的细线在照片墙上看不见，
+   而强调色本身就是这套主题的视觉锚点，细一点也不会抢卡片。 */
 .sc-gen-h::after {
     content: "";
     flex: 1 1 auto;
@@ -348,8 +350,8 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     min-width: 24px;
     background: linear-gradient(
         to right,
-        color-mix(in srgb, var(--ink) 18%, transparent),
-        transparent 92%
+        color-mix(in srgb, var(--acc) 42%, transparent),
+        transparent 78%
     );
 }
 
