@@ -97,17 +97,15 @@ const EAGER = new Set(
   description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（KONAMI原创 ${countOf('cn', 'KONAMI原创')} 首、音乐魔方原创 ${countOf('cn', '音乐魔方原创')} 首、音乐魔方流行 ${countOf('cn', '音乐魔方流行')} 首），按世代分组，同页切换服务器。`}
 >
   <section class="band songs" id="songsRoot" data-srv={DEFAULT_SRV}>
-    <div class="band-h">
-      <h2>曲目</h2>
-      <em id="scCount">{srvTotal(DEFAULT_SRV)} songs</em>
-    </div>
-
-    <div class="panel sc-tools">
+    {/* 主人 2026-10-22 要求：去掉「曲目 + songs 计数」那行标题，也去掉外面那层暗色 panel，
+        服务器卡直接站到页面上并放大，总曲数收进卡里（分区 chips 各自还带自己的计数）。 */}
+    <div class="sc-tools">
       <div class="sc-srv" role="group" aria-label="切换服务器">
         {SRV_CARDS.map((s) => (
           <button type="button" class={`sc-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`} data-srv={s.id} aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}>
-            <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="120" height="40" loading="eager" decoding="async" />
+            <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="160" height="54" loading="eager" decoding="async" />
             <span class="sc-srv-n">{s.name}</span>
+            <span class="sc-srv-c">{srvTotal(s.id)} 首</span>
           </button>
         ))}
       </div>
@@ -185,7 +183,6 @@ const EAGER = new Set(
     (function () {
       var root = document.getElementById('songsRoot');
       if (!root) return;
-      var countEl = document.getElementById('scCount');
       var srvBtns = root.querySelectorAll('.sc-srv-b');
       var sets = root.querySelectorAll('.sc-cat-set');
       var bodies = root.querySelectorAll('.sc-body');
@@ -203,7 +200,7 @@ const EAGER = new Set(
         for (var j = 0; j < sets.length; j++) {
           sets[j].hidden = sets[j].getAttribute('data-srv') !== bs;
         }
-        var total = 0;
+        // 总曲数已移进服务器卡（静态渲染），这里只负责显隐，不再统计
         for (var k = 0; k < bodies.length; k++) {
           var body = bodies[k];
           var isMine = body.getAttribute('data-srv') === bs;
@@ -212,10 +209,8 @@ const EAGER = new Set(
           for (var m = 0; m < secs.length; m++) {
             var show = isMine && (state.cat === 'all' || secs[m].getAttribute('data-cat') === state.cat);
             secs[m].hidden = !show;
-            if (show) total += secs[m].querySelectorAll('.sc-card').length;
           }
         }
-        if (countEl) countEl.textContent = total + ' songs';
       }
 
       root.addEventListener('click', function (e) {
