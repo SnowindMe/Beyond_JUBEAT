@@ -23,6 +23,64 @@ const PREFIX = '/ub-proxy';
 
 const PASS_QUERY = new Set(['song', 'chart', 't', 'paused', 'play']);
 
+// 精简样式：藏掉播放器里我们不需要的界面，只留曲目信息、4×4 面板和播放控制。
+// 选择器都是对方站真实的 id/class（实测取自它的 DOM），不是猜的。
+const SIMPLIFY_CSS = `<style id="bj-simplify">
+  /* 只保留三块：曲目信息(#nowPlaying) + 4x4 面板(#panel) + 播放控制(#transport)。
+     实测对方原布局：侧栏 320px 在左，其余内容以 320 为起点排布；
+     单纯 display:none 掉侧栏会留下右侧空白、且面板不会自动居中
+     （邻居仍是按原网格定位的）。所以这里连布局一起改写成居中单列。 */
+
+  /* 1) 藏掉不需要的块 */
+  #sidebar, .scrim, #btnSidebarOpen, #btnSidebar,
+  #optionsPanel, .options,
+  .brand, #visitorCount, #btnShare,
+  #timelineWrap, #timelineToggle, #densityWrap, .density-wrap, .density-hud,
+  #chartOverview, .chart-overview,
+  #loadRow, #btnCollapse, #btnPreview,
+  .mobile-bar { display: none !important; }
+
+  /* 2) 应用外壳改成纵向居中的单列 */
+  #app {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    padding: 10px 12px 12px !important;
+    box-sizing: border-box !important;
+    gap: 8px !important;
+  }
+
+  /* 3) 曲目信息条：横排、吃满宽度、别占太高 */
+  #nowPlaying {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+  }
+  /* 封面压小，把纵向空间留给面板 */
+  #nowPlaying .cover-wrap, #nowPlaying #cover { width: 56px !important; height: 56px !important; }
+  #nowPlaying .np-side { display: none !important; }
+
+  /* 4) 面板：按可用高度自适应，保持正方形居中 */
+  #panel {
+    flex: 0 0 auto !important;
+    align-self: center !important;
+    margin: 4px auto !important;
+  }
+
+  /* 5) 控制条：贴底横排、不换行 */
+  #transport {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    box-sizing: border-box !important;
+    flex: 0 0 auto !important;
+  }
+</style>`;
+
 export const GET: APIRoute = async ({ request, url }) => {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response('method not allowed', { status: 405 });
@@ -67,14 +125,18 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   const type = upstream.headers.get('content-type') ?? '';
 
-  // HTML：注入 <base>，让页面内相对路径也走代理前缀
+  // HTML：注入 <base> + 精简样式
   if (type.includes('text/html')) {
     let html = await upstream.text();
     if (!/<base\s/i.test(html)) {
       // 注入到 <head> 开头，越早越好（晚于任何相对资源就来不及了）
       html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${PREFIX}/">`);
-      headers.delete('content-length'); // 内容已改，长度作废
     }
+    // 精简注入：我们只在详情页里要「曲目信息 + 4×4 谱面 + 播放控制」，
+    // 曲库侧栏、筛选、设置面板、品牌头、访客数、时间轴/物量条全部藏掉。
+    // 同源（都经过本代理）才能这样注入 CSS——跨域时改不到 iframe 内部。
+    html = html.replace(/<\/head>/i, SIMPLIFY_CSS + '</head>');
+    headers.delete('content-length'); // 内容已改，长度作废
     return new Response(request.method === 'HEAD' ? null : html, {
       status: upstream.status,
       headers,
