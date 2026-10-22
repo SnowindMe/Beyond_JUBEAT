@@ -79,6 +79,37 @@ export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
   return cache;
 }
 
+// 单曲查询：走 PRIMARY KEY 索引。与 getAllSongs 分开缓存——详情页只取一行，
+// 拉全量 1241 行太浪费；但热门曲会反复命中，同样在 isolate 内缓存。
+const songCache = new Map<string, { song: Song | null; at: number }>();
+
+const SQL_ONE = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
+              bsc, adv, ext, alt, cover, added_at, unlock_note
+         FROM songs
+        WHERE song_id = ?`;
+
+export async function getSongById(
+  db: D1Database | undefined,
+  id: string
+): Promise<Song | null> {
+  const now = Date.now();
+  const hit = songCache.get(id);
+  if (hit && now - hit.at < TTL_MS) return hit.song;
+
+  let song: Song | null = null;
+  if (db) {
+    const row = await db.prepare(SQL_ONE).bind(id).first<D1Row>();
+    song = row ? rowToSong(row) : null;
+  } else {
+    if (!import.meta.env.DEV) throw new Error('D1 binding "beyond_jubeat" is missing');
+    const { default: snap } = await import('../data/songs.json');
+    song = (snap as unknown as Song[]).find((s) => s.id === id) ?? null;
+  }
+
+  songCache.set(id, { song, at: now });
+  return song;
+}
+
 /** 最近更改（/recent/ 用；表暂时是空的，结构先接上） */
 export type RecentChange = {
   time: string; user: string; target: { label: string; href: string };
@@ -110,4 +141,5 @@ export async function getRecentChanges(db: D1Database): Promise<RecentChange[]> 
 export function invalidateSongsCache() {
   cache = null;
   cacheAt = 0;
+  songCache.clear();
 }

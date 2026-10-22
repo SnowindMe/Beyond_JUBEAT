@@ -1,0 +1,79 @@
+---
+// 曲目详情页：按 song_id 查 D1 单行。
+// 和 /songs/ 一样是 SSR（prerender = false）：曲库在 D1，构建期不知道有哪些 id，
+// 也不能给 1241 首预渲染 1241 个静态页——新增曲目会漏、改一次数据要全量重建。
+import Layout from '../../layouts/Base.astro';
+import '../../styles/songs.css';
+import { pageTitle } from '../../lib/title';
+import { GEN_ORDER } from '../../lib/gens';
+import { getSongById, type Song } from '../../lib/db';
+import { env } from 'cloudflare:workers';
+
+export const prerender = false;
+
+const { songId } = Astro.params;
+const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+const song: Song | null = songId ? await getSongById(db, songId) : null;
+
+// 不存在的 id 走 404 页（而不是渲染一个空壳详情页被搜索引擎收录）
+if (!song) {
+  return Astro.redirect('/404', 302);
+}
+
+Astro.response.headers.set(
+  'cache-control',
+  'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
+);
+
+const genMeta = GEN_ORDER.find((g) => g.k === song.gen);
+const dash = (v: number | null) => (v == null ? '—' : String(v));
+const servers = [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ');
+const coverSrc = song.cover ? `/assets/images/jackets/${song.cover}` : null;
+---
+
+<Layout
+  title={pageTitle(song.t)}
+  canonicalPath={`/songs/${song.id}/`}
+  description={`${song.t}${song.a ? ' - ' + song.a : ''}｜jubeat ${song.gen} 世代，BSC ${dash(song.lv.bsc)} / ADV ${dash(song.lv.adv)} / EXT ${dash(song.lv.ext)}。`}
+>
+  <section class="band sd" id="songRoot">
+    <div class="sd-top">
+      <a class="sd-back" href="/songs/">← 曲目库</a>
+    </div>
+
+    <div class="sd-main">
+      <div class="sd-j">
+        {coverSrc ? (
+          <img src={coverSrc} alt={`${song.t} 曲绘`} width="300" height="300" loading="eager" fetchpriority="high" decoding="async" />
+        ) : (
+          <span class="sd-no">no jacket</span>
+        )}
+        {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
+      </div>
+
+      <div class="sd-info">
+        <h1 class="sd-title">{song.t}</h1>
+        <p class="sd-artist">{song.a ?? '—'}</p>
+
+        {/* 复用曲目卡的 .sc-lv：难度徽章的配色令牌（--d-bsc/--d-adv/--d-ext）、
+            浅色世代压深规则、空值灰都在那里定义好了，不再复制一份。 */}
+        <div class="sc-lv sd-lv">
+          <i class={`lv lv-bsc${song.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(song.lv.bsc)}</i>
+          <i class={`lv lv-adv${song.lv.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(song.lv.adv)}</i>
+          <i class={`lv lv-ext${song.lv.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(song.lv.ext)}</i>
+        </div>
+
+        <dl class="sd-meta">
+          <div><dt>songId</dt><dd class="sd-id">{song.id}</dd></div>
+          <div><dt>世代</dt><dd>{song.gen}{genMeta ? `（${genMeta.y}）` : ''}</dd></div>
+          <div><dt>分区</dt><dd>{song.cat}</dd></div>
+          <div><dt>服务器</dt><dd>{servers || '—'}</dd></div>
+          <div><dt>BPM</dt><dd>{song.bpm ?? '—'}</dd></div>
+          <div><dt>上线日期</dt><dd>{song.d ?? '—'}</dd></div>
+          {song.unlock ? <div><dt>解禁</dt><dd>{song.unlock}</dd></div> : null}
+          {song.kind === 'synthetic' ? <div><dt>备注</dt><dd>官方 songId 暂缺，此处为占位 id</dd></div> : null}
+        </dl>
+      </div>
+    </div>
+  </section>
+</Layout>

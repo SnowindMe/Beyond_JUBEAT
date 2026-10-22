@@ -540,6 +540,16 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         font-size: 7px;
     }
 }
+/* 曲名链接：卡整体悬停已有上浮反馈，链接本身不再加下划线/换色，
+   否则一屏几十张卡全是下划线很吵。键盘聚焦时靠全局 :focus-visible 双环标示。 */
+.sc-tl {
+    color: inherit;
+    text-decoration: none;
+}
+.sc-tl:hover {
+    color: inherit;
+    text-decoration: none;
+}
 /* 双服标记：曲名后的小徽标（两服都有的 KONAMI 移植曲） */
 .sc-dual {
   display: inline-block;
@@ -553,3 +563,149 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
   background: var(--accent, #6c5ce7);
   opacity: 0.85;
 }
+
+/* ---------- 曲目详情页 /songs/[songId]/ ----------
+   单曲信息页：左曲绘（300px）、右信息。窄屏上下堆叠。
+   难度徽章直接复用 .sc-lv（配色令牌与浅色压深规则都在上面定义好）。 */
+.sd {
+    max-width: 880px;
+    margin: 0 auto;
+}
+.sd-top {
+    margin: 0 0 14px;
+}
+.sd-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 13px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--ink2);
+    border-radius: var(--r-s);
+    border: 1px solid var(--edge);
+    background: var(--glass);
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.sd-back:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+    background: var(--glass2);
+}
+.sd-main {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: clamp(18px, 3vw, 34px);
+    align-items: start;
+    padding: clamp(16px, 2.4vw, 26px);
+    border-radius: var(--r-l);
+    border: 1px solid var(--edge);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+}
+.sd-j {
+    position: relative;
+    border-radius: var(--r-m);
+    overflow: hidden;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    aspect-ratio: 1;
+}
+.sd-j img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.sd-no {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    font-size: 12px;
+    color: var(--ink3);
+}
+.sd-alt {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    padding: 2px 7px;
+    font-size: 11px;
+    line-height: 17px;
+    border-radius: 4px;
+    color: #fff;
+    background: color-mix(in srgb, var(--acc) 82%, #000);
+}
+.sd-info {
+    min-width: 0;
+}
+.sd-title {
+    margin: 0 0 6px;
+    font-size: clamp(21px, 2.6vw, 29px);
+    line-height: 1.28;
+    font-weight: 700;
+    color: var(--title);
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+.sd-artist {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: var(--ink2);
+    overflow-wrap: anywhere;
+}
+.sd-lv {
+    margin: 0 0 18px;
+    max-width: 340px;
+}
+.sd-lv .lv {
+    padding: 7px 0 6px;
+    font-size: 14px;
+}
+.sd-lv .lv u {
+    font-size: 9px;
+}
+.sd-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px 16px;
+    margin: 0;
+}
+.sd-meta > div {
+    min-width: 0;
+    padding: 8px 11px;
+    border-radius: var(--r-s);
+    border: 1px solid var(--edge);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.sd-meta dt {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink3);
+}
+.sd-meta dd {
+    margin: 3px 0 0;
+    font-size: 13.5px;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+/* songId 是等宽数据，用数据字体并禁止折行，避免长 id 被拆断 */
+.sd-meta dd.sd-id {
+    font-family: var(--font-data);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+@media (max-width: 700px) {
+    .sd-main {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .sd-j {
+        max-width: 230px;
+    }
+    .sd-lv {
+        max-width: none;
+    }
+}
+

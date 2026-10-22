@@ -164,7 +164,13 @@ const EAGER = new Set(
                           )}
                           {s.alt ? <span class="sc-alt">[2]</span> : null}
                         </div>
-                        <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
+                        {/* 曲名即详情页链接：整张卡不套 <a>（卡内还有徽章、长押标记，
+                            套整卡会让读屏把一大串内容连成一个链接名），只让标题可点。
+                            title 属性保留：曲名过长被截断时鼠标悬停仍能看全。 */}
+                        <b class="sc-t" title={s.t}>
+                          <a class="sc-tl" href={`/songs/${s.id}/`}>{s.t}</a>
+                          {s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}
+                        </b>
                         <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
                         <div class="sc-lv">
                           <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.lv.bsc)}</i>
