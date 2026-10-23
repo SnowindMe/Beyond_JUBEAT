@@ -134,9 +134,36 @@ console.log('[越权分支]');
   ok('玩家 + 无 D1 → 403（复核先于取库）', res.status === 403, 'got ' + res.status);
 }
 {
-  // 浏览器表单提交（非 JSON）也要回同样的状态码，不能靠页面跳转掩盖越权
+  // 浏览器表单（非 JSON）未登录：**不再回 401 纯文本，而是 303 跳登录页并带回跳目标**。
+  // 为什么翻过来：浏览器里一屏「请先登录」纯文本没有链接、没有返回，用户只能改地址栏，
+  // 而他刚填的编辑内容已经丢了。跳登录页至少能原路回来重填。
+  // 越权证据没有被削弱 —— 它由下面那条 JSON 断言和上面「未登录 → 401 + JSON」共同守着。
   const res = await run({ user: null, wantsJson: false });
-  ok('未登录 + 表单提交 → 401', res.status === 401, 'got ' + res.status);
+  ok(
+    '未登录 + 表单提交 → 303 跳登录页',
+    res.status === 303 && /^\/login\/\?next=/.test(res.location ?? ''),
+    'got ' + res.status + ' ' + (res.location ?? '')
+  );
+}
+{
+  // 同一个人换成 JSON 调用（curl / fetch）：仍要拿到 401，验收命令靠这条。
+  const res = await run({ user: null, wantsJson: true });
+  ok('未登录 + JSON 提交 → 401', res.status === 401, 'got ' + res.status);
+  ok(
+    '未登录 + JSON → body 含 error: unauthorized',
+    res.json?.ok === false && res.json?.error === 'unauthorized',
+    JSON.stringify(res.json)
+  );
+}
+{
+  // 已登录但没权限（role=player）用浏览器表单提交：同样跳转，去列表页并带错误码，
+  // 不给人一屏 403 纯文本。口径与 /api/admin/decide 一致（它也跳 ?e=no-permission）。
+  const res = await run({ user: { id: 'u1', name: '路人', role: 'player' }, wantsJson: false });
+  ok(
+    '玩家 + 表单提交 → 303 跳列表并带 no-permission',
+    res.status === 303 && (res.location ?? '').includes('e=no-permission'),
+    'got ' + res.status + ' ' + (res.location ?? '')
+  );
 }
 {
   const before = db.prepare('SELECT COUNT(*) AS n FROM recent_changes').get().n;
@@ -253,12 +280,34 @@ console.log('[防线口径]');
     wantsJson: false,
     now: '2026-10-23T12:00:00.000Z',
   });
-  ok('裸 POST（player）→ 403，与页面无关', res.status === 403, String(res.status));
+  // 这个用例要证明的是「防线在服务端、与页面无关」，不是某个具体状态码。
+  // 按新口径：浏览器表单（wantsJson=false）-> 303 跳转；JSON -> 403。
+  // 两种都必须在**进入业务逻辑之前**就被拦下（连表单都没解析）。
+  ok(
+    '裸 POST（player、表单）→ 303 跳转，与页面无关',
+    res.status === 303 && typeof res.location === 'string',
+    String(res.status) + ' ' + (res.location ?? '')
+  );
+}
+{
+  // 同一场景换成 JSON 调用：403 + body 结构（状态码之外还要验 body，否则 body 变了抓不到）。
+  const res = await handleSongUpdate({
+    user: { id: 'u9', name: '玩家乙', role: 'player' },
+    db: d1,
+    readForm: async () => form({ ...base, ext: '11' }),
+    wantsJson: true,
+    now: '2026-10-23T12:00:00.000Z',
+  });
+  ok(
+    '裸 POST（player、JSON）→ 403 + body error=forbidden',
+    res.status === 403 && res.json?.ok === false && res.json?.error === 'forbidden',
+    String(res.status) + ' ' + JSON.stringify(res.json)
+  );
 }
 
 console.log(
   failures === 0
-    ? '曲目编辑校验通过：越权 401/403、参数规则、recent_changes 列名全部符合预期'
+    ? '曲目编辑校验通过：越权（表单 303 跳转 / JSON 401·403）、参数规则、recent_changes 列名全部符合预期'
     : '曲目编辑校验失败：' + failures + ' 项'
 );
 if (failures) process.exit(1);

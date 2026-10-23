@@ -10,6 +10,7 @@ import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { invalidateSongsCache } from '../../../lib/db';
 import { handleSongUpdate } from '../../../lib/song-admin-server';
+import { isMachineRequest } from '../../../lib/song-admin';
 
 // API 端点必须标 prerender = false：本站 output 是 'static'，
 // 端点默认会被当静态路由在构建期预渲染——那样它既拿不到请求体，
@@ -18,7 +19,10 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
-  const wantsJson = (request.headers.get('accept') ?? '').includes('application/json');
+  // 机器请求（curl/fetch）-> 401/403 + JSON；浏览器表单 -> 303 跳登录。
+  // 判定逻辑集中在 isMachineRequest（accept: application/json 或 x-requested-with: XMLHttpRequest）。
+  // 注意：curl 默认 Accept: */* 不算机器请求，验收时要显式带头（脚本里已这么写）。
+  const wantsJson = isMachineRequest(request.headers);
 
   const result = await handleSongUpdate({
     user: locals.user,

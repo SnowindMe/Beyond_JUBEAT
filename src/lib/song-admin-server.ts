@@ -82,18 +82,25 @@ export async function handleSongUpdate(input: UpdateInput): Promise<UpdateResult
   const { user, db, readForm, wantsJson, now } = input;
 
   // ---- 第一道也是唯一一道防线：服务端复核 role ----
+  // 越权分支对两种调用者给不同答案（口径见 isMachineRequest 的注释）：
+  //   人（浏览器表单）-> 303 跳登录页。登录后回的是**列表页**而不是那一首：
+  //     越权时故意不解析表单（避免大包 POST 白耗 CPU），所以拿不到 songId。
+  //   机器（curl/fetch）-> 401/403 + JSON，越权证据要能被脚本稳定断言。
+  // 早先对浏览器也回裸 401（「请先登录」一行纯文本），实测在浏览器里是一屏
+  // 无链接的死路，而且填了半天的内容全丢 —— 所以把两种调用者分开了。
   const guard = songEditGuard(user);
   if (guard !== 'ok') {
     const status = GUARD_STATUS[guard];
     if (wantsJson) {
       return { status, json: { ok: false, error: guard } };
     }
+    // 未登录：跳登录页并带回程目标；已登录但没权限：回列表并带错误码
     return {
-      status,
-      message:
+      status: 303,
+      location:
         guard === 'unauthorized'
-          ? '请先登录，再回来编辑曲目。'
-          : '当前身份没有编辑曲目的权限。',
+          ? '/login/?next=' + encodeURIComponent('/admin/songs/')
+          : listHref('no-permission'),
     };
   }
 

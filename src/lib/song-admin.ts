@@ -224,6 +224,29 @@ export const GUARD_STATUS: Record<Exclude<EditGuard, 'ok'>, number> = {
   forbidden: 403,
 };
 
+/**
+ * 这个请求是不是「机器在调」（curl / fetch / 脚本），而不是人点浏览器表单。
+ *
+ * 为什么需要区分：同一件事对这两种调用者该给不同答案。
+ *   人   -> 303 跳登录页，登录后原路回来（浏览器里一屏纯文本 401 等于把人困住）
+ *   机器 -> 401/403 + JSON，越权证据要能被脚本稳定断言
+ *
+ * 判定不看 Referer、不看 UA——都太不可靠。只看两个请求头：
+ *   * accept 含 application/json         —— fetch/axios 默认带，浏览器表单 POST 不带
+ *   * x-requested-with 含 xmlhttprequest —— 传统 AJAX 标记；也是 curl 显式声明「我在验接口」的最短写法
+ *
+ * 注意一个反直觉点：curl 默认 Accept 是通配（不含 application/json），
+ * 只看 accept 的话裸 curl 会走 303、拿不到 401/403，验收证据就丢了。
+ * 所以验收命令要显式带 -H 'accept: application/json' 或 -H 'X-Requested-With: XMLHttpRequest'，
+ * 这两种写法都认。
+ */
+export function isMachineRequest(headers: { get(name: string): string | null }): boolean {
+  const accept = (headers.get('accept') ?? '').toLowerCase();
+  if (accept.includes('application/json')) return true;
+  const xrw = (headers.get('x-requested-with') ?? '').toLowerCase();
+  return xrw.includes('xmlhttprequest');
+}
+
 // ---------- 列表查询（/admin/songs/） ----------
 
 /** songs 表的全列（与 src/lib/db.ts 的 SELECT 保持一致，两处都只读不写） */

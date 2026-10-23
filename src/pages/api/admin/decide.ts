@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { isOwner } from '../../../lib/auth';
+import { isMachineRequest } from '../../../lib/song-admin';
 
 
 // API 端点必须标 prerender = false：本站 output 是 'static'，
@@ -12,13 +13,33 @@ import { isOwner } from '../../../lib/auth';
 // 也会在 Node 预渲染环境里 import cloudflare:workers 直接崩。
 export const prerender = false;
 
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
-  if (!user) return new Response(null, { status: 303, headers: { location: '/login/?next=/admin/' } });
+
+  // 与 /api/admin/song-update 统一口径（2026-10-24 定）：
+  //   人（浏览器表单）-> 303 跳转，登录后能原路回来；
+  //   机器（curl/fetch，即 accept: application/json 或 x-requested-with: XMLHttpRequest）
+  //     -> 401/403 + JSON，越权证据要能被脚本稳定断言。
+  // 早先这里对机器也只回 303，脚本验越权时拿到的是一个跳转，看不清是「没登录」还是「没权限」。
+  const wantsJson = isMachineRequest(request.headers);
+
+  if (!user) {
+    return wantsJson
+      ? json({ ok: false, error: 'unauthorized' }, 401)
+      : new Response(null, { status: 303, headers: { location: '/login/?next=/admin/' } });
+  }
 
   // 只有站长能审批：维护者进得了 /admin/，但点不了这个动作
   if (!isOwner(user)) {
-    return new Response(null, { status: 303, headers: { location: '/admin/?e=no-permission' } });
+    return wantsJson
+      ? json({ ok: false, error: 'forbidden' }, 403)
+      : new Response(null, { status: 303, headers: { location: '/admin/?e=no-permission' } });
   }
 
   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
