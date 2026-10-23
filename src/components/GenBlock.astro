@@ -1,0 +1,45 @@
+---
+// 世代块：一个世代标题（吸顶）+ 该世代下的曲目网格。
+//
+// 为什么抽成组件（2026-10-24）：「全部分区」视图与「单分区」视图都要渲染世代块，
+// 两份拷贝会漂——改一处忘另一处是今晚反复踩的坑（sc-skip 挪位只加没删）。
+// 组件化后两种视图只有「传哪些曲目进来」的区别。
+import SongCard from './SongCard.astro';
+import type { Song } from '../lib/db';
+import { slugOf } from '../lib/gens';
+
+type Props = {
+  gen: string;
+  list: Song[];
+  year: string;
+  eager: Set<string>;
+  srv?: 'jp' | 'cn';
+};
+
+const { gen, list, year, eager, srv = 'jp' } = Astro.props;
+const slug = slugOf(gen);
+---
+<div class="sc-gen" data-y={year || '0'}>
+  <div class="sc-gen-h">
+    {/* 世代名本身就是该世代筛选页的入口（2026-10-23）：
+        点名字进 /songs/gen/<slug>/。不把整条吸顶标题做成链接——
+        它 position:sticky 会一直跟着滚，点击面积过大会误触。 */}
+    <b>
+      {slug ? (
+        <a class="sc-gen-a" href={`/songs/gen/${slug}/`} title={`${gen} 世代全部曲目`}>
+          {gen}
+          <span class="sc-gen-x" aria-hidden="true">→</span>
+        </a>
+      ) : (
+        gen
+      )}
+    </b>
+    {year && <span>{year}</span>}
+    <i>{list.length}</i>
+  </div>
+  <div class="sc-grid">
+    {list.map((s) => (
+      <SongCard song={s} eager={eager.has(s.id)} srv={srv} />
+    ))}
+  </div>
+</div>

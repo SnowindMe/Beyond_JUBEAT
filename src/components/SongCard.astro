@@ -11,14 +11,17 @@
 // data-lv 是三档定数拼成的一串（"7 10.5 10.9"），只给搜索用：
 // 用户常直接打「10.5」找歌，光靠曲名/曲师/songId 三个字段搜不到。
 import type { Song } from '../lib/db';
+import { catOf } from '../lib/song-view';
 
 interface Props {
   song: Song;
   /** 首屏图给 eager + high，其余 lazy + low（一次开 1200+ 请求会被浏览器排队拖慢） */
   eager?: boolean;
+  /** 当前视图服务器：决定该卡属于哪个分区（catOf 的口径在 lib/song-view.ts） */
+  srv?: 'jp' | 'cn';
 }
 
-const { song: s, eager = false } = Astro.props;
+const { song: s, eager = false, srv = 'jp' } = Astro.props;
 // 徽章颜色按难度固定（2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 ---
@@ -28,6 +31,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-a={s.a ?? ''}
   data-id={s.id}
   data-gen={s.gen}
+  data-cat={catOf(s, srv)}
   data-bsc={s.lv.bsc ?? ''}
   data-adv={s.lv.adv ?? ''}
   data-ext={s.lv.ext ?? ''}

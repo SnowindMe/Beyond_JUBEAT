@@ -14,6 +14,7 @@
 import Layout from '../layouts/Base.astro';
 import '../styles/songs.css';
 import SongCard from '../components/SongCard.astro';
+import GenBlock from '../components/GenBlock.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN, slugOf } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
@@ -71,6 +72,34 @@ for (const srv of ['jp', 'cn'] as const) {
     }
   }
 }
+
+// 「全部分区」视图（主人 2026-10-24）：选「全部」时不按分区分块，改成跨该服务器
+// 所有分区按世代整合——一个世代只出现一次，同一世代的版权/原创/国服各类曲目混在一起按定数排。
+// 不这么做的话，选「全部」只是把三个分区各自展开，同一个世代会出现 3 次，看着不像"全部"。
+// 键用世代名，值是该世代在这个服务器视图下的全部行（跨分区去重后合并）。
+const byGen: Record<string, Record<string, Song[]>> = { jp: {}, cn: {} };
+for (const srv of ['jp', 'cn'] as const) {
+  for (const gen of GEN_JP.concat(GEN_CN).map((g) => g.k)) byGen[srv][gen] = [];
+}
+for (const srv of ['jp', 'cn'] as const) {
+  for (const s of ALL) {
+    if (!inView(s, srv)) continue;
+    const g = byGen[srv][s.gen];
+    if (g) g.push(s);
+  }
+  for (const gen of Object.keys(byGen[srv])) {
+    byGen[srv][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
+  }
+}
+// 该服务器视图下按 **GEN_ORDER 的自然顺序（旧→新：jubeat 2008 → beyond the Ave. 2024）**
+// 排列的世代清单，只保留非空世代。
+// 注意：默认顺序是「旧→新」（与 GEN_ORDER 一致）；「世代 新→旧」是排序选项 gen-new 的活，
+// 由前端按 data-y 给 .sc-gen 写 style.order 实现——两者不冲突，别把这里改成倒序。
+const srvGenOrder = (srv: Srv) =>
+  GEN_JP.concat(GEN_CN)
+    .filter((g) => g.s === srv)
+    .map((g) => g.k)
+    .filter((k) => (byGen[srv][k] || []).length > 0);
 
 const countOf = (srv: Srv, cat?: string) =>
   ALL.filter((s) => inView(s, srv) && (!cat || catOf(s, srv) === cat)).length;
@@ -230,7 +259,9 @@ const SORTS = [
       <div class="sc-cats" role="group" aria-label="按分区筛选">
         {(['jp', 'cn'] as const).map((srv) => (
           <div class="sc-cat-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
-            <button type="button" class="sc-chip is-on" data-cat="all" aria-pressed="true">全部分区<b>{srvTotal(srv)}</b></button>
+            {/* 「全部」不分区、按世代整合（主人 2026-10-24）；改文案为「全部」而不是「全部分区」，
+            因为它现在真的不是"所有分区各自展开"，而是跨分区合并成一个世代流水。 */}
+            <button type="button" class="sc-chip is-on" data-cat="all" aria-pressed="true">全部<b>{srvTotal(srv)}</b></button>
             {CATS[srv].map((c) => (
               <button type="button" class="sc-chip" data-cat={c} aria-pressed="false">{c}<b>{countOf(srv, c)}</b></button>
             ))}
@@ -293,46 +324,31 @@ const SORTS = [
 
     {(['jp', 'cn'] as const).map((srv) => (
       <div class="sc-body" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
-        {CATS[srv].map((cat) => (
-          <section class="sc-sec" data-cat={cat}>
-            <header class="sc-sec-h">
-              {/* 分区标题是 h2：页面主标题已经是 h1（.sc-hide），下面直接跳到 h3 会缺一级 */}
-              <h2>{cat}</h2>
-              <em>{countOf(srv, cat)} 首</em>
-            </header>
-            {CAT_GENS[srv][cat].map((gen) => {
-              const list = bucket[srv][cat][gen];
-              if (!list.length) return null;
-              const slug = slugOf(gen);
-              return (
-                <div class="sc-gen" data-y={yearOf(gen) || '0'}>
-                  <div class="sc-gen-h">
-                    {/* 世代名本身就是该世代筛选页的入口（2026-10-23）：
-                        点名字进 /songs/gen/<slug>/。不把整条吸顶标题做成链接——
-                        它 position:sticky 会一直跟着滚，点击面积过大会误触。 */}
-                    <b>
-                      {slug ? (
-                        <a class="sc-gen-a" href={`/songs/gen/${slug}/`} title={`${gen} 世代全部曲目`}>
-                          {gen}
-                          <span class="sc-gen-x" aria-hidden="true">→</span>
-                        </a>
-                      ) : (
-                        gen
-                      )}
-                    </b>
-                    {yearOf(gen) && <span>{yearOf(gen)}</span>}
-                    <i>{list.length}</i>
-                  </div>
-                  <div class="sc-grid">
-                    {list.map((s) => (
-                      <SongCard song={s} eager={EAGER.has(s.id)} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-        ))}
+        {/*
+          「全部分区」视图（2026-10-24 主人要求）：
+          选「全部」时不再按版权/原创/KONAMI原创分区切块，而是**跨该服务器的所有分区、
+          按世代整合**——一个世代只出现一次，该世代下的各类曲目混在一起按定数排。
+          原来的做法是三个分区各自展开，同一世代（如 festo）会出现 3 次，选「全部」反而不像"全部"。
+          世代块渲染抽成 renderGen()，两种视图共用，避免复制一份卡片结构。
+        */}
+        <section class="sc-sec sc-sec-all" data-cat="all">
+          <header class="sc-sec-h">
+            <h2>全部曲目</h2>
+            <em>{srvTotal(srv)} 首</em>
+          </header>
+          {srvGenOrder(srv).map((gen) => (
+            <GenBlock gen={gen} list={byGen[srv][gen]} year={yearOf(gen)} eager={EAGER} srv={srv} />
+          ))}
+        </section>
+
+        {/*
+          不再为每个分区块渲染一套独立的 DOM —— 那会把同一世代渲染两遍、
+          总卡片数从 1241 涨到 2482（HTML 翻倍，首屏解析变慢）。
+          改成：**只渲染这一套「按世代整合」的 DOM**，选具体分区时由 JS 按
+          data-cat 隐藏不属于该分区的卡片、并把空的世代块整块藏掉。
+          这与 t9 的既有原则一致（只动 hidden，不重排 DOM），并且「全部」与
+          「单分区」共用同一套节点，不会出现两份结构漂移。
+        */}
       </div>
     ))}
 
@@ -400,7 +416,7 @@ const SORTS = [
         return isNaN(n) ? null : n;
       }
 
-      function matchCard(card) {
+      function matchCard(card, bodySrv) {
         if (state.q) {
           // 匹配 曲名 / 曲师 / songId 三个字段（任务书①），外加 data-lv 的三档定数：
           // 用户常直接打「10.5」找这个定数的歌，只搜前三个字段会一无所获。
@@ -410,6 +426,16 @@ const SORTS = [
                     (card.getAttribute('data-lv') || '').toLowerCase();
           if (hay.indexOf(state.q) === -1) return false;
         }
+        // 分区过滤（2026-10-24 改）：DOM 只有一套「按世代整合」的节点，
+        // 选具体分区时靠这里隐藏不属于该分区的卡片，而不是另渲染一份结构。
+        // 「全部」= 不分区、所有卡片都露出来。
+        // 分区名要按**该 body 自己的服务器**解析：cn 的分区是 KONAMI原创/音乐魔方原创/音乐魔方流行，
+        // jp 的是版权/原创。state.cat 里的分区名只对当前 srv 有意义。
+        // bodySrv 在这里真正用上（2026-10-24 稽核指出它在函数体内 0 引用）：
+        // 只有当该 body 的服务器与当前视图一致时，state.cat 才是有效的筛选条件；
+        // 对隐藏 body，state.cat 可能属于另一个服务器的分区名，此时不该按它过滤（否则会把它自己的卡全判否）。
+        var catApplies = state.cat !== 'all' && bodySrv === state.srv;
+        if (catApplies && card.getAttribute('data-cat') !== state.cat) return false;
         if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
         if (state.artist !== 'all' && card.getAttribute('data-a') !== state.artist) return false;
 
@@ -498,20 +524,31 @@ const SORTS = [
           sets[j].hidden = sets[j].getAttribute('data-srv') !== state.srv;
         }
 
-        var total = 0;
+        // totalMine = **当前服务器**的命中数，给「命中 N 首」提示条与空态判断用。
+        //
+        // 历史坑（2026-10-24）：早先遍历所有 body（含隐藏的）时用过两服之和 total，
+        // 但两服之间有 1 首共同曲名（Big Daddy）+ 13 位共同曲师（C-Show / Yooh / kors k …），
+        // 搜这些时两服之和会是当前服务器的 2 倍 —— 实测提示条显示「命中 3 首」而卡片只有 2 张。
+        // 所以现在只保留「当前服务器」这一个累计量；不需要「两服总命中」这个概念
+        // （空态与提示条都以当前视图为准，藏着的那个 body 用户看不到）。
+        var totalMine = 0;
+        // 遍历**所有** body（含隐藏的）：切服后原来只更新当前 body，
+        // 导致另一个 body 的 em/h2 保留上一次的值 —— 实测「切 cn 后 h2 还是『原创』、em 还是 925 首」，
+        // 「cn 回全部后 em 显示 1150 首」（串了 jp 的总数）。隐藏的 body 也要各自按自己的数据重算，
+        // 这样它一被显示出来就是对的，不会残留跨服串值。
         for (var k = 0; k < bodies.length; k++) {
           var body = bodies[k];
           var isMine = body.getAttribute('data-srv') === state.srv;
           body.hidden = !isMine;
-          if (!isMine) continue;
 
           var secs = body.querySelectorAll('.sc-sec');
           for (var m = 0; m < secs.length; m++) {
             var sec = secs[m];
-            if (state.cat !== 'all' && sec.getAttribute('data-cat') !== state.cat) {
-              sec.hidden = true;
-              continue;
-            }
+            // 「全部分区」= 跨分区按世代整合的单一视图（.sc-sec-all），
+            // 此时所有单分区 section 一律隐藏；选具体分区时才反过来。
+            // 两者互斥，避免同一世代在页面上出现两次。
+            // 结构性说明（2026-10-24 前端指出）：旧的分区 section 已全部删除，
+            // 页面上只剩 .sc-sec-all 一个 section，所以这里不再需要「非 all 就隐藏」的分支。
 
             var gens = sec.querySelectorAll('.sc-gen');
             var hitSec = 0;
@@ -520,7 +557,7 @@ const SORTS = [
               var cards = genEl.querySelectorAll('.sc-card');
               var hitGen = 0;
               for (var c = 0; c < cards.length; c++) {
-                var ok = matchCard(cards[c]);
+                var ok = matchCard(cards[c], body.getAttribute('data-srv'));
                 cards[c].hidden = !ok;
                 if (ok) hitGen++;
               }
@@ -530,14 +567,28 @@ const SORTS = [
               hitSec += hitGen;
             }
             sec.hidden = hitSec === 0;
+            // 标题随分区变（2026-10-24 页面组指出）：
+            // 原来 h2 是硬编码「全部曲目」，选「原创」时 em 变成 925 首、标题却还写「全部曲目」，
+            // 用户看到的是标题与内容不符。现在「全部」→「全部曲目」，具体分区→分区名。
+            // 标题按「该 body 是否当前服务器」区分：
+            // 当前 srv 跟 state.cat 走；隐藏的 body 一律回到默认「全部曲目」（它再被显示时会重新计算）。
+            // 否则切服后 cn 的标题会残留 jp 的「原创」（实测问题 A）。
+            var isCurBody = body.getAttribute('data-srv') === state.srv;
+            var secH = sec.querySelector('.sc-sec-h h2');
+            if (secH) {
+              var catForH = isCurBody && state.cat !== 'all' ? state.cat
+                : (isCurBody ? '全部曲目' : '全部曲目');
+              secH.textContent = catForH;
+            }
             var secCnt = sec.querySelector('.sc-sec-h em');
             if (secCnt) secCnt.textContent = hitSec + ' 首';
-            total += hitSec;
+            if (isMine) totalMine += hitSec;
           }
         }
 
         // 空态：整页零命中给明确文案 + 一键重置，而不是留白
-        if (emptyBox) emptyBox.hidden = total > 0;
+        // 空态按**当前服务器**判断：jp 搜不到但 cn 能搜到时，jp 视图下仍要显示空态。
+        if (emptyBox) emptyBox.hidden = totalMine > 0;
 
         // 命中提示条：只有真的在筛/排序时才出现
         var filtering = !!state.q || state.gen !== 'all' || state.artist !== 'all' ||
@@ -545,7 +596,7 @@ const SORTS = [
         if (activeBox) {
           activeBox.hidden = !filtering;
           // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值
-          if (activeTxt) activeTxt.textContent = filtering ? '命中 ' + total + ' 首' : '';
+          if (activeTxt) activeTxt.textContent = filtering ? '命中 ' + totalMine + ' 首' : '';
         }
 
         // aria-pressed 在这里统一收口（2026-10-23 收尾）。
