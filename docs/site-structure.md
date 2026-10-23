@@ -19,15 +19,22 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 ├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0；v1.7.0 起改 SSR 读 D1）
 │   ├─ ✅ 日服 / 国际服 / 国服三卡切换（logo 上、名在下；国际服暂共用日服曲库）
 │   ├─ ✅ 分区筛选（日服：版权/原创；国服：KONAMI原创/音乐魔方原创/音乐魔方流行）+ 世代分组
+│   ├─ ✅ 搜索 + 四维筛选 + 五种排序（2026-10-23，t9）：搜索按曲名/曲师/songId 即输即筛（debounce 120ms，匹配读卡片 data-*）；筛选含世代下拉、曲师下拉（仅 5 首以上常用曲师，余者用搜索）、难度档、定数区间；排序五种（定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
+│   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-cats/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
+│   ├─ ✅ 卡片区跳过链接 .sc-skip（Tab 第 9 位 → 直达列表锚点 #scList）
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
-│   │   页面 `prerender = false` 是本站唯一 SSR 页，缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
+│   │   页面 `prerender = false` 是本站两个 SSR 页之一（另一个是 /recent/），缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
 │   ├─ ✅ 曲目详情 /songs/[songId]/（2026-10-22 上线，v1.10.0；与 /songs/ 同为 SSR 查 D1）
 │   │   ├─ ✅ 曲绘 / 曲名 / 作曲者 / 三档定数刻度条 / songId / 世代 / 分区 / 服务器 / BPM / 上线 / 解禁
 │   │   ├─ ✅ 不存在的 id 在原 URL 回 404 状态 + noindex
 │   │   ├─ 💭 Jubility 理论值
 │   │   └─ 💭 上一首 / 下一首
 │   │   ⤷ 谱面预览：v1.12.0 曾内嵌 ub.thregren.world 播放器（经 /ub-proxy 代理），v1.13.0 已整体下线
-│   └─ 💭 世代筛选 /songs/gen/[gen]/（15 个世代）
+│   └─ ✅ 世代筛选 /songs/gen/<slug>/（2026-10-23 上线，波次一 t7；SSR 查 D1，与 /songs/ 共用 SongCard.astro）
+│       ├─ ✅ 13 个世代各一页，slug 定在 src/lib/gens.ts 的 GEN_ORDER（jubeat / saucer-fulfill / qubell / ave / beyond-the-ave / yinyue-mofang …）
+│       ├─ ✅ 每页独立 title · description · canonical；面包屑回 /songs/；页尾「同服务器其他世代」内链
+│       ├─ ✅ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
+│       └─ ✅ /songs/ 的世代分组标题链到对应页（点世代名进，不是整条吸顶标题）
 │
 ├─ 🚧 Jubility /jubility/
 │   ├─ 💭 理论值总表（按定数排序）
@@ -42,10 +49,10 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 ├─ 🚧 成就 /achievements/
 │   └─ 💭 成就 / 任务列表（数据尚未进入 data.json）
 │
-├─ ✅ 最近更改 /recent/
-│   ├─ ✅ 空状态（recent.astro:26-34）
-│   ├─ 💭 变更列表（time / user / target / summary / before / after）
-│   └─ 💭 前后差异折叠（details.rc-diff，已写样式未接数据）
+├─ ✅ 最近更改 /recent/（2026-10-23 改 SSR，v1.15.0 起为真实数据页）
+│   ├─ ✅ 空状态（recent.astro:57-64，无数据时三行说明）
+│   ├─ ✅ 变更列表（time / user / target / summary / before / after；SSR 读 D1 的 recent_changes）
+│   └─ ✅ 前后差异折叠（原生 details/summary，无 JS 也能展开；长文本 overflow-wrap:anywhere）
 │
 ├─ 🚧 关于 /about/
 │   ├─ 💭 数据口径与来源
@@ -59,7 +66,12 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   └─ ✅ 账户设置 /account/（改昵称、改密、自荐维护者）
 │
 ├─ ✅ 管理面板 /admin/（v1.14.0，仅维护者/站长可进）
-│   └─ ✅ 站长审批维护者自荐
+│   ├─ ✅ 站长审批维护者自荐
+│   └─ ✅ 曲目编辑 /admin/songs/（t4，维护者/站长）
+│       ├─ ✅ 列表：按曲名/songId 搜索、世代与服务器筛选、分页（48/页），复用 /songs/ 的 .sc-* 卡片与 .sc-chip
+│       ├─ ✅ 编辑页 /admin/songs/[songId]/：曲名/艺人/BPM/BSC·ADV·EXT 定数/解禁注/曲绘文件名
+│       ├─ ✅ 写入端点 POST /api/admin/song-update（服务端复核 role，未登录 401 / 非维护者 403）
+│       └─ ✅ 每次成功编辑写一条 recent_changes（字段照 db/schema.sql）
 │
 └─ ✅ 404 /404
     └─ 自定义「这里还没有铺路」页（404.astro:7-13）
@@ -144,7 +156,9 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 **新站有、v2 没有的**：世代主题切换（15 套）、开屏 LOADING、最近更改、曲目库三卡切换、曲目页 SSR 读 D1。
 
-**渲染架构（v1.7.0 起）**：`output: 'static'` + `@astrojs/cloudflare` 适配器的混合渲染——没标 `prerender = false` 的页面照旧在构建期预渲染，产物进 `dist/client` 由 Workers Assets 直出；只有 `/songs/` 进 Worker 脚本，请求时查 D1 再渲染。所以 `dist/client/songs/index.html` 不存在，这是有意为之。数据权威源是 `data/jubeat.db`（本地 SQLite）→ `db/seed.sql` 重放进 D1。
+**渲染架构（v1.7.0 起，v1.15.0 扩到多页）**：`output: 'static'` + `@astrojs/cloudflare` 适配器的混合渲染——没标 `prerender = false` 的页面照旧在构建期预渲染，产物进 `dist/client` 由 Workers Assets 直出；`/songs/`、`/songs/[songId]/`、`/songs/gen/[gen]/`、`/recent/` 与登录/账户/管理页进 Worker 脚本，请求时查 D1 再渲染。所以 `dist/client/songs/index.html` 与 `dist/client/recent/index.html` 都不存在，这是有意为之。
+
+数据权威源分两份：曲库是 `data/jubeat.db`（本地 SQLite）→ `db/seed.sql` 重放进 D1；用户系统（users / sessions / oauth_accounts / role_requests）在 `db/migrate-users.sql`。**上线顺序必须先 `migrate-users.sql` 再 `seed.sql`**——seed 只含数据表的幂等 DDL，反序不会清空账号，但先建用户表才能让登录功能立刻可用；旧版 seed 曾内嵌 `DROP TABLE users`，重放会清账号，已在 t6 剥离。
 
 ---
 

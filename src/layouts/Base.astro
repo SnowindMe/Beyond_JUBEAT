@@ -27,7 +27,10 @@ const SITE = 'https://wiki.byd-ub.top';
 
 const {
   title = pageTitle('首页'),
-  description = `jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，支持 14 套世代主题切换。`,
+  // 「13 个世代 / 15 套主题」是两套口径：世代是曲库归属（lib/gens.ts），
+  // 主题是视觉皮肤（ThemeScript 的 GEN 数组，clan 一个世代拆 4 套）。
+  // 原来同一句里并列「15 个世代」和「14 套主题」，读者会以为自相矛盾（审计第 19 条）。
+  description = `jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 15 套世代主题可切换。`,
   gen = 'ave',
   font = 'F',
   canonicalPath = '/',
@@ -43,14 +46,21 @@ const canonical = canonicalPath ? SITE + canonicalPath : null;
 const BUILD_DATE = (() => {
   const d = new Date();
   try {
-    const day = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
-    const hm = d.toLocaleTimeString('en-GB', {
+    // Intl.DateTimeFormat 显式构造，不再靠 toLocaleDateString('en-CA') 的隐式 locale 行为：
+    // en-CA 的「YYYY-MM-DD」依赖运行时 ICU 数据，换环境可能变成 MM/DD/YYYY。
+    const fmt = new Intl.DateTimeFormat('zh-CN', {
       timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     });
-    return `${day} ${hm}`;
+    const p: Record<string, string> = {};
+    for (const { type, value } of fmt.formatToParts(d)) p[type] = value;
+    const hh = p.hour === '24' ? '00' : p.hour; // zh-CN 的 hourCycle 在 0 点可能给 24
+    return `${p.year}-${p.month}-${p.day} ${hh}:${p.minute}`;
   } catch {
     return d.toISOString().slice(0, 16).replace('T', ' ');
   }
@@ -64,7 +74,9 @@ const BUILD_DATE = (() => {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{title}</title>
   <meta name="description" content={description} />
-  <meta name="theme-color" content="#0b1a22" />
+  {/* theme-color 的初值由下面的首屏预热脚本按世代改写；这里的 #0a1418 是 ave 的 --base，
+      作为「脚本被禁用」时的兜底（原来的 #0b1a22 与 15 套主题全都不一致）。 */}
+  <meta name="theme-color" content="#0a1418" />
   {noindex && <meta name="robots" content="noindex,follow" />}
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -96,6 +108,12 @@ const BUILD_DATE = (() => {
       var el = document.documentElement;
       el.setAttribute('data-g', g);
       el.setAttribute('data-font', FONT[g]);
+      /* theme-color 先给一个与世代相符的值：CSS 尚未应用时 getComputedStyle 读不到
+         --base，所以这里用内联色表兜住首帧；ThemeScript 的 commit() 之后会按
+         解析后的 --base 再校一次（那里是唯一权威）。 */
+      var THEME_BG = { ave: '#0a1418', bta: '#190f08', clan_blue: '#0a1424', clan_green: '#08160f', clan_purple: '#120b1c', clan_red: '#1a0a0c', copious: '#080d22', festo: '#12100c', knit: '#f2eee4', prop: '#f7f6f4', qubell: '#f4f1ea', saucer: '#eceff1', saucerfulfill: '#141414', ripples: '#dfeeea', yymf: '#e9eefb' };
+      var mt = document.querySelector('meta[name="theme-color"]');
+      if (mt && THEME_BG[g]) mt.setAttribute('content', THEME_BG[g]);
       var FONTFILE = { F: 'jost-500.woff2', C: 'rye-400.woff2', D: 'playfair-700.woff2', E: 'caveat-700.woff2', G: 'shrikhand-400.woff2' };
       function pre(href, as, type) {
         var l = document.createElement('link');
@@ -129,10 +147,11 @@ const BUILD_DATE = (() => {
     <footer class="foot mono">
       <div class="foot-l">
         <span class="foot-k">最后一次编辑 <b>{BUILD_DATE}</b></span>
-        <span class="foot-ver">v{site.version}</span>
+        {/* title：页脚只显示 v1.15.0，读者不知道这是站点迭代版本还是 npm 包版本（审计第 21 条） */}
+        <span class="foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
       </div>
       <div class="foot-r">
-        <span class="mark mark-sm">
+        <span class="mark mark-sm" translate="no">
           <i></i>
           <span class="mark-x">
             <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>

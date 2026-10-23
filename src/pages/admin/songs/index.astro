@@ -1,0 +1,256 @@
+---
+// 维护者曲目列表 /admin/songs/：搜索 + 世代/服务器筛选 + 分页，卡片进编辑页。
+//
+// 权限：页面能进只是体验，真正的写防线在 /api/admin/song-update.ts（服务端复核 role）。
+// 这里对非维护者返回 403 并在模板里给「没有权限」的说明，与 /admin/ 的处理保持一致。
+//
+// 样式复用：卡片整块沿用 /songs/ 的 .sc-grid / .sc-card / .sc-lv / .sc-j，
+// 服务器筛选沿用 .sc-chip（chips 语言与 /songs/ 一致，只是这里每片是一个链接、
+// 筛选发生在服务端而不是前端显隐——后台要能分享「某个世代第 3 页」这种 URL）。
+import Layout from '../../../layouts/Base.astro';
+import '../../../styles/auth.css';
+import '../../../styles/songs.css';
+import { pageTitle } from '../../../lib/title';
+import { isStaff } from '../../../lib/auth';
+import { GEN_ORDER } from '../../../lib/gens';
+import { env } from 'cloudflare:workers';
+import { buildSongListQuery, songEditError } from '../../../lib/song-admin';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login/?next=/admin/songs/');
+const staff = isStaff(user);
+if (!staff) {
+  Astro.response.status = 403;
+}
+// 列表会随编辑立刻变化，不进任何缓存（含边缘）
+Astro.response.headers.set('cache-control', 'private, no-store');
+
+const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+
+const sp = Astro.url.searchParams;
+const q = (sp.get('q') ?? '').trim().slice(0, 60);
+const gen = (sp.get('gen') ?? '').trim();
+const srvRaw = sp.get('srv') ?? 'all';
+const srv = srvRaw === 'jp' || srvRaw === 'cn' ? srvRaw : 'all';
+const pageRaw = Math.floor(Number(sp.get('page') ?? '1'));
+const wantPage = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+const PER_PAGE = 48;
+
+type Row = {
+  song_id: string;
+  id_kind: string | null;
+  title: string;
+  artist: string | null;
+  bpm: string | null;
+  gen_name: string;
+  server_jp: number;
+  server_cn: number;
+  category: string;
+  bsc: number | null;
+  adv: number | null;
+  ext: number | null;
+  alt: number;
+  cover: string | null;
+  added_at: string | null;
+  unlock_note: string | null;
+};
+
+// 先 COUNT 再取当页：这样才能把超界的 ?page=999 收到最后一页，
+// 而不是让用户看到「第 999/52 页 + 空列表」。COUNT 走同一段 WHERE，不会两处写歪。
+let total = 0;
+let rows: Row[] = [];
+let dbFailed = false;
+if (db && staff) {
+  try {
+    const countQuery = buildSongListQuery({ q, gen, srv, page: 1, perPage: PER_PAGE });
+    const countRow = await db
+      .prepare(countQuery.countSql)
+      .bind(...countQuery.params)
+      .first<{ n: number }>();
+    total = countRow?.n ?? 0;
+    const pagesN = Math.max(1, Math.ceil(total / PER_PAGE));
+    const page = Math.min(wantPage, pagesN);
+    const listQuery = buildSongListQuery({ q, gen, srv, page, perPage: PER_PAGE });
+    const listRes = await db
+      .prepare(listQuery.listSql)
+      .bind(...listQuery.params, listQuery.limit, listQuery.offset)
+      .all<Row>();
+    rows = listRes.results ?? [];
+  } catch {
+    // 库抖动不该让整页 500：列表空 + 顶部提示（模板里按 dbFailed 显示）
+    dbFailed = true;
+  }
+}
+
+const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+const page = Math.min(wantPage, pages);
+
+const err = songEditError(sp.get('e'));
+const okCode = sp.get('ok');
+
+/** 组装带当前筛选条件的 URL：翻页 / 切服务器都不丢搜索词与世代 */
+const hrefWith = (patch: { page?: number; srv?: 'all' | 'jp' | 'cn' }) => {
+  const u = new URLSearchParams();
+  if (q) u.set('q', q);
+  if (gen) u.set('gen', gen);
+  const nextSrv = patch.srv ?? srv;
+  if (nextSrv !== 'all') u.set('srv', nextSrv);
+  const nextPage = patch.page ?? page;
+  if (nextPage > 1) u.set('page', String(nextPage));
+  const s = u.toString();
+  return '/admin/songs/' + (s ? '?' + s : '');
+};
+
+const dash = (v: number | null) => (v == null ? '—' : String(v));
+
+// 分页条：当前页两侧各 2 页 + 首尾，被省略处用省略号
+const pageLinks = (() => {
+  const set = new Set<number>([1, pages]);
+  for (let p = page - 2; p <= page + 2; p++) if (p >= 1 && p <= pages) set.add(p);
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | 'gap')[] = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push('gap');
+    out.push(p);
+    prev = p;
+  }
+  return out;
+})();
+
+// 服务器 chips：与 /songs/ 同一套 .sc-chip，只是这里是链接不是按钮
+const SRV_OPTS = [
+  { k: 'all', name: '全部服务器' },
+  { k: 'jp', name: '日服' },
+  { k: 'cn', name: '国服' },
+] as const;
+---
+
+<Layout title={pageTitle('曲目编辑')} canonicalPath="/admin/songs/" description="维护者曲目编辑面板。" noindex>
+  {!staff ? (
+    <section class="band">
+      <div class="panel">
+        {/* 无权限分支没有可见页头，用视觉隐藏的 h1 让每页仍有唯一主标题 */}
+        <h1 class="vh">曲目编辑</h1>
+        <p class="au-alert" role="alert">当前身份（{user.role}）没有编辑曲目的权限。</p>
+        <p class="au-alt">想参与编辑？在<a href="/account/">账户页</a>提交维护者自荐。</p>
+      </div>
+    </section>
+  ) : (
+    <>
+      <section class="band">
+        <div class="band-h">
+          <h1>曲目编辑</h1>
+          <em>{total} 首 · 第 {page}/{pages} 页</em>
+        </div>
+
+        <div class="panel">
+          {err && <p class="au-alert" role="alert">{err}</p>}
+          {okCode === 'saved' && <p class="au-alert is-ok">已保存，改动已记入最近更改。</p>}
+          {okCode === 'nochange' && <p class="au-alert is-ok">没有改动，未写入记录。</p>}
+          {dbFailed && <p class="au-alert" role="alert">读取曲库失败，请刷新重试。</p>}
+
+          {/* 筛选条：GET 表单，搜索词/世代进 URL；服务器用 chips（链接）切换，
+              三者都保留在 URL 里，刷新、收藏、翻页都不丢 */}
+          <form class="ae-filter" method="get" action="/admin/songs/">
+            <label class="ae-f ae-f-q">
+              <span>搜索</span>
+              <input type="search" name="q" value={q} maxlength="60" placeholder="曲名或 songId，例如 アガット / 80001015" />
+            </label>
+            <label class="ae-f">
+              <span>世代</span>
+              <select name="gen">
+                <option value="" selected={!gen}>全部世代</option>
+                {GEN_ORDER.map((g) => (
+                  <option value={g.k} selected={g.k === gen}>{g.k}</option>
+                ))}
+              </select>
+            </label>
+            {/* 服务器选择要走链接，所以用 hidden 把它一起带进 GET 表单 */}
+            <input type="hidden" name="srv" value={srv} />
+            <button class="au-submit ae-go" type="submit">筛选</button>
+            <a class="au-alt ae-reset" href="/admin/songs/">重置</a>
+          </form>
+
+          <div class="sc-cats ae-srv" role="group" aria-label="按服务器筛选">
+            {SRV_OPTS.map((o) => (
+              <a
+                class={`sc-chip${srv === o.k ? ' is-on' : ''}`}
+                href={hrefWith({ srv: o.k, page: 1 })}
+                aria-current={srv === o.k ? 'true' : undefined}
+              >{o.name}</a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        {rows.length === 0 ? (
+          <div class="panel">
+            <p class="au-alt">没有匹配的曲目。换个关键词或清掉筛选再试。</p>
+          </div>
+        ) : (
+          <div class="sc-grid ae-grid">
+            {rows.map((s) => (
+              <article class="sc-card ae-card">
+                <div class="sc-j">
+                  {/* 库里日服 cover 是源文件原名 idN.gif，站点素材统一是 .webp：
+                      与 lib/db.ts 的 rowToSong 同一归一化，否则列表图全 404 */}
+                  {s.cover ? (
+                    <img
+                      src={'/assets/images/jackets/' + s.cover.replace(/\.gif$/i, '.webp')}
+                      alt=""
+                      width="144"
+                      height="144"
+                      loading="lazy"
+                      fetchpriority="low"
+                      decoding="async"
+                    />
+                  ) : (
+                    <span class="sc-no">no jacket</span>
+                  )}
+                  {s.alt ? <span class="sc-alt">[2]</span> : null}
+                </div>
+                <b class="sc-t" title={s.title}>{s.title}</b>
+                <span class="sc-a" title={s.artist ?? ''}>{s.artist ?? '—'}</span>
+                <div class="sc-lv">
+                  <i class={`lv lv-bsc${s.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.bsc)}</i>
+                  <i class={`lv lv-adv${s.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(s.adv)}</i>
+                  <i class={`lv lv-ext${s.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(s.ext)}</i>
+                </div>
+                {/* 列表卡不整卡可点（和 /songs/ 不同）：这里点进去是编辑页而不是详情页，
+                    做整卡热区容易让人误以为是浏览。只在卡底给一条明确的「编辑」链接，
+                    链接名带上曲名，读屏在 48 张卡里才分得清点的是哪一首。 */}
+                <a
+                  class="ae-edit"
+                  href={'/admin/songs/' + encodeURIComponent(s.song_id) + '/'}
+                  aria-label={`编辑：${s.title}`}
+                >编辑</a>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {pages > 1 ? (
+        <section class="band">
+          <nav class="ae-pager" aria-label="分页">
+            {page > 1 ? <a href={hrefWith({ page: page - 1 })} rel="prev">上一页</a> : <span class="is-off">上一页</span>}
+            {pageLinks.map((p) =>
+              p === 'gap' ? (
+                <span class="is-gap" aria-hidden="true">…</span>
+              ) : p === page ? (
+                <span class="is-on" aria-current="page">{p}</span>
+              ) : (
+                <a href={hrefWith({ page: p })}>{p}</a>
+              )
+            )}
+            {page < pages ? <a href={hrefWith({ page: page + 1 })} rel="next">下一页</a> : <span class="is-off">下一页</span>}
+          </nav>
+        </section>
+      ) : null}
+    </>
+  )}
+</Layout>

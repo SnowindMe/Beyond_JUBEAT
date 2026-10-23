@@ -1,5 +1,8 @@
--- 由 scripts/db/build-db.cjs --seed 生成，勿手改
+-- 由 scripts/db/build-db.cjs --seed 生成，勿手改；改数据请改 data/ 下的输入再重跑
+-- 结构：数据表的幂等 DDL（IF NOT EXISTS / 无 DROP）+ INSERT + ANALYZE。
+-- 不含用户系统：users / sessions / oauth_accounts / role_requests 见 db/migrate-users.sql。
 -- 灌库：npx wrangler d1 execute beyond-jubeat --remote --file=db/seed.sql
+-- 单条 INSERT 已按 D1 的 100,000 bytes 语句上限切分（切点 90 KB），切分在同一文件内完成。
 
 -- jubeat 资料站数据库（本地 SQLite 与 Cloudflare D1 共用同一份 DDL）
 -- 只保留两张业务表：歌曲表、最近更改表。
@@ -11,8 +14,7 @@
 --     日服行 (1,0)；国服独有行 (0,1)；国服「KONAMI原创」= 两服都有 (1,1)——
 --     页面口径：两服都有的曲目在音乐魔方里显示在 KONAMI原创 分区（主人 2026-10-22 指定）。
 
-DROP TABLE IF EXISTS songs;
-CREATE TABLE songs (
+CREATE TABLE IF NOT EXISTS songs (
   song_id     TEXT PRIMARY KEY,          -- 官方 songId；占位 id 形如 BTA-44711214
   id_kind     TEXT,                      -- official / synthetic（synthetic = 官方 id 拿不到的占位）
   title       TEXT NOT NULL,
@@ -30,15 +32,14 @@ CREATE TABLE songs (
   added_at    TEXT,                      -- 上线/解禁日期 YYYY-MM-DD
   unlock_note TEXT                       -- 解禁池或联动来源，人类可读
 );
-CREATE INDEX idx_songs_jp_gen  ON songs(server_jp, gen_name);
-CREATE INDEX idx_songs_cn_cat  ON songs(server_cn, category);
-CREATE INDEX idx_songs_title   ON songs(title);
+CREATE INDEX IF NOT EXISTS idx_songs_jp_gen  ON songs(server_jp, gen_name);
+CREATE INDEX IF NOT EXISTS idx_songs_cn_cat  ON songs(server_cn, category);
+CREATE INDEX IF NOT EXISTS idx_songs_title   ON songs(title);
 -- 主导出查询（ORDER BY gen_name, ext DESC）专用：两列复合索引直接按序输出，
 -- 免掉 TEMP B-TREE 全表排序（1241 行 ×16 列）。
-CREATE INDEX idx_songs_order ON songs(gen_name, ext DESC);
+CREATE INDEX IF NOT EXISTS idx_songs_order ON songs(gen_name, ext DESC);
 
-DROP TABLE IF EXISTS recent_changes;
-CREATE TABLE recent_changes (
+CREATE TABLE IF NOT EXISTS recent_changes (
   change_id    INTEGER PRIMARY KEY AUTOINCREMENT,
   changed_at   TEXT NOT NULL,            -- ISO 时间
   user         TEXT NOT NULL,            -- 谁改的
@@ -49,7 +50,9 @@ CREATE TABLE recent_changes (
   after_text  TEXT                       -- 改后
 );
 
-CREATE INDEX idx_recent_changed_at ON recent_changes(changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recent_changed_at ON recent_changes(changed_at DESC);
+
+
 
 -- songs: 1241 行
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,cover,added_at,unlock_note) VALUES
@@ -1295,5 +1298,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('995000048','official','零距离的思念','TINY7','128','音乐魔方',0,1,'音乐魔方流行',1,4,6,0,'id995000048.webp','2026-10-15',NULL),
   ('995000054','official','我爱你就像','李承铉',NULL,'音乐魔方',0,1,'音乐魔方流行',2,4,6,0,'id995000054.webp','2026-10-15',NULL),
   ('995000055','official','太极','井胧/井迪','145','音乐魔方',0,1,'音乐魔方流行',2,4,8,0,'42b12e3606.webp','2026-09-29',NULL);
+
+-- recent_changes: 0 行（空表，无 INSERT）
 
 ANALYZE;

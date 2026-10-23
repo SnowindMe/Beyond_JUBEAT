@@ -7,10 +7,14 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
 
 <section class="hero">
   <div>
-    {/* h1 里唯一有文字的是 .word-t，但 14 套世代主题都用 display:none 把它藏掉，
+    {/* h1 里唯一有文字的是 .word-t，但 15 套世代主题都用 display:none 把它藏掉，
         字标图又是 aria-hidden + alt=""，结果 h1 的可访问名是空字符串（实测 AX name: ""）。
         aria-label 补一个稳定可读名，别指望视觉字标能读出来。 */}
-    <h1 class="word" id="wordMark" aria-label="jubeat 音乐魔方"><span class="word-t" aria-hidden="true">jubeat</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" decoding="async" fetchpriority="high" /></span></h1>
+    {/* 字标 img 补上 width/height：不带尺寸时图片没解码完高度是 0（实测 box 285×0），
+        整块首屏会在图到货的瞬间往下跳。世代字标宽高比各不相同（ave 284×210、
+        ripples 570×171、yymf 1180×593），所以真正的占位比例由 CSS 按 data-g
+        写在 .word-l 的 aspect-ratio 上；这组属性只是给「还没应用主题」的那一帧兜底。 */}
+    <h1 class="word" id="wordMark" aria-label="jubeat 音乐魔方"><span class="word-t" aria-hidden="true">jubeat</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" width="285" height="210" decoding="async" fetchpriority="high" /></span></h1>
     {/* 字标图紧跟 img 就地设 src：HTML 里不写 src 就不会先下 ave，再由主题脚本换成保存的世代。
         这段必须紧贴 img（is:inline 同步执行），否则浏览器已按空 src 判定过一次。 */}
     <script is:inline>
@@ -32,7 +36,23 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
   <div class="cubewrap"><div class="cube">
     {/* 没有代表曲的世代（如日服当前世代 beyond the Ave. 快照里暂无曲目）不出这一格：
         否则 jacket(undefined) 会拼出 /assets/images/jackets/ 目录路径，渲染成一张裂图。 */}
-    {data.gen.filter((g) => g.rep?.cover).map((g) => <i><img src={jacket(g.rep.cover)} alt={g.k} /></i>)}
+    {data.gen.filter((g) => g.rep?.cover).map((g, i) => (
+      <i>
+        {/* 曲绘原图 144×144，容器靠 .cube i 的 aspect-ratio 撑住；补上尺寸属性后
+            图没到货也不会先把格子撑成 0 高（图片一多就是一次整块重排）。
+            懒加载：曲绘立方体在首屏右栏，移动端要滚下去才看得到；只有最前面
+            几张（首屏可能露出的一半）保持 eager，其余交给我浏览器按需加载。
+            字标图 #wordLogo 不走这里，它始终 fetchpriority="high"。 */}
+        <img
+          src={jacket(g.rep.cover)}
+          alt={g.k}
+          width="144"
+          height="144"
+          loading={i < 4 ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      </i>
+    ))}
     <i class="sum"><b>{data.stat.songs}</b><span>曲</span></i>
   </div></div>
 </section>

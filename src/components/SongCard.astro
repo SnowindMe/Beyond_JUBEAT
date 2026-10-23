@@ -1,0 +1,65 @@
+---
+// 曲目卡：/songs/ 与 /songs/gen/[gen]/ 共用的唯一一份卡片。
+// 抽出来的原因：两页要长得完全一样，复制一份等于以后改样式要改两遍（必然漏一边）。
+// 样式仍走 src/styles/songs.css 的 .sc-*（这里是纯结构，没有自己的 CSS）。
+//
+// data-* 承载匹配字段（2026-10-23，t9 搜索/筛选/排序）：
+// 搜索与筛选一律读这些属性，**不在输入时去解析卡片里的文字**——
+// 卡片文本里混着「双」徽章、被截断的省略号、破折号占位，解析出来必然是脏数据。
+// 定数缺失写空串（不是 0）：前端据此区分「没有这一档」与「定数是 0」，
+// 否则「7.0 以下」会把没有 EXT 的曲误判成 0。
+// data-lv 是三档定数拼成的一串（"7 10.5 10.9"），只给搜索用：
+// 用户常直接打「10.5」找歌，光靠曲名/曲师/songId 三个字段搜不到。
+import type { Song } from '../lib/db';
+
+interface Props {
+  song: Song;
+  /** 首屏图给 eager + high，其余 lazy + low（一次开 1200+ 请求会被浏览器排队拖慢） */
+  eager?: boolean;
+}
+
+const { song: s, eager = false } = Astro.props;
+// 徽章颜色按难度固定（2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
+const dash = (v: number | null) => (v == null ? '—' : String(v));
+---
+<article
+  class="sc-card"
+  data-t={s.t}
+  data-a={s.a ?? ''}
+  data-id={s.id}
+  data-gen={s.gen}
+  data-bsc={s.lv.bsc ?? ''}
+  data-adv={s.lv.adv ?? ''}
+  data-ext={s.lv.ext ?? ''}
+  data-lv={`${s.lv.bsc ?? ''} ${s.lv.adv ?? ''} ${s.lv.ext ?? ''}`}
+>
+  <div class="sc-j">
+    {s.cover ? (
+      <img
+        src={`/assets/images/jackets/${s.cover}`}
+        alt=""
+        width="144"
+        height="144"
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : 'low'}
+        decoding="async"
+      />
+    ) : (
+      <span class="sc-no">no jacket</span>
+    )}
+    {s.alt ? <span class="sc-alt">[2]</span> : null}
+  </div>
+  {/* 整卡可点（2026-10-22 主人指出只点标题进不去太难用）。
+      做法是卡内嵌一个绝对定位铺满的 <a>，而不是把整张卡包成 <a>：
+      包成 <a> 会把曲绘、双服徽章、三个难度徽章全卷进链接名里，
+      读屏一次念一大串；铺满层让链接名只有曲名，点击却覆盖全卡。
+      链接层放在最后以保证盖住其余内容，z-index 由 CSS 控制。 */}
+  <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
+  <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
+  <div class="sc-lv">
+    <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.lv.bsc)}</i>
+    <i class={`lv lv-adv${s.lv.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(s.lv.adv)}</i>
+    <i class={`lv lv-ext${s.lv.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(s.lv.ext)}</i>
+  </div>
+  <a class="sc-link" href={`/songs/${s.id}/`} aria-label={`${s.t}${s.a ? ' - ' + s.a : ''} 详情`}></a>
+</article>

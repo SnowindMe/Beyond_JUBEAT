@@ -3,21 +3,24 @@ import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
-// 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：clan 一个世代拆成 4 套。
-const THEME_COUNT = 14;
+// 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：
+// 15 个世代 → 15 套主题，其中 clan 一个世代拆成 4 套皮肤（clan Red/Blue/Green/Purple），
+// 所以世代数（src/lib/gens.ts 的 GEN_ORDER，13 条）与主题数（14 条可切换 + 音乐魔方 = 15）不同。
+// 实测 ThemeScript 的 GEN 数组就是 15 条。别再把这两个数写成打架的两个值。
+const THEME_COUNT = 15;
 ---
 
 <Layout
   title={pageTitle('首页')}
   canonicalPath="/"
-  description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，${THEME_COUNT} 套世代主题可切换。`}
+  description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
   <Hero />
 
   <section class="band">
     <div class="panel wip">
       <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
-      <p class="wip-t">正在施工中，前面的区域以后再来探索吧......</p>
+      <p class="wip-t">正在施工中，前面的区域以后再来探索吧……</p>
       <span class="wip-s">under construction</span>
     </div>
   </section>

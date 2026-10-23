@@ -1,16 +1,21 @@
-// 建库：把日服 1150 首 + 国服 84 首合成一张歌曲表，外加空的最近更改表。
+// 建库：把日服 1150 首 + 国服 92 行合成 songs 表（1241 行 / 3723 谱面），外加空的 recent_changes。
 //   node scripts/db/build-db.cjs                 只建本地库
 //   node scripts/db/build-db.cjs --seed          同时导出 db/seed.sql（给 D1）
 //   node scripts/db/build-db.cjs --out=data/x.db 建到指定路径
+// 输入约定与全链路口径见 docs/data-pipeline.md；一条命令重建用 npm run db。
 const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCHEMA_PATH = path.join(ROOT, 'db/schema.sql');
-const JP_PATH = path.join(ROOT, 'data/beyond-the-ave/resolved.json');
-const ARCHIVE = path.join(ROOT, 'archive/legacy/jubeat-wiki-v3/data/songs.json');
-const XLSX_DIR = path.join(ROOT, 'scripts/tmp/xlsx');
+// 三个输入都在受版本控制的目录，新机器 clone 后无需 archive/ 与 scripts/tmp 即可重建。
+//   data/upstream/jp-resolved.json  日服全量 1150 首（冻结快照，见 docs/data-pipeline.md）
+//   data/upstream/wiki-v3-songs.json 旧站 v3 的 513 首快照（补 BPM / 上线日期 / 解禁信息）
+//   data/xlsx/sheet*.json           国服 xlsx 的解析产物（由 parse-xlsx.cjs 从 source.xlsx 生成）
+const JP_PATH = path.join(ROOT, 'data/upstream/jp-resolved.json');
+const ARCHIVE = path.join(ROOT, 'data/upstream/wiki-v3-songs.json');
+const XLSX_DIR = path.join(ROOT, 'data/xlsx');
 
 const argv = process.argv.slice(2);
 const wantSeed = argv.includes('--seed');
@@ -20,7 +25,7 @@ const SEED_PATH = path.join(ROOT, 'db/seed.sql');
 
 // 世代 → 服务器归属。日服 12 代（server_jp），国服 1 代（server_cn）；
 // 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI原创」分区；
-// 现有数据两服 song_id 体系不同、暂无重合（移植曲只有国服有，主人 2026-10-22 纠正）。
+// 两服 song_id 体系不同，同曲只能按 dualKey 归一化标题+艺人匹配（见 docs/data-pipeline.md §5）。
 const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.'];
 const CN_GENS = ['音乐魔方'];
 
@@ -259,7 +264,10 @@ function selfCheck(db, stat, problems) {
   if (bad) { console.log(`\n自检未通过项 ${bad} 个`); process.exitCode = 1; }
 }
 
-// D1 单条语句上限约 100KB（实测 141396 bytes 报 SQLITE_TOOBIG），按行数 + 字节双封顶。
+// D1 的单条 SQL 语句上限是 100,000 bytes（官方 Limits 页实测口径），超了报 SQLITE_TOOBIG。
+// 现有数据一条 INSERT 装 1241 首要 178,738 bytes，所以必须切成多条语句；
+// 切在 90 KB（留 10 KB 余量给换行与列名前缀），实测只需 2 条。切分发生在同一个 seed.sql 内，
+// 不需要再拆文件：d1 execute --file 的文件上限是 5 GB，限制只在「单条语句」上。
 const MAX_STMT_BYTES = 90 * 1024;
 
 function sqlLit(v) {
@@ -268,18 +276,38 @@ function sqlLit(v) {
   return "'" + String(v).replace(/'/g, "''") + "'";
 }
 
+// seed.sql = 数据表的幂等 DDL（IF NOT EXISTS，无 DROP）+ INSERT + ANALYZE。
+// 不整份内嵌 schema.sql 的原因：schema.sql 里是 DROP TABLE，重放到线上 D1 会把
+// users / sessions / oauth_accounts / role_requests / recent_changes 一并清空。
+// 用户系统的表由 db/migrate-users.sql 管（增量、IF NOT EXISTS），seed 一律不碰。
+function dataTableDdl() {
+  const full = fs.readFileSync(SCHEMA_PATH, 'utf8');
+  // 只取用户系统之前的部分（songs / recent_changes 及其索引）
+  const cut = full.indexOf('-- 用户系统（2026-10-23');
+  const dataPart = cut > 0 ? full.slice(0, full.lastIndexOf('-- ---', cut)) : full;
+  return dataPart
+    .replace(/^DROP TABLE IF EXISTS .*$/gm, '')
+    .replace(/\bCREATE TABLE\b/g, 'CREATE TABLE IF NOT EXISTS')
+    .replace(/\bCREATE (UNIQUE )?INDEX\b/g, 'CREATE $1INDEX IF NOT EXISTS')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
 function buildSeedSql(db) {
   const marker = 'INSERT OR REPLACE INTO ';
   const out = [
-    '-- 由 scripts/db/build-db.cjs --seed 生成，勿手改',
+    '-- 由 scripts/db/build-db.cjs --seed 生成，勿手改；改数据请改 data/ 下的输入再重跑',
+    '-- 结构：数据表的幂等 DDL（IF NOT EXISTS / 无 DROP）+ INSERT + ANALYZE。',
+    '-- 不含用户系统：users / sessions / oauth_accounts / role_requests 见 db/migrate-users.sql。',
     '-- 灌库：npx wrangler d1 execute beyond-jubeat --remote --file=db/seed.sql',
+    '-- 单条 INSERT 已按 D1 的 100,000 bytes 语句上限切分（切点 90 KB），切分在同一文件内完成。',
     '',
-    fs.readFileSync(SCHEMA_PATH, 'utf8'),
+    dataTableDdl(),
     '',
   ];
+  const stmts = [];          // 每条 INSERT 语句的字节数，末尾统一校验
   for (const table of ['songs', 'recent_changes']) {
     const rows = db.prepare(`SELECT * FROM ${table}`).all();
-    if (!rows.length) continue;
+    if (!rows.length) { out.push(`-- ${table}: 0 行（空表，无 INSERT）`, ''); continue; }
     const cols = Object.keys(rows[0]);
     out.push(`-- ${table}: ${rows.length} 行`);
     const prefix = `${marker}${table}(${cols.join(',')}) VALUES\n  `;
@@ -288,7 +316,9 @@ function buildSeedSql(db) {
     let bytes = prefixBytes;
     const flush = () => {
       if (!batch.length) return;
-      out.push(prefix + batch.join(',\n  ') + ';');
+      const stmt = prefix + batch.join(',\n  ') + ';';
+      stmts.push({ table, bytes: Buffer.byteLength(stmt), rows: batch.length });
+      out.push(stmt);
       batch = [];
       bytes = prefixBytes;
     };
@@ -305,7 +335,15 @@ function buildSeedSql(db) {
   // 统计信息随 seed 一起重放：没有 ANALYZE 时 D1/SQLite 靠猜选错索引
   out.push('ANALYZE;', '');
   fs.writeFileSync(SEED_PATH, out.join('\n'));
-  console.log(`seed.sql -> ${path.relative(ROOT, SEED_PATH)} (${(fs.statSync(SEED_PATH).size / 1024).toFixed(1)} KB)`);
+
+  // 自检：任何一条语句超过 D1 上限就算失败，别等 wrangler 报 SQLITE_TOOBIG 才发现。
+  const over = stmts.filter((s) => s.bytes > 100000);
+  const detail = stmts.map((s) => `${s.table} ${s.rows} 行 / ${s.bytes} B`).join('；');
+  console.log(`seed.sql -> ${path.relative(ROOT, SEED_PATH)} (${(fs.statSync(SEED_PATH).size / 1024).toFixed(1)} KB, ${stmts.length} 条 INSERT：${detail})`);
+  if (over.length) {
+    console.log(`FAIL ${over.length} 条 INSERT 超过 D1 的 100,000 B 上限`);
+    process.exitCode = 1;
+  }
 }
 
 main();

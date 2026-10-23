@@ -1,4 +1,11 @@
 :root {
+    /* 首屏默认深色：主题预热脚本在 CSS 生效前就把 data-g 写上了，
+       这一行只兜住「脚本被禁用/还没跑」的那一帧，避免原生控件先按亮色渲染再跳变。 */
+    color-scheme: dark;
+    /* 焦点环专用令牌：不复用装饰性的 --acc —— --acc 在浅色底上只有 1.1–3.9:1，
+       而 WCAG 2.4.11 对焦点指示器要求 3:1。深色世代默认用 --acc（实测 5.89–13.18 全部达标），
+       浅色世代各自覆写成深色变体（见下面各代主题块）。 */
+    --focus: var(--acc);
     --ink: #eef7fb;
     --ink2: #a9c2ce;
     --ink3: #7e97a4;
@@ -111,6 +118,13 @@ html[data-font="G"] .word {
 }
 html {
     -webkit-font-smoothing: antialiased;
+    /* 触屏基础（审计第 14 条，原先三项全站 0 处）：
+       touch-action: manipulation 去掉双击缩放的 300ms 等待；
+       overscroll-behavior-y: contain 防止下拉到顶后触发浏览器刷新、也隔离滚动链；
+       -webkit-tap-highlight-color 统一高亮块（原来只有开屏遮罩有，可点元素还是系统蓝块）。 */
+    touch-action: manipulation;
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--acc) 22%, transparent);
 }
 body {
     color: var(--ink);
@@ -194,7 +208,11 @@ img {
 .wrap {
     max-width: 1256px;
     margin: 0 auto;
-    padding: 0 clamp(18px, 3.4vw, 44px);
+    /* 左右各加一个刘海屏安全区内边距（非刘海屏 env() 为 0，不影响现有间距） */
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: max(clamp(18px, 3.4vw, 44px), env(safe-area-inset-left));
+    padding-right: max(clamp(18px, 3.4vw, 44px), env(safe-area-inset-right));
     position: relative;
     z-index: 1;
 }
@@ -217,6 +235,13 @@ img {
     /* 整个品牌字组是回首页的链接 */
     border-radius: var(--r-xs);
     transition: opacity 0.18s ease;
+}
+/* 只有顶栏那个 .mark 是可点链接，页脚的 .mark-sm 是 <span>（品牌字，不可点）。
+   所以 44 的触控高度只给顶栏：实测桌面 230×37、移动端 154×16，
+   是顶栏最容易点偏的一个目标；只加高度不改字号/图标，视觉边界不变。
+   写在 .mark 上会让页脚那行也撑到 44 高（多出 24px 空白），所以单独一条。 */
+.top .mark {
+    min-height: 44px;
 }
 .mark:hover {
     opacity: 0.86;
@@ -307,7 +332,7 @@ html[data-g="knit"] .mark b .til {
     min-width: 0;
 }
 .mark span {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--ink3);
     letter-spacing: 0.14em;
     font-family:
@@ -333,7 +358,17 @@ html[data-g="knit"] .mark b .til {
 /* 导航不再用 12.5px 的次要灰字：提到 15px / 700，颜色直接用正文 --ink。
    主人 2026-10-20：「导航栏的字体加大加粗，不用小灰字」。 */
 .top nav a {
-    padding: 7px 12px;
+    /* 文字链接实测 44×34 / 71×34：高度差 10px。改成 44 高的定高盒，
+       文字在其中垂直居中，横向 padding 不动（视觉上只是可点区域变高）。
+       ※ min-inline-size 不能省：769–1180 档把 padding 收到 6px 8px、字号 13.5px 后，
+         2 个汉字算出来只有 43.53px **宽**（实测 43.53×44 —— 缺的是宽度不是高度，
+         高度早有 min-height 兜住）。补最小内联尺寸，任何档位收窄 padding 都不会跌破 44。 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-inline-size: 44px;
+    padding: 0 12px;
     border-radius: var(--pill);
     font-size: 15px;
     font-weight: 700;
@@ -358,8 +393,8 @@ html[data-g="knit"] .mark b .til {
     display: none;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border-radius: var(--r-xs);
     border: 1px solid transparent;
@@ -400,7 +435,11 @@ html[data-g="knit"] .mark b .til {
     display: flex;
 }
 .nav-drawer a {
-    padding: 10px 12px;
+    /* 抽屉是窄屏唯一的导航入口，每条都要够点：实测 10px padding 只有 38 高 */
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
     border-radius: var(--r-xs);
     color: var(--ink);
     font-size: 14px;
@@ -430,10 +469,12 @@ html[data-g="knit"] .mark b .til {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    /* 44×44：实测原来只有 30×30（移动端 28×28），是顶栏里最密的一组目标。
+       图标本身仍是 17px，只是可点方块放大到 44——视觉边界没变，热区够指头。 */
+    width: 44px;
+    height: 44px;
     padding: 0;
-    border-radius: 10px;
+    border-radius: 12px;
     color: var(--ink);
     opacity: 0.72;
 }
@@ -682,6 +723,27 @@ html[data-g="yymf"] .word-t,
 html[data-g="yymf"] .sub {
     display: none;
 }
+/* 字标占位比例按世代写死：15 张 logo 的宽高比差 2.5 倍（ave 1.35、knit 3.46、
+   ripples 3.33、yymf 1.99），img 的 width/height 属性只能给一个兜底比例。
+   在字标图解码完成之前按各自真实比例占位，图到货时高度不再跳一下。
+   只在宽屏生效：窄屏（≤768px）走锁高度那套，见文件末尾移动端段。 */
+@media (min-width: 769px) {
+    html[data-g="ave"] .word-l { aspect-ratio: 284 / 210; }
+    html[data-g="bta"] .word-l { aspect-ratio: 285 / 210; }
+    html[data-g="knit"] .word-l { aspect-ratio: 360 / 104; }
+    html[data-g="copious"] .word-l { aspect-ratio: 360 / 128; }
+    html[data-g="saucer"] .word-l { aspect-ratio: 360 / 145; }
+    html[data-g="saucerfulfill"] .word-l { aspect-ratio: 360 / 164; }
+    html[data-g="prop"] .word-l { aspect-ratio: 360 / 140; }
+    html[data-g="qubell"] .word-l { aspect-ratio: 360 / 162; }
+    html[data-g="clan_blue"] .word-l,
+    html[data-g="clan_green"] .word-l,
+    html[data-g="clan_purple"] .word-l,
+    html[data-g="clan_red"] .word-l { aspect-ratio: 360 / 163; }
+    html[data-g="festo"] .word-l { aspect-ratio: 287 / 210; }
+    html[data-g="ripples"] .word-l { aspect-ratio: 570 / 171; }
+    html[data-g="yymf"] .word-l { aspect-ratio: 1180 / 593; }
+}
 /* ripples 背景压暗后，字标自带的浅薄荷绿在雾面底上偏灰：
    加深一档并提饱和，PNG 原色不动，只在渲染时滤镜。 */
 html[data-g="ripples"] #wordLogo {
@@ -730,29 +792,6 @@ html[data-g="saucerfulfill"] .sub {
     flex: none;
     background: linear-gradient(90deg, transparent, var(--acc));
 }
-.lede {
-    margin-top: clamp(16px, 2vw, 22px);
-    color: var(--ink2);
-    font-size: 13.5px;
-    line-height: 1.9;
-    max-width: 34em;
-    text-shadow: var(--lede-shadow, 0 1px 12px rgba(0, 0, 0, 0.5));
-}
-.lede b {
-    color: var(--ink);
-    font-weight: 700;
-    font-family: var(--font-data);
-    font-size: 14px;
-}
-/* 口号：替换原「N 首曲子…」统计句，作为固定文案 */
-.lede.slogan {
-    font-size: clamp(15px, 1.6vw, 17px);
-    letter-spacing: 0.2em;
-    color: var(--ink);
-    font-weight: 600;
-    line-height: 1.7;
-    margin-top: clamp(18px, 2.2vw, 24px);
-}
 .stats {
     display: flex;
     gap: clamp(8px, 1.2vw, 12px);
@@ -782,7 +821,8 @@ html[data-g="saucerfulfill"] .sub {
 }
 .st span {
     display: block;
-    font-size: 10px;
+    /* 10px 是审计第 12 条里最典型的一处：统计卡标签，正文级可读性下限 11px */
+    font-size: 11px;
     color: var(--ink3);
     letter-spacing: 0.16em;
     margin-bottom: 3px;
@@ -794,6 +834,8 @@ html[data-g="saucerfulfill"] .sub {
     font-family: var(--font-data);
     line-height: 1.1;
     color: var(--ink);
+    /* 统计卡的数字会随世代切换而变（曲目 1241 / 谱面 3723…），等宽数字让卡片宽度不抖 */
+    font-variant-numeric: tabular-nums;
 }
 
 /* cube */
@@ -883,7 +925,8 @@ html[data-g="saucerfulfill"] .sub {
     font-weight: 800;
 }
 .cube i.sum span {
-    font-size: 9px;
+    /* 9px 是全站最小字号（审计第 12 条），提到 11px；立方体格子里放得下 */
+    font-size: 11px;
     color: #0b3f4c;
     letter-spacing: 0.14em;
     margin-top: 1px;
@@ -901,6 +944,9 @@ html[data-g="saucerfulfill"] .sub {
     margin-bottom: 14px;
     padding: 0 2px;
 }
+/* 各页第一处标题用 h1（每页唯一主标题），其余分区标题仍是 h2。
+   两者同一套视觉，避免「为了语义多出一个 h1 就换一种字号」。 */
+.band-h h1,
 .band-h h2 {
     font-size: 15px;
     font-weight: 700;
@@ -909,6 +955,7 @@ html[data-g="saucerfulfill"] .sub {
     display: flex;
     align-items: center;
 }
+.band-h h1::before,
 .band-h h2::before {
     content: "";
     width: 6px;
@@ -921,7 +968,7 @@ html[data-g="saucerfulfill"] .sub {
 }
 .band-h em {
     font-style: normal;
-    font-size: 10.5px;
+    font-size: 11px;
     letter-spacing: 0.18em;
     color: var(--ink3);
     font-family: var(--font-data);
@@ -986,7 +1033,7 @@ html[data-g="saucerfulfill"] .sub {
 .wip-s {
     position: relative;
     font-family: var(--font-data);
-    font-size: 10.5px;
+    font-size: 11px;
     letter-spacing: 0.26em;
     text-transform: uppercase;
     color: var(--ink3);
@@ -999,257 +1046,24 @@ html[data-g="saucerfulfill"] .sub {
     .wip-ico i { animation: none; opacity: 0.75; }
 }
 
-/* timeline */
-.strip {
-    display: flex;
-    gap: 3px;
-    height: clamp(44px, 5vw, 62px);
-    margin-bottom: 20px;
-}
-.strip i {
-    display: block;
-    border-radius: 5px;
-    min-width: 4px;
-    position: relative;
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.42),
-        0 2px 10px rgba(0, 0, 0, 0.25);
-    transition:
-        filter 0.2s,
-        transform 0.25s;
-}
-.strip i span {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-data);
-    font-size: 12px;
-    font-weight: 700;
-    color: #04222c;
-    letter-spacing: 0.02em;
-}
-.strip i:hover {
-    filter: brightness(1.16);
-    transform: translateY(-2px);
-}
-.glegend {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px 14px;
-    padding-top: 18px;
-    border-top: 1px solid var(--edge);
-}
-.gl {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    min-width: 0;
-}
-.gl em {
-    font-style: normal;
-    width: 7px;
-    height: 7px;
-    border-radius: 2px;
-    flex: none;
-    margin-bottom: 1px;
-}
-.gl b {
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-}
-.gl span {
-    font-size: 10.5px;
-    color: var(--ink3);
-    font-family: var(--font-data);
-    margin-left: auto;
-}
+/* 2026-10-23 t3 死代码清理：这里原本是 strip（timeline）/ glegend / rank / dist / lat 五块，
+   合计 235 行。它们对应「世代的层 / 定数顶格 / 定数分布 / 最近收录」四个数据区块，
+   那四个区块在 v1.9.1 就已下线（README.md 有说明）；实测 13 个类名（strip glegend gl rank rk
+   dist dr tr lat lc cd lede）在 src/ 的 .astro 与 .ts 里一个引用都没有，是纯死代码。
+   数据本身仍在 src/data/data.json，需要时从 git 历史取回这段样式。 */
 
-/* rank */
-.rank {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: repeat(6, auto);
-    grid-auto-flow: column;
-    column-gap: clamp(22px, 3.6vw, 52px);
-}
-.rk {
-    display: grid;
-    grid-template-columns: 24px 42px minmax(0, 1fr) 54px;
-    align-items: center;
-    gap: 12px;
-    padding: 9px 10px;
-    border-radius: var(--r-sm);
-    transition: background 0.2s;
-    min-width: 0;
-}
-.rk:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-.rk > i {
-    font-style: normal;
-    font-size: 10px;
-    color: var(--ink3);
-    font-family: var(--font-data);
-}
-.rk img {
-    width: 42px;
-    height: 42px;
-    object-fit: cover;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
-}
-.rk .t {
-    min-width: 0;
-}
-.rk b {
-    display: block;
-    font-size: 13.5px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.2s;
-}
-.rk:hover b {
-    color: var(--acc);
-}
-.rk em {
-    display: block;
-    font-style: normal;
-    font-size: 10.5px;
-    color: var(--ink3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.rk .v {
-    font-family: var(--font-data);
-    font-size: 13px;
-    font-weight: 700;
-    text-align: center;
-    color: #ffe1ec;
-    background: rgba(255, 92, 157, 0.26);
-    border: 1px solid rgba(255, 140, 185, 0.45);
-    border-radius: var(--pill);
-    padding: 3px 0;
-}
-
-/* dist */
-.dist {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.dr {
-    display: grid;
-    grid-template-columns: 64px minmax(0, 1fr) 46px;
-    align-items: center;
-    gap: 16px;
-}
-.dr b {
-    font-size: 11px;
-    color: var(--ink2);
-    font-family: var(--font-data);
-    white-space: nowrap;
-    letter-spacing: 0.06em;
-}
-.dr .tr {
-    height: 14px;
-    border-radius: var(--pill);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
-    overflow: hidden;
-}
-.dr .tr i {
-    display: block;
-    height: 100%;
-    border-radius: var(--pill);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
-}
-.dr span {
-    font-size: 12.5px;
-    color: var(--ink);
-    font-family: var(--font-data);
-    text-align: right;
-}
-
-/* latest */
-.lat {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 14px 12px;
-}
-.lc {
-    display: block;
-    border-radius: var(--r-sm);
-    padding: 6px;
-    border: 1px solid transparent;
-    transition:
-        background 0.22s,
-        border-color 0.22s,
-        transform 0.3s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-.lc:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--edge);
-    transform: translateY(-2px);
-}
-.lc .cd {
-    border-radius: 10px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
-}
-.lc img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    opacity: 0.95;
-    transition:
-        opacity 0.25s,
-        transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-.lc:hover img {
-    opacity: 1;
-    transform: scale(1.05);
-}
-.lc b {
-    display: block;
-    margin: 9px 2px 0;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.lc span {
-    display: block;
-    margin: 2px 2px 2px;
-    font-size: 10px;
-    color: var(--ink3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
 /* foot：左列（编辑时间 / 版本号）+ 右列（品牌字 / Enjoy Yourself） */
 .foot {
     margin-top: clamp(46px, 5.8vw, 76px);
-    padding: 26px 0 56px;
+    /* 底部内边距叠加刘海屏/圆角屏底部安全区，避免页脚文字贴在系统手势条上 */
+    padding: 26px 0 max(56px, env(safe-area-inset-bottom));
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
     flex-wrap: wrap;
-    font-size: 10.5px;
+    font-size: 11px;
     color: var(--ink3);
     letter-spacing: 0.1em;
     border-top: 1px solid var(--edge);
@@ -1271,17 +1085,23 @@ html[data-g="saucerfulfill"] .sub {
     letter-spacing: 0.04em;
 }
 .foot-ver {
-    font-size: 10px;
+    font-size: 11px;
     opacity: 0.72;
+    font-variant-numeric: tabular-nums;
 }
 .foot-slogan {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--ink3);
     letter-spacing: 0.16em;
 }
 /* 页脚品牌字：沿用顶栏 .mark 的世代字体与符号处理，只把尺寸收小一号 */
 .foot .mark-sm {
     gap: 7px;
+    /* cursor: default 是显式声明「这里不是链接」，不是漏改：
+       顶栏那个 .mark 是 <a>（可点进首页），页脚的 .mark-sm 是 <span>（纯品牌字）。
+       浏览器本来就给 span 默认箭头，但顶栏 .mark 的 cursor:pointer 若被继承下来，
+       页脚会显示成假链接。审计第 20 条曾把它记为待改，经复核确认这是有意的意图声明，
+       记为「已澄清，非缺陷」，保留。 */
     cursor: default;
 }
 .foot .mark-sm:hover {
@@ -1317,6 +1137,7 @@ html[data-font="C"] .foot .mark-sm b {
 
 /* ---------- 世代主题：底色 + 遮罩 + 字标色 ---------- */
 html[data-g="ave"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #0a1418;
@@ -1327,6 +1148,7 @@ html[data-g="ave"] {
         0 0 26px rgba(46, 232, 232, 0.85), 0 0 70px rgba(46, 232, 232, 0.35);
 }
 html[data-g="bta"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #190f08;
@@ -1337,6 +1159,7 @@ html[data-g="bta"] {
         0 0 26px rgba(255, 162, 60, 0.85), 0 0 70px rgba(255, 162, 60, 0.3);
 }
 html[data-g="clan_blue"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #0a1424;
@@ -1346,6 +1169,7 @@ html[data-g="clan_blue"] {
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 html[data-g="clan_green"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #08160f;
@@ -1355,6 +1179,7 @@ html[data-g="clan_green"] {
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 html[data-g="clan_purple"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #120b1c;
@@ -1364,6 +1189,7 @@ html[data-g="clan_purple"] {
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 html[data-g="clan_red"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #1a0a0c;
@@ -1373,6 +1199,7 @@ html[data-g="clan_red"] {
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 html[data-g="copious"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #080d22;
@@ -1382,6 +1209,7 @@ html[data-g="copious"] {
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 html[data-g="festo"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #12100c;
@@ -1391,6 +1219,9 @@ html[data-g="festo"] {
     --tshadow: 0 4px 26px rgba(0, 0, 0, 0.55);
 }
 html[data-g="knit"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #6b6257;
     --bgop: 0.65;
     --veil: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.15) 100%);
     --scrim: rgba(0, 0, 0, 0.34);
@@ -1402,13 +1233,18 @@ html[data-g="knit"] {
     --lede-shadow: none;
     --ink: #2a2417;
     --ink2: #5c5240;
-    --ink3: #6b6257;
+    /* knit 首屏背景偏黄，实测 --ink3 在玻璃卡片上最差 4.46（<4.5），
+       单独收到 #665d52 换 4.82。其余 5 套浅色代都在 4.56–5.71，不动它们。 */
+    --ink3: #665d52;
     --edge: rgba(40, 32, 18, 0.14);
     --edge2: rgba(40, 32, 18, 0.26);
     --glass: rgba(255, 253, 247, 0.6);
     --glass2: rgba(255, 253, 247, 0.72);
 }
 html[data-g="prop"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #7a2f56;
     --bgop: 0.65;
     --veil: linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0%, rgba(0, 0, 0, 0.16) 100%);
     --scrim: rgba(0, 0, 0, 0.34);
@@ -1427,6 +1263,9 @@ html[data-g="prop"] {
     --glass2: rgba(255, 255, 255, 0.74);
 }
 html[data-g="qubell"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #8a5a1e;
     --bgop: 0.65;
     --veil: linear-gradient(180deg, rgba(0, 0, 0, 0.20) 0%, rgba(0, 0, 0, 0.20) 100%);
     --scrim: rgba(0, 0, 0, 0.34);
@@ -1445,6 +1284,9 @@ html[data-g="qubell"] {
     --glass2: rgba(255, 252, 246, 0.72);
 }
 html[data-g="saucer"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #0f5f74;
     --bgop: 0.65;
     --veil: linear-gradient(180deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0.24) 100%);
     --scrim: rgba(0, 0, 0, 0.34);
@@ -1463,6 +1305,7 @@ html[data-g="saucer"] {
     --glass2: rgba(255, 255, 255, 0.74);
 }
 html[data-g="saucerfulfill"] {
+    color-scheme: dark;
     --bgop: 0.65;
     --scrim: rgba(0, 0, 0, 0.34);
     --base: #141414;
@@ -1476,6 +1319,9 @@ html[data-g="saucerfulfill"] {
    仍保持浅色世代：深字 + 白卡片，只是底子从「白得发光」变成「灰绿雾面」。
    主色取字标薄荷绿 #70c5b7，粉 #ff9fb2 做次色。 */
 html[data-g="ripples"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #1f7a6c;
     --bgop: 0.9;
     --veil: linear-gradient(180deg, rgba(18, 52, 47, 0.30) 0%, rgba(18, 52, 47, 0.20) 55%, rgba(18, 52, 47, 0.32) 100%);
     --scrim: rgba(0, 0, 0, 0.2);
@@ -1497,6 +1343,9 @@ html[data-g="ripples"] {
 /* 音乐魔方（国服）：底板是青→粉糖果亮图，和 ripples 同策——保留浅色主题，
    用淡薰衣草 veil 把背景压暗一档，保证深字与白卡片的对比。 */
 html[data-g="yymf"] {
+    color-scheme: light;
+    /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
+    --focus: #2b4a9e;
     --bgop: 0.92;
     --veil: linear-gradient(180deg, rgba(64, 78, 148, 0.34) 0%, rgba(64, 78, 148, 0.22) 55%, rgba(64, 78, 148, 0.36) 100%);
     --scrim: rgba(30, 34, 80, 0.22);
@@ -1580,13 +1429,29 @@ html[data-g="yymf"] {
    因为 Chromium 对 file:// 页面的 file:// mask-image 会按 CORS 拦截。 */
 
 /* ---------- 键盘焦点可见性 ----------
-   浏览器默认 outline 是 0.8px 近黑，在 14 套深色主题上几乎看不见；
+   浏览器默认 outline 是 0.8px 近黑，在深色主题上几乎看不见；
    统一换成 --acc 双环（内环带走一圈底色，浅色世代也有对比）。只对键盘生效，
    鼠标点击不出现光圈。 */
 :where(a, button, [tabindex]):focus-visible {
-    outline: 2px solid var(--acc);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
     border-radius: var(--r-xs);
+}
+
+/* ---------- 视觉隐藏 ----------
+   给「页面上没有自己的可见标题、但语义上必须有 h1」的页面用（管理面板等）。
+   不能用 display:none / visibility:hidden——那会把标题移出无障碍树，
+   也和跳过导航那种「保留语义」的初衷相反。 */
+.vh {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* ---------- 跳到主内容 ----------
@@ -1598,19 +1463,43 @@ html[data-g="yymf"] {
     top: 0;
     left: 50%;
     z-index: 200;
-    padding: 10px 18px;
-    border-radius: 0 0 var(--r-m) var(--r-m);
-    background: var(--acc);
-    color: #fff;
+    /* 触控/点击热区要够：跳到主内容就是键盘/读屏用户点的第一下 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 20px;
+    /* 原来写的是 var(--r-m)，这个令牌全站不存在（:root 只有 --r/--r-sm/--r-xs），
+       实测 border-radius 被算成 0px。改用已有的小圆角令牌。 */
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
+    /* 对比度：白字压 --acc 在 15 套主题里 14 套低于 4.5:1（festo 1.44 最低）。
+       键盘用户第一下就聚焦到这里，必须是看得清的一格。
+       改用 --ink / --base 反相块：深色世代是「亮底深字」、浅色世代是「深底亮字」，
+       实测 15 套 --ink 对 --base 的对比度 13.06–17.73，全部远超 4.5。
+       反相块本身也和页面底色互为反色，不需要再靠描边去「衬」。 */
+    background: var(--ink);
+    color: var(--base);
+    border: 1px solid var(--ink);
+    border-top: 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-decoration: none;
     transform: translate(-50%, -120%);
     transition: transform 0.2s ease;
 }
 .skip:focus-visible {
     transform: translate(-50%, 0);
+    /* 焦点环画在块外面 2px 处：深色世代是亮环 + 亮块（中间那 2px 的页面底色把两者分开），
+       浅色世代是暗环 + 暗块，两种都能看出「这里被聚焦了」。 */
     outline: 2px solid var(--ink);
     outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .skip {
+        transition: none;
+    }
 }
 #main:focus {
     outline: none;
@@ -1624,8 +1513,9 @@ html[data-g="yymf"] {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 44px;
     cursor: pointer;
-    padding: 7px 10px;
+    padding: 7px 12px;
     border-radius: var(--pill);
     border: 1px solid var(--edge2);
     background: transparent;
@@ -1690,7 +1580,7 @@ html[data-g="yymf"] {
     opacity: 0;
     transform: translateY(-6px);
     pointer-events: none;
-    /* 关闭态必须真正不可见且不可聚焦：只靠 opacity:0 时里面的 14 个按钮仍在 Tab 序列里，
+    /* 关闭态必须真正不可见且不可聚焦：只靠 opacity:0 时里面的 15 个按钮仍在 Tab 序列里，
        键盘用户会连续 16 次聚焦到「看不见的按钮」上。visibility 负责从无障碍树/焦点序列里摘掉，
        延迟 0.18s 让它等淡出动画走完；打开时立刻可见。 */
     visibility: hidden;
@@ -1721,6 +1611,9 @@ html[data-g="yymf"] {
     display: flex;
     align-items: center;
     gap: 8px;
+    /* 实测 147×28：面板里 15 个按钮挤成 28 高，是触控最不达标的一处。
+       加到 44 高后整个弹层从 283 涨到约 400，仍在桌面视口内（视口 786 高）。 */
+    min-height: 44px;
     padding: 7px 8px;
     border: 1px solid transparent;
     border-radius: var(--r-xs);
@@ -1799,11 +1692,7 @@ html[data-g="yymf"] {
         animation: none !important;
     }
 }
-@media (max-width: 1080px) {
-    .lat {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
+/* 1080px 档原本只有 .lat（已下线的「最近收录」区块）的降列规则，随死代码一并删除。 */
 /* 中等宽度（769~1180px）导航先收一档：链接缩进缩号，间距归零 */
 @media (min-width: 769px) and (max-width: 1180px) {
     .top {
@@ -1812,6 +1701,9 @@ html[data-g="yymf"] {
     .top nav a {
         padding: 6px 8px;
         font-size: 13.5px;
+        /* 这一档收窄了 padding 与字号：2 个汉字只剩 43.53px 宽，
+           必须同时保 min-inline-size 44，否则「曲目/登录」实测 43.53×44 不达标。 */
+        min-inline-size: 44px;
     }
     .nav-txt {
         gap: 0;
@@ -1831,6 +1723,8 @@ html[data-g="yymf"] {
     .top nav a {
         padding: 6px;
         font-size: 13px;
+        /* 更窄一档：同样要保 44，2 字按 13px 算只剩 38.5px */
+        min-inline-size: 44px;
     }
     .nav-ico {
         gap: 0;
@@ -1850,8 +1744,10 @@ html[data-g="yymf"] {
         font-size: 19px;
     }
     .st span {
-        font-size: 9px;
+        /* 9px 是审计第 12 条列出的最小字号；这一档四张卡必须一行，仍保持 nowrap 不换行 */
+        font-size: 10px;
         letter-spacing: 0.1em;
+        white-space: nowrap;
     }
 }
 /* 780 附近左栏只有 ~360px，四张卡一行时「EXT ≥ 10」会折成两行把卡片撑高，
@@ -1861,7 +1757,7 @@ html[data-g="yymf"] {
         padding: 11px 8px 12px;
     }
     .st span {
-        font-size: 9px;
+        font-size: 10px;
         letter-spacing: 0.02em;
         white-space: nowrap;
     }
@@ -1869,35 +1765,8 @@ html[data-g="yymf"] {
         font-size: 18px;
     }
 }
-@media (max-width: 860px) {
-    .glegend {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .rank {
-        grid-template-columns: 1fr;
-        grid-template-rows: none;
-        grid-auto-flow: row;
-    }
-    .lat {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-    .dr {
-        grid-template-columns: 56px minmax(0, 1fr) 42px;
-        gap: 12px;
-    }
-}
+/* 860px 档原本只有 glegend / rank / lat / dr 四条，全是已下线区块的死规则，随死代码一并删除。 */
 @media (max-width: 768px) {
-    .strip {
-        height: 40px;
-        gap: 2px;
-    }
-    .strip i span {
-        font-size: 10px;
-    }
-    .glegend {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-    }
     .top {
         height: 62px;
     }
@@ -1952,13 +1821,10 @@ html[data-g="yymf"] {
         margin-right: 0;
         flex: 0 0 auto;
     }
+    /* 最近更改图标在窄屏才出现（宽屏有 .nav-txt 的文字链接）。
+       注意：≤414px 那一档会把它和 GitHub 一起收进抽屉，见下面更窄的媒体查询。 */
     .top nav a.nav-i-recent {
         display: inline-flex;
-    }
-    .top nav a.nav-i {
-        width: 28px;
-        height: 28px;
-        border-radius: 9px;
     }
     .nav-i svg {
         width: 16px;
@@ -1968,11 +1834,13 @@ html[data-g="yymf"] {
         margin-left: auto;
     }
     .tsw-btn {
-        padding: 7px 9px;
+        padding: 7px 8px;
     }
+    /* 隐藏态仍有布局盒（visibility 只管可见性），rigth:-6px 会顶出视口右缘，
+       窄屏一律贴右 0，配合 width 上限保证右缘不越过 clientWidth。 */
     .tsw-pop {
         width: min(296px, calc(100vw - 32px));
-        right: -6px;
+        right: 0;
     }
     .hero {
         grid-template-columns: 1fr;
@@ -2022,6 +1890,20 @@ html[data-g="yymf"] {
     }
 }
 
+/* 图标目标放大到 44×44 之后，窄屏放不下 汉堡 + 四个图标 + 世代切换。
+   实测（口径用 clientWidth，滚动条那 15px 要扣掉）360/+37、375/+22、390/+7、414/+29、430/+13。
+   收掉「最近更改」「GitHub」两个图标就能归零（两者在抽屉里都有链接，热区一样 ≥44）。
+   ※ 这段必须放在上面那个 max-width:768px 块之后：同优先级下后者胜，
+     放在前面会被它里面的 .nav-i-recent{display:inline-flex} 复活（今天踩过这个坑）。
+   ※ 断点取 440 而不是 414：setW=414 时 414.4 的亚像素会把 414 那档判成不匹配。 */
+@media (max-width: 440px) {
+    .top nav a.nav-i-recent,
+    .top nav a.nav-i-github {
+        display: none;
+    }
+    /* 弹层在 ≤768 已经是 right:0（见上面那个 768 块），这里不用再改。 */
+}
+
 /* ---------- 最近更改（/recent/） ---------- */
 .rc {
     padding: clamp(14px, 2vw, 22px);
@@ -2064,6 +1946,8 @@ html[data-g="yymf"] {
     font-size: 11.5px;
     color: var(--ink3);
     letter-spacing: 0.04em;
+    /* 时间是等宽内容（2026-10-23 14:05 这类），比例数字会让每条列表左右错位 */
+    font-variant-numeric: tabular-nums;
 }
 .rc-user {
     font-size: 12.5px;
@@ -2072,9 +1956,14 @@ html[data-g="yymf"] {
 }
 .rc-target {
     display: inline-block;
+    /* 链接名来自 target_label（「曲目：<曲名>」），曲名可以是一长串没有空格的中英混排。
+       inline-block 默认按最长不可断处撑宽，窄屏（实测 441/390/360）会把整页顶出
+       31–112px 的横向滚动 —— 所以要显式限宽 + 允许任意位置断行。 */
+    max-width: 100%;
     font-size: 14px;
     font-weight: 700;
     color: var(--ink);
+    overflow-wrap: anywhere;
 }
 .rc-target:hover {
     color: var(--acc);
@@ -2084,6 +1973,8 @@ html[data-g="yymf"] {
     font-size: 13px;
     line-height: 1.65;
     color: var(--ink2);
+    /* 同上：summary 里可能拼进曲名，长串也要能断 */
+    overflow-wrap: anywhere;
 }
 .rc-diff {
     margin-top: 8px;
@@ -2104,7 +1995,10 @@ html[data-g="yymf"] {
     margin-top: 8px;
     padding: 10px 12px;
     border-radius: var(--r-xs);
-    background: rgba(0, 0, 0, 0.22);
+    /* 底色用 --ink 的 6%（随主题自适应），不用固定黑 22%：
+       固定黑在浅色世代会把底压到 #c3c1ba 一档，「改前/改后」正文对比度实测只有 2.6–3.3（达标线 4.5）。
+       改后实测：knit 6.40 / ripples 6.49 / saucer 6.40 / Qubell 6.30 / festo 5.45 / Ave. 5.23 / 深色 9.15。 */
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
     border: 1px solid var(--edge);
 }
 .rc-before,
@@ -2113,20 +2007,39 @@ html[data-g="yymf"] {
     gap: 8px;
     line-height: 1.6;
     color: var(--ink2);
+    /* min-width: 0 让 flex 子项能真正收缩，否则 overflow-wrap 在长串（连续数字/英文）
+       上不生效，会把整行撑出面板 —— 实测过定数/曲名这类无空格长串。 */
+    min-width: 0;
+}
+/* 文本单独一层：一条记录可能改了好几个字段（每字段一行），要保留换行；
+   overflow-wrap:anywhere 兜住没有空格的长曲名与整段 BPM 备注。 */
+.rc-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: pre-line;
     overflow-wrap: anywhere;
 }
-.rc-before {
+/* 删除线只画在「改前」的正文上，不要连「改前」小标签一起划掉。
+   .rc-before 上原有的 opacity: 0.8 已移除：12.5px 小字达标线是 4.5:1，
+   压到 0.8 之后实测 knit 3.05 / ripples 3.08 / saucer 3.06 / Qubell 3.01 / festo 2.70 / Ave. 2.63
+   全部不达标。「改前」本身已有删除线 + 小标签双重区分，不必再靠透明度降权。 */
+.rc-before .rc-text {
     text-decoration: line-through;
     text-decoration-color: color-mix(in srgb, var(--ink3) 60%, transparent);
-    opacity: 0.8;
 }
 .rc-tag {
     flex: none;
+    align-self: flex-start;
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.12em;
     color: var(--ink3);
     padding-top: 2px;
+}
+/* 前后差异默认折叠，展开后限制高度：一条记录最多 1000 字，别把页面拉太长 */
+.rc-diff-body {
+    max-height: 340px;
+    overflow-y: auto;
 }
 @media (max-width: 768px) {
     .rc-top {

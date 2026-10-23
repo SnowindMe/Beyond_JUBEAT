@@ -1,5 +1,7 @@
 ---
-// 顶栏：品牌标 + 导航 + 世代主题切换（15 个世代）
+// 顶栏：品牌标 + 导航 + 世代主题切换（13 个世代 / 15 套主题：
+//   世代是曲库口径（src/lib/gens.ts 的 GEN_ORDER 13 条，含国服音乐魔方）；
+//   主题是视觉皮肤（ThemeScript 的 GEN 数组 15 条，clan 一个世代拆成 4 套）。两个数别混用）
 // 导航只列真实存在的页面：没做的二级页不上导航，不做成指向 404 的死链。
 // 加新页时 .nav-txt（宽屏）与 .nav-drawer（窄屏抽屉）两处必须同步加。
 //
@@ -12,7 +14,8 @@ const user = Astro.locals.user;
 ---
 
 <header class="top">
-  <a class="mark" href="/" aria-label="Beyond ↑ JUBEAT 首页"><i></i><div class="mark-x"><b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b><span>Not Only Jubeat Wiki</span></div></a>
+  {/* translate="no"：品牌名不能被浏览器自动翻译拆坏（Beyond ↑ JUBEAT ♪~ 拆开就失去标识性） */}
+  <a class="mark" href="/" aria-label="Beyond ↑ JUBEAT 首页" translate="no"><i></i><div class="mark-x"><b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b><span translate="no">Not Only Jubeat Wiki</span></div></a>
   <nav>
     {/* 窄屏导航入口：≤768px 时 .nav-txt 收起，只留这个汉堡按钮（主人 2026-10-22） */}
     <button type="button" class="nav-burger" id="navBurger" aria-expanded="false" aria-controls="navDrawer" aria-label="打开导航菜单" title="导航">
@@ -30,7 +33,7 @@ const user = Astro.locals.user;
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
-      <a class="nav-i" href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
+      <a class="nav-i nav-i-github" href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 20.6v-1.9c-2.7.5-3.5-1.1-3.5-1.1-.3-.9-.9-1.3-.9-1.3-.8-.5 0-.5 0-.5.9.1 1.3.9 1.3.9.7 1.3 1.9 1 2.4.8.1-.6.3-1 .5-1.2-2.2-.3-4.4-1.1-4.4-4.8 0-1.1.4-1.9 1-2.6-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1 .8-.2 1.6-.3 2.5-.3s1.7.1 2.5.3c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.5 1 2.6 0 3.7-2.2 4.5-4.4 4.8.3.3.6.9.6 1.8v2.8"/></svg>
       </a>
       {/* 图标组同样只放真实页面。
@@ -65,6 +68,9 @@ const user = Astro.locals.user;
     ) : (
       <a href="/login/" class:list={[{ on: path === '/login/' || path === '/register/' }]}>登录</a>
     )}
+    {/* 窄屏把顶栏的 GitHub 图标收进抽屉：44×44 的图标组在 390px 宽里挤不下，
+        但要保留入口，所以抽屉里补一条文字链接（桌面抽屉永不显示，不影响宽屏）。 */}
+    <a href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>
   <script is:inline>
     // 登录态同步：静态页在构建期生成，顶栏永远是「登录」。

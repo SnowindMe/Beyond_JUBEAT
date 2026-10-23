@@ -1,12 +1,23 @@
 ---
 // 曲目库：日服 / 国服 同页切换（不换网址），分区按服务器各自的分类，区内再按世代分组。
-// 数据在运行时从 Cloudflare D1 读取（prerender = false）；切换与筛选仍是纯前端显隐，
+// 数据在运行时从 Cloudflare D1 读取（prerender = false）；切换、搜索、筛选、排序全是纯前端显隐，
 // 不请求接口、不动 URL。D1 查询在 lib/db.ts 里做 isolate 级缓存（60s）。
+//
+// 世代分组标题同时是入口：点世代名进 /songs/gen/<slug>/（该世代的完整列表，2026-10-23 加）。
+// 卡片结构在 components/SongCard.astro，世代页共用同一份，别在这里再写一遍。
+//
+// 搜索 / 四维筛选 / 五种排序（2026-10-23，t9）：
+//   匹配字段全部读卡片上的 data-*，不在输入时解析文本；
+//   排序只改 CSS order，不重排 DOM（1241 张卡重排会掉帧、滚动位置也会跳）。
+// 【无 JS 时】页面默认就渲染成「日服 → 分区 → 世代分组」的完整列表，
+//   工具条只是叠加能力：脚本不跑，内容照样从头读到尾，不会白屏。
 import Layout from '../layouts/Base.astro';
 import '../styles/songs.css';
+import SongCard from '../components/SongCard.astro';
 import { pageTitle } from '../lib/title';
-import { GEN_JP, GEN_CN } from '../lib/gens';
+import { GEN_ORDER, GEN_JP, GEN_CN, slugOf } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
+import { CATS, catOf, inView, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
@@ -20,16 +31,10 @@ Astro.response.headers.set(
   'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
 );
 
-const yearOf = (gen: string, _srv?: string) => [...GEN_JP, ...GEN_CN].find((g) => g.k === gen)?.y ?? '';
+// 世代 → 元信息（年份 + 稳定 slug）。
+const genMetaOf = (gen: string) => GEN_ORDER.find((g) => g.k === gen);
+const yearOf = (gen: string) => genMetaOf(gen)?.y ?? '';
 
-// 分区顺序：日服 版权 → 原创；国服 KONAMI原创 → 音乐魔方原创 → 音乐魔方流行。
-const CATS: Record<string, string[]> = {
-  jp: ['版权', '原创'],
-  cn: ['KONAMI原创', '音乐魔方原创', '音乐魔方流行'],
-};
-// 分区归属（主人 2026-10-22 口径）：音乐魔方里「两者都有」的曲目显示在 KONAMI原创 分区，
-// 其余按库里的 category。日服视图只走自己的两个分区。
-const catOf = (s: Song, srv: string) => (srv === 'cn' && s.jp && s.cn ? 'KONAMI原创' : s.cat);
 // 每个分区实际会出现的世代
 const CAT_GENS: Record<string, Record<string, string[]>> = {
   jp: { '版权': GEN_JP.map((g) => g.k), '原创': GEN_JP.map((g) => g.k) },
@@ -43,27 +48,23 @@ const SRV_CARDS = [
 ] as const;
 
 // 按 视图服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）。
-// 行有 jp/cn 两个标志：两服都有的行（KONAMI原创）同时进 jp 和 cn 两个视图。
+// 「哪些行进哪个视图、算哪个分区」的口径在 lib/song-view.ts，与世代页共用，别在这里重写。
 const extOf = (s: Song) => s.lv.ext ?? -1;
-// 视图归属：行 = 一份谱面记录，各归各的世代。双服曲（如 Big Daddy）两服各有一行，
-// 国服视图只收「音乐魔方」世代的行，日服视图只收日服世代的行，避免同一首的两行串视图。
-const inView = (s: Song, srv: string) =>
-  srv === 'cn' ? s.cn && s.gen === '音乐魔方' : s.jp && s.gen !== '音乐魔方';
 const bucket: Record<string, Record<string, Record<string, Song[]>>> = { jp: {}, cn: {} };
-for (const srv of ['jp', 'cn']) {
+for (const srv of ['jp', 'cn'] as const) {
   for (const cat of CATS[srv]) {
     bucket[srv][cat] = {};
     for (const gen of CAT_GENS[srv][cat]) bucket[srv][cat][gen] = [];
   }
 }
-for (const srv of ['jp', 'cn']) {
+for (const srv of ['jp', 'cn'] as const) {
   for (const s of ALL) {
     if (!inView(s, srv)) continue;
     const g = bucket[srv]?.[catOf(s, srv)]?.[s.gen];
     if (g) g.push(s);
   }
 }
-for (const srv of ['jp', 'cn']) {
+for (const srv of ['jp', 'cn'] as const) {
   for (const cat of CATS[srv]) {
     for (const gen of CAT_GENS[srv][cat]) {
       bucket[srv][cat][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
@@ -71,14 +72,11 @@ for (const srv of ['jp', 'cn']) {
   }
 }
 
-const countOf = (srv: string, cat?: string) =>
+const countOf = (srv: Srv, cat?: string) =>
   ALL.filter((s) => inView(s, srv) && (!cat || catOf(s, srv) === cat)).length;
-const srvTotal = (srv: string) => ALL.filter((s) => inView(s, srv)).length;
+const srvTotal = (srv: Srv) => ALL.filter((s) => inView(s, srv)).length;
 
-// 徽章颜色按难度固定（主人 2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
-const dash = (v: number | null) => (v == null ? '—' : String(v));
-
-const DEFAULT_SRV = 'jp';
+const DEFAULT_SRV: Srv = 'jp';
 
 // 首屏曲绘：默认视图（日服 · 版权 · 前两个世代）里的前 18 张优先加载，
 // 其余一律 lazy + low，避免一次开 1200+ 请求。
@@ -88,19 +86,88 @@ const EAGER = new Set(
     .slice(0, 18)
     .map((s) => s.id),
 );
----
 
+// 曲师筛选面板只放「常用曲师」：库里 710 位，全塞进下拉会变成一条没人翻得完的列表。
+// 门槛 5 首（实测 38 位），其余靠搜索框直接打曲师名（搜索同时匹配曲师字段）。
+const ARTIST_MIN = 5;
+const ARTIST_TALLY = new Map<string, number>();
+for (const s of ALL) {
+  if (!s.a) continue;
+  ARTIST_TALLY.set(s.a, (ARTIST_TALLY.get(s.a) ?? 0) + 1);
+}
+const TOP_ARTISTS = [...ARTIST_TALLY.entries()]
+  .filter(([, n]) => n >= ARTIST_MIN)
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+// 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 CONTEXT.md）
+const GEN_OPTS = GEN_ORDER;
+
+// 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BANDS 一一对应，改一处必须改两处。
+const BANDS = [
+  { v: 'all', label: '全部' },
+  { v: 'lt7', label: '7.0 以下' },
+  { v: '7', label: '7.0–7.9' },
+  { v: '8', label: '8.0–8.9' },
+  { v: '9', label: '9.0–9.9' },
+  { v: '10', label: '10.0 以上' },
+] as const;
+const DIFFS = [
+  { v: 'all', label: '全部档' },
+  { v: 'bsc', label: 'BSC' },
+  { v: 'adv', label: 'ADV' },
+  { v: 'ext', label: 'EXT' },
+] as const;
+const SORTS = [
+  { v: 'ext-desc', label: '定数 高→低' },
+  { v: 'ext-asc', label: '定数 低→高' },
+  { v: 't-asc', label: '曲名 A→Z' },
+  { v: 't-desc', label: '曲名 Z→A' },
+  { v: 'gen-new', label: '世代 新→旧' },
+] as const;
+---
 
 <Layout
   title={pageTitle('曲目')}
   canonicalPath="/songs/"
-  description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（KONAMI原创 ${countOf('cn', 'KONAMI原创')} 首、音乐魔方原创 ${countOf('cn', '音乐魔方原创')} 首、音乐魔方流行 ${countOf('cn', '音乐魔方流行')} 首），按世代分组，同页切换服务器。`}
+  description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（KONAMI原创 ${countOf('cn', 'KONAMI原创')} 首、音乐魔方原创 ${countOf('cn', '音乐魔方原创')} 首、音乐魔方流行 ${countOf('cn', '音乐魔方流行')} 首），按世代分组，可搜索、筛选与排序。`}
 >
+  {/*
+    【本页第 1 个可聚焦元素】键盘逃生口（2026-10-23，t9；位置按稽核实测调整）
+
+    工具条从 3 个控件长到 10+，Tab 到第一张卡要按十几次。原先这条 skip 放在工具条前面，
+    实测 Tab 序是：1 skip(全站) → 2~8 mark/曲目/最近更改/登录/图标×2/主题切换
+    → 9 sc-skip → 10 服务器 → 11 国服 → 12 搜索 → … → 19 第一张卡。
+    也就是说它被 7 个顶栏导航项挡在后面，"快捷键"反而要先绕过整个导航才够得着。
+
+    挪到版面最顶端（<Layout> 之后、第一个 section 之前）之后：
+      1「跳到主内容」(全站) → 2「跳到曲目列表」(本页)
+    两条 escape hatch 都在最前，Tab 两下进内容。
+
+    必须放在这里而不是 <section> 里：section 有 .band 的定位上下文，
+    绝对定位的 skip 会被限制在 section 内，浮不出到版面顶部。
+    平时视觉隐藏、键盘聚焦时浮现——与全站 <a class="skip"> 同一套做法。 */}
+  <a class="sc-skip" href="#scList">跳到曲目列表</a>
+
+  {/*
+    工具条可见性的第一笔（防 FOUC）：这段脚本紧贴 <section> 开头，
+    在浏览器解析到它时立刻执行，比版面绘制早，所以不会出现"工具条先亮一下"。
+    CSS 侧对应的默认值是隐藏（.sc-find/.sc-cats/.sc-panel 都 display:none），
+    只有 html.sc-js 存在时它们才显示——两边配合起来，无 JS 就没有死控件，有 JS 也不闪。
+  */}
+  <script is:inline>document.documentElement.classList.add('sc-js');</script>
+
   <section class="band songs" id="songsRoot" data-srv={DEFAULT_SRV}>
-    {/* 主人 2026-10-22 要求：去掉「曲目 + songs 计数」那行标题，也去掉外面那层暗色 panel，
-        服务器卡直接站到页面上并放大，总曲数收进卡里（分区 chips 各自还带自己的计数）。
-        标题行去掉后页面只剩 h3（分区名），补一个视觉隐藏的 h2 保住标题层级，供读屏与 SEO。 */}
-    <h2 class="sc-hide">曲目库</h2>
+    {/*
+      主人 2026-10-22 要求：去掉「曲目 + songs 计数」那行标题，也去掉外面那层暗色 panel，
+      服务器卡直接站到页面上并放大，总曲数收进卡里（分区 chips 各自还带自己的计数）。
+      标题行去掉后页面只剩 h3（分区名），补一个视觉隐藏的 h1 保住标题层级，供读屏与 SEO。
+      h1 是页面唯一的主标题（2026-10-23 无障碍收口：原先这里只有 h2，整页没有 h1）。
+    */}
+    <h1 class="sc-hide">曲目库</h1>
+    {/* 无 JS 兜底：工具条是纯 JS 控件，脚本不跑就是一排死按钮，干脆不显示。
+        正文的服务器/分区/世代分组本来就完整可读，不让"假控件"误导人。
+        实现见页面末尾那段脚本的第一行（给 <html> 加 .sc-js）+ CSS 的 html:not(.sc-js) 规则。 */}
+
     <div class="sc-tools">
       <div class="sc-srv" role="group" aria-label="切换服务器">
         {SRV_CARDS.map((s) => (
@@ -115,6 +182,51 @@ const EAGER = new Set(
         ))}
       </div>
 
+      {/*
+        搜索行（2026-10-23 t9）：输入即筛，没有提交按钮。
+        窄屏（≤768px）这一行独占：搜索框吃掉剩余宽度，按钮固定宽度，绝不把输入框挤没。
+        清空按钮初始 hidden，有内容才出现；它是真按钮（可 Tab 聚焦），不是贴在图上的叉。
+      */}
+      <div class="sc-find">
+        <div class="sc-q">
+          <span class="sc-q-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4 20 20"/></svg>
+          </span>
+          <input
+            id="scSearch"
+            class="sc-q-in"
+            type="search"
+            inputmode="search"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="搜索曲名 / 曲师 / songId / 定数"
+            aria-label="搜索曲目：匹配曲名、曲师、songId 或定数"
+          />
+          <button type="button" id="scClear" class="sc-q-x" aria-label="清空搜索" title="清空搜索（Esc）" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
+          </button>
+        </div>
+
+        <button
+          type="button"
+          id="scFilterBtn"
+          class="sc-btn sc-btn-f"
+          aria-expanded="false"
+          aria-controls="scPanel"
+          aria-pressed="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M7 12h10M10 17.5h4"/></svg>
+          筛选
+        </button>
+
+        <label class="sc-sort">
+          <span class="sc-sort-k">排序</span>
+          <select id="scSort" class="sc-sort-in" aria-label="排序方式">
+            {SORTS.map((o) => <option value={o.v}>{o.label}</option>)}
+          </select>
+        </label>
+      </div>
+
       <div class="sc-cats" role="group" aria-label="按分区筛选">
         {(['jp', 'cn'] as const).map((srv) => (
           <div class="sc-cat-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
@@ -125,59 +237,95 @@ const EAGER = new Set(
           </div>
         ))}
       </div>
+
+      {/*
+        四维筛选面板：默认收起（hidden），由「筛选」按钮展开，aria-expanded 同步。
+        面板里全是原生控件（select / button），键盘天然可达，不需要额外的方向键处理。
+      */}
+      <div class="sc-panel" id="scPanel" hidden>
+        <div class="sc-pf">
+          <label class="sc-pf-k" for="scGen">世代</label>
+          <select id="scGen" class="sc-pf-in" aria-label="按世代筛选">
+            <option value="all">全部世代</option>
+            {GEN_OPTS.map((g) => <option value={g.k}>{g.k}{g.s === 'cn' ? '（国服）' : ''}</option>)}
+          </select>
+        </div>
+
+        <div class="sc-pf">
+          <label class="sc-pf-k" for="scArtist">曲师</label>
+          <select id="scArtist" class="sc-pf-in" aria-label="按曲师筛选：仅列出 5 首及以上的常用曲师，其余请用搜索框">
+            <option value="all">全部曲师（{ARTIST_TALLY.size} 位）</option>
+            {TOP_ARTISTS.map(([a, n]) => <option value={a}>{a}（{n}）</option>)}
+          </select>
+        </div>
+
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">难度档</span>
+          <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
+            {DIFFS.map((d) => (
+              <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">定数区间</span>
+          <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
+            {BANDS.map((b) => (
+              <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div class="sc-pf sc-pf-end">
+          <button type="button" id="scReset" class="sc-btn sc-btn-r">重置全部</button>
+        </div>
+      </div>
+
+      {/* 命中提示：只有真的在筛的时候才出现（未筛选时整个条隐藏，不占地方） */}
+      <p class="sc-active" id="scActive" hidden aria-live="polite">
+        <span id="scActiveTxt">命中 0 首</span>
+      </p>
     </div>
+
+    {/* 列表锚点：sc-skip 的落点。tabindex="-1" 让焦点真的移进来（否则只滚动不换焦点）。 */}
+    <div id="scList" tabindex="-1">
 
     {(['jp', 'cn'] as const).map((srv) => (
       <div class="sc-body" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
         {CATS[srv].map((cat) => (
           <section class="sc-sec" data-cat={cat}>
             <header class="sc-sec-h">
-              <h3>{cat}</h3>
+              {/* 分区标题是 h2：页面主标题已经是 h1（.sc-hide），下面直接跳到 h3 会缺一级 */}
+              <h2>{cat}</h2>
               <em>{countOf(srv, cat)} 首</em>
             </header>
             {CAT_GENS[srv][cat].map((gen) => {
               const list = bucket[srv][cat][gen];
               if (!list.length) return null;
+              const slug = slugOf(gen);
               return (
-                <div class="sc-gen">
+                <div class="sc-gen" data-y={yearOf(gen) || '0'}>
                   <div class="sc-gen-h">
-                    <b>{gen}</b>
-                    {yearOf(gen, srv) && <span>{yearOf(gen, srv)}</span>}
+                    {/* 世代名本身就是该世代筛选页的入口（2026-10-23）：
+                        点名字进 /songs/gen/<slug>/。不把整条吸顶标题做成链接——
+                        它 position:sticky 会一直跟着滚，点击面积过大会误触。 */}
+                    <b>
+                      {slug ? (
+                        <a class="sc-gen-a" href={`/songs/gen/${slug}/`} title={`${gen} 世代全部曲目`}>
+                          {gen}
+                          <span class="sc-gen-x" aria-hidden="true">→</span>
+                        </a>
+                      ) : (
+                        gen
+                      )}
+                    </b>
+                    {yearOf(gen) && <span>{yearOf(gen)}</span>}
                     <i>{list.length}</i>
                   </div>
                   <div class="sc-grid">
                     {list.map((s) => (
-                      <article class="sc-card">
-                        <div class="sc-j">
-                          {s.cover ? (
-                            <img
-                              src={`/assets/images/jackets/${s.cover}`}
-                              alt=""
-                              width="144"
-                              height="144"
-                              loading={EAGER.has(s.id) ? 'eager' : 'lazy'}
-                              fetchpriority={EAGER.has(s.id) ? 'high' : 'low'}
-                              decoding="async"
-                            />
-                          ) : (
-                            <span class="sc-no">no jacket</span>
-                          )}
-                          {s.alt ? <span class="sc-alt">[2]</span> : null}
-                        </div>
-                        {/* 整卡可点（2026-10-22 主人指出只点标题进不去太难用）。
-                            做法是卡内嵌一个绝对定位铺满的 <a>，而不是把整张卡包成 <a>：
-                            包成 <a> 会把曲绘、双服徽章、三个难度徽章全卷进链接名里，
-                            读屏一次念一大串；铺满层让链接名只有曲名，点击却覆盖全卡。
-                            链接层放在最后以保证盖住其余内容，z-index 由 CSS 控制。 */}
-                        <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
-                        <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
-                        <div class="sc-lv">
-                          <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.lv.bsc)}</i>
-                          <i class={`lv lv-adv${s.lv.adv == null ? ' lv-0' : ''}`}><u>ADV</u>{dash(s.lv.adv)}</i>
-                          <i class={`lv lv-ext${s.lv.ext == null ? ' lv-0' : ''}`}><u>EXT</u>{dash(s.lv.ext)}</i>
-                        </div>
-                        <a class="sc-link" href={`/songs/${s.id}/`} aria-label={`${s.t}${s.a ? ' - ' + s.a : ''} 详情`}></a>
-                      </article>
+                      <SongCard song={s} eager={EAGER.has(s.id)} />
                     ))}
                   </div>
                 </div>
@@ -187,89 +335,391 @@ const EAGER = new Set(
         ))}
       </div>
     ))}
+
+    {/* 空态：整页零命中时给明确文案 + 一键重置，而不是留一片空白 */}
+    <div class="sc-empty" id="scEmpty" hidden>
+      <p class="sc-empty-t">没有找到符合条件的曲目</p>
+      <p class="sc-empty-s">试试换个关键词，或者把筛选条件放宽一些。</p>
+      <button type="button" class="sc-btn sc-btn-r" data-sc-reset>重置全部条件</button>
+    </div>
+    </div>{/* /#scList */}
   </section>
 
   <script is:inline>
-    // 服务器切换 + 分区筛选：只改 data-srv / hidden，不写 localStorage、不动 URL。
+    // 服务器切换 + 搜索 + 四维筛选 + 五种排序（2026-10-23，t9）。
+    // 只改 hidden 与 CSS order，不写 localStorage、不动 URL、不重排 DOM。
+    //
+    // 三条硬原则：
+    //  1) 匹配字段一律读 data-*（data-t / data-a / data-id / data-gen / data-bsc / data-adv / data-ext），
+    //     不在输入时解析卡片文本——文本里混着「双」徽章、被截断的省略号、破折号占位，解析必然是脏数据。
+    //  2) 排序用 CSS order（grid/flex 都支持），1241 张卡重排 DOM 会掉帧、滚动位置也会跳。
+    //  3) 定数缺失是空串而不是 0：区间筛选时直接判不命中，绝不把它当 0 塞进「7.0 以下」。
     (function () {
+      // .sc-js 已在页首的内联脚本里挂好（见文件开头那条 script），这里不再重复加。
+
       var root = document.getElementById('songsRoot');
       if (!root) return;
+
       var srvBtns = root.querySelectorAll('.sc-srv-b');
       var sets = root.querySelectorAll('.sc-cat-set');
       var bodies = root.querySelectorAll('.sc-body');
+      var search = document.getElementById('scSearch');
+      var clearBtn = document.getElementById('scClear');
+      var panelBtn = document.getElementById('scFilterBtn');
+      var panel = document.getElementById('scPanel');
+      var sortSel = document.getElementById('scSort');
+      var emptyBox = document.getElementById('scEmpty');
+      var activeBox = document.getElementById('scActive');
+      var activeTxt = document.getElementById('scActiveTxt');
 
-      var state = { srv: root.getAttribute('data-srv') || 'jp', cat: 'all' };
+      var state = {
+        srv: root.getAttribute('data-srv') || 'jp',
+        cat: 'all',
+        q: '',
+        gen: 'all',
+        artist: 'all',
+        diff: 'all',   // all | bsc | adv | ext
+        band: 'all',   // all | lt7 | 7 | 8 | 9 | 10
+        sort: 'ext-desc'
+      };
 
-      // 错开入场：给当前可见的前 12 张卡打上 .sc-stag 并设延迟（最多只做 12 个，
-      // 一个分区上千张卡不可能全做动画）。每次切换先清掉上一轮的标记与延迟。
-      function stagger() {
-        var old = root.querySelectorAll('.sc-card.sc-stag');
-        for (var i = 0; i < old.length; i++) {
-          old[i].classList.remove('sc-stag');
-          old[i].style.animationDelay = '';
+      // 定数区间：与页面上那五档按钮一一对应，改这里必须同步改模板里的 BANDS
+      var BANDS = {
+        lt7: function (v) { return v < 7; },
+        '7': function (v) { return v >= 7 && v < 8; },
+        '8': function (v) { return v >= 8 && v < 9; },
+        '9': function (v) { return v >= 9 && v < 10; },
+        '10': function (v) { return v >= 10; }
+      };
+
+      // 取某张卡在当前难度档下的定数。null = 这张卡没有这一档（不是 0）
+      function lvOf(card, diff) {
+        var raw = card.getAttribute('data-' + diff);
+        if (raw === null || raw === '') return null;
+        var n = Number(raw);
+        return isNaN(n) ? null : n;
+      }
+
+      function matchCard(card) {
+        if (state.q) {
+          // 匹配 曲名 / 曲师 / songId 三个字段（任务书①），外加 data-lv 的三档定数：
+          // 用户常直接打「10.5」找这个定数的歌，只搜前三个字段会一无所获。
+          var hay = (card.getAttribute('data-t') || '').toLowerCase() + '\n' +
+                    (card.getAttribute('data-a') || '').toLowerCase() + '\n' +
+                    (card.getAttribute('data-id') || '').toLowerCase() + '\n' +
+                    (card.getAttribute('data-lv') || '').toLowerCase();
+          if (hay.indexOf(state.q) === -1) return false;
         }
-        // 同一帧里先删后加，浏览器看不到样式变化、动画不会重播；
-        // 读一次 offsetWidth 强制回流，让「删除」这一笔先落定。
-        void root.offsetWidth;
-        var picked = 0;
-        var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden])');
-        for (var s = 0; s < secs.length && picked < 12; s++) {
-          var cards = secs[s].querySelectorAll('.sc-card');
-          for (var c = 0; c < cards.length && picked < 12; c++, picked++) {
-            cards[c].classList.add('sc-stag');
-            cards[c].style.animationDelay = (picked * 0.03).toFixed(2) + 's';
+        if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
+        if (state.artist !== 'all' && card.getAttribute('data-a') !== state.artist) return false;
+
+        // 难度档 + 定数区间
+        if (state.diff === 'all') {
+          // 全部档：任务书要求「跳过该卡」，即不按定数筛——缺值的卡也算命中
+          return true;
+        }
+        var v = lvOf(card, state.diff);
+        if (v === null) return false;                 // 缺这一档：不参与区间筛选
+        if (state.band === 'all') return true;        // 只看档位不看区间
+        return BANDS[state.band](v);
+      }
+
+      // ---- 排序：只写 style.order ----
+      function sortCards(cards) {
+        var arr = [];
+        for (var i = 0; i < cards.length; i++) arr.push(cards[i]);
+        var mode = state.sort;
+
+        if (mode === 't-asc' || mode === 't-desc') {
+          arr.sort(function (a, b) {
+            var c = (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
+            return mode === 't-desc' ? -c : c;
+          });
+        } else {
+          arr.sort(function (a, b) {
+            var va = lvOf(a, 'ext'), vb = lvOf(b, 'ext');
+            // 缺 EXT 的永远排最后（升序降序都一样），避免 -1 跑到最前
+            if (va === null && vb !== null) return 1;
+            if (vb === null && va !== null) return -1;
+            if (va === null && vb === null) {
+              return (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
+            }
+            var d = mode === 'ext-asc' ? va - vb : vb - va;
+            if (d !== 0) return d;
+            return (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
+          });
+        }
+        for (var n = 0; n < arr.length; n++) arr[n].style.order = String(n);
+      }
+
+      function applySort() {
+        // 世代块排序只用「世代 新→旧」，靠给 .sc-sec 切 flex 后写 order；其余排序一律清掉
+        var genBlocks = root.querySelectorAll('.sc-gen');
+        var genNew = state.sort === 'gen-new';
+        if (genNew) root.setAttribute('data-sort-mode', 'gen-new');
+        else root.removeAttribute('data-sort-mode');
+
+        if (genNew) {
+          var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec');
+          for (var s = 0; s < secs.length; s++) {
+            var blk = secs[s].querySelectorAll('.sc-gen');
+            var order = [];
+            for (var b = 0; b < blk.length; b++) {
+              order.push({ el: blk[b], y: Number(blk[b].getAttribute('data-y')) || 0, i: b });
+            }
+            order.sort(function (x, y) { return y.y - x.y || x.i - y.i; });
+            for (var o = 0; o < order.length; o++) order[o].el.style.order = String(o);
+            // 世代内部保持 EXT 降序（与默认一致）
+            var grids = secs[s].querySelectorAll('.sc-grid');
+            for (var g = 0; g < grids.length; g++) {
+              var cs = grids[g].querySelectorAll('.sc-card');
+              for (var c = 0; c < cs.length; c++) cs[c].style.order = '';
+            }
+          }
+        } else {
+          for (var k = 0; k < genBlocks.length; k++) genBlocks[k].style.order = '';
+          var grids2 = root.querySelectorAll('.sc-body:not([hidden]) .sc-grid');
+          for (var g2 = 0; g2 < grids2.length; g2++) {
+            sortCards(grids2[g2].querySelectorAll('.sc-card'));
           }
         }
       }
 
+      // ---- 主流程 ----
       function apply() {
         root.setAttribute('data-srv', state.srv);
-        var bs = state.srv;
+
         for (var i = 0; i < srvBtns.length; i++) {
           var on = srvBtns[i].getAttribute('data-srv') === state.srv;
           srvBtns[i].classList.toggle('is-on', on);
           srvBtns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
         }
         for (var j = 0; j < sets.length; j++) {
-          sets[j].hidden = sets[j].getAttribute('data-srv') !== bs;
+          sets[j].hidden = sets[j].getAttribute('data-srv') !== state.srv;
         }
-        // 总曲数已移进服务器卡（静态渲染），这里只负责显隐，不再统计
+
+        var total = 0;
         for (var k = 0; k < bodies.length; k++) {
           var body = bodies[k];
-          var isMine = body.getAttribute('data-srv') === bs;
+          var isMine = body.getAttribute('data-srv') === state.srv;
           body.hidden = !isMine;
+          if (!isMine) continue;
+
           var secs = body.querySelectorAll('.sc-sec');
           for (var m = 0; m < secs.length; m++) {
-            var show = isMine && (state.cat === 'all' || secs[m].getAttribute('data-cat') === state.cat);
-            secs[m].hidden = !show;
+            var sec = secs[m];
+            if (state.cat !== 'all' && sec.getAttribute('data-cat') !== state.cat) {
+              sec.hidden = true;
+              continue;
+            }
+
+            var gens = sec.querySelectorAll('.sc-gen');
+            var hitSec = 0;
+            for (var g = 0; g < gens.length; g++) {
+              var genEl = gens[g];
+              var cards = genEl.querySelectorAll('.sc-card');
+              var hitGen = 0;
+              for (var c = 0; c < cards.length; c++) {
+                var ok = matchCard(cards[c]);
+                cards[c].hidden = !ok;
+                if (ok) hitGen++;
+              }
+              genEl.hidden = hitGen === 0;
+              var cnt = genEl.querySelector('.sc-gen-h i');
+              if (cnt) cnt.textContent = String(hitGen);
+              hitSec += hitGen;
+            }
+            sec.hidden = hitSec === 0;
+            var secCnt = sec.querySelector('.sc-sec-h em');
+            if (secCnt) secCnt.textContent = hitSec + ' 首';
+            total += hitSec;
           }
         }
+
+        // 空态：整页零命中给明确文案 + 一键重置，而不是留白
+        if (emptyBox) emptyBox.hidden = total > 0;
+
+        // 命中提示条：只有真的在筛/排序时才出现
+        var filtering = !!state.q || state.gen !== 'all' || state.artist !== 'all' ||
+                        state.diff !== 'all' || state.band !== 'all' || state.sort !== 'ext-desc';
+        if (activeBox) {
+          activeBox.hidden = !filtering;
+          // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值
+          if (activeTxt) activeTxt.textContent = filtering ? '命中 ' + total + ' 首' : '';
+        }
+
+        // aria-pressed 在这里统一收口（2026-10-23 收尾）。
+        // 之前只在各事件分支里各自 setAttribute，只要有一条路径忘记同步，
+        // 读屏听到的选中态就会和实际筛选状态不符。改成「由 state 反推 UI」：
+        // 每次 apply() 都按当前 state 重写一遍，谁调 apply 都不会漏。
+        syncPressed();
+
+        applySort();
         stagger();
+      }
+
+      // 把 state → aria-pressed / .is-on 的映射集中在一处
+      function syncPressed() {
+        syncGroup('[data-diff]', 'data-diff', state.diff);
+        syncGroup('[data-band]', 'data-band', state.band);
+        syncGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
+      }
+
+      function syncGroup(sel, attr, want) {
+        var list = root.querySelectorAll(sel);
+        for (var i = 0; i < list.length; i++) {
+          var hit = list[i].getAttribute(attr) === want;
+          list[i].classList.toggle('is-on', hit);
+          list[i].setAttribute('aria-pressed', hit ? 'true' : 'false');
+        }
+      }
+
+      // 错开入场：只给当前可见的前 12 张（1241 张全做动画没有意义，也撑不住）
+      function stagger() {
+        var old = root.querySelectorAll('.sc-card.sc-stag');
+        for (var i = 0; i < old.length; i++) {
+          old[i].classList.remove('sc-stag');
+          old[i].style.animationDelay = '';
+        }
+        // 同一帧先删后加浏览器看不到变化、动画不重播；读一次 offsetWidth 强制回流让删除先落定
+        void root.offsetWidth;
+        var vis = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden]) .sc-card:not([hidden])');
+        for (var c = 0; c < vis.length && c < 12; c++) {
+          vis[c].classList.add('sc-stag');
+          vis[c].style.animationDelay = (c * 0.03).toFixed(2) + 's';
+        }
+      }
+
+      // ---- 搜索：输入即筛，debounce 120ms（1241 张卡每个按键全量遍历会卡） ----
+      var timer = null;
+      function commitSearch() {
+        state.q = (search && search.value || '').trim().toLowerCase();
+        if (clearBtn) clearBtn.hidden = !(search && search.value);
+        apply();
+      }
+      function onSearch() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(commitSearch, 120);
+      }
+      function clearSearch() {
+        if (!search) return;
+        if (timer) clearTimeout(timer);
+        search.value = '';
+        state.q = '';
+        if (clearBtn) clearBtn.hidden = true;
+        apply();
+        search.focus();
+      }
+      if (search) {
+        search.addEventListener('input', onSearch);
+        search.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); if (timer) clearTimeout(timer); commitSearch(); }
+          else if (e.key === 'Escape') { e.preventDefault(); clearSearch(); }
+        });
+      }
+      if (clearBtn) clearBtn.addEventListener('click', clearSearch);
+
+      // ---- 折叠面板：aria-expanded 与 aria-pressed 同步 ----
+      function setPanel(open) {
+        if (!panel || !panelBtn) return;
+        panel.hidden = !open;
+        panelBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        panelBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
+        panelBtn.classList.toggle('is-on', open);
+      }
+      if (panelBtn) panelBtn.addEventListener('click', function () {
+        setPanel(panel.hidden);
+      });
+      // Esc 收起面板（焦点在搜索框时不抢：那边 Esc 是清空）
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (document.activeElement === search) return;
+        if (panel && !panel.hidden) { setPanel(false); if (panelBtn) panelBtn.focus(); }
+      });
+
+      // ---- 下拉筛选 ----
+      root.addEventListener('change', function (e) {
+        var t = e.target;
+        if (!t || !t.id) return;
+        if (t.id === 'scGen') { state.gen = t.value; apply(); }
+        else if (t.id === 'scArtist') { state.artist = t.value; apply(); }
+        else if (t.id === 'scSort') { state.sort = t.value; apply(); }
+      });
+
+      // ---- chip / 按钮：服务器、分区、难度档、区间、重置 ----
+      function setChipGroup(sel, active) {
+        var list = root.querySelectorAll(sel);
+        for (var i = 0; i < list.length; i++) {
+          var hit = list[i] === active;
+          list[i].classList.toggle('is-on', hit);
+          list[i].setAttribute('aria-pressed', hit ? 'true' : 'false');
+        }
+      }
+
+      function resetAll() {
+        state.q = ''; state.gen = 'all'; state.artist = 'all';
+        state.diff = 'all'; state.band = 'all'; state.sort = 'ext-desc'; state.cat = 'all';
+        if (search) search.value = '';
+        if (clearBtn) clearBtn.hidden = true;
+        if (sortSel) sortSel.value = 'ext-desc';
+        var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
+        var ai = document.getElementById('scArtist'); if (ai) ai.value = 'all';
+        setChipGroup('[data-diff]', root.querySelector('[data-diff="all"]'));
+        setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
+        var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');
+        if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
+        apply();
       }
 
       root.addEventListener('click', function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
+
+        if (t.closest('#scReset') || t.closest('[data-sc-reset]')) { resetAll(); return; }
+
         var srvB = t.closest('.sc-srv-b');
-        if (srvB) { state.srv = srvB.getAttribute('data-srv'); state.cat = 'all';
-          var chips = document.querySelectorAll('.sc-cat-set .sc-chip');
-          for (var i = 0; i < chips.length; i++) {
-            var on = chips[i].getAttribute('data-cat') === 'all';
-            chips[i].classList.toggle('is-on', on);
-            chips[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+        if (srvB) {
+          var nextSrv = srvB.getAttribute('data-srv');
+          // 换服务器必须把「服务器专属」的两个维度一起归零：分区与世代。
+          // 只重置分区是不够的——实测踩过：日服筛到 festo 再切国服，世代筛选还挂着
+          // festo，而国服只有音乐魔方一个世代，于是整页 0 命中、只剩空态，看着像坏了。
+          // 搜索 / 曲师 / 难度档 / 定数区间 是全局维度，跨服仍然有意义，保留。
+          if (nextSrv !== state.srv) {
+            state.cat = 'all';
+            state.gen = 'all';
+            var genSel = document.getElementById('scGen');
+            if (genSel) genSel.value = 'all';
+            var chipsAll = root.querySelectorAll('.sc-cat-set .sc-chip');
+            for (var i = 0; i < chipsAll.length; i++) {
+              var isAll = chipsAll[i].getAttribute('data-cat') === 'all';
+              chipsAll[i].classList.toggle('is-on', isAll);
+              chipsAll[i].setAttribute('aria-pressed', isAll ? 'true' : 'false');
+            }
           }
-          apply(); return; }
+          state.srv = nextSrv;
+          apply(); return;
+        }
+
+        var dChip = t.closest('[data-diff]');
+        if (dChip) {
+          state.diff = dChip.getAttribute('data-diff');
+          setChipGroup('[data-diff]', dChip);
+          apply(); return;
+        }
+
+        var bChip = t.closest('[data-band]');
+        if (bChip) {
+          state.band = bChip.getAttribute('data-band');
+          setChipGroup('[data-band]', bChip);
+          apply(); return;
+        }
+
         var chip = t.closest('.sc-chip');
         if (chip) {
           var set = chip.closest('.sc-cat-set');
           if (!set || set.getAttribute('data-srv') !== state.srv) return;
           state.cat = chip.getAttribute('data-cat');
-          var all = set.querySelectorAll('.sc-chip');
-          for (var n = 0; n < all.length; n++) {
-            var sel = all[n] === chip;
-            all[n].classList.toggle('is-on', sel);
-            all[n].setAttribute('aria-pressed', sel ? 'true' : 'false');
-          }
+          setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', chip);
           apply();
         }
       });

@@ -110,13 +110,30 @@ export async function getSongById(
   return song;
 }
 
-/** 最近更改（/recent/ 用；表暂时是空的，结构先接上） */
+/** 最近更改（/recent/ 用）：写入方是 /api/admin/song-update，这里只读 */
 export type RecentChange = {
   time: string; user: string; target: { label: string; href: string };
   summary: string | null; before: string | null; after: string | null;
 };
 
-export async function getRecentChanges(db: D1Database): Promise<RecentChange[]> {
+/**
+ * 最近更改列表：按 changed_at 倒序，最多 200 条。
+ *
+ * 不缓存：改一条记录要立刻出现在 /recent/ 上，60s 的 isolate 缓存会让编辑者
+ * 「刚保存完却看不到自己那一行」。这条查询走 idx_recent_changed_at 索引，
+ * 200 行的代价可以忽略；HTTP 层的 30s 浏览器缓存已足够挡重复请求。
+ */
+export async function getRecentChanges(db: D1Database | undefined): Promise<RecentChange[]> {
+  if (!db) {
+    // 与 getAllSongs 同一套退路：dev 阶段没有 D1 绑定，读构建期快照；
+    // 生产环境缺绑定则明确抛错（fail loud），不要静默显示「没有更改」——
+    // 那会让人误以为站点没被改过，而不是基础设施出了问题。
+    if (!import.meta.env.DEV) throw new Error('D1 binding "beyond_jubeat" is missing');
+    const { default: snap } = await import('../data/recent-changes.json');
+    const list = (snap as { changes?: RecentChange[] }).changes ?? [];
+    return list.map((c) => ({ ...c }));
+  }
+
   const { results } = await db
     .prepare(
       `SELECT changed_at, user, target_label, target_href, summary, before_text, after_text

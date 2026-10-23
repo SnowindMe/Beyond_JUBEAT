@@ -2,7 +2,8 @@
 #songsRoot ::selection {
     background: color-mix(in srgb, var(--acc) 30%, transparent);
 }
-/* 视觉隐藏的 h2：标题行按主人要求去掉了，但页面仍需要一个 h2 撑住层级（h3 分区名在上面） */
+/* 视觉隐藏的 h1（/songs/ 用）：标题行按主人要求去掉了，但页面仍需要一个 h1 撑住层级
+   （h3 分区名在它下面）。display:none / visibility:hidden 会把标题移出无障碍树，不能用。 */
 .sc-hide {
     position: absolute;
     width: 1px;
@@ -87,7 +88,7 @@
 }
 .sc-tag-c i {
     font-style: normal;
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.04em;
 }
 /* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样 */
@@ -148,6 +149,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     display: inline-flex;
     align-items: center;
     gap: 7px;
+    /* 实测 91×34 / 66×34：分区筛选片高度不够 44。改成 44 高定高盒，
+       纵向 padding 归 0 由 min-height 撑住，横向不变（视觉宽度一模一样）。 */
+    min-height: 44px;
     font: inherit;
     font-size: 12.5px;
     font-weight: 700;
@@ -155,13 +159,13 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     background: color-mix(in srgb, var(--glass2) 62%, transparent);
     border: 1px solid var(--edge);
     border-radius: var(--pill);
-    padding: 6px 13px;
+    padding: 0 13px;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 .sc-chip b {
     font-family: var(--font-data);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 400;
     color: var(--ink3);
     transition: color 0.2s;
@@ -245,7 +249,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     border-bottom: 1px solid var(--edge);
     margin-bottom: 6px;
 }
-.sc-sec-h h3 {
+.sc-sec-h h2 {
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -254,7 +258,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-sec-h em {
     font-style: normal;
     font-family: var(--font-data);
-    font-size: 10.5px;
+    font-size: 11px;
     letter-spacing: 0.16em;
     color: var(--ink3);
 }
@@ -322,7 +326,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-gen-h span {
     flex: none;
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     color: var(--ink3);
 }
@@ -331,7 +335,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     flex: none;
     font-style: normal;
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     color: var(--ink3);
 }
@@ -353,6 +357,52 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
         color-mix(in srgb, var(--acc) 42%, transparent),
         transparent 78%
     );
+}
+
+/* 世代标题里的链接（2026-10-23）：世代名本身进 /songs/gen/<slug>/。
+   只给文字上色 + 箭头，不加下划线也不加框——标题条本身是吸顶的，
+   视觉上它得继续像"标题"而不是"按钮"。指针范围只有文字和箭头。
+   display:flex 是为了让 ::before 的强调色竖条继续跟着文字走（b 原本就是 flex）。 */
+.sc-gen-a {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    /* 世代名链接实测只有 20px 高（b 的 ::before 竖条才 13px），触控远不够 44。
+       做法：纵向 padding 12 + 等量负 margin 抵消，盒子垫到 44 高而版面位置不变；
+       横向只补 min-inline-size（短名 knit 42→44），不动左右间距——
+       横向也用负 margin 会把吸顶标题里的 gap 吃掉，相邻元素会贴上来。 */
+    justify-content: center;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+    padding: 12px 0;
+    margin: -12px 0;
+    color: inherit;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: color 0.18s ease;
+}
+.sc-gen-a:hover {
+    color: color-mix(in srgb, var(--acc) 72%, var(--ink));
+}
+.sc-gen-a:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 3px;
+}
+/* 箭头比世代名小一号、常态半透明：它是"还能点进去"的提示，不该抢标题的份量 */
+.sc-gen-x {
+    font-size: 11px;
+    line-height: 1;
+    opacity: 0.55;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.sc-gen-a:hover .sc-gen-x {
+    opacity: 1;
+    transform: translateX(2px);
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-gen-x {
+        transition: none;
+    }
 }
 
 /* 6 列：宽屏下单卡 ~180px，曲名与作曲者都放得下（主人 2026-10-21 选定） */
@@ -405,7 +455,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     width: 100%;
     height: 100%;
     font-family: var(--font-data);
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
@@ -416,7 +466,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     right: 5px;
     top: 5px;
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 0.04em;
     color: #04141b;
     background: var(--acc2);
@@ -441,7 +491,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-a {
     display: block;
     margin: 2px 2px 0;
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.4;
     color: var(--ink3);
     white-space: nowrap;
@@ -462,7 +512,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     white-space: nowrap;
     font-style: normal;
     font-family: var(--font-data);
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
     padding: 4px 0 3px;
@@ -473,7 +523,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 }
 .sc-lv .lv u {
     text-decoration: none;
-    font-size: 7.5px;
+    /* 原 7.5px 是卡片里最小的字（难度前缀 BSC/ADV/EXT）。它长在难度徽章内，
+       直接翻倍会撑破徽章，所以提到 10px（审计第 12 条允许「最小档提到 9–10」）。 */
+    font-size: 10px;
     font-weight: 500;
     letter-spacing: 0;
     opacity: 0.72;
@@ -521,7 +573,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         padding: 4px 8px;
     }
     .sc-tag-c {
-        font-size: 10.5px;
+        font-size: 11px;
     }
     .sc-cats,
     .sc-cat-set {
@@ -538,7 +590,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         padding: 3px 0 3px;
     }
     .sc-lv .lv u {
-        font-size: 7px;
+        font-size: 10px;
     }
 }
 /* 整卡点击层：绝对定位铺满卡片，让任意位置（曲绘、空白、徽章区）都能进详情，
@@ -561,7 +613,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
   display: inline-block;
   margin-left: 4px;
   padding: 0 4px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 15px;
   border-radius: 3px;
   vertical-align: 1px;
@@ -604,7 +656,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     padding: clamp(18px, 2.6vw, 30px);
     /* 承托底板：浅色世代的白底彩图上，ink3 小字（世代/分区）直接压在曲线图案上会糊。
        这里给内容一层玻璃底 + 细边，圆角收到 10px（比旧的 --r:16px 克制），
-       颜色全部走站内令牌，14 套主题各自成立，不硬编码。 */
+       颜色全部走站内令牌，15 套主题各自成立，不硬编码。 */
     border-radius: 10px;
     border: 1px solid var(--edge);
     background: var(--glass);
@@ -635,7 +687,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 }
 .sd-foot dt {
     font-family: var(--font-data);
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
@@ -734,7 +786,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     width: 100%;
     height: 100%;
     font-family: var(--font-data);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: 0.14em;
     color: var(--ink3);
 }
@@ -743,7 +795,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     margin-top: 8px;
     padding: 2px 7px;
     font-family: var(--font-data);
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     border-radius: 2px;
     color: var(--acc);
@@ -762,7 +814,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 }
 .sd-meta dt {
     font-family: var(--font-data);
-    font-size: 9.5px;
+    font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
@@ -835,7 +887,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 .sd-row-k {
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.1em;
     color: var(--ink3);
 }
@@ -932,4 +984,687 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     .sd-bar i {
         transition: none;
     }
+}
+
+/* ============================================================
+   世代筛选页 /songs/gen/<slug>/
+   和 /songs/ 共用 .sc-grid / .sc-card / .lv 全部卡片样式（同一份 SongCard.astro），
+   这里只补这一页独有的三块：面包屑 + 页头、网格入场、同服务器世代导航。
+   ============================================================ */
+.sg {
+    /* 卡片最多 225 张一屏排下来很长，左右给一点呼吸但不加宽到失衡 */
+    max-width: 1180px;
+    margin: 0 auto;
+}
+
+/* 面包屑：和详情页 .sd-head 同一套语汇（等宽小字 + 细线分隔），
+   但这里是「曲目库 / 世代名」，因为世代页的上一级本来就是列表页。 */
+.sg-crumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 clamp(14px, 2vw, 22px);
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.sg-crumb a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    color: var(--ink2);
+    text-decoration: none;
+    transition: color 0.18s ease;
+}
+/* 返回箭头与详情页保持一致（伪元素画，模板里不堆内联 SVG） */
+.sg-crumb a::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-left: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.18s ease;
+}
+.sg-crumb a:hover {
+    color: var(--acc);
+}
+.sg-crumb a:hover::before {
+    transform: rotate(45deg) translateX(-2px);
+}
+.sg-crumb > span:not([aria-current]) {
+    color: var(--edge2);
+}
+.sg-crumb > span[aria-current] {
+    color: var(--ink3);
+}
+
+/* 页头：这一页是「某个世代的全集」，所以世代名当 h1 主角，
+   服务器 · 年份做上引，曲数与分区构成做副行。不加大底板——
+   卡片墙本身已经是内容主体，再加一层玻璃板会把首屏压得很重。 */
+.sg-head {
+    margin: 0 0 clamp(20px, 3vw, 32px);
+    padding: 0 2px clamp(12px, 1.6vw, 16px);
+    border-bottom: 1px solid var(--edge);
+}
+.sg-kicker {
+    margin: 0 0 8px;
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink3);
+}
+.sg-title {
+    margin: 0;
+    font-size: clamp(30px, 5vw, 54px);
+    line-height: 1.06;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--title);
+    text-shadow: var(--tshadow);
+    overflow-wrap: anywhere;
+}
+.sg-sub {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--ink2);
+}
+/* 曲数是这一页最有用的一个数字，单独给强调色 + 数据字体 */
+.sg-sub b {
+    font-family: var(--font-data);
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--acc);
+}
+.sg-cats {
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink3);
+}
+
+/* 网格入场：只给前 12 张错开（和 /songs/ 的 12 张同一口径）。
+   规则写 :nth-child(-n + 12) 而不是让 JS 去数——这页是 SSR 直出，
+   没有切换动作，JS 标记纯属多余；超过 12 张的直接不做动画。 */
+@keyframes sgIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+.sg-grid > .sc-card:nth-child(-n + 12) {
+    animation: sgIn 0.34s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+}
+.sg-grid > .sc-card:nth-child(1) { animation-delay: 0s; }
+.sg-grid > .sc-card:nth-child(2) { animation-delay: 0.03s; }
+.sg-grid > .sc-card:nth-child(3) { animation-delay: 0.06s; }
+.sg-grid > .sc-card:nth-child(4) { animation-delay: 0.09s; }
+.sg-grid > .sc-card:nth-child(5) { animation-delay: 0.12s; }
+.sg-grid > .sc-card:nth-child(6) { animation-delay: 0.15s; }
+.sg-grid > .sc-card:nth-child(7) { animation-delay: 0.18s; }
+.sg-grid > .sc-card:nth-child(8) { animation-delay: 0.21s; }
+.sg-grid > .sc-card:nth-child(9) { animation-delay: 0.24s; }
+.sg-grid > .sc-card:nth-child(10) { animation-delay: 0.27s; }
+.sg-grid > .sc-card:nth-child(11) { animation-delay: 0.3s; }
+.sg-grid > .sc-card:nth-child(12) { animation-delay: 0.33s; }
+
+/* 同服务器世代导航：15 个世代页互相通，没有一页是孤岛。
+   放在页尾而不是顶部——顶部已经有面包屑，再堆一排链接会抢世代名的位置。 */
+.sg-more {
+    margin: clamp(34px, 4vw, 52px) 0 0;
+    padding-top: clamp(16px, 2vw, 22px);
+    border-top: 1px solid var(--edge);
+}
+.sg-more-h {
+    margin: 0 0 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+}
+.sg-more-l {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.sg-more-l a {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 7px 12px;
+    border-radius: var(--pill);
+    border: 1px solid var(--edge);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    color: var(--ink2);
+    text-decoration: none;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.sg-more-l a:hover {
+    color: var(--ink);
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 16%, transparent);
+}
+.sg-more-l a:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .sg-title {
+        font-size: clamp(26px, 8vw, 38px);
+    }
+    .sg-sub b {
+        font-size: 18px;
+    }
+    .sg-more-l a {
+        /* 触控目标不低于 44px 高（WCAG 2.5.5）：窄屏上这些标签是主要的内链入口 */
+        min-height: 44px;
+        padding: 0 14px;
+    }
+    /* 面包屑的「曲目库」也是窄屏上的主要返回入口，但它是 11.5px 小字，
+       实测可点高度只有 26px。用上下 padding 把热区撑到 44px，
+       再用等量的负 margin 把外框收回原尺寸——点击变大，视觉位置和行距都不变。 */
+    .sg-crumb a {
+        /* 11px 实测只到 40px（行高 18 + 上下 11×2），13px 才够 WCAG 的 44px */
+        padding: 13px 0;
+        margin: -13px 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sg-grid > .sc-card:nth-child(-n + 12) {
+        animation: none;
+    }
+    .sg-crumb a::before {
+        transition: none;
+    }
+}
+
+/* ============================================================
+   搜索 / 四维筛选 / 排序工具条（2026-10-23，t9）
+   挂在原来 .sc-tools 里，服务器卡与分区 chips 原样保留在上方。
+   ============================================================ */
+/* 搜索行：输入框吃剩余宽度，两个按钮固定不缩。窄屏改成一列，搜索独占整行。 */
+.sc-find {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 760px;
+}
+/* 输入框外壳：图标 + input + 清空按钮。图标与叉都绝对定位，
+   input 用 padding 让出位置，避免「图标盖住第一个字」。 */
+.sc-q {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+.sc-q-ico {
+    position: absolute;
+    left: 11px;
+    display: flex;
+    width: 15px;
+    height: 15px;
+    color: var(--ink3);
+    pointer-events: none;
+}
+.sc-q-ico svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+.sc-q-in {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    /* 44px：WCAG 2.5.5 触控目标下限。先前写 38 是按"桌面鼠标够用"来的，
+       但触屏笔记本/平板横屏也是这个断点，别省这 6px。 */
+    height: 44px;
+    padding: 0 40px 0 34px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--pill);
+    transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+/* 原生 search 的叉要去掉（会和自定义的清空按钮叠在一起） */
+.sc-q-in::-webkit-search-cancel-button,
+.sc-q-in::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+.sc-q-in::placeholder {
+    color: var(--ink3);
+    opacity: 0.85;
+}
+.sc-q-in:hover {
+    border-color: var(--edge2);
+}
+.sc-q-in:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 7%, var(--glass2));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 16%, transparent);
+}
+/* 清空按钮：真按钮，可 Tab 聚焦；有内容才出现（hidden 由脚本切换） */
+.sc-q-x {
+    position: absolute;
+    right: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--ink2);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 0.18s, background 0.18s;
+}
+.sc-q-x svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+}
+.sc-q-x:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.sc-q-x:focus-visible,
+.sc-btn:focus-visible,
+.sc-chip:focus-visible,
+.sc-sort-in:focus-visible,
+.sc-pf-in:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
+/* 工具条上的普通按钮（筛选 / 重置）：与 chips 同一套语汇，不做成彩色主按钮——
+   这页的主色要留给世代名与卡片，控件不该抢视觉。 */
+.sc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: none;
+    /* 与搜索框同高 44（触控目标下限），两者并排才不显得一高一矮 */
+    height: 44px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink2);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--pill);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.18s, border-color 0.18s, background 0.18s;
+}
+.sc-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+}
+.sc-btn:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+}
+/* 展开态：与分区 chips 的选中态同一套强调色，一眼看出面板开着 */
+.sc-btn.is-on {
+    color: var(--ink);
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 16%, transparent);
+}
+.sc-btn-r {
+    height: 44px;
+    font-size: 12px;
+}
+
+/* 排序：label + select 并排。select 用原生控件（键盘行为免费拿到），
+   只做外观统一；箭头用背景图，避免自己画一层跟原生箭头打架。 */
+.sc-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+}
+.sc-sort-k {
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--ink3);
+    white-space: nowrap;
+}
+.sc-sort-in {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 44px;
+    padding: 0 26px 0 12px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink2);
+    background-color: color-mix(in srgb, var(--glass2) 62%, transparent);
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 14px) 19px, calc(100% - 9px) 19px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    border: 1px solid var(--edge);
+    border-radius: var(--pill);
+    cursor: pointer;
+    transition: color 0.18s, border-color 0.18s;
+}
+.sc-sort-in:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+}
+
+/* ---------- 折叠面板 ---------- */
+/* 默认 hidden；展开后是一张横铺的玻璃底板，四组控件排成自适应网格。
+   面板本身不加圆角大卡片感过重的东西——它只是工具条的延伸。 */
+.sc-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px 18px;
+    width: 100%;
+    max-width: 900px;
+    margin-top: 2px;
+    padding: 14px 16px;
+    border: 1px solid var(--edge);
+    border-radius: var(--r);
+    background: color-mix(in srgb, var(--glass2) 55%, transparent);
+    backdrop-filter: blur(10px);
+}
+.sc-panel[hidden] {
+    display: none;
+}
+.sc-pf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+/* 难度档 / 定数区间这两组横着放不下，占满整行改成上下排（用显式 class，
+   不依赖 :has()——它在旧 Safari / Firefox 上会整条规则失效，那两行会挤成一坨） */
+.sc-pf-wide {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+}
+.sc-pf-k {
+    flex: none;
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink3);
+}
+.sc-pf-in {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 32px;
+    padding: 0 8px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-xs);
+    cursor: pointer;
+}
+.sc-pf-in:hover {
+    border-color: var(--edge2);
+}
+.sc-pf-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+/* 面板里的 chip 比工具条上的小一号：它们是二级控件，不该和分区 chips 一样重 */
+.sc-chip-sm {
+    font-size: 11.5px;
+    font-weight: 700;
+    /* 面板里的 chip 是二级控件，视觉上小一号，但可点区域同样给足 44 */
+    min-height: 44px;
+    padding: 0 12px;
+}
+.sc-pf-end {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+}
+
+/* 命中提示：细字一行，跟在工具条下面 */
+.sc-active {
+    margin: 0;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    color: var(--ink3);
+}
+.sc-active[hidden] {
+    display: none;
+}
+.sc-active span {
+    color: var(--acc);
+    font-weight: 700;
+}
+
+/* ---------- 空态 ---------- */
+/* 零命中时给文案 + 重置，而不是留一片白。
+   不做成大插画块：这页已经很满，空态只需要「说清发生了什么 + 给一条出路」。 */
+.sc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: clamp(28px, 4vw, 48px) 0;
+    padding: clamp(24px, 4vw, 40px) 20px;
+    text-align: center;
+    border: 1px dashed var(--edge2);
+    border-radius: var(--r);
+    background: color-mix(in srgb, var(--glass2) 40%, transparent);
+}
+.sc-empty[hidden] {
+    display: none;
+}
+.sc-empty-t {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+}
+.sc-empty-s {
+    margin: 0 0 4px;
+    font-size: 12.5px;
+    color: var(--ink3);
+}
+
+/* ---------- 排序承载：只用 order，不重排 DOM ---------- */
+/* 卡片的 order 由脚本写进 style；.sc-grid 是 grid，order 天然生效。 */
+/* 「世代 新→旧」要把 .sc-gen 块本身换位：这时 .sc-sec 得成为 flex 容器
+   （块级流的 order 不生效）。只在这个模式下切，平时保持原来的块级布局，
+   避免影响 .sc-gen 的 content-visibility 与吸顶行为。 */
+#songsRoot[data-sort-mode="gen-new"] .sc-sec {
+    display: flex;
+    flex-direction: column;
+}
+#songsRoot[data-sort-mode="gen-new"] .sc-sec-h {
+    order: -1;
+}
+/* 换成 flex 后 .sc-gen 的 content-visibility 会让占位估算失真（它假设子块高度稳定，
+   而 order 打乱后滚动条会跳），这个模式下关掉；退出该排序时就恢复。 */
+#songsRoot[data-sort-mode="gen-new"] .sc-gen {
+    content-visibility: visible;
+}
+
+@media (max-width: 768px) {
+    /* 搜索独占一行：输入框吃满宽度，两个按钮并排到下一行，绝不把输入框挤没 */
+    .sc-find {
+        flex-wrap: wrap;
+        max-width: none;
+    }
+    .sc-q {
+        flex: 1 1 100%;
+        order: -1;
+    }
+    .sc-q-in {
+        height: 44px;
+        font-size: 14px;
+    }
+    .sc-q-x {
+        width: 32px;
+        height: 32px;
+        right: 6px;
+    }
+    .sc-btn,
+    .sc-sort-in {
+        height: 44px;
+    }
+    .sc-btn {
+        flex: 1 1 auto;
+    }
+    .sc-sort {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .sc-sort-in {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .sc-panel {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: none;
+        padding: 12px 13px;
+    }
+    .sc-pf-in {
+        height: 44px;
+        font-size: 13px;
+    }
+    .sc-chip-sm {
+        /* 窄屏上这些 chip 是主要筛选入口，必须够 44 高 */
+        min-height: 44px;
+        padding: 0 12px;
+    }
+    .sc-pf-end {
+        justify-content: stretch;
+    }
+    .sc-pf-end .sc-btn-r {
+        width: 100%;
+    }
+}
+
+/* ---------- hidden 必须真的藏住 ---------- */
+/* 这是这类筛选最常见的坑：给元素设了 display:flex / grid 之后，
+   浏览器的 [hidden] 默认样式（display:none）会被作者样式覆盖，
+   于是"隐藏"的卡照样占位、照样显示。凡是自己设过 display 的容器，
+   都要显式补一条 [hidden] 规则。 */
+.sc-find[hidden],
+.sc-panel[hidden],
+.sc-empty[hidden],
+.sc-active[hidden],
+.sc-q-x[hidden],
+.sc-body[hidden],
+.sc-cat-set[hidden],
+.sc-sec[hidden],
+.sc-gen[hidden],
+.sc-card[hidden] {
+    display: none !important;
+}
+
+/* ---------- 无 JS / JS 未就绪时工具条不显示（防 FOUC） ---------- */
+/* 方向很重要：**默认隐藏，脚本跑起来才显示**。
+   早先写成 html:not(.sc-js) 隐藏（默认显示、脚本后加类再藏），会有时序缺口：
+   内联脚本在解析到 <script> 时才执行，而 CSS 可能更早生效，
+   中间那一瞬工具条是"可见的死控件"——慢网/窄屏上肉眼能看见闪一下。
+   改成反向写：CSS 一到位工具条就是隐藏的，脚本把 .sc-js 挂到 <html> 那刻才出现。
+   内容列表全程可见，不受影响。 */
+.sc-find,
+.sc-panel,
+.sc-active,
+.sc-cats {
+    display: none;
+}
+html.sc-js .sc-find {
+    display: flex;
+}
+html.sc-js .sc-cats {
+    display: flex;
+}
+html.sc-js .sc-active:not([hidden]) {
+    display: block;
+}
+/* 面板展开时才显示（收起态是 hidden，不需要这条也藏不住） */
+html.sc-js .sc-panel {
+    display: grid;
+}
+html.sc-js .sc-panel[hidden] {
+    display: none;
+}
+
+/* ---------- 「跳到曲目列表」 ---------- */
+/* 和全站 .skip 同一套做法：平时视觉隐藏，键盘聚焦时出现在左上角。
+   为什么不是 display:none —— 那样就不能 Tab 到它了（skip link 必须可聚焦）。
+   用 clip 方案而不是 left:-9999px：后者会让页面横向滚动条跳一下。 */
+.sc-skip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 40;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--glass2);
+    border: 1px solid var(--acc);
+    border-radius: 0 0 var(--r-sm) 0;
+    text-decoration: none;
+    transform: translateY(-120%);
+    transition: transform 0.16s ease;
+}
+.sc-skip:focus-visible,
+.sc-skip:focus {
+    transform: none;
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-skip {
+        transition: none;
+    }
+}
+/* 落点容器本身不显示聚焦框：它是跳转目标，不是可操作元素 */
+#scList:focus {
+    outline: none;
 }

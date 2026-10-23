@@ -64,12 +64,31 @@ const decided = db && user.role === 'owner'
   {!isStaff(user) ? (
     <section class="band">
       <div class="panel">
+        {/* 无权限分支没有可见页头，用视觉隐藏的 h1 让每页仍有唯一主标题 */}
+        <h1 class="vh">管理面板</h1>
         <p class="au-alert" role="alert">当前身份（{user.role}）没有管理权限。</p>
         <p class="au-alt">想参与编辑？在<a href="/account/">账户页</a>提交维护者自荐。</p>
       </div>
     </section>
   ) : (
     <>
+      {/* 整页主题是「管理面板」，主标题不能判给下面的某个区块：
+          有权限分支也用同一个视觉隐藏 h1，区块标题一律 h2（否则读屏先读到的
+          主标题会变成「曲目编辑」，与页面实际主题错位）。 */}
+      <h1 class="vh">管理面板</h1>
+      {/* 曲目编辑入口：维护者与站长都能进（写防线在 /api/admin/song-update）。
+          放在审批区之前——日常编辑比审批常用得多。 */}
+      <section class="band">
+        <div class="band-h">
+          <h2>曲目编辑</h2>
+          <em>songs</em>
+        </div>
+        <div class="panel">
+          <p class="au-alt" style="margin-bottom:12px">按曲名或 songId 搜索、按世代与服务器筛选，进详情页改曲名/艺人/BPM/三档定数/解禁注/曲绘文件名。每次保存都会记一条最近更改。</p>
+          <a class="au-submit" href="/admin/songs/" style="display:inline-block;text-decoration:none">进入曲目编辑</a>
+        </div>
+      </section>
+
       <section class="band">
         <div class="band-h">
           <h2>维护者自荐</h2>

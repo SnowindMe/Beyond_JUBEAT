@@ -39,14 +39,27 @@
     // 不写的话 not_found_handling 会在资源层直接用 404.html 截住它们，不进 Worker。
     // run_worker_first 让这些路径永远先交给 Worker；其余静态页不受影响。
     //   /songs*  = 曲目库与详情（查 D1）
+    //   /songs/gen/* = 世代筛选页（2026-10-23 加）——不需要单独写一条：
+    //                 它已被上面的 /songs/* 覆盖。实测写出来会被 @cloudflare/vite-plugin
+    //                 判为 redundant 并直接 build 失败（Invalid routes in run_worker_first），
+    //                 所以靠 /songs/* 兜住。以后若有人收窄 /songs/*，记得把这 15 个页补回。
     //   /login /register /account /admin = 需要读会话的用户页（2026-10-23 起）
-    //   /api/*   = 注册/登录/退出/改密/自荐/审批等表单提交端点
+    //     /admin/songs/* = 维护者曲目编辑面板（t4 加）——同样不需要单独写一条：
+    //     它已被 /admin/* 覆盖。实测显式写 "/admin/songs", "/admin/songs/*" 会被
+    //     @cloudflare/vite-plugin 判为 redundant 并直接 build 失败
+    //     （Invalid routes in run_worker_first: rule '/admin/*' makes it redundant），
+    //     所以这里只留说明，靠 /admin/* 兜住。以后若有人收窄 /admin/*，记得把编辑面板补回。
+    //   /recent/* = 最近更改（t5 起改 SSR 读 D1 的 recent_changes）——
+    //               这一条必须单独写：/recent 不在任何通配规则里，不写就会被
+    //               资源层按 not_found_handling 直接截成 404.html，进不了 Worker。
+    //   /api/*   = 注册/登录/退出/改密/自荐/审批/曲目编辑等表单提交端点
     "run_worker_first": [
       "/songs", "/songs/*",
       "/login", "/login/*",
       "/register", "/register/*",
       "/account", "/account/*",
       "/admin", "/admin/*",
+      "/recent", "/recent/*",
       "/api/*"
     ]
   },

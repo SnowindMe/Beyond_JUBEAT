@@ -1,0 +1,167 @@
+---
+// 曲目编辑 /admin/songs/[songId]/：改曲名/艺人/BPM/三档定数/解禁注/曲绘文件名。
+//
+// 权限：这里只在服务端确认身份后**渲染表单**，真正的写防线在
+// /api/admin/song-update.ts 里对 role 的复核（页面藏按钮不算防线）。
+// 单行直接从 D1 读原始列，不经 lib/db.ts 的 60s 缓存——刚改完回来看要是新值。
+import Layout from '../../../layouts/Base.astro';
+import '../../../styles/auth.css';
+import '../../../styles/songs.css';
+import { pageTitle } from '../../../lib/title';
+import { isStaff } from '../../../lib/auth';
+import { env } from 'cloudflare:workers';
+import { SQL_EDIT_ROW, songEditError, LIMITS, DIFF_MAX } from '../../../lib/song-admin';
+
+export const prerender = false;
+
+const user = Astro.locals.user;
+const { songId } = Astro.params;
+const back = '/admin/songs/';
+// ?next= 只接受站内单斜杠路径：这里把目标路径整体编码，登录后能原路回来
+if (!user) return Astro.redirect('/login/?next=' + encodeURIComponent('/admin/songs/' + (songId ?? '') + '/'));
+if (!isStaff(user)) {
+  Astro.response.status = 403;
+}
+Astro.response.headers.set('cache-control', 'private, no-store');
+
+type Row = {
+  song_id: string;
+  title: string;
+  artist: string | null;
+  bpm: string | null;
+  gen_name: string;
+  server_jp: number;
+  server_cn: number;
+  category: string;
+  bsc: number | null;
+  adv: number | null;
+  ext: number | null;
+  alt: number;
+  cover: string | null;
+  added_at: string | null;
+  unlock_note: string | null;
+  id_kind: string | null;
+};
+
+const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+let song: Row | null = null;
+if (db && songId && isStaff(user)) {
+  song = await db.prepare(SQL_EDIT_ROW).bind(songId).first<Row>();
+}
+
+// 找不到这首就回 404 状态码（不动 URL）：与 /songs/[songId]/ 的处理口径一致
+if (isStaff(user) && !song) Astro.response.status = 404;
+
+const err = songEditError(Astro.url.searchParams.get('e'));
+const okCode = Astro.url.searchParams.get('ok');
+
+const servers = song
+  ? [song.server_jp ? '日服' : null, song.server_cn ? '国服' : null].filter(Boolean).join(' / ')
+  : '';
+// 定数回填：库里是 REAL（10.6），表单要的是「10.6」而不是「10.600000」
+const diffVal = (v: number | null) => (v == null ? '' : String(v));
+const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
+---
+
+<Layout title={pageTitle(song ? '编辑 · ' + song.title : '曲目编辑')} canonicalPath="" description="维护者曲目编辑。" noindex>
+  {!isStaff(user) ? (
+    <section class="band">
+      <div class="panel">
+        {/* 无权限分支没有可见页头，用视觉隐藏的 h1 让每页仍有唯一主标题 */}
+        <h1 class="vh">编辑曲目</h1>
+        <p class="au-alert" role="alert">当前身份（{user.role}）没有编辑曲目的权限。</p>
+        <p class="au-alt"><a href="/account/">回账户页</a>提交维护者自荐。</p>
+      </div>
+    </section>
+  ) : !song ? (
+    <section class="band">
+      <div class="panel">
+        <h1 class="vh">编辑曲目</h1>
+        <p class="au-alert" role="alert">没有找到 songId 为「{songId}」的曲目。</p>
+        <p class="au-alt"><a href={back}>回曲目列表</a></p>
+      </div>
+    </section>
+  ) : (
+    <>
+      <section class="band">
+        <div class="band-h">
+          <h1>编辑曲目</h1>
+          <em>{song.song_id}</em>
+        </div>
+
+        <div class="panel">
+          {err && <p class="au-alert" role="alert">{err}</p>}
+          {okCode === 'saved' && <p class="au-alert is-ok">已保存，改动已记入最近更改。</p>}
+          {okCode === 'nochange' && <p class="au-alert is-ok">没有改动，未写入记录。</p>}
+
+          {/* 只读区：这些列编辑面板不改（世代/分区/服务器是「曲目 × 服务器」的事实，
+              改了等于搬曲目换世代，得走数据管线而不是这里） */}
+          <dl class="au-kv ae-readonly">
+            <div><dt>songId</dt><dd>{song.song_id}{song.id_kind === 'synthetic' ? '（占位 id）' : ''}</dd></div>
+            <div><dt>世代</dt><dd>{song.gen_name}</dd></div>
+            <div><dt>分区</dt><dd>{song.category}</dd></div>
+            <div><dt>服务器</dt><dd>{servers || '—'}</dd></div>
+            <div><dt>上线</dt><dd>{fmt(song.added_at)}</dd></div>
+            <div><dt>长押谱</dt><dd>{song.alt ? '是（标题带 [ 2 ]）' : '否'}</dd></div>
+          </dl>
+
+          <form class="au-form ae-form" method="post" action="/api/admin/song-update" novalidate>
+            <input type="hidden" name="song_id" value={song.song_id} />
+
+            <div class="au-f">
+              <label for="ae-title">曲名</label>
+              <input id="ae-title" name="title" type="text" value={song.title} required maxlength={LIMITS.title} />
+              <p class="au-hint">必填，最多 {LIMITS.title} 个字。长押谱的标题末尾带 [ 2 ]，改的时候别丢。</p>
+            </div>
+
+            <div class="au-f">
+              <label for="ae-artist">艺人</label>
+              <input id="ae-artist" name="artist" type="text" value={song.artist ?? ''} maxlength={LIMITS.artist} />
+              <p class="au-hint">留空表示数据源里没有，会存成 NULL（不是空字符串）。</p>
+            </div>
+
+            <div class="au-f">
+              <label for="ae-bpm">BPM</label>
+              <input id="ae-bpm" name="bpm" type="text" value={song.bpm ?? ''} maxlength={LIMITS.bpm} />
+              <p class="au-hint">源数据是字符串，可能带多版本写法（如「190 (beatmania IIDX, jubeat)」），照抄即可。</p>
+            </div>
+
+            <div class="ae-diffs">
+              <div class="au-f">
+                <label for="ae-bsc">BSC 定数</label>
+                <input id="ae-bsc" name="bsc" type="text" inputmode="decimal" value={diffVal(song.bsc)} maxlength="4" placeholder="示例 5.6" />
+              </div>
+              <div class="au-f">
+                <label for="ae-adv">ADV 定数</label>
+                <input id="ae-adv" name="adv" type="text" inputmode="decimal" value={diffVal(song.adv)} maxlength="4" placeholder="示例 8.2" />
+              </div>
+              <div class="au-f">
+                <label for="ae-ext">EXT 定数</label>
+                <input id="ae-ext" name="ext" type="text" inputmode="decimal" value={diffVal(song.ext)} maxlength="4" placeholder="示例 10.6" />
+              </div>
+            </div>
+            <p class="au-hint ae-diffhint">定数填 0–{DIFF_MAX} 之间、最多一位小数；这个档位没有谱面就留空（存 NULL）。</p>
+
+            <div class="au-f">
+              <label for="ae-unlock">解禁注</label>
+              <input id="ae-unlock" name="unlock" type="text" value={song.unlock_note ?? ''} maxlength={LIMITS.unlock} />
+              <p class="au-hint">解禁池或联动来源，人类可读的一句话。</p>
+            </div>
+
+            <div class="au-f">
+              <label for="ae-cover">曲绘文件名</label>
+              <input id="ae-cover" name="cover" type="text" value={song.cover ?? ''} maxlength={LIMITS.cover} placeholder="示例 id71588407.webp" />
+              <p class="au-hint">只要文件名，不要路径。站点按 /assets/images/jackets/&lt;文件名&gt; 取图，.gif 会自动按 .webp 访问。</p>
+            </div>
+
+            <div class="ae-actions">
+              <button class="au-submit" type="submit">保存</button>
+              <a class="au-alt" href={back}>取消</a>
+            </div>
+            <p class="au-alt">保存会写一条最近更改（谁、什么时候、改了哪几项、改前改后）。</p>
+          </form>
+        </div>
+      </section>
+    </>
+  )}
+</Layout>

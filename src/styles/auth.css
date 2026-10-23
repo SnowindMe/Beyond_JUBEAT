@@ -169,7 +169,7 @@
   align-items: center;
   gap: 5px;
   font-family: var(--font-data);
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.12em;
   line-height: 1;
   padding: 5px 9px;
@@ -315,5 +315,206 @@
   .au-kv > div {
     grid-template-columns: minmax(0, 1fr);
     gap: 4px;
+  }
+}
+
+/* ---------- 曲目编辑面板（/admin/songs/） ----------
+   列表卡直接复用 /songs/ 的 .sc-card / .sc-grid / .sc-lv，这里只补
+   「筛选条 / 编辑链接 / 分页 / 表单栅格」这几处套着的壳。
+   只加 admin 前缀的类，不改 .sc-* 原样式——/songs/ 那边还在用。 */
+
+/* 筛选条：搜索框占一整行，世代/服务器/按钮并排一行；窄屏全部堆成一列 */
+.ae-filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ae-f {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ae-f > span {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+/* 控件外观与 .au-f 的输入框同一套，避免两页两套皮肤 */
+.ae-f input,
+.ae-f select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border: 1px solid var(--edge2);
+  border-radius: 10px;
+  padding: 10px 13px;
+  min-width: 0;
+  appearance: none;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.ae-f input:focus,
+.ae-f select:focus {
+  outline: none;
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent);
+}
+/* 搜索框要最宽：曲名可以很长，世代名最长也才 beyond the Ave. */
+.ae-filter .ae-f:first-child {
+  flex: 1 1 320px;
+}
+.ae-filter .ae-f:first-child input {
+  width: 100%;
+}
+.ae-filter .ae-go {
+  padding: 10px 22px;
+}
+/* 「重置」只是条文字链，底对齐到按钮中线 */
+.ae-reset {
+  padding-bottom: 12px;
+}
+/* 搜索框独占较宽的一格，世代下拉按内容宽 */
+.ae-filter .ae-f-q {
+  flex: 1 1 340px;
+}
+/* 服务器筛选 chips：直接复用 /songs/ 的 .sc-chip，这里只补与筛选条的间距。
+   注意 .sc-cats（songs.css）在 auth.css 之后加载且是同一特异性，光写 .ae-srv
+   会被它的 justify-content:center 盖掉 —— 所以这里带上 .sc-cats 提高特异性。 */
+.sc-cats.ae-srv {
+  justify-content: flex-start;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--edge);
+}
+/* chip 是链接不是按钮：去掉下划线，hover/焦点沿用 .sc-chip 自己的规则 */
+.ae-srv .sc-chip {
+  text-decoration: none;
+}
+
+/* 列表栅格：沿用 /songs/ 的列宽，但卡片里多一行「编辑」按钮，行距给足 */
+.ae-grid {
+  align-items: stretch;
+}
+.ae-card .ae-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin: 9px 2px 0;
+  padding: 5px 14px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--acc);
+  border: 1px solid color-mix(in srgb, var(--acc) 42%, transparent);
+  border-radius: var(--pill);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--acc) 10%, transparent);
+  transition: color 0.18s, border-color 0.18s, background 0.18s;
+}
+.ae-card .ae-edit:hover {
+  color: var(--ink);
+  border-color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 22%, transparent);
+}
+.ae-card .ae-edit:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* 分页条：居中的方块页码，当前页实心强调色 */
+.ae-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+.ae-pager a,
+.ae-pager > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--edge);
+  color: var(--ink2);
+  text-decoration: none;
+  background: color-mix(in srgb, var(--glass2) 62%, transparent);
+}
+.ae-pager a:hover {
+  color: var(--ink);
+  border-color: var(--edge2);
+}
+.ae-pager .is-on {
+  color: #04222b;
+  background: var(--acc);
+  border-color: var(--acc);
+  font-weight: 700;
+}
+.ae-pager .is-off {
+  opacity: 0.4;
+}
+.ae-pager .is-gap {
+  border-color: transparent;
+  background: none;
+  min-width: 18px;
+  padding: 0;
+  color: var(--ink3);
+}
+
+/* 编辑表单：比账户页的 .au-form（460px 单列）宽一些，定数三连要并排 */
+.ae-form {
+  max-width: 620px;
+  margin-top: 20px;
+}
+/* 只读区与表单同宽：两个块宽度不一致时右侧会空出一条，看着像没对齐 */
+.ae-readonly {
+  max-width: 620px;
+  margin-bottom: 4px;
+}
+.ae-diffs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ae-diffhint {
+  margin: -8px 0 0;
+}
+.ae-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+/* 窄屏：只读区 6 行在手机上占掉半个屏，先把行高收紧；
+   字段级的上下堆叠已经由上面 .au-kv 的 620px 媒体查询处理 */
+@media (max-width: 620px) {
+  .ae-readonly > div {
+    padding: 8px 12px;
+  }
+  .ae-filter {
+    align-items: stretch;
+  }
+  .ae-filter .ae-f {
+    flex: 1 1 100%;
+  }
+  .ae-reset {
+    padding-bottom: 0;
+  }
+  .ae-diffs {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .ae-diffhint {
+    margin: 0;
   }
 }

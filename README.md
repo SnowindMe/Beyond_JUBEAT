@@ -14,7 +14,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 >
-> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选）。这是唯一 `prerender = false` 的页面：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。
+> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选 + 搜索 + 四维筛选 + 五种排序）。它标了 `prerender = false`：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。`/recent/`、`/songs/[songId]/`、`/songs/gen/[gen]/` 与登录/账户/管理页同样是 SSR。
 >
 > **导航只列真实存在的页面，没有死链**（v1.9.1 起）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」六个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已全部撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。「最近更改」是已做出来的页面，见下。
 
@@ -45,7 +45,11 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 静态页的登录态：本站绝大多数页面是构建期预渲染的，生成时没有会话，顶栏渲染出来永远是「登录」。`/api/auth/me` 接口 + Header 里的内联脚本在客户端把顶栏换成「昵称 / 我的账户 / 管理」。所以**不要在静态页里写死任何按用户变化的文案**。
 
-**/recent/ 最近更改**：用来记录已登录用户的编辑。列表数据在 `src/data/recent-changes.json`，每条含 `time` / `user` / `target{label,href}` / `summary` / `before` / `after`（前后差异折叠展示）。站点目前是纯静态、没有登录与写入后端，所以数组是空的，页面显示空状态；将来接 Cloudflare D1 + Workers 时只要产出同样结构即可，页面不用改。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
+**/recent/ 最近更改**（v1.15.0 起为真实数据页）：记录维护者对站点内容的编辑。该页 `prerender = false`（与 `/songs/` 一样是 SSR），运行时查 D1 的 `recent_changes` 表，每条含 `changed_at` / `user` / `target_label` / `target_href` / `summary` / `before_text` / `after_text`。前后差异用原生 `<details>/<summary>` 折叠，**这一页没有任何脚本**，无 JS 也能展开。写入源是 `/api/admin/song-update`（维护者每次成功编辑曲目写一条）。库里没有记录时显示空态三行说明。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
+
+> 为什么改了 SSR：此前读的是 `src/data/recent-changes.json` 这份构建期快照，编辑记录是运行时数据，构建期永远不知道，列表恒为空。那个文件现在只留作 dev 退路（见 `src/lib/db.ts`）。副作用：`dist/client/recent/` 不再生成，`check-refs` 的 dist 引用基线从 46 变为 42。
+>
+> **`run_worker_first` 必须保留独立条目**：`/recent` 与 `/recent/*` 不在任何通配规则里，漏写会被资源层按 `not_found_handling` 直接截成 404.html，进不了 Worker。
 
 **开屏 LOADING**：`src/components/BootScreen.astro` 是街机开机风的整站开屏遮罩（4×4 方块逐格点亮 + `LOADING......` + 进度条 + 扫描线），同一套视觉有**三种触发**，但只有「真的要等」时才亮：①首访开屏——每个会话第一次进入才出现（`sessionStorage` 记 `jb-boot`），最少停 900ms（太快闪一下像故障）、最多 3s（`load` 被慢资源拖住时不锁人）；②点导航去下一页——延迟 160ms 才亮，新页在此之前到达就完全不出现（本地点击到 `pagehide` 约 68ms，正常网速下看不到遮罩）；③切世代主题——先查本页是否已经拿到过这两张图（背景 + 字标），拿到就零延迟直换、一点不闪；没拿到才挂 160ms 延迟遮罩，图到齐立刻收（兜底 2.6s）。
 
@@ -62,30 +66,35 @@ Beyond_JUBEAT/
 ├─ src/                       Astro 源码
 │  ├─ pages/
 │  │  ├─ index.astro          首页（Hero + 施工中占位）
-│  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，三卡切换 + 分区筛选）
+│  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，双服切换 + 分区筛选 + 搜索/四维筛选/5 种排序）
 │  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
+│  │  ├─ songs/gen/           世代筛选页（SSR：13 个世代各一页，slug 在 lib/gens.ts）
+│  │  ├─ admin/songs/         维护者曲目编辑（列表 + 单曲编辑，服务端复核 role）
 │  │  ├─ login.astro          登录（SSR）
 │  │  ├─ register.astro       注册（SSR）
 │  │  ├─ account.astro        我的账户：改昵称/改密/自荐维护者（SSR）
 │  │  ├─ admin.astro          管理面板：站长审批维护者自荐（SSR）
-│  │  ├─ api/                 auth(register/login/logout/me) · account(profile/password/apply) · admin(decide)
-│  │  ├─ recent.astro         最近更改（已登录用户编辑记录，现为空状态）
+│  │  ├─ api/                 auth(register/login/logout/me) · account(profile/password/apply) · admin(decide/song-update)
+│  │  ├─ recent.astro         最近更改（SSR：查 D1 recent_changes，原生 details 折叠前后差异）
 │  │  └─ 404.astro            404 页
 │  ├─ components/
 │  │  ├─ Header.astro         顶部导航 + 主题切换按钮
 │  │  ├─ BootScreen.astro     开屏 LOADING 遮罩（每会话一次，is:inline）
 │  │  ├─ Hero.astro           主视觉（站标 / 统计 / 曲绘方块）
+│  │  ├─ SongCard.astro       曲目卡（/songs/ 与 /songs/gen/ 共用的唯一一份）
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
 │  ├─ middleware.ts           全站中间件：会话 cookie → Astro.locals.user
-│  ├─ styles/theme.css        全站样式（约 34 KB）
+│  ├─ styles/theme.css        全站样式（源码 60 KB → 产物 31 KB → gzip 7 KB）
 │  ├─ styles/auth.css         用户系统样式（登录/注册/账户/管理）
+│  ├─ styles/songs.css        曲目页样式（卡片 / 工具条 / 世代页 / 搜索筛选排序）
 │  ├─ lib/
 │  │  ├─ title.ts             页面标题格式「XXX · Beyond ↑ JUBEAT ♪~」
 │  │  ├─ db.ts                D1 数据访问层（getAllSongs 全量查询 + isolate 缓存）
 │  │  ├─ auth.ts              认证底层：PBKDF2 / 会话 / Turnstile / 角色
 │  │  ├─ auth-messages.ts     认证错误码 → 中文文案
-│  │  └─ gens.ts              世代顺序表（13 条，含日服 / 国服归属）
+│  │  ├─ gens.ts              世代顺序表（13 条，含日服 / 国服归属 + 稳定 url slug）
+│  │  └─ song-view.ts         视图口径：哪些行进哪个服务器视图、算哪个分区（两页共用）
 │  └─ data/
 │     ├─ data.json            页面聚合数据（约 11 KB）
 │     ├─ songs.json           构建期曲目快照（1241 条，本地无 D1 时的兜底）
@@ -105,18 +114,23 @@ Beyond_JUBEAT/
 │  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
 │  └─ favicon.svg             站点图标
 │
-├─ data/
-│  └─ jubeat.db               权威曲库（SQLite 360 KB / 1241 曲 / 3723 谱面，不部署）
+├─ data/                      管线输入与本地产物（详见 docs/data-pipeline.md）
+│  ├─ xlsx/source.xlsx        国服更新表原件（7 表，2 隐藏）
+│  ├─ xlsx/sheet*.json        xlsx 解析产物（parse-xlsx 生成，受版本控制）
+│  ├─ upstream/               日服 1150 首 + 旧站 513 首冻结快照
+│  └─ jubeat.db               权威曲库（SQLite 392 KB / 1241 曲 / 3723 谱面，不部署）
 ├─ db/
 │  ├─ schema.sql              本地建库全量 DDL（含 DROP，勿对线上跑）
 │  ├─ migrate-users.sql       用户系统增量迁移（IF NOT EXISTS，给线上 D1 用）
-│  ├─ seed.sql                本地导出，可整体重放到 D1（不提交）
-│  └─ seed-parts/             分段导出（D1 单条语句约 100 KB 上限，按段发）
+│  └─ seed.sql                生成物：幂等数据 DDL + INSERT + ANALYZE，可整体重放到 D1
 ├─ scripts/                   工具脚本（不部署）
 │  ├─ build-data.cjs          data/jubeat.db → src/data/data.json + songs.json + 同步曲绘
-│  ├─ db/build-db.cjs         建库导入（旧 json / xlsx → data/jubeat.db，末尾 ANALYZE）
-│  ├─ db/parse-xlsx.cjs       xlsx 更新情报解析
+│  ├─ db/build-db.cjs         建库导入（上游快照 / xlsx 产物 → data/jubeat.db，末尾 ANALYZE）
+│  ├─ db/parse-xlsx.cjs       xlsx 解析（自带 ZIP 解包，读 data/xlsx/source.xlsx）
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
+│  ├─ ci/check-song-edits.mjs 曲目编辑越权/参数校验（node:sqlite 内存库冒充 D1，调真实 handleSongUpdate）
+│  ├─ ci/check-contrast.mjs   对比度自检（16 套主题 × 三条组合取 min；输出公式理论值，不含背景图）
+│  ├─ scrape-beyond-ave.cjs   上游曲目抓取（beyond the Ave. 站点 → data/upstream/*.json）
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
 │  ├─ gen-brand-assets.cjs   生成 og 分享图与 apple-touch-icon（素材变了才跑）
 │  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
@@ -144,8 +158,8 @@ Beyond_JUBEAT/
 
 | 字段 | 来源 |
 | --- | --- |
-| 曲名 / 谱师 / 三档定数 / 曲绘 | `data/jubeat.db`（SQLite 360 KB，1241 曲 / 3723 谱面；`scripts/db/build-db.cjs` 导入，`db/schema.sql` 建表） |
-| **线上实际读的曲库** | Cloudflare D1 数据库 `beyond-jubeat`（id `91a48a18-62b2-4933-9214-788205926744`），内容与上面那份 SQLite 一致；重灌用 `db/seed.sql`（先 `db/schema.sql` 建表） |
+| 曲名 / 谱师 / 三档定数 / 曲绘 | `data/jubeat.db`（SQLite 392 KB，1241 曲 / 3723 谱面；`npm run db` 从 `data/xlsx` + `data/upstream` 重建，细节见 [docs/data-pipeline.md](docs/data-pipeline.md)） |
+| **线上实际读的曲库** | Cloudflare D1 数据库 `beyond-jubeat`（id `91a48a18-62b2-4933-9214-788205926744`），内容与上面那份 SQLite 一致；重灌曲库用 `db/seed.sql`（幂等数据 DDL + INSERT，不含用户系统表），用户表另跑 `db/migrate-users.sql` |
 | 世代归属与年份 | `src/lib/gens.ts` 的 `GEN_ORDER`（13 条：日服 12 + 国服 1），`scripts/build-data.cjs` 里有同源的一张表 |
 | 收录日期 | `songs.added_at`（D1 列名），缺失则为 `null` |
 
@@ -156,14 +170,17 @@ Beyond_JUBEAT/
 ```bash
 npm install              # astro + wrangler
 npm run dev              # 本地开发服务器（本机起不来，见「本机 workerd 的两个坑」）
-npm run data             # 重新生成 src/data/data.json 并同步曲绘
+npm run db               # 一条命令重建曲库：xlsx → sheet JSON → data/jubeat.db + db/seed.sql → 站点 JSON
+npm run data             # 只重新生成 src/data/data.json 与 songs.json 并同步曲绘
 npm run build            # 构建到 dist/
-npm run check            # 校验源码与 dist 的引用完整性
+npm run check            # 四段：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验 → 对比度自检(16 套主题)
+                         # 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），真实渲染会有 0.5–1.0 偏差，
+                         # 验收仍以实机渲染为准，脚本只作回归护栏。
 npm run opt              # 压缩 public/assets/images 下的图片
 npm run fonts            # woff2 字体子集化（需 python + fonttools）
 ```
 
-改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`，改曲库改 `data/jubeat.db`（本地库）并把同样的数据灌进 D1，改聚合快照跑 `npm run data`。
+改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
 
 资源引用一律写站点绝对路径（`/assets/...`）：Astro 会把 CSS 打到 `/_astro/*.css`，相对路径会失效。
 
@@ -175,7 +192,7 @@ npm run fonts            # woff2 字体子集化（需 python + fonttools）
 线上：<https://wiki.byd-ub.top>（自定义域名，绑在 `byd-ub.top` zone 下）
 备用：<https://beyond-jubeat.1945743455.workers.dev>
 
-用的是 **Cloudflare Workers（混合渲染）**：`dist/client` 走 Workers Assets 静态资源层（零运行时开销），只有 `/songs/` 落进 Worker 脚本在边缘 SSR 时查 D1。
+用的是 **Cloudflare Workers（混合渲染）**：`dist/client` 走 Workers Assets 静态资源层（零运行时开销），`/songs/`、`/recent/`、登录/账户/管理页等落进 Worker 脚本在边缘 SSR 时查 D1。哪些路径进 Worker 由 `wrangler.jsonc` 的 `assets.run_worker_first` 决定。
 
 - Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
 - `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "@astrojs/cloudflare/entrypoints/server"`。

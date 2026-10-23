@@ -1,0 +1,14 @@
+# data/ 的提交策略（管线细节见 docs/data-pipeline.md）
+#
+# 进版本控制（新机器复现曲库只靠这两块）：
+#   xlsx/source.xlsx      国服更新表原件
+#   xlsx/sheet*.json      解析产物（parse-xlsx 生成）
+#   xlsx/all.json         解析元数据（含 sourceSha256）
+#   upstream/*.json       日服与旧站快照
+#
+# 不进版本控制：
+#   jubeat.db             本地库，npm run db 随时重建
+#   beyond-the-ave/       日服曲绘原图（31 MB）等大素材，站点用的 webp 已在 public/ 里
+
+/jubeat.db
+/beyond-the-ave/

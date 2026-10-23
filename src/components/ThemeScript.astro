@@ -1,5 +1,5 @@
 ---
-// 世代主题切换：14 套配色 + 背景交叉淡入，选择记在 localStorage
+// 世代主题切换：15 套配色（clan 一个世代拆 4 套）+ 背景交叉淡入，选择记在 localStorage
 // 换图需要现下时才亮 LOADING（由 BootScreen.astro 暴露的 window.jbBoot 控制）
 // 用 is:inline 保持原样（不打包、在解析到此处时立即执行）
 ---
@@ -96,10 +96,20 @@
     }, 2600);
   }
 
+  /* theme-color：手机浏览器地址栏/状态栏的颜色。原来写死 #0b1a22，15 套主题里 0 套对。
+     现在跟着当前世代的 --base 走：读的是 <html> 上解析后的 --base，
+     所以换世代只要在 commit() 里同步一次，不用在 JS 里再维护一份色表。 */
+  var metaTheme=document.querySelector('meta[name="theme-color"]');
+  function syncThemeColor(){
+    if(!metaTheme) return;
+    var base=getComputedStyle(root).getPropertyValue('--base').trim();
+    if(base) metaTheme.setAttribute('content',base);
+  }
   function commit(g,instant){
     var prev=cur; cur=g;
     root.setAttribute('data-g',g.k);
     root.setAttribute('data-font',g.f);
+    syncThemeColor();
     if(wordLogo){
       // 四个 clan_* 世代共用同一张 clan 字标
       var next=logoUrl(g);
@@ -147,19 +157,35 @@
   apply(hit,true);
 
   var tswBtn=document.getElementById('tswBtn'), tswPop=document.getElementById('tswPop'), tsw=tswBtn.parentNode;
-  function setOpen(v){
+  /* 焦点管理（2026-10-23 无障碍收口）：
+     打开：把焦点送进弹层第一个（或当前选中的）世代按钮——键盘用户不必再 Tab 一次才进得去；
+     关闭：把焦点还给 #tswBtn——否则焦点会留在已被 visibility:hidden 摘掉的按钮上，
+     读屏与键盘的下一次 Tab 就从「不存在的位置」算起。
+     opts.returnFocus=false 用于点击弹层外关闭：那种情况焦点本来就在别处，抢回来反而烦人。 */
+  function setOpen(v, opts){
     tswPop.setAttribute('data-open',v?'1':'0');
     tswBtn.setAttribute('aria-expanded',v?'true':'false');
+    if(v){
+      var target = tswPop.querySelector('button[aria-pressed="true"]') || tswPop.querySelector('button');
+      if(target) target.focus();
+    } else if(!opts || opts.returnFocus!==false){
+      // 只有焦点还在弹层里（或已掉到 body）时才还，避免和用户刚点的目标抢焦点
+      var act=document.activeElement;
+      if(!act || act===document.body || tswPop.contains(act)) tswBtn.focus();
+    }
   }
   tswBtn.addEventListener('click',function(ev){
     ev.stopPropagation();
     setOpen(tswPop.getAttribute('data-open')!=='1');
   });
   document.addEventListener('click',function(ev){
-    if(!tsw.contains(ev.target)) setOpen(false);
+    if(tsw.contains(ev.target)) return;
+    if(tswPop.getAttribute('data-open')==='1') setOpen(false,{returnFocus:false});
   });
   document.addEventListener('keydown',function(ev){
-    if(ev.key==='Escape') setOpen(false);
+    if(ev.key!=='Escape') return;
+    if(tswPop.getAttribute('data-open')!=='1') return;
+    setOpen(false);
   });
 })();
 </script>

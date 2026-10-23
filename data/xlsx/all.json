@@ -1,0 +1,91 @@
+{
+  "sourceXlsx": "data/xlsx/source.xlsx",
+  "sourceSha256": "4f0382b1202b43ff61d7f83369a5a874540cb6cd5300ae075e003a8a7ba28f07",
+  "sharedStringCount": 1450,
+  "sheets": [
+    {
+      "sheetIndex": 1,
+      "sheetName": "国框更新日服歌曲进度",
+      "state": "visible",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet1.xml",
+      "maxRow": 700,
+      "maxCol": 22,
+      "declaredRange": "国框更新日服歌曲进度!$A$1:$J$700",
+      "mergeCount": 21,
+      "nonEmptyRowCount": 700,
+      "json": "data/xlsx/sheet1.json"
+    },
+    {
+      "sheetIndex": 2,
+      "sheetName": "国框更新音乐魔方进度",
+      "state": "visible",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet2.xml",
+      "maxRow": 95,
+      "maxCol": 10,
+      "declaredRange": "国框更新音乐魔方进度!$A$1:$J$95",
+      "mergeCount": 10,
+      "nonEmptyRowCount": 95,
+      "json": "data/xlsx/sheet2.json"
+    },
+    {
+      "sheetIndex": 3,
+      "sheetName": "国框Jubiility理论值",
+      "state": "hidden",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet3.xml",
+      "maxRow": 65,
+      "maxCol": 8,
+      "declaredRange": "国框Jubiility理论值!$A$3:$F$65",
+      "mergeCount": 3,
+      "nonEmptyRowCount": 65,
+      "json": "data/xlsx/sheet3.json"
+    },
+    {
+      "sheetIndex": 4,
+      "sheetName": "国框Jubiility理论值 【20261015】",
+      "state": "visible",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet4.xml",
+      "maxRow": 65,
+      "maxCol": 15,
+      "declaredRange": "'国框Jubiility理论值 【20261015】'!$A$3:$F$65",
+      "mergeCount": 4,
+      "nonEmptyRowCount": 65,
+      "json": "data/xlsx/sheet4.json"
+    },
+    {
+      "sheetIndex": 5,
+      "sheetName": "国框跑图II歌曲详情",
+      "state": "hidden",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet5.xml",
+      "maxRow": 29,
+      "maxCol": 12,
+      "declaredRange": null,
+      "mergeCount": 9,
+      "nonEmptyRowCount": 27,
+      "json": "data/xlsx/sheet5.json"
+    },
+    {
+      "sheetIndex": 6,
+      "sheetName": "pick up（10+）",
+      "state": "visible",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet6.xml",
+      "maxRow": 27,
+      "maxCol": 17,
+      "declaredRange": null,
+      "mergeCount": 1,
+      "nonEmptyRowCount": 26,
+      "json": "data/xlsx/sheet6.json"
+    },
+    {
+      "sheetIndex": 7,
+      "sheetName": "pick up（9+）",
+      "state": "visible",
+      "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet7.xml",
+      "maxRow": 32,
+      "maxCol": 17,
+      "declaredRange": null,
+      "mergeCount": 1,
+      "nonEmptyRowCount": 31,
+      "json": "data/xlsx/sheet7.json"
+    }
+  ]
+}
