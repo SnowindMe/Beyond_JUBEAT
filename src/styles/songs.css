@@ -133,15 +133,18 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 }
 
 /* chips 可能换行（国服 4 个分区在窄一点的桌面宽度下会折），换行后每行也要居中 */
+/* 分区 chips（2026-10-25 起住在 .sc-panel 里的「分区」一行）。
+   原来在工具条上是居中排列；进了面板要与其它四组的标签左对齐，所以改 flex-start。 */
 .sc-cats {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 .sc-cat-set {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
     flex-wrap: wrap;
 }
@@ -1334,6 +1337,18 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     border-color: color-mix(in srgb, var(--acc) 62%, transparent);
     background: color-mix(in srgb, var(--acc) 16%, transparent);
 }
+/* 「有筛选条件生效」：与展开态是两个独立状态（整合进面板后 chips 看不见了，
+   按钮必须自己说明列表为什么变少）。用右侧小圆点，不抢展开态的底色，
+   这样「收起但仍有筛选」和「展开但无筛选」都能一眼区分。 */
+.sc-btn.has-filter::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    margin-left: 2px;
+    border-radius: 50%;
+    background: var(--acc);
+    flex: none;
+}
 .sc-btn-r {
     height: 44px;
     font-size: 12px;
@@ -1603,16 +1618,16 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    内容列表全程可见，不受影响。 */
 .sc-find,
 .sc-panel,
-.sc-active,
-.sc-cats {
+.sc-active {
     display: none;
 }
 html.sc-js .sc-find {
     display: flex;
 }
-html.sc-js .sc-cats {
-    display: flex;
-}
+/* 分区 chips 已于 2026-10-25 移入 .sc-panel（与筛选/排序整合）。
+   它不再需要单独防 FOUC：父级 .sc-panel 默认 display:none、且收起态是 hidden，
+   整块都在隐藏容器里，不存在"先亮一下"的窗口。
+   所以这里删掉原来的 .sc-cats 隐藏/显示两条规则，否则面板展开后分区仍然看不见。 */
 html.sc-js .sc-active:not([hidden]) {
     display: block;
 }

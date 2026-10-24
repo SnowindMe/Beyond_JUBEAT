@@ -190,7 +190,14 @@ const DIFFS = [
   { v: 'adv', label: 'ADV' },
   { v: 'ext', label: 'EXT' },
 ] as const;
+// 排序选项（2026-10-25 主人：加 songId 排序，且**默认改为 songId 升序**）。
+// DEFAULT_SORT 单独抽出来，因为「默认值」还散落在三处判据里（state 初值、
+// resetAll、以及「是否在筛选」的提示条判断），必须都引用这一个常量，
+// 否则改默认值时会漏改一处，出现「默认排序却显示命中提示条」这种怪现象。
+const DEFAULT_SORT = 'id-asc';
 const SORTS = [
+  { v: 'id-asc', label: 'songId 升序' },
+  { v: 'id-desc', label: 'songId 降序' },
   { v: 'ext-desc', label: '定数 高→低' },
   { v: 'ext-asc', label: '定数 低→高' },
   { v: 't-asc', label: '曲名 A→Z' },
@@ -289,35 +296,42 @@ const SORTS = [
           aria-pressed="false"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M7 12h10M10 17.5h4"/></svg>
-          筛选
+          <span id="scFilterTxt">筛选</span>
         </button>
-
-        <label class="sc-sort">
-          <span class="sc-sort-k">排序</span>
-          <select id="scSort" class="sc-sort-in" aria-label="排序方式">
-            {SORTS.map((o) => <option value={o.v}>{o.label}</option>)}
-          </select>
-        </label>
       </div>
 
-      <div class="sc-cats" role="group" aria-label="按分区筛选">
-        {(['jp', 'cn'] as const).map((srv) => (
-          <div class="sc-cat-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
-            {/* 「全部」不分区、按世代整合（主人 2026-10-24）；改文案为「全部」而不是「全部分区」，
-            因为它现在真的不是"所有分区各自展开"，而是跨分区合并成一个世代流水。 */}
-            <button type="button" class="sc-chip is-on" data-cat="all" aria-pressed="true">全部<b>{srvTotal(srv)}</b></button>
-            {CATS[srv].map((c) => (
-              <button type="button" class="sc-chip" data-cat={c} aria-pressed="false">{c}<b>{countOf(srv, c)}</b></button>
-            ))}
-          </div>
-        ))}
-      </div>
+      {/* 分区 chips 与排序已全部移入下面这个面板（2026-10-25 主人要求「筛选、排序、分区选择
+          全整合进一个按钮里」）。工具条上只留：服务器卡（主切换器，不该藏）、搜索框、筛选按钮。
+          这样第一张卡的位置从「Tab 19 次」变成「Tab 6 次」，页面顶部也不再被三排控件占掉。 */}
 
       {/*
         四维筛选面板：默认收起（hidden），由「筛选」按钮展开，aria-expanded 同步。
         面板里全是原生控件（select / button），键盘天然可达，不需要额外的方向键处理。
       */}
       <div class="sc-panel" id="scPanel" hidden>
+        {/* 分区选择：按服务器各一套 chips，切服时由 apply() 显隐（sets 变量仍指向它们）。 */}
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">分区</span>
+          <div class="sc-cats" role="group" aria-label="按分区筛选">
+            {(['jp', 'cn'] as const).map((srv) => (
+              <div class="sc-cat-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
+                {/* 「全部」= 跨分区按世代整合（主人 2026-10-24），不是"所有分区各自展开"。 */}
+                <button type="button" class="sc-chip is-on" data-cat="all" aria-pressed="true">全部<b>{srvTotal(srv)}</b></button>
+                {CATS[srv].map((c) => (
+                  <button type="button" class="sc-chip" data-cat={c} aria-pressed="false">{c}<b>{countOf(srv, c)}</b></button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div class="sc-pf">
+          <label class="sc-pf-k" for="scSort">排序</label>
+          <select id="scSort" class="sc-pf-in" aria-label="排序方式">
+            {SORTS.map((o) => <option value={o.v} selected={o.v === DEFAULT_SORT}>{o.label}</option>)}
+          </select>
+        </div>
+
         <div class="sc-pf">
           <label class="sc-pf-k" for="scGen">世代</label>
           <select id="scGen" class="sc-pf-in" aria-label="按世代筛选">
@@ -417,6 +431,11 @@ const SORTS = [
     (function () {
       // .sc-js 已在页首的内联脚本里挂好（见文件开头那条 script），这里不再重复加。
 
+      // 默认排序值：与页面顶部 DEFAULT_SORT 保持一致。
+      // is:inline 脚本不经过 Astro 编译，取不到前端常量，只能在这里再写一次；
+      // 改排序默认值时**两处都要改**（这是本项目唯一允许的重复，因为技术上限如此）。
+      var DEFAULT_SORT_INLINE = 'id-asc';
+
       var root = document.getElementById('songsRoot');
       if (!root) return;
 
@@ -428,6 +447,7 @@ const SORTS = [
       var panelBtn = document.getElementById('scFilterBtn');
       var panel = document.getElementById('scPanel');
       var sortSel = document.getElementById('scSort');
+      var filterTxt = document.getElementById('scFilterTxt');
       var emptyBox = document.getElementById('scEmpty');
       var activeBox = document.getElementById('scActive');
       var activeTxt = document.getElementById('scActiveTxt');
@@ -440,7 +460,7 @@ const SORTS = [
         artist: 'all',
         diff: 'all',   // all | bsc | adv | ext
         band: 'all',   // all | lt7 | 7 | 8 | 9 | 10
-        sort: 'ext-desc'
+        sort: DEFAULT_SORT_INLINE
       };
 
       // 定数区间：与页面上那五档按钮一一对应，改这里必须同步改模板里的 BANDS
@@ -500,7 +520,27 @@ const SORTS = [
         for (var i = 0; i < cards.length; i++) arr.push(cards[i]);
         var mode = state.sort;
 
-        if (mode === 't-asc' || mode === 't-desc') {
+        if (mode === 'id-asc' || mode === 'id-desc') {
+          // songId 排序（2026-10-25 主人要求）。
+          // **必须按数值比，不能 localeCompare**：songId 是「8 位日服 / 9 位国服」两种长度，
+          // 按字符串比会得出 "991000007" < "11000228"（因为 '9' > '1' 但长度短），
+          // 与用户对「升序」的直觉完全相反。日服占位 id（BTA-xxxxxx）不是纯数字，
+          // 用 data-id-kind 也判不出来，这里统一走「能解析成数字就按数字，否则按字符串兜底」，
+          // 非数字的一律排在数字后面（与「缺 EXT 排最后」同一套约定）。
+          arr.sort(function (a, b) {
+            var ia = a.getAttribute('data-id') || '';
+            var ib = b.getAttribute('data-id') || '';
+            var na = /^\d+$/.test(ia) ? Number(ia) : null;
+            var nb = /^\d+$/.test(ib) ? Number(ib) : null;
+            if (na === null && nb !== null) return 1;
+            if (nb === null && na !== null) return -1;
+            var c;
+            if (na === null && nb === null) c = ia.localeCompare(ib);
+            else c = na - nb;
+            if (c === 0) c = (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
+            return mode === 'id-desc' ? -c : c;
+          });
+        } else if (mode === 't-asc' || mode === 't-desc') {
           arr.sort(function (a, b) {
             var c = (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
             return mode === 't-desc' ? -c : c;
@@ -634,9 +674,19 @@ const SORTS = [
         // 空态按**当前服务器**判断：jp 搜不到但 cn 能搜到时，jp 视图下仍要显示空态。
         if (emptyBox) emptyBox.hidden = totalMine > 0;
 
+        // 筛选按钮上的角标：整合进面板后，chips 和排序都看不见了，
+        // 必须让按钮自己说明「有几项条件正在生效」，否则用户不知道列表为什么变少了。
+        // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
+        var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
+                          (state.artist !== 'all' ? 1 : 0) + (state.diff !== 'all' ? 1 : 0) +
+                          (state.band !== 'all' ? 1 : 0);
+        if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
+        // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
+        // 两个状态共用一个 class 会互相覆盖——展开时把「有筛选」的强调抹掉，收起时又反过来。
+        if (panelBtn) panelBtn.classList.toggle('has-filter', activeCount > 0);
+
         // 命中提示条：只有真的在筛/排序时才出现
-        var filtering = !!state.q || state.gen !== 'all' || state.artist !== 'all' ||
-                        state.diff !== 'all' || state.band !== 'all' || state.sort !== 'ext-desc';
+        var filtering = !!state.q || activeCount > 0 || state.sort !== DEFAULT_SORT_INLINE;
         if (activeBox) {
           activeBox.hidden = !filtering;
           // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值
@@ -753,10 +803,10 @@ const SORTS = [
 
       function resetAll() {
         state.q = ''; state.gen = 'all'; state.artist = 'all';
-        state.diff = 'all'; state.band = 'all'; state.sort = 'ext-desc'; state.cat = 'all';
+        state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE; state.cat = 'all';
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
-        if (sortSel) sortSel.value = 'ext-desc';
+        if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ai = document.getElementById('scArtist'); if (ai) ai.value = 'all';
         setChipGroup('[data-diff]', root.querySelector('[data-diff="all"]'));

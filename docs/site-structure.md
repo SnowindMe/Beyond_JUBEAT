@@ -19,8 +19,8 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 ├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0；v1.7.0 起改 SSR 读 D1）
 │   ├─ ✅ 日服 / 国际服 / 国服三卡切换（logo 上、名在下；国际服暂共用日服曲库）
 │   ├─ ✅ 分区筛选（2026-10-24 改名：日服 授权/原创；国服 独占/KONAMI/原创/流行）+ 世代分组
-│   ├─ ✅ 搜索 + 四维筛选 + 五种排序（2026-10-23，t9）：搜索按曲名/曲师/songId 即输即筛（debounce 120ms，匹配读卡片 data-*）；筛选含世代下拉、曲师下拉（仅 5 首以上常用曲师，余者用搜索）、难度档、定数区间；排序五种（定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
-│   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-cats/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
+│   ├─ ✅ 搜索 + 筛选（2026-10-25 整合，v1.17.0）：搜索框留在工具条（按曲名/曲师/songId/定数即输即筛，debounce 120ms，匹配读卡片 data-*）；**分区选择 + 排序 + 世代 + 曲师 + 难度档 + 定数区间全部收进「筛选」按钮展开的面板**（工具条只留服务器卡 / 搜索 / 筛选按钮），按钮显示「筛选 · N」角标提示有几项生效；排序七种（songId 升序（默认）/ songId 降序 / 定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
+│   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
 │   ├─ ✅ 卡片区跳过链接 .sc-skip（Tab 第 9 位 → 直达列表锚点 #scList）
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
 │   │   页面 `prerender = false` 是本站两个 SSR 页之一（另一个是 /recent/），缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
