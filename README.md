@@ -114,6 +114,12 @@ Beyond_JUBEAT/
 │  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
 │  └─ favicon.svg             站点图标
 │
+├─ docs/                      设计与验收文档
+│  ├─ measurement-caliber.md  **统计口径（做任何计数前先读）**：data-cat 三处 / 世代块 12 vs 13 / grep 单行陷阱 / Tab 分视口 / 断言数看运行时
+│  ├─ data-pipeline.md        数据管线（xlsx → db → seed，含 D1 上线顺序）
+│  ├─ site-structure.md       站点层级结构（页面 / 数据来源 / 导航）
+│  └─ audit-status-2026-10-23.md  22 条审计问题的现状与复测记录
+│
 ├─ data/                      管线输入与本地产物（详见 docs/data-pipeline.md）
 │  ├─ xlsx/source.xlsx        国服更新表原件（7 表，2 隐藏）
 │  ├─ xlsx/sheet*.json        xlsx 解析产物（parse-xlsx 生成，受版本控制）
