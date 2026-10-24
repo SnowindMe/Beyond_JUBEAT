@@ -61,6 +61,10 @@ function main() {
   // 只读 H 列 √，不按歌曲名猜；SongId 缺失的行（sheet1 里 107 行）天然不会被收录，安全。
   const cnOldFrameIds = readCnOldFrameIds();
 
+  // 世代人工覆盖（2026-10-25）：上游 origin 是首发世代，改版曲/替代谱面的
+  // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
+  const genOverrides = readGenOverrides();
+
   if (fs.existsSync(DB_PATH)) fs.rmSync(DB_PATH, { force: true });
   const db = new DatabaseSync(DB_PATH);
   db.exec('PRAGMA foreign_keys = ON;');
@@ -96,8 +100,13 @@ function main() {
   try {
     // ---- 日服 1150 首 ----
     for (const s of jp.songs) {
-      const genName = normalizeJpGen(s.origin);
+      // 世代：先看人工覆盖表（改版曲 / [2] 谱归新版世代），没有再按 origin 归并。
+      // 覆盖表里没有的 songId 一定走 origin；覆盖表里的 songId 若在库中不存在，
+      // 由后面的自检报出来（避免覆盖表写了错 id 却静默失效）。
+      const ovGen = genOverrides.get(String(s.songId));
+      const genName = ovGen || normalizeJpGen(s.origin);
       if (!genName) { problems.push(`日服世代无法归并: ${s.origin} (${s.title})`); continue; }
+      if (ovGen) stat.genOverride = (stat.genOverride || 0) + 1;
       const cat = JP_CATEGORY[s.category];
       if (!cat) { problems.push(`日服分类未知: ${s.category} (${s.title})`); continue; }
       const jpOfficial = s.idKind === 'official';
@@ -170,6 +179,17 @@ function main() {
     // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
     dualTotal: tickInJp + dualJpNotTick + stat.cnDual,
   };
+  // 覆盖表自检：表里每个 songId 都必须真的存在于库里，且写进去的世代与预期一致。
+  // 不做这一步的话，表里写错一个 id（比如手滑少一位）会静默无效 ——
+  // 表现为「改了没生效」，比报错难查得多。
+  for (const [id, wantGen] of genOverrides) {
+    const row = db.prepare('SELECT gen_name FROM songs WHERE song_id = ?').get(id);
+    if (!row) { problems.push(`覆盖表里的 songId 不在库中: ${id}`); continue; }
+    if (row.gen_name !== wantGen) {
+      problems.push(`覆盖未生效: ${id} 期望 ${wantGen}，实际 ${row.gen_name}`);
+    }
+  }
+
   selfCheck(db, stat, problems, expect);
   if (wantSeed) buildSeedSql(db);
   db.close();
@@ -228,6 +248,29 @@ function normalizeJpGen(origin) {
   const alias = { 'saucer F': 'saucer fulfill' };
   const v = alias[raw] || raw.replace(/^jubeat\s+/, '');
   return JP_GENS.includes(v) ? v : null;
+}
+
+// ---- 世代人工覆盖表（2026-10-25 建立）----
+// 上游 origin 记的是「曲目首发世代」，但改版曲与替代谱面（[2] 谱）的归属应是
+// 「新版上线的世代」。上游快照没有这个信息，这类错位只能人工维护。
+// 文件：data/gen-overrides.json（受版本控制），key=songId，value={gen, note}。
+// 覆盖优先于 origin；gen 必须与 JP_GENS 一致，写错直接抛错而不是静默丢弃
+// （静默丢弃会表现为「改了没生效」，比报错难查得多）。
+function readGenOverrides() {
+  const p = path.join(ROOT, 'data/gen-overrides.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const [id, v] of Object.entries(raw.overrides || {})) {
+    const gen = String((v && v.gen) || '').trim();
+    if (!JP_GENS.includes(gen)) { bad.push(id + ' -> ' + JSON.stringify(gen)); continue; }
+    map.set(String(id), gen);
+  }
+  if (bad.length) {
+    throw new Error('data/gen-overrides.json 里有非法世代名（必须是 JP_GENS 之一）：\n  ' + bad.join('\n  '));
+  }
+  return map;
 }
 
 // sheet1「国框更新日服歌曲进度」：H 列（索引 7）为 '√' 的行 = 国服已上线。

@@ -1,0 +1,53 @@
+{
+  "_comment": [
+    "世代归属的人工覆盖表（2026-10-25 建立）。",
+    "",
+    "为什么需要它：上游 jp-resolved.json 的 origin 字段记录的是**曲目首发世代**，",
+    "但同一首歌可能在后续世代改版、或追加替代谱面（[2] 谱）——这时它的世代归属",
+    "应该是「新版上线的世代」，不是首发世代。上游快照没有这个信息，所以这类错位",
+    "是系统性的，只能靠人工维护。",
+    "",
+    "判据补充：songId 前两位是世代号，但 **11 段（Ave. 与 beyond the Ave.）和",
+    "50 段（saucer 与 saucer fulfill）是共用的**，光看前缀判不出世代，必须查这里。",
+    "",
+    "维护方式：key = songId，value = 正确的世代名（必须与 gens.ts 的 GEN_ORDER 一致）。",
+    "改完跑 npm run db 重建数据，再 npm run build。覆盖优先于上游 origin。",
+    "每条都写 note 说明依据，方便以后核对是谁在什么时候确定的。"
+  ],
+  "overrides": {
+    "11000076": {
+      "gen": "Ave.",
+      "note": "凛として咲く花の如く。主人 2026-10-25 指出原 jubeat 错，应为 Ave.（该曲在 Ave. 有新版）"
+    },
+    "90000204": {
+      "gen": "festo",
+      "note": "サヨナラ・ヘヴン (BEMANI SYMPHONY Arr.)。主人 2026-10-25：原 saucer 错，SYMPHONY 版在 festo 上线"
+    },
+    "80000037": {
+      "gen": "clan",
+      "note": "千本桜。主人 2026-10-25：原 saucer 错，clan 有新版"
+    },
+    "90000206": {
+      "gen": "festo",
+      "note": "Idola (BEMANI SYMPHONY Arr.)。主人 2026-10-25：原 saucer fulfill 错，SYMPHONY 版在 festo 上线"
+    },
+    "80000014": {
+      "gen": "clan",
+      "note": "Paranoia。主人 2026-10-25：原 Qubell 错，clan 有新版"
+    },
+    "11001002": { "gen": "beyond the Ave.", "note": "カラフルミニッツ [ 2 ]。主人 2026-10-25：Ave. 的 [2] 谱全部属于 bta" },
+    "11001003": { "gen": "beyond the Ave.", "note": "New Decade [ 2 ]。同上" },
+    "11001004": { "gen": "beyond the Ave.", "note": "千年ノ理 [ 2 ]。同上" },
+    "11001005": { "gen": "beyond the Ave.", "note": "蒼空に舞え、墨染の桜 [ 2 ]。同上" },
+    "11001006": { "gen": "beyond the Ave.", "note": "WARNING×WARNING×WARNING [ 2 ]。同上" },
+    "11001008": { "gen": "beyond the Ave.", "note": "幻想系世界修復少女 [ 2 ]。同上" },
+    "11001009": { "gen": "beyond the Ave.", "note": "ケッペキショウ [ 2 ]。同上" },
+    "11001010": { "gen": "beyond the Ave.", "note": "AIR RAID FROM THA UNDAGROUND [ 2 ]。同上" },
+    "11001011": { "gen": "beyond the Ave.", "note": "Never Look Back in Sorrow [ 2 ]。同上" },
+    "11001012": { "gen": "beyond the Ave.", "note": "エイリアンエイリアン [ 2 ]。同上" },
+    "90001022": {
+      "gen": "Ave.",
+      "note": "Daily Lunch Special [ 2 ]。主人 2026-10-25：Ave. 那批 [2] 谱全归 bta，只有这一首属于 Ave.，现为 festo"
+    }
+  }
+}

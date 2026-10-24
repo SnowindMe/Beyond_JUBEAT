@@ -15,7 +15,7 @@ npm run db      # = parse-xlsx → build-db --seed → build-data
 | 步骤 | 脚本 | 输入 | 输出 |
 |---|---|---|---|
 | ① 解析 xlsx | `scripts/db/parse-xlsx.cjs` | `data/xlsx/source.xlsx` | `data/xlsx/sheet1..7.json` + `all.json` |
-| ② 建库 + 导种子 | `scripts/db/build-db.cjs --seed` | 上面 7 份 JSON + `data/upstream/*.json` + `db/schema.sql` | `data/jubeat.db` + `db/seed.sql` |
+| ② 建库 + 导种子 | `scripts/db/build-db.cjs --seed` | 上面 7 份 JSON + `data/upstream/*.json` + `data/gen-overrides.json` + `db/schema.sql` | `data/jubeat.db` + `db/seed.sql` |
 | ③ 生成站点数据 | `scripts/build-data.cjs` | `data/jubeat.db` | `src/data/data.json`、`src/data/songs.json`、曲绘同步 |
 
 自检（每次跑都会打印并判失败）：
@@ -39,6 +39,20 @@ node scripts/build-data.cjs                       # 只从现有库刷站点 JSO
 ```bash
 node scripts/db/parse-xlsx.cjs --xlsx=/绝对路径/音乐魔方更新歌曲.xlsx --out=data/xlsx
 ```
+
+### 0.1 世代归属的人工覆盖表（`data/gen-overrides.json`）
+
+上游 `jp-resolved.json` 的 `origin` 记的是**曲目首发世代**，但改版曲和替代谱面（`[ 2 ]` 谱）
+的归属应是**新版上线的世代**。上游快照没有这个信息，所以这类错位是系统性的，需要人工覆盖。
+
+```jsonc
+{ "overrides": { "11000076": { "gen": "Ave.", "note": "凛として咲く花の如く，主人 2026-10-25 指出原 jubeat 错" } } }
+```
+
+- 覆盖优先于 `origin`；`gen` 必须是 `JP_GENS` 之一，写错会**直接抛错**（不静默丢弃）。
+- 表里每个 songId 都会自检：不在库中 → 列进「待人工确认」；世代没生效 → 报「覆盖未生效」。
+- **判据补充**：songId 前两位是世代号，但 `11` 段（Ave. 与 beyond the Ave.）和
+  `50` 段（saucer 与 saucer fulfill）是**共用的**，光看前缀判不出世代，必须查这张表。
 
 ## 1. 数据从哪来
 
