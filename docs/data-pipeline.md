@@ -40,6 +40,25 @@ node scripts/build-data.cjs                       # 只从现有库刷站点 JSO
 node scripts/db/parse-xlsx.cjs --xlsx=/绝对路径/音乐魔方更新歌曲.xlsx --out=data/xlsx
 ```
 
+### 0.0 songId 修正表（`data/id-fixes.json`）
+
+上游有些曲目拿不到官方 songId（用 `BTA-<曲绘id>` 占位），还有几首 id 与世代段不符。
+本表存「现有 id → 正确 id」，在插入前重映射；重映射在内存整表做，因此**互换**
+（A→B 且 B→A）不会撞主键。
+
+```jsonc
+{ "fixes": { "BTA-30740339": { "id": "11000155", "note": "voxel star arise / bta" } } }
+```
+
+- 修正后 id 一律要与曲目自身世代吻合（前缀判据见 0.1）。
+- 自检三条：目标 id 不能重复、旧 id 必须真的消失、新 id 必须真的存在。
+  「旧 id 仍在」对**互换项**不算错误（该 id 会被另一方占用），判据是「它是否也是别人的目标」。
+
+> **seed 必须先清空数据表**：原先只靠 `INSERT OR REPLACE` 做幂等，只对「同主键改内容」有效。
+> 一旦 id 变了，旧主键那行没人覆盖 → 库里同时留新旧两行，页面卡片数凭空变多
+> （2026-10-25 实测从 1150 涨到 1159）。现在 seed 在 INSERT 前 `DELETE FROM songs; DELETE FROM recent_changes;`，
+> 用户系统表一律不碰。
+
 ### 0.1 世代归属的人工覆盖表（`data/gen-overrides.json`）
 
 上游 `jp-resolved.json` 的 `origin` 记的是**曲目首发世代**，但改版曲和替代谱面（`[ 2 ]` 谱）

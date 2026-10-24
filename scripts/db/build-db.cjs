@@ -65,6 +65,10 @@ function main() {
   // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
   const genOverrides = readGenOverrides();
 
+  // songId 修正（2026-10-25）：见 readIdFixes 注释。占位 id 与错位 id 都走这里，
+  // 重映射后再写库，因此库里的 song_id 一律是官方 id（除少数确实拿不到的）。
+  const idFixes = readIdFixes();
+
   if (fs.existsSync(DB_PATH)) fs.rmSync(DB_PATH, { force: true });
   const db = new DatabaseSync(DB_PATH);
   db.exec('PRAGMA foreign_keys = ON;');
@@ -100,10 +104,20 @@ function main() {
   try {
     // ---- 日服 1150 首 ----
     for (const s of jp.songs) {
+      // songId 修正：占位 id（BTA-xxx）与错位 id 都换成官方 id，必须在一切
+      // 按 id 查表之前做（否则 archive 回查、cnOldFrame 匹配都会用错 id）。
+      const srcId = String(s.songId);
+      const finalId = idFixes.get(srcId) || srcId;
+      if (idFixes.has(srcId)) {
+        stat.idFixed = (stat.idFixed || 0) + 1;
+        // 修正后 idKind 一律视为官方 id（原来记 synthetic 是因为占位 id）
+        s.idKind = 'official';
+      }
       // 世代：先看人工覆盖表（改版曲 / [2] 谱归新版世代），没有再按 origin 归并。
       // 覆盖表里没有的 songId 一定走 origin；覆盖表里的 songId 若在库中不存在，
       // 由后面的自检报出来（避免覆盖表写了错 id 却静默失效）。
-      const ovGen = genOverrides.get(String(s.songId));
+      // 注意覆盖表的 key 用**原始 id**（写表时以现有库为准），因此这里用 srcId 查。
+      const ovGen = genOverrides.get(srcId);
       const genName = ovGen || normalizeJpGen(s.origin);
       if (!genName) { problems.push(`日服世代无法归并: ${s.origin} (${s.title})`); continue; }
       if (ovGen) stat.genOverride = (stat.genOverride || 0) + 1;
@@ -113,7 +127,7 @@ function main() {
       if (jpOfficial) stat.jpOfficial++; else stat.jpSynthetic++;
       // resolved.json 没有 BPM / 上线日期 / 解禁信息，这三项从 archive 快照按 songId 回查；
       // 无占位 id 的新曲（721 首）在快照里压根不存在，回查不到就保持 NULL，不猜。
-      const arc = archiveById.get(String(s.songId)) || {};
+      const arc = archiveById.get(srcId) || {};
       if (arc.bpm) stat.jpBpm++;
       if (arc.addedAt) stat.jpAdded++;
       const note = jpUnlockNote(arc);
@@ -123,10 +137,10 @@ function main() {
       //   ② sheet1 打 √ 的旧框已有曲（按官方 songId 精确匹配，不猜）。
       // ② 是 2026-10-24 补的：这 432 首在国服音乐魔方里可玩，之前漏标了。
       const isCnOnline = cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ||
-        cnOldFrameIds.has(String(s.songId));
-      if (isCnOnline && cnOldFrameIds.has(String(s.songId))) stat.cnOldFrame++;
+        cnOldFrameIds.has(srcId);
+      if (isCnOnline && cnOldFrameIds.has(srcId)) stat.cnOldFrame++;
       ins.run(
-        String(s.songId), s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
+        finalId, s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
         genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
@@ -174,11 +188,33 @@ function main() {
     (s) => !tickIds.has(String(s.songId)) && cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist))
   ).length;
   const expect = {
+    // 官方 / 占位 id 期望值由上游原始数据 + 修正表推算（不写死：每加一条 id 修正，
+    // 这两个数都会变，硬编码等于每次都要改断言）。
+    jpOfficial: jp.songs.filter((s) => s.idKind === 'official' || idFixes.has(String(s.songId))).length,
+    jpSynthetic: jp.songs.filter((s) => s.idKind !== 'official' && !idFixes.has(String(s.songId))).length,
     // 国服行 = sheet1 打√ 且真在日服库里的（432）+ 被 sheet2 命中的日服行（1）+ sheet2 自身的国服行（91）
     cnTotal: tickInJp + dualJpNotTick + cnRows.length,
     // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
     dualTotal: tickInJp + dualJpNotTick + stat.cnDual,
   };
+  // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
+  // 并且新 id 不能被两条修正挤到同一个（否则 INSERT OR REPLACE 会静默吞掉一条）。
+  const usedNewIds = new Map();
+  for (const [from, to] of idFixes) {
+    if (usedNewIds.has(to)) {
+      problems.push(`id 修正表重复目标: ${from} 与 ${usedNewIds.get(to)} 都指向 ${to}`);
+    }
+    usedNewIds.set(to, from);
+    // 【互换要放过】A→B 且 B→A 时，A 这个 id 之后会被 B 那条修正的新主人占用，
+    // 所以「旧 id 仍在库中」对互换项是正常现象，不能当错误报。
+    // 判据：这个旧 id 是否也是别人修正表的**目标**。是 → 它本来就该继续存在。
+    const isSwapTarget = [...idFixes.values()].includes(from);
+    const stillOld = db.prepare('SELECT COUNT(*) n FROM songs WHERE song_id = ?').get(from).n;
+    const hasNew = db.prepare('SELECT COUNT(*) n FROM songs WHERE song_id = ?').get(to).n;
+    if (stillOld && !isSwapTarget) problems.push(`id 修正未生效: ${from} 仍在库中`);
+    if (!hasNew) problems.push(`id 修正目标缺失: ${to}（来自 ${from}）`);
+  }
+
   // 覆盖表自检：表里每个 songId 都必须真的存在于库里，且写进去的世代与预期一致。
   // 不做这一步的话，表里写错一个 id（比如手滑少一位）会静默无效 ——
   // 表现为「改了没生效」，比报错难查得多。
@@ -248,6 +284,25 @@ function normalizeJpGen(origin) {
   const alias = { 'saucer F': 'saucer fulfill' };
   const v = alias[raw] || raw.replace(/^jubeat\s+/, '');
   return JP_GENS.includes(v) ? v : null;
+}
+
+// ---- songId 修正表（2026-10-25 建立）----
+// 上游有些曲拿不到官方 songId（用 BTA-<曲绘id> 占位），还有几首 id 与世代段不符。
+// data/id-fixes.json 存「现有 id → 正确 id」，插入前统一重映射。
+// 重映射在内存里整表做（不就地 UPDATE），所以**互换**（A→B 且 B→A）不会撞主键。
+function readIdFixes() {
+  const p = path.join(ROOT, 'data/id-fixes.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const [from, v] of Object.entries(raw.fixes || {})) {
+    const to = String((v && v.id) || '').trim();
+    if (!to) { bad.push(from + ' -> (空)'); continue; }
+    map.set(String(from), to);
+  }
+  if (bad.length) throw new Error('data/id-fixes.json 里有空目标 id：\n  ' + bad.join('\n  '));
+  return map;
 }
 
 // ---- 世代人工覆盖表（2026-10-25 建立）----
@@ -354,8 +409,11 @@ function selfCheck(db, stat, problems, expect) {
     // - 两者按曲名重叠的部分（Big Daddy 在 sheet2 里也有日服行）。
     // 下面把期望从源数据算出来，再与库里的实测对比：源表一变而代码没跟上，就会真的 FAIL。
     ['  国服（含双服行）', cnN, expect.cnTotal],
-    ['  日服官方 id', stat.jpOfficial, 1140],
-    ['  日服占位 id', stat.jpSynthetic, 10],
+    // 官方 / 占位 id 的期望值不再写死：id 修正表会把占位 id 换成官方 id，
+    // 每修一条这两个数都会变。改成从上游原始数据 + 修正表推算，
+    // 这样以后加修正不用改断言（写死的话每加一条就要改一次，属于魔数）。
+    ['  日服官方 id', stat.jpOfficial, expect.jpOfficial],
+    ['  日服占位 id', stat.jpSynthetic, expect.jpSynthetic],
     ['世代为空的曲目', noGen, 0],
     ['分类为空的曲目', noCat, 0],
     ['缺 EXT 定数的曲目', noExt, 0],
@@ -391,7 +449,8 @@ function sqlLit(v) {
   return "'" + String(v).replace(/'/g, "''") + "'";
 }
 
-// seed.sql = 数据表的幂等 DDL（IF NOT EXISTS，无 DROP）+ INSERT + ANALYZE。
+// seed.sql = 数据表的幂等 DDL（IF NOT EXISTS，无 DROP）+ **清空数据表** + INSERT + ANALYZE。
+// 「清空」不是冗余：只有 INSERT OR REPLACE 时，主键变过的旧行会残留（见下方注释）。
 // 不整份内嵌 schema.sql 的原因：schema.sql 里是 DROP TABLE，重放到线上 D1 会把
 // users / sessions / oauth_accounts / role_requests / recent_changes 一并清空。
 // 用户系统的表由 db/migrate-users.sql 管（增量、IF NOT EXISTS），seed 一律不碰。
@@ -417,6 +476,14 @@ function buildSeedSql(db) {
     '-- 单条 INSERT 已按 D1 的 100,000 bytes 语句上限切分（切点 90 KB），切分在同一文件内完成。',
     '',
     dataTableDdl(),
+    '',
+    // 【必须先清空数据表（2026-10-25 加）】
+    // 原先只有 INSERT OR REPLACE，靠主键覆盖做到「幂等」——但这只对「同主键改内容」有效。
+    // 一旦 songId 变了（本次 11 条 id 修正：BTA-xxx → 官方 id），旧主键那行没人覆盖，
+    // 于是库里同时留下新旧两行，页面卡片数从 1150 涨到 1159。
+    // 清空后再插，才是真正「seed = 目标状态」。只清数据表，用户系统一律不碰。
+    'DELETE FROM songs;',
+    'DELETE FROM recent_changes;',
     '',
   ];
   const stmts = [];          // 每条 INSERT 语句的字节数，末尾统一校验

@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "songId 修正表（2026-10-25 建立）。",
+    "",
+    "用途：上游日服数据里有些曲目拿不到官方 songId，用 BTA-<曲绘id> 占位；",
+    "还有几首的 songId 与世代段不符。主人 2026-10-25 提供了正确 id 清单。",
+    "",
+    "判据：songId 前两位是世代号（10=jubeat / 11=Ave.+bta 共用 / 20=ripples /",
+    "30=knit / 40=copious / 50=saucer+saucerfulfill 共用 / 60=prop / 70=Qubell /",
+    "80=clan / 90=festo）。修正后的 id 一律要与曲目自己的世代吻合 —— 这也反向",
+    "印证了「世代没错，是 id 记错了」。",
+    "",
+    "维护方式：key = 现有的 songId（占位 id 或错误 id），value = { id, note }。",
+    "在 build-db 里于插入前重映射。改完跑 npm run db + npm run build 并用",
+    "wrangler d1 execute 重灌本地/线上 D1。",
+    "",
+    "注意：有两组是『互换』（60000028、90000134），重映射按整表映射进行，",
+    "不存在先后覆盖问题（映射在内存里做，不就地 UPDATE）。"
+  ],
+  "fixes": {
+    "BTA-30740339": { "id": "11000155", "note": "voxel star arise / ああああ，bta" },
+    "BTA-34544668": { "id": "70000042", "note": "paranoia / つなまる，Qubell" },
+    "BTA-36970706": { "id": "60000028", "note": "ツーマンライブ / prop（原 60000028 空色デイズ迁往 20000031，互换）" },
+    "BTA-44639013": { "id": "11000074", "note": "Magical electrica / こふ，bta" },
+    "BTA-66488910": { "id": "11000136", "note": "jet coaster☆girl ～まり花 edition～ / bta" },
+    "BTA-81119663": { "id": "40000015", "note": "Love at First Sight / copious" },
+    "BTA-87226936": { "id": "90000134", "note": "Ghost Clock / festo（原 90000134 BEAT-NEW-WORLD 迁往 60000049，互换）" },
+    "BTA-95110867": { "id": "50000250", "note": "Unicorn tail Dustboxxxx RMX / saucer" },
+    "60000028": { "id": "20000031", "note": "空色デイズ / ripples（与ツーマンライブ互换）" },
+    "90000134": { "id": "60000049", "note": "BEAT-NEW-WORLD / prop（与 Ghost Clock 互换）" },
+    "90000170": { "id": "70000003", "note": "変じゃない!! / Qubell" }
+  }
+}
