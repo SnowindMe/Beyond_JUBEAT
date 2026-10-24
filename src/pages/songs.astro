@@ -18,7 +18,7 @@ import GenBlock from '../components/GenBlock.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN, slugOf } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
-import { CATS, catOf, inView, type Srv } from '../lib/song-view';
+import { CATS, catOf, inView, songKey, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
@@ -36,10 +36,21 @@ Astro.response.headers.set(
 const genMetaOf = (gen: string) => GEN_ORDER.find((g) => g.k === gen);
 const yearOf = (gen: string) => genMetaOf(gen)?.y ?? '';
 
-// 每个分区实际会出现的世代
+// 每个分区实际会出现的世代。
+//
+// KONAMI原创 分区（2026-10-24 改）要列**日服 12 个世代 + 音乐魔方**：
+// 它装的是「国服已上线的日服曲」（sheet1 打√的 432 首，首登于 jubeat…beyond the Ave.）
+// 加上国服独有的移植曲与 Big Daddy。只映射 GEN_CN 的话，那 432 首会因为没有对应桶被丢掉——
+// 这正是「数据标了 cn=1、页面却仍只有 91 卡」的真因（视图放行了，桶没建）。
+// 音乐魔方原创 / 音乐魔方流行 仍只有「音乐魔方」一个世代（国服独有曲）。
+const CN_ALL_GENS = [...GEN_JP.map((g) => g.k), ...GEN_CN.map((g) => g.k)];
 const CAT_GENS: Record<string, Record<string, string[]>> = {
   jp: { '版权': GEN_JP.map((g) => g.k), '原创': GEN_JP.map((g) => g.k) },
-  cn: { 'KONAMI原创': GEN_CN.map((g) => g.k), '音乐魔方原创': GEN_CN.map((g) => g.k), '音乐魔方流行': GEN_CN.map((g) => g.k) },
+  cn: {
+    'KONAMI原创': CN_ALL_GENS,
+    '音乐魔方原创': GEN_CN.map((g) => g.k),
+    '音乐魔方流行': GEN_CN.map((g) => g.k),
+  },
 };
 // 服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
 // 国际服已移除（主人 2026-10-22）：曲库没有独立国际服数据，入口留着只会误导。
@@ -58,9 +69,21 @@ for (const srv of ['jp', 'cn'] as const) {
     for (const gen of CAT_GENS[srv][cat]) bucket[srv][cat][gen] = [];
   }
 }
+// 国服视图内去重（2026-10-24 实测发现）：国服视图现在收 cn=1 的所有行，
+// 而「双服曲」在库里是**两行**（日服行 + 国服行，如 Big Daddy 11000228 / 991000007）。
+// 不去重的话同一首会在国服视图里出现两次，违反「同一视图内不重复」这条一直有效的约束
+// （之前 cn 只收 gen==='音乐魔方' 的行，那两行不会同时进视图，所以没暴露）。
+// 保留哪一行：优先保留国服行（gen==='音乐魔方'，它的定数/分类是国服口径），
+// 日服行只在这一首没有国服行时才留（即 432 首旧框曲，它们本来就只有日服行）。
+const cnSeen = new Set<string>();
+for (const s of ALL) {
+  if (s.cn && s.gen === '音乐魔方') cnSeen.add(songKey(s));
+}
 for (const srv of ['jp', 'cn'] as const) {
   for (const s of ALL) {
     if (!inView(s, srv)) continue;
+    // 双服曲在国服视图里被国服行接管：日服那行跳过（它仍在日服视图里渲染）。
+    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) continue;
     const g = bucket[srv]?.[catOf(s, srv)]?.[s.gen];
     if (g) g.push(s);
   }
@@ -84,6 +107,8 @@ for (const srv of ['jp', 'cn'] as const) {
 for (const srv of ['jp', 'cn'] as const) {
   for (const s of ALL) {
     if (!inView(s, srv)) continue;
+    // 与上面 bucket 同一套去重：国服视图里双服曲只留国服行，否则「全部曲目」也重复。
+    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) continue;
     const g = byGen[srv][s.gen];
     if (g) g.push(s);
   }
@@ -95,15 +120,29 @@ for (const srv of ['jp', 'cn'] as const) {
 // 排列的世代清单，只保留非空世代。
 // 注意：默认顺序是「旧→新」（与 GEN_ORDER 一致）；「世代 新→旧」是排序选项 gen-new 的活，
 // 由前端按 data-y 给 .sc-gen 写 style.order 实现——两者不冲突，别把这里改成倒序。
+//
+// 【2026-10-24 修正】不再按「世代自带服务器」过滤（g.s === srv）——那是「国服只有音乐魔方
+// 一个世代」的旧口径。国服视图现在还要装「旧框已有曲」（sheet1 打√的 432 首，首登于日服
+// 各世代），它们必须有自己的世代块，否则数据标了 cn=1、byGen 桶也装好了，渲染时却一个块
+// 都不列 —— 结果就是标题写「524 首」、页面只有 91 张卡（本轮实测到的真因）。
+// 判据改成「该视图下这个世代桶非空」，与是谁的世代无关；空世代仍然不出现。
 const srvGenOrder = (srv: Srv) =>
-  GEN_JP.concat(GEN_CN)
-    .filter((g) => g.s === srv)
-    .map((g) => g.k)
-    .filter((k) => (byGen[srv][k] || []).length > 0);
+  GEN_ORDER.map((g) => g.k).filter((k) => (byGen[srv][k] || []).length > 0);
+
+// 计数必须与实际渲染同一套口径，否则就会出现「标题 524、页面 523」这种自相矛盾
+// （本轮实测：去重过滤器只加在渲染循环里，countOf/srvTotal 还在裸数 ALL）。
+// 所以先把「这个视图里到底有哪些行」抽成一个函数，桶、计数、世代清单三处共用它。
+const rowsIn = (srv: Srv) =>
+  ALL.filter((s) => {
+    if (!inView(s, srv)) return false;
+    // 国服视图里双服曲只留国服行（与 bucket/byGen 同一判据，见上）
+    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) return false;
+    return true;
+  });
 
 const countOf = (srv: Srv, cat?: string) =>
-  ALL.filter((s) => inView(s, srv) && (!cat || catOf(s, srv) === cat)).length;
-const srvTotal = (srv: Srv) => ALL.filter((s) => inView(s, srv)).length;
+  rowsIn(srv).filter((s) => !cat || catOf(s, srv) === cat).length;
+const srvTotal = (srv: Srv) => rowsIn(srv).length;
 
 const DEFAULT_SRV: Srv = 'jp';
 

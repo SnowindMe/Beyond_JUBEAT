@@ -33,6 +33,9 @@ dsh-image-gen/
 tmp/
 .local/
 
+# AgentTeams 协作状态（多 agent 调试期的中间文件，不属于站点产物）
+.agent-teams/
+
 # 系统与编辑器
 Thumbs.db
 desktop.ini

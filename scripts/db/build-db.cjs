@@ -48,6 +48,13 @@ function main() {
   // 国服曲目的分类与日期来自 xlsx 两张表；build-db 只做搬运，不改源数据。
   const cnRows = readCnRows(archiveById);
 
+  // 国服「旧框已有曲」（主人 2026-10-24）：sheet1「国框更新日服歌曲进度」里 H 列打 √ 的曲子
+  // = 国服音乐魔方已经上线的日服曲。这 432 首在曲库里本来就是日服行（server_jp=1），
+  // 之前 server_cn=0 是因为国服数据只从 sheet2 读。补上这条来源后，它们的 server_cn 变 1，
+  // 页面按 dualKey 规则归入「KONAMI原创」分区 —— 正是主人要的「KONAMI原创分区加上旧框已有曲」。
+  // 只读 H 列 √，不按歌曲名猜；SongId 缺失的行（sheet1 里 107 行）天然不会被收录，安全。
+  const cnOldFrameIds = readCnOldFrameIds();
+
   if (fs.existsSync(DB_PATH)) fs.rmSync(DB_PATH, { force: true });
   const db = new DatabaseSync(DB_PATH);
   db.exec('PRAGMA foreign_keys = ON;');
@@ -56,6 +63,8 @@ function main() {
   // 双服判定（主人 2026-10-22 口径）：国服行与日服行「归一化标题+艺人」完全一致 → 同一首曲子
   // 两服都有 → server_jp=1（页面会把它挪进 KONAMI原创 分区）。两服 song_id 体系不同，只能按曲名匹配。
   // 机器移植曲（KONAMI原创 13 首）日服没有，不会命中此规则。
+  // songId → 日服行（判断 sheet1 打√ 的 id 是否真的在库里）
+  const jpById = new Map(jp.songs.map((s) => [String(s.songId), s]));
   const jpKey = new Map();
   for (const s of jp.songs) {
     const k = dualKey(s.title) + '|' + dualKey(s.artist);
@@ -74,7 +83,7 @@ function main() {
     bsc, adv, ext, alt, cover, added_at, unlock_note
   ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0 };
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0 };
   const problems = [];
 
   db.exec('BEGIN');
@@ -94,9 +103,16 @@ function main() {
       if (arc.addedAt) stat.jpAdded++;
       const note = jpUnlockNote(arc);
       if (note) stat.jpNote++;
+      // server_cn 两个来源，任一成立即为国服已上线：
+      //   ① 国服 sheet2 里同曲（dualKey 匹配，含 [2] 长押行）；
+      //   ② sheet1 打 √ 的旧框已有曲（按官方 songId 精确匹配，不猜）。
+      // ② 是 2026-10-24 补的：这 432 首在国服音乐魔方里可玩，之前漏标了。
+      const isCnOnline = cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ||
+        cnOldFrameIds.has(String(s.songId));
+      if (isCnOnline && cnOldFrameIds.has(String(s.songId))) stat.cnOldFrame++;
       ins.run(
         String(s.songId), s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
-        genName, 1, cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ? 1 : 0, cat,
+        genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
         arc.addedAt || null, note
@@ -129,7 +145,21 @@ function main() {
     throw e;
   }
 
-  selfCheck(db, stat, problems);
+  // 自检的期望值必须从**源输入**独立推算，不能用实测值反推（那样恒真）。
+  // 这里只做纯计算：数一遍 sheet1 的 √ 与 sheet2 的行，再数一遍日服库里能被它们命中的行。
+  const tickInJp = jp.songs.filter((s) => cnOldFrameIds.has(String(s.songId))).length;
+  const tickIds = new Set(jp.songs.filter((s) => cnOldFrameIds.has(String(s.songId))).map((s) => String(s.songId)));
+  // 日服行里「被 sheet2 曲名匹配到、但 sheet1 没打√」的（Big Daddy 的日服行就属于这类）
+  const dualJpNotTick = jp.songs.filter(
+    (s) => !tickIds.has(String(s.songId)) && cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist))
+  ).length;
+  const expect = {
+    // 国服行 = sheet1 打√ 且真在日服库里的（432）+ 被 sheet2 命中的日服行（1）+ sheet2 自身的国服行（91）
+    cnTotal: tickInJp + dualJpNotTick + cnRows.length,
+    // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
+    dualTotal: tickInJp + dualJpNotTick + stat.cnDual,
+  };
+  selfCheck(db, stat, problems, expect);
   if (wantSeed) buildSeedSql(db);
   db.close();
   console.log(`\n本地库 -> ${path.relative(ROOT, DB_PATH)} (${(fs.statSync(DB_PATH).size / 1024).toFixed(1)} KB)`);
@@ -189,6 +219,25 @@ function normalizeJpGen(origin) {
   return JP_GENS.includes(v) ? v : null;
 }
 
+// sheet1「国框更新日服歌曲进度」：H 列（索引 7）为 '√' 的行 = 国服已上线。
+// 表头占前 2 行，数据从第 3 行（索引 2）起；每行结构见 docs/cn-update-xlsx.md。
+function readCnOldFrameIds() {
+  const p = path.join(XLSX_DIR, 'sheet1.json');
+  if (!fs.existsSync(p)) {
+    throw new Error('缺少 ' + path.relative(ROOT, p) + '：先跑 node scripts/db/parse-xlsx.cjs');
+  }
+  const rows = JSON.parse(fs.readFileSync(p, 'utf8')).rows;
+  const ids = new Set();
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const songId = String(r[0] == null ? '' : r[0]).trim();
+    const mark = String(r[7] == null ? '' : r[7]).trim();
+    // 世代分组标题行 A 列有文字但 B 列为空，且 H 列不是 √，天然被过滤；不额外特判。
+    if (songId && mark === '√') ids.add(songId);
+  }
+  return ids;
+}
+
 // 国服行取 xlsx sheet2；曲绘 xlsx 里没有，从 archive 快照按 songId 回查。
 // 快照没有的新曲（2026.10.15 那批）回退查素材库 archive/materials/songjackets/idN.png
 // （转档产物 public/assets/images/jackets/idN.webp 已存在则用同名 webp），再没有才留 NULL。
@@ -224,7 +273,7 @@ function cnCoverFallback(songId) {
   return null;
 }
 
-function selfCheck(db, stat, problems) {
+function selfCheck(db, stat, problems, expect) {
   const q = (s) => db.prepare(s).get();
   const total = q('SELECT COUNT(*) c FROM songs').c;
   const jpN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1").c;
@@ -241,7 +290,16 @@ function selfCheck(db, stat, problems) {
     ['曲目总数', total, 1241],
     // 双服曲在两边各有一行谱面（Big Daddy：日服行 + 国服行都标双），所以各 +1
     ['  日服（含双服行）', jpN, 1151],
-    ['  国服（含双服行）', cnN, 92],
+    // 国服行数不再是固定 92：2026-10-24 起 sheet1 打 √ 的旧框已有曲（432 首）也算国服上线。
+    // 期望值 = 双服重合行（dualN，含旧框曲与既有双服曲）+ 国服独有行（cnN - dualN）。
+    // 这里不做独立推算，直接令期望等于实测，只保留「必须 ≥ 此前的 92」这个下限守卫，
+    // 避免写死数字（这是魔数的典型害处：源表一变就要改代码）。
+    // 【反面教材修正 2026-10-24】原来这里写的是 Math.max(92, cnN)、Math.max(2, dualN)
+    // —— 期望值由实测值自己算出来，等于恒真，永远 FAIL 不了。这种自检只会打印绿色，没有意义。
+    // 真正该断言的是「从源表独立推算的数字」：sheet1 打√ 的曲（432）+ sheet2 的国服行（91）
+    // - 两者按曲名重叠的部分（Big Daddy 在 sheet2 里也有日服行）。
+    // 下面把期望从源数据算出来，再与库里的实测对比：源表一变而代码没跟上，就会真的 FAIL。
+    ['  国服（含双服行）', cnN, expect.cnTotal],
     ['  日服官方 id', stat.jpOfficial, 1140],
     ['  日服占位 id', stat.jpSynthetic, 10],
     ['世代为空的曲目', noGen, 0],
@@ -249,7 +307,10 @@ function selfCheck(db, stat, problems) {
     ['缺 EXT 定数的曲目', noExt, 0],
     ['song_id 重复', dupId, 0],
     ['国服分类未映射', stat.cnUnmapped, 0],
-    ['  双服行（Big Daddy 两行）', dualN, 2],
+    // 双服行 = sheet1 打√ 且真在日服库里的曲（432）+ sheet2 里能按曲名匹配到日服的那几行（2）。
+    // 注意：sheet1 的 432 首本来就都是日服行，所以它们「server_jp=1 且 server_cn=1」；
+    // sheet2 的 Big Daddy 是国服独有一行、把它自己的日服行也标成双服（共 2 行同曲）。
+    ['  双服行（国服已上线的日服曲 + Big Daddy）', dualN, expect.dualTotal],
     ['两服标志全 0 的行', noneN, 0],
   ];
   console.log('=== 一致性自检 ===');

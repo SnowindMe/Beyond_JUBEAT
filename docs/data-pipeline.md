@@ -21,7 +21,7 @@ npm run db      # = parse-xlsx → build-db --seed → build-data
 自检（每次跑都会打印并判失败）：
 
 ```
-曲目总数 1241   日服（含双服行）1151   国服（含双服行）92   双服行 2
+曲目总数 1241   日服（含双服行）1151   国服（含双服行）524   双服行 434
 谱面 3723（bsc/adv/ext 非空计数之和）   song_id 重复 0   世代/分类/EXT 空 0
 ```
 
@@ -95,8 +95,8 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 
 | # | 工作表 | 可见性 | 用在管线里吗 | 口径 |
 |---|---|---|---|---|
-| 1 | 国框更新日服歌曲进度 | 可见 | 参考（不入 songs） | 685 行国服曲库台账：578 个有 SongId 的行 + 12 条 `×` 的 `[2]` 追加谱 + 95 行 beyond 占位。H 列 `√/×/空`，I 列日期或 `解禁I/II - 池名`。右侧 L–V 统计块的 P/Q/R 三列语义**未解**（已穷举排除难度/状态/批次/命中四类解释），不入库 |
-| 2 | 国框更新音乐魔方进度 | 可见 | **入库**（国服 92 行） | 91 条数据行，SongId 全为 9 位且唯一。A=SongId、B=曲名、C=艺人、D=BPM、E/F/G=BSC/ADV/EXT、H=分类（华立独占 / KONAMI/机种移植 / 音乐魔方原创 / 音乐魔方流行 / 流行（限时））、I=移植机种或联动、J=更新日期 |
+| 1 | 国框更新日服歌曲进度 | 可见 | **入库**（H 列 √ 的 432 首 → 标 server_cn=1） | 685 行国服曲库台账：578 个有 SongId 的行 + 12 条 `×` 的 `[2]` 追加谱 + 95 行 beyond 占位。H 列 `√/×/空`，I 列日期或 `解禁I/II - 池名`。右侧 L–V 统计块的 P/Q/R 三列语义**未解**（已穷举排除难度/状态/批次/命中四类解释），不入库 |
+| 2 | 国框更新音乐魔方进度 | 可见 | **入库**（国服独有 91 行） | 91 条数据行，SongId 全为 9 位且唯一。A=SongId、B=曲名、C=艺人、D=BPM、E/F/G=BSC/ADV/EXT、H=分类（华立独占 / KONAMI/机种移植 / 音乐魔方原创 / 音乐魔方流行 / 流行（限时））、I=移植机种或联动、J=更新日期 |
 | 3 | 国框Jubiility理论值 | **隐藏** | **不入库** | 2026-06-16 版理论值，60 首。与表 4 仅 36 首重合，属历史快照，见 §4 |
 | 4 | 国框Jubiility理论值 【20261015】 | 可见 | 暂不入库（波次二用） | 2026-10-15 版，60 首。E 列 Normal 理论值求和 = G2 MAX 8034.7，F 列 = H2 MAX 9641.9，逐行吻合 |
 | 5 | 国框跑图II歌曲详情 | **隐藏** | 参考 | 解禁II 五池（CHERRY/KUMQUAT/LIME/BLUEBERRY/RAINBOW）横向并排明细，61 首；与表 1 的 I 列 `解禁II` 完全一致，唯一增量是 Basic/Advanced 定数 |
@@ -105,14 +105,18 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 
 ### 3.1 songs 表怎么由三份输入拼出来
 
-| 字段 | 日服 1150 首 | 国服 92 行 |
+> **2026-10-24 起**：国服行有两个来源——sheet2 的 91 条国服独有曲，以及 **sheet1 H 列打 √ 的
+> 432 首「旧框已有曲」**（它们是日服行，首登于日服各世代，但在国服音乐魔方里可玩）。
+> 判定只按官方 songId 精确匹配，不按曲名猜。于是 server_cn=1 共 524 行，其中双服 434 行。
+
+| 字段 | 日服 1150 首 | 国服 524 行（91 国服独有 + 432 旧框已有曲 + 1 Big Daddy 日服行） |
 |---|---|---|
 | song_id | `jp-resolved.json` 的 `songId`（拿不到官方 id 的 10 首用 `BTA-<曲绘id>` 占位，`id_kind=synthetic`） | xlsx sheet2 的 A 列（9 位） |
 | title / artist | resolved.json | sheet2 B / C |
 | bpm | **NULL**（源数据没有），从 wiki-v3 快照按 songId 回查，回查不到就留 NULL | sheet2 D（`——` / `—` 归一成 NULL） |
 | bsc / adv / ext | resolved.json `levels` | sheet2 E / F / G |
 | gen_name | `origin` 剥掉 `jubeat ` 前缀后对齐 12 个日服世代 | 固定 `音乐魔方` |
-| server_jp / server_cn | jp=1；命中跨服同曲判定时再置 cn=1 | cn=1；命中判定时 jp=1 |
+| server_jp / server_cn | jp=1；命中跨服同曲判定时再置 cn=1；或该 songId 在 sheet1 的 H 列为 √（旧框已有曲）时置 cn=1 | cn=1；命中判定时 jp=1 |
 | category | `license`→版权、`original`→原创 | sheet2 H 的 5 种写法归成 3 个分区（`KONAMI原创` / `音乐魔方原创` / `音乐魔方流行`） |
 | alt | resolved.json `alt` | 标题匹配 `[ 2 ]` |
 | cover | `jacketFile` 的 `.gif` → `.webp` | wiki-v3 快照的 md5 名 → `.webp`；7 首新曲按 `id<songId>.webp` 回退（素材库 png 或已转档 webp 任一存在） |
