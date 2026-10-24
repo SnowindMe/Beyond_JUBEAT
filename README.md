@@ -186,7 +186,7 @@ npm run opt              # 压缩 public/assets/images 下的图片
 npm run fonts            # woff2 字体子集化（需 python + fonttools）
 ```
 
-改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
+改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
 
 资源引用一律写站点绝对路径（`/assets/...`）：Astro 会把 CSS 打到 `/_astro/*.css`，相对路径会失效。
 
