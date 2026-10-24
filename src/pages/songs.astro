@@ -329,27 +329,63 @@ const SORTS = [
           </div>
         </div>
 
+        {/* 【下拉改自定义弹层（2026-10-25）】
+            原生 <select> 的弹出列表由操作系统绘制（Windows 上是白底方块 + 系统蓝高亮），
+            页面 CSS 完全够不着 <option>，和站点这套玻璃质感格格不入 —— 主人反馈「好丑」。
+            所以：原生 select 保留在 DOM 里当**数据源与无障碍载体**（读屏、键盘、
+            表单语义都还靠它），但视觉上用 .sc-dd 按钮 + 自定义列表呈现。
+            两者通过 syncDd() 双向同步：点列表项 → 写 select.value → 派发 change，
+            原来监听 select 的筛选逻辑一行都不用改。 */}
         <div class="sc-pf">
-          <label class="sc-pf-k" for="scSort">排序</label>
-          <select id="scSort" class="sc-pf-in" aria-label="排序方式">
-            {SORTS.map((o) => <option value={o.v} selected={o.v === DEFAULT_SORT}>{o.label}</option>)}
-          </select>
+          <span class="sc-pf-k" id="scSortK">排序</span>
+          <div class="sc-dd" data-dd="scSort">
+            <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scSortK">
+              <span class="sc-dd-v">songId 升序</span>
+              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <select id="scSort" class="sc-dd-sel" aria-label="排序方式" tabindex="-1" aria-hidden="true">
+              {SORTS.map((o) => <option value={o.v} selected={o.v === DEFAULT_SORT}>{o.label}</option>)}
+            </select>
+            <ul class="sc-dd-list" role="listbox" aria-labelledby="scSortK" hidden>
+              {SORTS.map((o) => <li role="option" data-v={o.v} aria-selected={o.v === DEFAULT_SORT ? 'true' : 'false'}>{o.label}</li>)}
+            </ul>
+          </div>
         </div>
 
         <div class="sc-pf">
-          <label class="sc-pf-k" for="scGen">世代</label>
-          <select id="scGen" class="sc-pf-in" aria-label="按世代筛选">
-            <option value="all">全部世代</option>
-            {GEN_OPTS.map((g) => <option value={g.k}>{g.k}{g.s === 'cn' ? '（国服）' : ''}</option>)}
-          </select>
+          <span class="sc-pf-k" id="scGenK">世代</span>
+          <div class="sc-dd" data-dd="scGen">
+            <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scGenK">
+              <span class="sc-dd-v">全部世代</span>
+              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <select id="scGen" class="sc-dd-sel" aria-label="按世代筛选" tabindex="-1" aria-hidden="true">
+              <option value="all">全部世代</option>
+              {GEN_OPTS.map((g) => <option value={g.k}>{g.k}{g.s === 'cn' ? '（国服）' : ''}</option>)}
+            </select>
+            <ul class="sc-dd-list" role="listbox" aria-labelledby="scGenK" hidden>
+              <li role="option" data-v="all" aria-selected="true">全部世代</li>
+              {GEN_OPTS.map((g) => <li role="option" data-v={g.k} aria-selected="false">{g.k}{g.s === 'cn' ? '（国服）' : ''}</li>)}
+            </ul>
+          </div>
         </div>
 
         <div class="sc-pf">
-          <label class="sc-pf-k" for="scArtist">曲师</label>
-          <select id="scArtist" class="sc-pf-in" aria-label="按曲师筛选：仅列出 5 首及以上的常用曲师，其余请用搜索框">
-            <option value="all">全部曲师（{ARTIST_TALLY.size} 位）</option>
-            {TOP_ARTISTS.map(([a, n]) => <option value={a}>{a}（{n}）</option>)}
-          </select>
+          <span class="sc-pf-k" id="scArtistK">曲师</span>
+          <div class="sc-dd" data-dd="scArtist">
+            <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scArtistK" title="仅列出 5 首及以上的常用曲师，其余请用搜索框">
+              <span class="sc-dd-v">全部曲师（{ARTIST_TALLY.size} 位）</span>
+              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <select id="scArtist" class="sc-dd-sel" aria-label="按曲师筛选：仅列出 5 首及以上的常用曲师，其余请用搜索框" tabindex="-1" aria-hidden="true">
+              <option value="all">全部曲师（{ARTIST_TALLY.size} 位）</option>
+              {TOP_ARTISTS.map(([a, n]) => <option value={a}>{a}（{n}）</option>)}
+            </select>
+            <ul class="sc-dd-list" role="listbox" aria-labelledby="scArtistK" hidden>
+              <li role="option" data-v="all" aria-selected="true">全部曲师（{ARTIST_TALLY.size} 位）</li>
+              {TOP_ARTISTS.map(([a, n]) => <li role="option" data-v={a} aria-selected="false">{a}（{n}）</li>)}
+            </ul>
+          </div>
         </div>
 
         <div class="sc-pf sc-pf-wide">
@@ -804,17 +840,27 @@ const SORTS = [
         }
 
         if (open) {
-          // 展开：只需要「脱 hidden + 切 data-open」。
-          // 高度过渡交给 CSS 的 grid-template-rows 0fr→1fr（它本身就是
-          // "0 → 内容高度"，不需要 JS 量高度，也就没有量错时机的坑）。
-          // 先脱 hidden 再切属性：hidden 期间元素是 display:none，
-          // 直接切 data-open 不会有过渡起点。
+          // 展开：脱 hidden → height:0（锁起点）→ 量内容真实高度 → 写该高度。
+          // 【关键】量高度必须在内层已经排好版之后：先 hidden=false 再量，
+          // display:none 期间 scrollHeight 恒为 0（这是本轮踩过的坑）。
           panel.hidden = false;
-          void panel.offsetHeight; // 让"0fr"这一帧先成立，过渡才有起点
+          panel.style.height = '0px';
+          void panel.offsetHeight;              // 锁住"0 高度"这一帧
+          var realH = panel.scrollHeight;       // 内容全高（含内边距）
+          panel.style.height = realH + 'px';
           panel.setAttribute('data-open', 'true');
+          // 动画结束后清掉固定高度，改由内容撑开：不然后续切服/窄屏折行
+          // 让内容变高时，面板会停在旧高度、把底部控件裁掉。
+          clearTimeout(panelTimer);
+          panelTimer = setTimeout(function () {
+            if (!panelOpen) return;
+            panel.style.height = 'auto';
+          }, 300);
         } else {
-          // 收起：切回 0fr 触发过渡；动画走完（260ms）再真正 hidden，
-          // 否则元素立刻消失，过渡根本看不到。
+          // 收起：先把当前高度固化成像素（auto 无法过渡到 0），再设 0。
+          panel.style.height = panel.offsetHeight + 'px';
+          void panel.offsetHeight;
+          panel.style.height = '0px';
           panel.setAttribute('data-open', 'false');
           panelTimer = setTimeout(function () {
             if (panelOpen) return; // 期间又展开了
@@ -832,13 +878,105 @@ const SORTS = [
         if (panelOpen) { setPanel(false); if (panelBtn) panelBtn.focus(); }
       });
 
+      // ---- 自定义下拉（2026-10-25）----
+      // 原生 select 留在 DOM 当数据源；用户点的是 .sc-dd-list 里的 li。
+      // 点中后：写 select.value → 派发 change → 复用它下面那套筛选逻辑（一行没改）。
+      // 这样做的好处是可访问性不倒退：读屏仍能识别 select 的 label，
+      // 键盘也能用（Tab 到按钮、Enter/Space 展开、方向键移动、Esc 关闭、Enter 选中）。
+      var dds = [];
+      function ddClose(dd) {
+        dd.setAttribute('data-open', 'false');
+        dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'false');
+        dd.querySelector('.sc-dd-list').hidden = true;
+      }
+      function ddLabelOf(dd) {
+        var sel = dd.querySelector('select');
+        var opt = sel.options[sel.selectedIndex];
+        return opt ? opt.textContent : '';
+      }
+      // 把三个原生 select 的当前值刷新到自定义按钮上。
+      // resetAll 与程序化改值都必须调它，否则按钮文字会停在旧值
+      // （select.value 变了、可见的 .sc-dd-v 没变，用户会以为没重置）。
+      function ddRefresh() {
+        for (var i = 0; i < dds.length; i++) ddSync(dds[i]);
+      }
+
+      function ddSync(dd) {
+        dd.querySelector('.sc-dd-v').textContent = ddLabelOf(dd);
+        var cur = dd.querySelector('select').value;
+        var items = dd.querySelectorAll('.sc-dd-list li');
+        for (var i = 0; i < items.length; i++) {
+          items[i].setAttribute('aria-selected', items[i].getAttribute('data-v') === cur ? 'true' : 'false');
+        }
+      }
+      function ddOpen(dd) {
+        // 同时只允许一个展开：否则两个弹层会叠在一起
+        for (var i = 0; i < dds.length; i++) if (dds[i] !== dd) ddClose(dds[i]);
+        dd.setAttribute('data-open', 'true');
+        dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
+        dd.querySelector('.sc-dd-list').hidden = false;
+        // 让当前选中项滚进视野（曲师 39 项，不滚的话要自己找）
+        var cur = dd.querySelector('.sc-dd-list li[aria-selected="true"]');
+        if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
+      }
+      function ddPick(dd, v) {
+        var sel = dd.querySelector('select');
+        if (sel.value !== v) {
+          sel.value = v;
+          // 直接派发 change：复用既有的筛选监听，避免两套状态
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          ddSync(dd);
+        }
+        ddClose(dd);
+        dd.querySelector('.sc-dd-b').focus();
+      }
+      root.querySelectorAll('.sc-dd').forEach(function (dd) {
+        dds.push(dd);
+        var btn = dd.querySelector('.sc-dd-b');
+        var list = dd.querySelector('.sc-dd-list');
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (dd.getAttribute('data-open') === 'true') ddClose(dd); else ddOpen(dd);
+        });
+        list.addEventListener('click', function (e) {
+          var li = e.target.closest('li[data-v]');
+          if (!li) return;
+          e.stopPropagation();
+          ddPick(dd, li.getAttribute('data-v'));
+        });
+        // 键盘：按钮上 Enter/Space 已由原生触发 click；这里补方向键与 Esc
+        btn.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            ddOpen(dd);
+            var items = [...list.querySelectorAll('li')];
+            var idx = items.findIndex(function (x) { return x.getAttribute('aria-selected') === 'true'; });
+            var next = items[Math.max(0, Math.min(items.length - 1, idx + (e.key === 'ArrowDown' ? 1 : -1)))];
+            if (next) { next.classList.add('is-focus'); next.scrollIntoView({ block: 'nearest' }); }
+          }
+        });
+        list.addEventListener('keydown', function (e) {});
+        ddSync(dd);
+      });
+      // 点外面关掉；Esc 也关掉（注意别和「Esc 收起面板」抢：这里先处理并阻止冒泡）
+      document.addEventListener('click', function () {
+        for (var i = 0; i < dds.length; i++) if (dds[i].getAttribute('data-open') === 'true') ddClose(dds[i]);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        for (var i = 0; i < dds.length; i++) {
+          if (dds[i].getAttribute('data-open') === 'true') { ddClose(dds[i]); e.stopPropagation(); return; }
+        }
+      }, true);
+
       // ---- 下拉筛选 ----
       root.addEventListener('change', function (e) {
         var t = e.target;
         if (!t || !t.id) return;
-        if (t.id === 'scGen') { state.gen = t.value; apply(); }
-        else if (t.id === 'scArtist') { state.artist = t.value; apply(); }
-        else if (t.id === 'scSort') { state.sort = t.value; apply(); }
+        if (t.id === 'scGen') { state.gen = t.value; ddRefresh(); apply(); }
+        else if (t.id === 'scArtist') { state.artist = t.value; ddRefresh(); apply(); }
+        else if (t.id === 'scSort') { state.sort = t.value; ddRefresh(); apply(); }
       });
 
       // ---- chip / 按钮：服务器、分区、难度档、区间、重置 ----
@@ -859,6 +997,7 @@ const SORTS = [
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ai = document.getElementById('scArtist'); if (ai) ai.value = 'all';
+        ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
         setChipGroup('[data-diff]', root.querySelector('[data-diff="all"]'));
         setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
         var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');

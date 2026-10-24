@@ -1417,21 +1417,29 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
            等价于 max-content，所以 0fr→1fr 就是"0 → 内容高度"，且插值是连续的。
            要求：内层必须 min-height:0 + overflow:hidden 才能跟着收缩。
        注意：本元素必须是 display:grid，且内层是它唯一的直接子项。 */
-    display: grid;
-    grid-template-rows: 0fr;
+    display: block;
     width: 100%;
     max-width: 900px;
+    /* 高度由脚本写内联 height 控制：展开时 0 → 实测内容高度，
+       动画结束后脚本清成 auto，之后内容变化（切服、窄屏折行）都能自适应。
+       曾试过 grid-template-rows 0fr→1fr（理论上最优雅），但本结构里 1fr
+       反复被算成 28px（只有内边距），加/去 overflow 都无法稳定，
+       与其继续猜浏览器的 grid 尺寸传播，不如用能直接验证的方案。 */
+    height: 0;
     margin-top: 0;
     border: 1px solid transparent;
     border-radius: var(--r);
     background: color-mix(in srgb, var(--glass2) 0%, transparent);
     opacity: 0;
     transform: translateY(-4px);
+    /* 裁掉内容是为了收起动画；但**展开后必须放开**，否则下拉弹层会被裁掉
+       （弹层是 absolute 定位在下拉按钮下方，超出面板范围就会被 overflow:hidden 剪掉）。
+       所以收起态 hidden、展开态 visible，见下面 [data-open="true"]。 */
     overflow: hidden;
     /* 240ms：比一般 hover 慢一点（它是"块级展开"，太快会像闪），
        但仍在 150-300ms 的反馈区间内。缓动用 ease-out，收起时显得利落。 */
     transition:
-        grid-template-rows 0.26s cubic-bezier(0.33, 1, 0.68, 1),
+        height 0.26s cubic-bezier(0.33, 1, 0.68, 1),
         opacity 0.18s ease,
         transform 0.26s cubic-bezier(0.33, 1, 0.68, 1),
         margin-top 0.26s ease,
@@ -1439,7 +1447,9 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         background-color 0.18s ease;
 }
 .sc-panel[data-open="true"] {
-    grid-template-rows: 1fr;
+    /* 展开后放开溢出：下拉弹层要能被看见。收起动画期间仍由基础态的 hidden 裁剪，
+       因为那时 height 正在变，视觉上是"抽出来"，不需要看到外部。 */
+    overflow: visible;
     margin-top: 2px;
     opacity: 1;
     transform: translateY(0);
@@ -1456,10 +1466,11 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 12px 18px;
     padding: 14px 16px;
-    /* 0fr 时内层必须能被压到 0：min-height:0 + overflow:hidden 是必要条件，
-       少了任何一条，外壳的外壳收缩时内层会顶住，外壳高度就减不下去。 */
+    /* min-height:0 让 0fr 时能被压到 0。
+       注意**不要**在这里加 overflow:hidden —— 实测它会让 grid 计算 1fr 时
+       拿不到内容高度，展开后行高停在 28px（只有内边距），面板内容被裁光。
+       裁剪由外壳 .sc-panel 的 overflow:hidden 负责就够了。 */
     min-height: 0;
-    overflow: hidden;
 }
 /* 系统开了减少动效就直接切，不做位移与淡入 */
 @media (prefers-reduced-motion: reduce) {
@@ -1467,50 +1478,222 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         transition: none;
     }
 }
+/* 【面板内部布局（2026-10-25 重做）】
+   旧做法是「标签在左、控件在右」的横排，塞进 minmax(210px,1fr) 的网格里：
+   210px 减掉「标签（难度档/定数区间 4-5 字）+ 间距 + 控件」后控件只剩一百来像素，
+   实测结果是标签被裁掉、下拉和 chips 错位 —— 截图就是这个样子。
+   现在统一改成**标签在上、控件占满整行**：标签是一行小字（12px），
+   控件在下一行拿满宽度，读起来是"分组"，不再像散落的零件。 */
 .sc-pf {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
-/* 难度档 / 定数区间这两组横着放不下，占满整行改成上下排（用显式 class，
-   不依赖 :has()——它在旧 Safari / Firefox 上会整条规则失效，那两行会挤成一坨） */
-.sc-pf-wide {
-    grid-column: 1 / -1;
     flex-direction: column;
     align-items: stretch;
-    gap: 7px;
+    gap: 6px;
+    min-width: 0;
 }
+/* 占满整行的组（分区 / 难度档 / 定数区间 / 重置） */
+.sc-pf-wide {
+    grid-column: 1 / -1;
+}
+/* 组标题：统一成"小节标签"——左侧一条 2px 强调色竖线 + 文字，
+   比原来的全大写小字更好认，也和数据卡片上的分区标签同一套语汇。 */
 .sc-pf-k {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     flex: none;
-    font-family: var(--font-data);
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink3);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--ink2);
 }
+.sc-pf-k::before {
+    /* 小圆点而不是竖线/短横：竖线在等宽数字旁会被读成「1」，短横看着像破折号，
+       圆点最不容易误读，也不抢注意力。 */
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--acc);
+    flex: none;
+}
+/* 面板内的下拉/输入：整行宽度，40px 高（触控下限） */
 .sc-pf-in {
     -webkit-appearance: none;
     appearance: none;
-    flex: 1 1 auto;
+    width: 100%;
     min-width: 0;
-    height: 32px;
-    padding: 0 8px;
+    height: 40px;
+    padding: 0 34px 0 12px;
     font: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--ink);
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    background-color: color-mix(in srgb, var(--ink) 4%, transparent);
+    /* 箭头自己画（原生箭头在 Windows 上又大又偏，和圆角控件不搭） */
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink3) 50%),
+        linear-gradient(135deg, var(--ink3) 50%, transparent 50%);
+    background-position: calc(100% - 17px) 18px, calc(100% - 12px) 18px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
     border: 1px solid var(--edge);
     border-radius: var(--r-xs);
     cursor: pointer;
+    transition: border-color 0.16s, background-color 0.16s;
 }
 .sc-pf-in:hover {
     border-color: var(--edge2);
+    background-color: color-mix(in srgb, var(--ink) 7%, transparent);
 }
 .sc-pf-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+}
+
+/* ---------- 自定义下拉（2026-10-25）---------- */
+/* 原生 select 藏起来但仍留在 DOM：它是数据源也是无障碍载体，
+   所以用 clip 而不是 display:none（后者会让它退出无障碍树）。 */
+.sc-dd {
+    position: relative;
+    min-width: 0;
+}
+/* 展开中的那个下拉提到最上层：否则相邻列的弹层会互相压住 */
+.sc-dd[data-open="true"] {
+    z-index: 210;
+}
+.sc-dd-sel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+/* 触发按钮：与 .sc-pf-in 同一套外观（整行宽、40px、自绘箭头） */
+.sc-dd-b {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+    background-color: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-xs);
+    cursor: pointer;
+    transition: border-color 0.16s, background-color 0.16s;
+}
+.sc-dd-b:hover {
+    border-color: var(--edge2);
+    background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.sc-dd[data-open="true"] .sc-dd-b {
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+    background-color: color-mix(in srgb, var(--acc) 10%, transparent);
+}
+.sc-dd-v {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sc-dd-ico {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    fill: none;
+    stroke: var(--ink3);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.2s ease;
+}
+.sc-dd[data-open="true"] .sc-dd-ico {
+    transform: rotate(180deg);
+}
+/* 弹层：站点自己的玻璃卡片，绝不用系统弹层。
+   position:absolute + max-height + overflow:auto：曲师有 39 项，必须能滚。 */
+.sc-dd-list {
+    position: absolute;
+    /* 弹层要盖住面板里其它控件（难度档 chips 就在下方），z-index 高于卡片与吸顶条 */
+    z-index: 200;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 100%;
+    max-height: 268px;
+    margin: 0;
+    padding: 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+    background: color-mix(in srgb, var(--base) 96%, transparent);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-sm);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+    animation: scDdIn 0.16s ease;
+}
+.sc-dd-list[hidden] {
+    display: none;
+}
+@keyframes scDdIn {
+    from { opacity: 0; transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-dd-list { animation: none; }
+    .sc-dd-ico { transition: none; }
+}
+.sc-dd-list li {
+    padding: 9px 10px;
+    font-size: 12.5px;
+    color: var(--ink2);
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc-dd-list li:hover,
+.sc-dd-list li.is-focus {
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    color: var(--ink);
+}
+/* 选中项：左侧小圆点 + 加重，不用系统那种整条蓝底 */
+.sc-dd-list li[aria-selected="true"] {
+    color: var(--ink);
+    font-weight: 700;
+    background: color-mix(in srgb, var(--acc) 9%, transparent);
+}
+.sc-dd-list li[aria-selected="true"]::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--acc);
+    vertical-align: 2px;
+}
+/* 滚动条也换掉（Windows 默认滚动条在深色弹层上很扎眼） */
+.sc-dd-list::-webkit-scrollbar {
+    width: 8px;
+}
+.sc-dd-list::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 4px;
+    background-clip: content-box;
+    background-color: color-mix(in srgb, var(--ink3) 45%, transparent);
 }
 /* 面板里的 chip 比工具条上的小一号：它们是二级控件，不该和分区 chips 一样重 */
 .sc-chip-sm {
