@@ -117,7 +117,7 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 | bsc / adv / ext | resolved.json `levels` | sheet2 E / F / G |
 | gen_name | `origin` 剥掉 `jubeat ` 前缀后对齐 12 个日服世代 | 固定 `音乐魔方` |
 | server_jp / server_cn | jp=1；命中跨服同曲判定时再置 cn=1；或该 songId 在 sheet1 的 H 列为 √（旧框已有曲）时置 cn=1 | cn=1；命中判定时 jp=1 |
-| category | `license`→版权、`original`→原创 | sheet2 H 的 5 种写法归成 3 个分区（`KONAMI原创` / `音乐魔方原创` / `音乐魔方流行`） |
+| category | `license`→**授权**、`original`→**原创**（2026-10-24 改名，原名「版权」） | sheet2 H 的 5 种写法归成 4 个分区：`华立独占`→**独占**、`KONAMI/机种移植`→**KONAMI**、`音乐魔方/原创`→**原创**、`音乐魔方/流行`(+限时)→**流行**。**只存源生分类**，不再按「两服都有」改写成 KONAMI——分区归属是视图相关的，由页面层 `catOf()` 现算 |
 | alt | resolved.json `alt` | 标题匹配 `[ 2 ]` |
 | cover | `jacketFile` 的 `.gif` → `.webp` | wiki-v3 快照的 md5 名 → `.webp`；7 首新曲按 `id<songId>.webp` 回退（素材库 png 或已转档 webp 任一存在） |
 | added_at | 从快照回查 | sheet2 J 的 `YYYY.MM.DD` → `YYYY-MM-DD` |
@@ -150,13 +150,14 @@ lowercase → 去掉 [ 2 ] 长押标记 → 去掉所有空白 → 去掉 ~～�
 双向用法：
 
 1. 先用日服全部 1150 首建 `Map<dualKey(title)|dualKey(artist), title>`；
-2. 国服行拿同一个键去查，命中即 `server_jp = 1`（页面归到「KONAMI原创」分区）；
+2. 国服行拿同一个键去查，命中即 `server_jp = 1`（只标标志位，不参与分区判定）；
 3. 国服命中行的键收集进 `cnDualKeys`，日服循环把这些行也标 `server_cn = 1`。
    日服侧的 `[ 2 ]` 长押行靠 `dualKey` 抹掉后缀后同样命中，所以「两服都有」是双向一致的。
 
 当前结果：只有 **2 行** 同时 `server_jp=1 AND server_cn=1`——Big Daddy（USAO），
-日服行 `11000228`（beyond the Ave.，版权）+ 国服行 `991000007`（音乐魔方，KONAMI原创）。
-国服「KONAMI原创」区里的 13 首机种移植曲日服没有，不命中此规则。
+日服行 `11000228`（beyond the Ave.，授权）+ 国服行 `991000007`（音乐魔方，原创）。
+   注：2026-10-24 主人明确「国服的 Big Daddy 属于原创分区」，于是废弃了「两服都有→KONAMI」的自动改判。
+国服「KONAMI」区里的 13 首机种移植曲日服没有，不命中此规则。
 
 `DUAL_EXTRA` 是**逃生口**：当曲名写法差太多、`dualKey` 归一化后仍对不上、但人工确认是同一首时，
 往里加一条 `dualKey(国服曲名) → true`。当前它是**空的**（现有数据用归一化键就能全部覆盖），

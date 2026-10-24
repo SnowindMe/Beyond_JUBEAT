@@ -36,20 +36,25 @@ Astro.response.headers.set(
 const genMetaOf = (gen: string) => GEN_ORDER.find((g) => g.k === gen);
 const yearOf = (gen: string) => genMetaOf(gen)?.y ?? '';
 
-// 每个分区实际会出现的世代。
+// 每个分区实际会出现的世代（2026-10-24 分区改名后重算）。
 //
-// KONAMI原创 分区（2026-10-24 改）要列**日服 12 个世代 + 音乐魔方**：
+// KONAMI 分区要列**日服 12 个世代 + 音乐魔方**：
 // 它装的是「国服已上线的日服曲」（sheet1 打√的 432 首，首登于 jubeat…beyond the Ave.）
-// 加上国服独有的移植曲与 Big Daddy。只映射 GEN_CN 的话，那 432 首会因为没有对应桶被丢掉——
+// 加上国服独有的机种移植曲与 Big Daddy。只映射 GEN_CN 的话，那 432 首会因为没有对应桶被丢掉——
 // 这正是「数据标了 cn=1、页面却仍只有 91 卡」的真因（视图放行了，桶没建）。
-// 音乐魔方原创 / 音乐魔方流行 仍只有「音乐魔方」一个世代（国服独有曲）。
+//
+// 「独占」也要列日服的 12 个世代：华立独占的 17 首里有相当一部分是 gitadora / DDR / popn
+// 等机种的移植曲（源表 I 列写着「移植机种」），它们在库里带着日服世代的 gen_name，
+// 只给它 GEN_CN 会导致命中卡片被静默丢掉（数据对、页面少卡，就是上一轮踩过的坑）。
+// 多给世代不会让别的曲混进来 —— 分区归属由 catOf() 决定，世代只是分块轴。
 const CN_ALL_GENS = [...GEN_JP.map((g) => g.k), ...GEN_CN.map((g) => g.k)];
 const CAT_GENS: Record<string, Record<string, string[]>> = {
-  jp: { '版权': GEN_JP.map((g) => g.k), '原创': GEN_JP.map((g) => g.k) },
+  jp: { '授权': GEN_JP.map((g) => g.k), '原创': GEN_JP.map((g) => g.k) },
   cn: {
-    'KONAMI原创': CN_ALL_GENS,
-    '音乐魔方原创': GEN_CN.map((g) => g.k),
-    '音乐魔方流行': GEN_CN.map((g) => g.k),
+    '独占': CN_ALL_GENS,
+    'KONAMI': CN_ALL_GENS,
+    '原创': GEN_CN.map((g) => g.k),
+    '流行': GEN_CN.map((g) => g.k),
   },
 };
 // 服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
@@ -97,7 +102,7 @@ for (const srv of ['jp', 'cn'] as const) {
 }
 
 // 「全部分区」视图（主人 2026-10-24）：选「全部」时不按分区分块，改成跨该服务器
-// 所有分区按世代整合——一个世代只出现一次，同一世代的版权/原创/国服各类曲目混在一起按定数排。
+// 所有分区按世代整合——一个世代只出现一次，同一世代的授权/原创/国服各类曲目混在一起按定数排。
 // 不这么做的话，选「全部」只是把三个分区各自展开，同一个世代会出现 3 次，看着不像"全部"。
 // 键用世代名，值是该世代在这个服务器视图下的全部行（跨分区去重后合并）。
 const byGen: Record<string, Record<string, Song[]>> = { jp: {}, cn: {} };
@@ -146,10 +151,10 @@ const srvTotal = (srv: Srv) => rowsIn(srv).length;
 
 const DEFAULT_SRV: Srv = 'jp';
 
-// 首屏曲绘：默认视图（日服 · 版权 · 前两个世代）里的前 18 张优先加载，
+// 首屏曲绘：默认视图（日服 · 授权 · 前两个世代）里的前 18 张优先加载，
 // 其余一律 lazy + low，避免一次开 1200+ 请求。
 const EAGER = new Set(
-  GEN_JP.map((g) => bucket.jp['版权'][g.k] ?? [])
+  GEN_JP.map((g) => bucket.jp['授权'][g.k] ?? [])
     .reduce((acc, arr) => acc.concat(arr), [])
     .slice(0, 18)
     .map((s) => s.id),
@@ -197,7 +202,7 @@ const SORTS = [
 <Layout
   title={pageTitle('曲目')}
   canonicalPath="/songs/"
-  description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（版权 ${countOf('jp', '版权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（KONAMI原创 ${countOf('cn', 'KONAMI原创')} 首、音乐魔方原创 ${countOf('cn', '音乐魔方原创')} 首、音乐魔方流行 ${countOf('cn', '音乐魔方流行')} 首），按世代分组，可搜索、筛选与排序。`}
+  description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（授权 ${countOf('jp', '授权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（独占 ${countOf('cn', '独占')} 首、KONAMI ${countOf('cn', 'KONAMI')} 首、原创 ${countOf('cn', '原创')} 首、流行 ${countOf('cn', '流行')} 首），按世代分组，可搜索、筛选与排序。`}
 >
   {/*
     【本页第 1 个可聚焦元素】键盘逃生口（2026-10-23，t9；位置按稽核实测调整）
@@ -365,7 +370,7 @@ const SORTS = [
       <div class="sc-body" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
         {/*
           「全部分区」视图（2026-10-24 主人要求）：
-          选「全部」时不再按版权/原创/KONAMI原创分区切块，而是**跨该服务器的所有分区、
+          选「全部」时不再按授权/原创/KONAMI 等分区切块，而是**跨该服务器的所有分区、
           按世代整合**——一个世代只出现一次，该世代下的各类曲目混在一起按定数排。
           原来的做法是三个分区各自展开，同一世代（如 festo）会出现 3 次，选「全部」反而不像"全部"。
           世代块渲染抽成 renderGen()，两种视图共用，避免复制一份卡片结构。
@@ -468,8 +473,8 @@ const SORTS = [
         // 分区过滤（2026-10-24 改）：DOM 只有一套「按世代整合」的节点，
         // 选具体分区时靠这里隐藏不属于该分区的卡片，而不是另渲染一份结构。
         // 「全部」= 不分区、所有卡片都露出来。
-        // 分区名要按**该 body 自己的服务器**解析：cn 的分区是 KONAMI原创/音乐魔方原创/音乐魔方流行，
-        // jp 的是版权/原创。state.cat 里的分区名只对当前 srv 有意义。
+        // 分区名要按**该 body 自己的服务器**解析：cn 的分区是 独占/KONAMI/原创/流行，
+        // jp 的是授权/原创。state.cat 里的分区名只对当前 srv 有意义。
         // bodySrv 在这里真正用上（2026-10-24 稽核指出它在函数体内 0 引用）：
         // 只有当该 body 的服务器与当前视图一致时，state.cat 才是有效的筛选条件；
         // 对隐藏 body，state.cat 可能属于另一个服务器的分区名，此时不该按它过滤（否则会把它自己的卡全判否）。

@@ -58,7 +58,12 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
       包成 <a> 会把曲绘、双服徽章、三个难度徽章全卷进链接名里，
       读屏一次念一大串；铺满层让链接名只有曲名，点击却覆盖全卡。
       链接层放在最后以保证盖住其余内容，z-index 由 CSS 控制。 */}
-  <b class="sc-t" title={s.t}>{s.t}{s.jp && s.cn ? <span class="sc-dual" title="日服/国服均有">双</span> : null}</b>
+  {/* 【双】徽章已移除（2026-10-24 主人：「【双】徽章可以不用」）。
+      原先它标的是「日服/国服均有」，但国服视图现在收的都是已上线的日服曲（432 首旧框已有曲
+      + 双服曲），几乎每张卡都带这个徽章 —— 满屏同一个标记等于没有信息量，还挤占曲名宽度。
+      「两服都有」这个事实由分区（KONAMI）和详情页表达，卡片上不再重复。
+      注意：s.jp && s.cn 仍参与国服视图的去重（songKey），只是不再画成徽章，也不再参与分区判定。 */}
+  <b class="sc-t" title={s.t}>{s.t}</b>
   <span class="sc-a" title={s.a ?? ''}>{s.a ?? '—'}</span>
   <div class="sc-lv">
     <i class={`lv lv-bsc${s.lv.bsc == null ? ' lv-0' : ''}`}><u>BSC</u>{dash(s.lv.bsc)}</i>

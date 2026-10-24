@@ -24,20 +24,26 @@ const DB_PATH = outArg ? path.join(ROOT, outArg.slice(6)) : path.join(ROOT, 'dat
 const SEED_PATH = path.join(ROOT, 'db/seed.sql');
 
 // 世代 → 服务器归属。日服 12 代（server_jp），国服 1 代（server_cn）；
-// 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI原创」分区；
+// 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI」分区（2026-10-24 改名，原名 KONAMI原创）；
 // 两服 song_id 体系不同，同曲只能按 dualKey 归一化标题+艺人匹配（见 docs/data-pipeline.md §5）。
 const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.'];
 const CN_GENS = ['音乐魔方'];
 
 // 日服分类：源数据里的 license / original 两分。
-const JP_CATEGORY = { license: '版权', original: '原创' };
-// 国服分类：xlsx sheet2 第 7 列的五种写法归成三个分区（主人 m02311 定的口径）。
+// 【2026-10-24 主人改名】「版权」→「授权」（Licensed）、「原创」保持「原创」（Original）。
+// 英文只作对照，页面上不显示。
+const JP_CATEGORY = { license: '授权', original: '原创' };
+// 国服分类：xlsx sheet2 第 7 列的写法归成四个分区（2026-10-24 主人重新定的口径）。
+//   「独占」= 华立独占（源表精确词，17 首）——之前被错归进「音乐魔方原创」，等于把
+//   「华立独占」和「音乐魔方/原创」混成同一类，这正是分区含义含糊的根源。
+//   「KONAMI」= 机种移植（13 首）；其余双服曲在 catOf() 里另行归入同一分区。
+//   「原创」= 音乐魔方/原创（26 首）；「流行」= 音乐魔方/流行 + 流行（限时）（35 首）。
 const CN_CATEGORY = {
-  '华立独占': '音乐魔方原创',
-  '音乐魔方/原创': '音乐魔方原创',
-  '音乐魔方/流行': '音乐魔方流行',
-  '音乐魔方/流行（限时）': '音乐魔方流行',
-  'KONAMI/机种移植': 'KONAMI原创',
+  '华立独占': '独占',
+  'KONAMI/机种移植': 'KONAMI',
+  '音乐魔方/原创': '原创',
+  '音乐魔方/流行': '流行',
+  '音乐魔方/流行（限时）': '流行',
 };
 
 function main() {
@@ -51,7 +57,7 @@ function main() {
   // 国服「旧框已有曲」（主人 2026-10-24）：sheet1「国框更新日服歌曲进度」里 H 列打 √ 的曲子
   // = 国服音乐魔方已经上线的日服曲。这 432 首在曲库里本来就是日服行（server_jp=1），
   // 之前 server_cn=0 是因为国服数据只从 sheet2 读。补上这条来源后，它们的 server_cn 变 1，
-  // 页面按 dualKey 规则归入「KONAMI原创」分区 —— 正是主人要的「KONAMI原创分区加上旧框已有曲」。
+  // 页面按 dualKey 规则归入「KONAMI」分区 —— 正是主人要的「KONAMI 分区加上旧框已有曲」。
   // 只读 H 列 √，不按歌曲名猜；SongId 缺失的行（sheet1 里 107 行）天然不会被收录，安全。
   const cnOldFrameIds = readCnOldFrameIds();
 
@@ -61,8 +67,8 @@ function main() {
   db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
 
   // 双服判定（主人 2026-10-22 口径）：国服行与日服行「归一化标题+艺人」完全一致 → 同一首曲子
-  // 两服都有 → server_jp=1（页面会把它挪进 KONAMI原创 分区）。两服 song_id 体系不同，只能按曲名匹配。
-  // 机器移植曲（KONAMI原创 13 首）日服没有，不会命中此规则。
+  // 两服都有 → server_jp=1（页面会把它挪进 KONAMI 分区）。两服 song_id 体系不同，只能按曲名匹配。
+  // 机器移植曲（KONAMI 分区 13 首）日服没有，不会命中此规则。
   // songId → 日服行（判断 sheet1 打√ 的 id 是否真的在库里）
   const jpById = new Map(jp.songs.map((s) => [String(s.songId), s]));
   const jpKey = new Map();
@@ -124,11 +130,16 @@ function main() {
     for (const r of cnRows) {
       const cat = CN_CATEGORY[r.cnCategory];
       if (!cat) { stat.cnUnmapped++; problems.push(`国服分类未映射: ${r.cnCategory} (${r.title})`); }
-      let cat2 = cat || '音乐魔方原创';
+      let cat2 = cat || '原创';
       // 双服标志按数据事实判定：标题+艺人匹配日服才算两服都有；
-      // KONAMI原创 13 首是别的机种移植曲，日服没有 → 不命中（主人 2026-10-22 纠正）。
+      // KONAMI 分区的 13 首是别的机种移植曲，日服没有 → 不命中（主人 2026-10-22 纠正）。
       const dual = cnIsDual(r) ? 1 : 0;
-      if (dual) { stat.cnDual++; cat2 = 'KONAMI原创'; }
+      // 【2026-10-24 修正】category 列只存**源生分类**，不要在这里改写成「KONAMI」。
+      // 原因：这一列是单值，而 Big Daddy 这类双服曲在两服的分区并不相同——
+      // 日服要按源生分类算（授权），国服要算 KONAMI。以前把国服行写成 KONAMI，
+      // 结果日服视图里凭空冒出一个布局外的「KONAMI」分区（那 1 首就是它）。
+      // 分区归属是**视图相关的**，交给页面层的 catOf() 按 (song, srv) 现算，不入库。
+      if (dual) { stat.cnDual++; }
       ins.run(
         r.songId, 'official', r.title, r.artist || null, dashNull(r.bpm),
         '音乐魔方', dual, 1, cat2,

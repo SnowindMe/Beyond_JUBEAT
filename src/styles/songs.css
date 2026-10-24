@@ -608,19 +608,10 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     outline: 2px solid var(--acc);
     outline-offset: 2px;
 }
-/* 双服标记：曲名后的小徽标（两服都有的 KONAMI 移植曲） */
-.sc-dual {
-  display: inline-block;
-  margin-left: 4px;
-  padding: 0 4px;
-  font-size: 11px;
-  line-height: 15px;
-  border-radius: 3px;
-  vertical-align: 1px;
-  color: #fff;
-  background: var(--accent, #6c5ce7);
-  opacity: 0.85;
-}
+/* 双服标记 .sc-dual 已于 2026-10-24 移除（主人：「【双】徽章可以不用」）。
+   国服视图几乎每张卡都带它，满屏同一标记等于没有信息量，还挤占曲名宽度。
+   样式一并删除，避免留下「有规则没有元素」的死代码。
+   s.jp && s.cn 仍参与 catOf() 分区判定与国服视图去重，只是不再画成徽章。 */
 
 
 /* ---------- 曲目详情页 /songs/[songId]/ ----------
