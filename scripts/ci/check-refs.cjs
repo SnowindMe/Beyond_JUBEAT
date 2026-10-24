@@ -40,8 +40,11 @@ for (const [from, ref] of refs) {
   // 或 404 兜底提供，不该拿 public/ 的文件表来校验。
   if (ref.endsWith('/')) continue;
   // /xxx 是站点绝对路径：源码期从 public/ 找，产物期从 dist/ 找
+  // 查询串/锚点不是文件路径的一部分：/assets/images/bg/festo.webp?v=2 校验的文件是
+  // festo.webp。不去掉的话换图加了破缓存参数就会被误报 MISSING（实测踩过）。
+  const fileRef = ref.replace(/[?#].*$/, '');
   const base = ref.startsWith('/') ? (isDist ? target : path.join(ROOT, 'public')) : path.dirname(from);
-  const p = path.resolve(base, ref.replace(/^\//, ''));
+  const p = path.resolve(base, fileRef.replace(/^\//, ''));
   if (fs.existsSync(p)) ok++;
   else missing.push(path.relative(ROOT, from) + ' -> ' + ref);
 }

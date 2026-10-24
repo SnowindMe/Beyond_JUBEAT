@@ -1438,7 +1438,10 @@ html[data-g="copious"] {
     --bgauto: url("/assets/images/bg/copious.webp");
 }
 html[data-g="festo"] {
-    --bgauto: url("/assets/images/bg/festo.webp");
+    /* ?v=2：2026-10-25 换新图（三角马赛克）。文件名不变但 /assets/images/* 是
+       immutable 一年缓存，必须带版本参数才不会让老访客看旧图。换图时同步 +
+       改 Base.astro 的 JB_BGVER 与这里的值。 */
+    --bgauto: url("/assets/images/bg/festo.webp?v=2");
 }
 html[data-g="knit"] {
     --bgauto: url("/assets/images/bg/knit.webp");

@@ -103,7 +103,7 @@ Beyond_JUBEAT/
 │
 ├─ public/                    原样拷进 dist 根的内容
 │  ├─ assets/
-│  │  ├─ images/bg/           15 张世代主题背景 webp（383 KB，1440 宽）
+│  │  ├─ images/bg/           15 张世代主题背景 webp（397 KB，1440 宽）
 │  │  ├─ images/jackets/      1305 张曲绘 webp（11 MB，144px）
 │  │  ├─ images/logo/         12 张世代站标 webp（244 KB，570 宽 DPR2）
 │  │  ├─ images/og/           og:image 分享图（1200x630 png）

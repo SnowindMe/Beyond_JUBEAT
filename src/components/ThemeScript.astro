@@ -25,6 +25,10 @@
     {k:'yymf',n:'音乐魔方',f:'F',c:'#8fd0ff'}
   ];
   var BG='/assets/images/bg/';
+  /* 背景图版本号（单一来源在 Base.astro 的 JB_BGVER）：图换了但文件名不变，
+     而 /assets/images/* 是 immutable 一年缓存，老访客会一直看旧图。
+     所以给换过的图拼 ?v=N 破缓存，没换过的图不加参数（不多下 397KB）。 */
+  var BGVER=window.JB_BGVER||{};
   // 字标：首屏只加载当前世代那一张，切主题时才换 src（原先 10 张一起下载，浪费 ~150KB）
   var LOGO='/assets/images/logo/';
   var root=document.documentElement, dock=document.getElementById('genDock');
@@ -45,7 +49,7 @@
      opacity 走 GPU 合成，切主题时图是「渐变过去」而不是「闪一下」。 */
   var bgv=document.querySelectorAll('.bgv-l'), vf=0;
   function paint(g){
-    var url='url("'+BG+g.k+'.webp")';
+    var url='url("'+bgUrl(g)+'")';
     var nx=bgv[(vf+1)%bgv.length];
     nx.style.backgroundImage=url;
     nx.style.opacity='1';
@@ -63,7 +67,7 @@
      可以直接完全跳过遮罩——本地切换世代零闪烁靠的就是它。 */
   var loaded = {};
   function logoUrl(g){ return LOGO + (g.k.indexOf('clan_')===0 ? 'clan' : g.k) + '.webp'; }
-  function bgUrl(g){ return BG + g.k + '.webp'; }
+  function bgUrl(g){ return BG + g.k + '.webp' + (BGVER[g.k] ? '?v=' + BGVER[g.k] : ''); }
   function sync(g){ loaded[bgUrl(g)] = 1; loaded[logoUrl(g)] = 1; }
 
   /* 换世代要下载两样东西：背景大图 + 字标。两样都到齐了才撤遮罩，
@@ -126,7 +130,7 @@
     if(instant||reduce||!prev){
       // 首屏直接落图，不要从空白淡进来
       for(var i=0;i<bgv.length;i++){bgv[i].style.transition='none';}
-      bgv[0].style.backgroundImage=bgv[1].style.backgroundImage='url("'+BG+g.k+'.webp")';
+      bgv[0].style.backgroundImage=bgv[1].style.backgroundImage='url("'+bgUrl(g)+'")';
       bgv[0].style.opacity='1'; bgv[1].style.opacity='0';
       vf=0;
       // 关键：必须把 transition 还回去，否则首屏这一下会把「永不过渡」写死在元素上，
