@@ -290,10 +290,32 @@
   // 现在改成单一路径，别再往 head 脚本里加 class。
   var shown = false;
 
+  /* ---- 看门狗：遮罩一旦可见，最多挂 MAX_VISIBLE 毫秒，到点无条件收起 ----
+     2026-10-24 主人反馈「有时候加载会卡在 loading 页」，实测复现出三条永久卡死路径：
+       ① 点站内链接时 click 处理器调了 begin(160) 却把返回的 end() 丢掉（真实代码就是这样）。
+          导航一旦慢、失败或被取消，就再没人收遮罩 —— 实测 10 秒后仍 opacity:1 且
+          overflow:hidden、pointer-events:auto，elementFromPoint 返回 none，整页点不动、滚不动。
+       ② bfcache 恢复时 shown===true，pageshow 处理器只清 boot-out 不摘 boot-run，停在可见态。
+       ③ 任何 show()/hold() 之后抛异常，end 永远不执行。
+     共同点是「点亮之后，收尾责任全压在调用方手上」。调用方一漏、一抛，或那次导航压根没发生，
+     就没人兜底。所以加一道与调用方完全无关的看门狗：进入可见态就挂表，到点强制收起。
+     这不是补某个已知 bug，而是让「不可收起」这个状态在结构上不可能存在。 */
+  var MAX_VISIBLE = 8000;
+  var watchdog = 0;
+  // 导航时 begin(160) 返回的收尾函数：页面若没真的跳走，下一次交互或 pageshow 要能收掉它。
+  var pendingEnd = null;
+  function armWatchdog() {
+    clearTimeout(watchdog);
+    // 不判断任何条件，到点就收：遮罩挂满 8 秒已经不是「加载中」而是故障，
+    // 让用户看到内容，远比继续假装还在加载有价值。
+    watchdog = setTimeout(function () { hide(); }, MAX_VISIBLE);
+  }
+
   var outT = 0;
   function show(waitMode) {
     if (shown) return;
     shown = true;
+    armWatchdog();
     el.classList.toggle('is-wait', !!waitMode);
     if (iris) {
       // 上一轮退场还没走完就又要亮：先掐掉退场，再重新播进场
@@ -307,6 +329,7 @@
   function hide() {
     if (!shown) return;
     shown = false;
+    clearTimeout(watchdog);
     el.classList.remove('is-wait');
     if (iris) {
       // 圆孔从中心向四周退开：--boot-r 过渡到 130%，走完再摘 boot-out。
@@ -340,14 +363,45 @@
 
   window.jbBoot = { show: show, hide: hide, begin: begin, hold: hold };
 
+  /* ---- 进 bfcache 之前主动摘掉遮罩（2026-10-24 主人反馈「进详情后按 back 有概率卡 loading」）----
+     根因链：列表页点进详情 → begin(160) 在 160ms 后点亮遮罩 → 若导航比 160ms 慢，
+     遮罩已经亮了，此时列表页被冻结进 bfcache，**快照里就带着 boot-run**。
+     按 back 恢复时脚本不重跑、闭包 state 保持原样，页面直接从坏快照复活。
+     这也解释了「有概率」：导航快于 160ms → 遮罩没亮 → 快照干净 → 正常；
+     慢于 160ms → 遮罩亮着 → 卡死。越快越正常，越慢越卡。
+
+     pageshow 里补一次复位是「事后救」，但更彻底的是**不让坏状态进入快照**：
+     pagehide 时先把遮罩摘干净，bfcache 存下的就是干净状态，back 回来天然正常。
+     两道保险都留着：pagehide 保证快照干净，pageshow 兜住其他来源的脏状态。 */
+  window.addEventListener('pagehide', function (ev) {
+    // 只有进 bfcache 才需要管；真正的卸载（persisted=false）不用做任何事，
+    // 反正页面就要销毁了，多改 class 反而多一次样式计算。
+    if (!ev.persisted) return;
+    clearTimeout(outT);
+    clearTimeout(watchdog);
+    shown = false;
+    pendingEnd = null;
+    d.classList.remove('boot-run', 'boot-out', 'boot-first');
+    el.classList.remove('is-wait', 'boot-first');
+  });
+
   // 前进/后退走 bfcache 恢复时脚本不会重跑，但 class 会原样留着：
   // 若恢复时正卡在退场里，html.boot-out 的 overflow:hidden 会把滚动永久锁死。
   window.addEventListener('pageshow', function (ev) {
     if (!ev.persisted) return;
     clearTimeout(outT);
     d.classList.remove('boot-out');
-    if (!shown) d.classList.remove('boot-run');
-    el.classList.remove('is-wait');
+    // 【2026-10-24 修】原来写的是 if (!shown) d.classList.remove('boot-run')。
+    // bfcache 恢复时若遮罩正亮着（shown===true），这一句就不执行，boot-run 留在 html 上，
+    // 恢复出来的页面直接停在 LOADING —— 实测可复现。
+    // 从缓存里回来意味着**这一页早就加载完了**，遮罩没有任何继续存在的理由，
+    // 所以这里无条件复位，并把 shown 一起归零（否则后续 show() 会因为 shown 仍为 true 而直接 return）。
+    clearTimeout(watchdog);
+    shown = false;
+    // 导航残留的收尾函数也要一并作废，否则它以后可能把一次新的遮罩误收掉。
+    pendingEnd = null;
+    d.classList.remove('boot-run', 'boot-first');
+    el.classList.remove('is-wait', 'boot-first');
   });
 
   // ---- 首访开屏：load 后收，最短 900ms / 最长 3s ----
@@ -392,7 +446,21 @@
     if (url.origin !== location.origin) return;
     // 同页只改 hash 不算跳转
     if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
-    begin(160);
+    // 【2026-10-24】begin(160) 的返回值是「收尾函数」，原来直接丢掉了：
+    // 导航若慢/失败/被取消，遮罩就永远没人收（实测卡死）。
+    // 现在把它挂到 document 上，由下一次 pageshow 或看门狗兜底；
+    // 这里不主动 end，因为点击之后页面很快就要卸载，主动 end 反而会让遮罩白闪一下。
+    var endBoot = begin(160);
+    pendingEnd = endBoot;
+    // 导航本该在几十毫秒内卸载本页。若 3 秒后我们还活着，说明那次导航失败/被取消
+    // （服务器 502、离线、用户按了 Esc、target 被 JS 拦下……），必须自己把遮罩收掉。
+    // 只在「本页仍然可见」时收：如果页面已经进了后台（visibilityState === 'hidden'），
+    // 说明导航确实在进行中，这时收掉反而会露出旧页面。
+    setTimeout(function () {
+      if (document.visibilityState !== 'visible') return;
+      pendingEnd = null;
+      endBoot();
+    }, 3000);
   }, true);
 
   // ---- 切世代：ThemeScript 会调用 jbBoot.begin() 包住换图过程 ----
