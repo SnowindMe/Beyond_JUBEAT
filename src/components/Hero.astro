@@ -5,6 +5,21 @@ const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qub
 const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop();
 ---
 
+<script is:inline define:vars={{ cubeData: data.gen.reduce((m, g) => {
+  if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: s.cover, t: s.t, e: s.lv?.ext ?? null }));
+  return m;
+}, {}) }}>
+  // 首屏立方体：主题世代 → 该世代定数最高的 16 首。
+  // 为什么用 define:vars 而不是 <script type="application/json">：
+  // 后者要再 JSON.parse 一次、且 Astro 对 set:html 的 JSON 里尖括号转义有坑；
+  // define:vars 直接把对象序列化进脚本，最省事。
+  //
+  // 【为什么放在<head>前的同步脚本里】主题是在 HTML 解析早期由 ThemeScript 设的
+  // data-g；若这里等到 DOMContentLoaded 才换，会先闪一下 ave 那 16 张再跳成目标世代。
+  // 但此时 #cubeGrid 还不存在，所以这里只做「记录」，真正替换由 cube-apply 调用。
+  window.__cubeData = cubeData;
+</script>
+
 <section class="hero">
   <div>
     {/* h1 里唯一有文字的是 .word-t，但 15 套世代主题都用 display:none 把它藏掉，
@@ -33,26 +48,76 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
       <div class="st"><span>EXT ≥ 10</span><b>{data.gen10}</b></div>
     </div>
   </div>
-  <div class="cubewrap"><div class="cube">
-    {/* 没有代表曲的世代（如日服当前世代 beyond the Ave. 快照里暂无曲目）不出这一格：
-        否则 jacket(undefined) 会拼出 /assets/images/jackets/ 目录路径，渲染成一张裂图。 */}
-    {data.gen.filter((g) => g.rep?.cover).map((g, i) => (
-      <i>
-        {/* 曲绘原图 144×144，容器靠 .cube i 的 aspect-ratio 撑住；补上尺寸属性后
-            图没到货也不会先把格子撑成 0 高（图片一多就是一次整块重排）。
-            懒加载：曲绘立方体在首屏右栏，移动端要滚下去才看得到；只有最前面
-            几张（首屏可能露出的一半）保持 eager，其余交给我浏览器按需加载。
-            字标图 #wordLogo 不走这里，它始终 fetchpriority="high"。 */}
-        <img
-          src={jacket(g.rep.cover)}
-          alt={g.k}
-          width="144"
-          height="144"
-          loading={i < 4 ? 'eager' : 'lazy'}
-          decoding="async"
-        />
-      </i>
-    ))}
-    <i class="sum"><b>{data.stat.songs}</b><span>曲</span></i>
-  </div></div>
+  {/*
+    曲绘立方体（2026-10-25 改）：
+    原来是「每个世代一张代表曲」共 13 格、且切主题不变化。
+    主人要求：显示**当前主题世代的 16 首**（clan 主题就显示 16 首 clan 的曲），按定数大到小。
+    所以服务端把 13 个世代各备一份 top16，这里先渲染默认世代那一份，
+    其余由 ThemeScript 在切换时整体替换（数据塞进 JSON 一次性带过去，切换时不发请求）。
+  */}
+  <div class="cubewrap" data-cube>
+    <div class="cube" id="cubeGrid" data-cube-grid>
+      {(data.gen.find((g) => g.k === 'Ave.')?.top16 ?? []).map((s, i) => (
+        <i>
+          <img src={jacket(s.cover)} alt={s.t} width="144" height="144"
+               loading={i < 4 ? 'eager' : 'lazy'} decoding="async" />
+        </i>
+      ))}
+    </div>
+    {/* 总数格移出 4×4 网格（2026-10-25）：16 张曲绘正好排满 4 行 4 列，
+        原来的总数格是第 17 格，会孤零零占第 5 行第一列，看着像个坏格。
+        改成网格下方独立一条横条，信息更清楚、也不破坏方阵。 */}
+    <div class="cube-sum"><b>{data.stat.songs}</b><span>曲</span></div>
+  </div>
+
+  <script is:inline>
+    // 按当前主题世代重绘 16 张曲绘。
+    // 由 ThemeScript 的 commit() 在设置完 data-g 之后调用（见那边的注释），
+    // 也在首屏执行一次，覆盖「主题是上次保存的、和 SSR 默认世代不一致」的情况。
+    //
+    // 【为什么只换 innerHTML 而不改 DOM 结构】16 张图 + 1 个总数格是固定布局，
+    // 曲绘张数恒为 16（每个世代都够 16 首，已由 build-data 保证），
+    // 所以整块重写最省事，也不用维护 diff 逻辑。
+    //
+    // 【切代主题（clan Red/Blue/Green/Purple）都映射到 clan 这一批曲】
+    // 主题 key 是 15 套，世代 slug 是 13 个，clan 的四个主题共用 clan 世代。
+    (function () {
+      // 【关键：主题 key ≠ 世代名，必须整张表映射】
+      // ThemeScript 的 key 是「主题皮肤」层（bta / qubell / yymf / clan_red… 共 15 套），
+      // 而 data.json 的 gen.k 是「世代」层（beyond the Ave. / Qubell / 音乐魔方 / clan… 共 13 个）。
+      // 两层名字几乎都不同，只写 clan 的别名会取不到数据 → 网格被清空（本轮实测 cells:0）。
+      // 15 条映射一一对应，已用脚本核对全部命中。
+      var THEME2GEN = {
+        ripples: 'ripples', knit: 'knit', copious: 'copious', saucer: 'saucer',
+        saucerfulfill: 'saucer fulfill', prop: 'prop', qubell: 'Qubell',
+        clan_red: 'clan', clan_blue: 'clan', clan_green: 'clan', clan_purple: 'clan',
+        festo: 'festo', ave: 'Ave.', bta: 'beyond the Ave.', yymf: '音乐魔方'
+      };
+      function applyCube(themeKey) {
+        var grid = document.getElementById('cubeGrid');
+        var data = window.__cubeData;
+        if (!grid || !data) return;
+        var key = THEME2GEN[themeKey] || themeKey;
+        var list = data[key] || data['Ave.'];
+        // 取不到就保持现状，**绝不清空**：清空会出现"一格都没有"的空方阵，
+        // 比显示旧内容糟糕得多（本轮第一版就是这么踩的，cells:0）。
+        if (!list || !list.length) return;
+        // 总数格已移出网格（见下方 .cube-sum），这里只重写曲绘格
+        var html = '';
+        for (var i = 0; i < list.length; i++) {
+          var s = list[i];
+          if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
+          html += '<i><img src="/assets/images/jackets/' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
+                  '" width="144" height="144" loading="' + (i < 4 ? 'eager' : 'lazy') + '" decoding="async"></i>';
+        }
+        grid.innerHTML = html;
+      }
+      window.jbCube = applyCube;
+      // 首屏立即执行一次：SSR 渲染的是 ave 那 16 张，但用户上次可能停在别的主题。
+      // 本脚本在 #cubeGrid 之后，且 ThemeScript 早已设好 data-g，所以直接读它重绘，
+      // 避免「先看到 ave 再跳成目标世代」。
+      applyCube(document.documentElement.getAttribute('data-g') || 'ave');
+    })();
+  </script>
+
 </section>

@@ -115,6 +115,11 @@
       var next=logoUrl(g);
       if(wordLogo.getAttribute('src')!==next) wordLogo.setAttribute('src',next);
     }
+    // 首屏曲绘立方体跟着换：显示「当前主题世代定数最高的 16 首」（2026-10-25 主人要求）。
+    // 由 Hero.astro 暴露的 window.jbCube 负责重绘；它内部把 clan_* 四个主题都映射到 clan 世代。
+    // 这里不判断「是否同世代」——clan Red→clan Blue 时曲绘相同，重绘一次代价很小（16 个 img 换 src），
+    // 但能保证逻辑只有一条路径，不用再维护一份「上次渲染的是哪个世代」的状态。
+    if (window.jbCube) { try { window.jbCube(g.k); } catch (e) {} }
     root.style.removeProperty('--bgimg');
     root.style.removeProperty('--bgop');
     for(var k in btns){btns[k].setAttribute('aria-pressed',k===g.k?'true':'false');}

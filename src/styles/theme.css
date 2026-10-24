@@ -902,6 +902,32 @@ html[data-g="saucerfulfill"] .sub {
         inset 0 0 0 1px var(--acc),
         0 0 18px var(--acc);
 }
+/* 总数条（2026-10-25）：16 张曲绘已排满 4×4，总数不再挤成第 17 格，
+   改为网格下方一条横条。保留原来的强调色渐变语汇，但做成扁平长条。 */
+.cube-sum {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    border-radius: var(--r-xs);
+    background: linear-gradient(90deg, var(--acc2), var(--acc) 70%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.cube-sum b {
+    font-family: var(--font-data);
+    font-size: clamp(14px, 1.4vw, 17px);
+    font-weight: 800;
+    color: #04181f;
+    line-height: 1;
+}
+.cube-sum span {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: #0b3f4c;
+}
+/* 旧的格内总数样式保留但不再使用（若将来把总数放回网格可直接复用） */
 .cube i.sum {
     background: linear-gradient(
         160deg,

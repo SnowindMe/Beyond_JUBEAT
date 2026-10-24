@@ -71,7 +71,20 @@ const GEN = GEN_ORDER.map(([key, server, y]) => {
   const rep = arr.length
     ? (arr.filter((s) => s.cover).sort(byExtDesc)[0] || arr.slice().sort(byExtDesc)[0])
     : null;
-  return { k: key, s: server, y, n: arr.length, rep: rep ? pick(rep) : null };
+  // 【top16：该世代 EXT 定数最高的 16 首（2026-10-25 主人要求）】
+  // 首屏立方体原本是「每代一张代表曲」共 13 格、且不随主题切换。
+  // 主人要的是「当前主题世代自己的 16 首、按定数大到小」——即切到 clan 主题时，
+  // 这 16 格全是 clan 世代的曲。所以数据要按世代各备一份。
+  //
+  // 排序：EXT 定数降序；同定数按曲名升序（稳定，避免每次重建顺序漂移）。
+  // 缺 EXT 的排最后（与页面筛选的约定一致，不能当 0 混进前面）。
+  // 不足 16 首的世代（如 jubeat 只有 20 首但够；万一有更少的）就返回实际条数，
+  // 前端按实际长度渲染，不留空格。
+  const top16 = arr.slice()
+    .sort((a, b) => (ext(b) ?? -1) - (ext(a) ?? -1) || String(a.title).localeCompare(String(b.title)))
+    .slice(0, 16)
+    .map(pick);
+  return { k: key, s: server, y, n: arr.length, rep: rep ? pick(rep) : null, top16 };
 });
 
 // 定数分布：10.5 及以上并成一档，其余按整数档
