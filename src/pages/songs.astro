@@ -268,6 +268,21 @@ const SORTS = [
         清空按钮初始 hidden，有内容才出现；它是真按钮（可 Tab 聚焦），不是贴在图上的叉。
       */}
       <div class="sc-find">
+        {/* 筛选按钮在搜索框**左边**（2026-10-25 主人要求）。
+            DOM 顺序就是视觉顺序，不用 order 倒装：键盘 Tab 时也是先到筛选，
+            与眼睛看到的左右关系一致，不会出现「视觉在左、Tab 却后到」的错位。 */}
+        <button
+          type="button"
+          id="scFilterBtn"
+          class="sc-btn sc-btn-f"
+          aria-expanded="false"
+          aria-controls="scPanel"
+          aria-pressed="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M7 12h10M10 17.5h4"/></svg>
+          <span id="scFilterTxt">筛选</span>
+        </button>
+
         <div class="sc-q">
           <span class="sc-q-ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4 20 20"/></svg>
@@ -286,18 +301,6 @@ const SORTS = [
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
           </button>
         </div>
-
-        <button
-          type="button"
-          id="scFilterBtn"
-          class="sc-btn sc-btn-f"
-          aria-expanded="false"
-          aria-controls="scPanel"
-          aria-pressed="false"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M7 12h10M10 17.5h4"/></svg>
-          <span id="scFilterTxt">筛选</span>
-        </button>
       </div>
 
       {/* 分区 chips 与排序已全部移入下面这个面板（2026-10-25 主人要求「筛选、排序、分区选择
@@ -308,7 +311,8 @@ const SORTS = [
         四维筛选面板：默认收起（hidden），由「筛选」按钮展开，aria-expanded 同步。
         面板里全是原生控件（select / button），键盘天然可达，不需要额外的方向键处理。
       */}
-      <div class="sc-panel" id="scPanel" hidden>
+      <div class="sc-panel" id="scPanel" data-open="false" hidden>
+        <div class="sc-panel-in">
         {/* 分区选择：按服务器各一套 chips，切服时由 apply() 显隐（sets 变量仍指向它们）。 */}
         <div class="sc-pf sc-pf-wide">
           <span class="sc-pf-k">分区</span>
@@ -369,6 +373,7 @@ const SORTS = [
         <div class="sc-pf sc-pf-end">
           <button type="button" id="scReset" class="sc-btn sc-btn-r">重置全部</button>
         </div>
+        </div>{/* /.sc-panel-in */}
       </div>
 
       {/* 命中提示：只有真的在筛的时候才出现（未筛选时整个条隐藏，不占地方） */}
@@ -764,22 +769,67 @@ const SORTS = [
       }
       if (clearBtn) clearBtn.addEventListener('click', clearSearch);
 
-      // ---- 折叠面板：aria-expanded 与 aria-pressed 同步 ----
-      function setPanel(open) {
+      // ---- 折叠面板：展开/收起带动画（2026-10-25 主人要求）----
+      //
+      // 【为什么不能再用 hidden 做开合】
+      // hidden 等价于 display:none，而 display 不参与过渡——加/删 hidden 是瞬间跳变，
+      // 想做出"展开"必须同时动一个可过渡的属性。这里用 grid-template-rows 0fr↔1fr
+      // 撑高度（子项 overflow:hidden），配合 opacity 与位移，做出"抽出来"的感觉。
+      //
+      // 【hidden 何时加】收起动画要跑完才能 hidden，否则元素立刻消失、过渡根本看不到。
+      // 所以收起时先标 data-open='false' 让 CSS 开始过渡，等 transitionend（或兜底 260ms）
+      // 再真正 hidden。展开则相反：先去掉 hidden 触发一次重排，下一帧再改 data-open，
+      // 浏览器才会把 0fr → 1fr 当成过渡而不是"初始值直接渲染"。
+      //
+      // 【重复点击】快速连点时两个方向的定时器会打架，所以用 panelTimer 统一掐断，
+      // 并且以 state 里的 open 标志为准，不读 DOM（DOM 可能还在动画中途）。
+      var panelTimer = 0;
+      var panelOpen = false;
+      function setPanel(open, immediate) {
         if (!panel || !panelBtn) return;
-        panel.hidden = !open;
+        panelOpen = open;
+        clearTimeout(panelTimer);
+
         panelBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         panelBtn.setAttribute('aria-pressed', open ? 'true' : 'false');
         panelBtn.classList.toggle('is-on', open);
+        // 收起后（尤其是动画途中）面板内容不该被 Tab 聚焦到：inert 比 visibility 更彻底。
+        if (open) panel.removeAttribute('inert');
+        else panel.setAttribute('inert', '');
+
+        if (immediate) {
+          panel.hidden = !open;
+          panel.setAttribute('data-open', open ? 'true' : 'false');
+          return;
+        }
+
+        if (open) {
+          // 展开：只需要「脱 hidden + 切 data-open」。
+          // 高度过渡交给 CSS 的 grid-template-rows 0fr→1fr（它本身就是
+          // "0 → 内容高度"，不需要 JS 量高度，也就没有量错时机的坑）。
+          // 先脱 hidden 再切属性：hidden 期间元素是 display:none，
+          // 直接切 data-open 不会有过渡起点。
+          panel.hidden = false;
+          void panel.offsetHeight; // 让"0fr"这一帧先成立，过渡才有起点
+          panel.setAttribute('data-open', 'true');
+        } else {
+          // 收起：切回 0fr 触发过渡；动画走完（260ms）再真正 hidden，
+          // 否则元素立刻消失，过渡根本看不到。
+          panel.setAttribute('data-open', 'false');
+          panelTimer = setTimeout(function () {
+            if (panelOpen) return; // 期间又展开了
+            panel.hidden = true;
+          }, 280);
+        }
       }
       if (panelBtn) panelBtn.addEventListener('click', function () {
-        setPanel(panel.hidden);
+        setPanel(!panelOpen);
       });
       // Esc 收起面板（焦点在搜索框时不抢：那边 Esc 是清空）
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
         if (document.activeElement === search) return;
-        if (panel && !panel.hidden) { setPanel(false); if (panelBtn) panelBtn.focus(); }
+        if (panelOpen) { setPanel(false); if (panelBtn) panelBtn.focus(); }
       });
 
       // ---- 下拉筛选 ----

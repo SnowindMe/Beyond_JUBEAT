@@ -1394,24 +1394,78 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     border-color: var(--edge2);
 }
 
-/* ---------- 折叠面板 ---------- */
-/* 默认 hidden；展开后是一张横铺的玻璃底板，四组控件排成自适应网格。
-   面板本身不加圆角大卡片感过重的东西——它只是工具条的延伸。 */
+/* ---------- 折叠面板（2026-10-25 加开合动画）---------- */
+/* 结构：.sc-panel 是"抽屉外壳"（block + max-height 过渡 + overflow:hidden），
+   真正的控件网格在 .sc-panel-in 里。分两层是为了让"高度动画"和"控件布局"互不干扰：
+   外壳只管从 0 撑到一个上限，内层该几列就几列。 */
 .sc-panel {
+    /* 【为什么用 max-height 而不是 grid-template-rows: 0fr→1fr】
+       这条路看着更优雅，但实测在本页不成立：外壳高度由内容决定，而 1fr 的
+       "剩余空间"在 auto 高度容器里算不出基准，浏览器退化成只有内边距的 28px，
+       展开后面板是塌的。要修就得给外壳一个确定高度，那又回到硬编码。
+       所以改用 max-height 过渡：0 → 一个"肯定够大"的上限，配合 overflow:hidden。
+       代价是过渡时间里有段"空跑"（内容早就放完了），所以时长压到 240ms 并用
+       ease-out，视觉上仍然是"抽出来"，不会显得拖沓。 */
+    /* 【最终方案：grid-template-rows 0fr ↔ 1fr】
+       试过的三条路（都实测失败，记下来省得再走）：
+       ①  max-height 0 → 720px：内容只有 360px，前一半时间高度还没到内容高度，
+           观感是"卡一下突然出现"；改成写真实高度变量又会被同帧样式计算合并掉。
+       ②  内联 style.height 0 ↔ 360：最直觉，但实测卡在 2px 不动 ——
+           overflow:hidden 容器在 height:0 时内层被完全裁剪，过渡插值被锁死
+           （关掉 transition 后同样的 0→360 立刻正常，证明是过渡本身的坑）。
+       ③  grid-template-rows 0fr ↔ 1fr（本方案）：1fr 在"高度由内容决定"的 grid 里
+           等价于 max-content，所以 0fr→1fr 就是"0 → 内容高度"，且插值是连续的。
+           要求：内层必须 min-height:0 + overflow:hidden 才能跟着收缩。
+       注意：本元素必须是 display:grid，且内层是它唯一的直接子项。 */
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 12px 18px;
+    grid-template-rows: 0fr;
     width: 100%;
     max-width: 900px;
-    margin-top: 2px;
-    padding: 14px 16px;
-    border: 1px solid var(--edge);
+    margin-top: 0;
+    border: 1px solid transparent;
     border-radius: var(--r);
+    background: color-mix(in srgb, var(--glass2) 0%, transparent);
+    opacity: 0;
+    transform: translateY(-4px);
+    overflow: hidden;
+    /* 240ms：比一般 hover 慢一点（它是"块级展开"，太快会像闪），
+       但仍在 150-300ms 的反馈区间内。缓动用 ease-out，收起时显得利落。 */
+    transition:
+        grid-template-rows 0.26s cubic-bezier(0.33, 1, 0.68, 1),
+        opacity 0.18s ease,
+        transform 0.26s cubic-bezier(0.33, 1, 0.68, 1),
+        margin-top 0.26s ease,
+        border-color 0.18s ease,
+        background-color 0.18s ease;
+}
+.sc-panel[data-open="true"] {
+    grid-template-rows: 1fr;
+    margin-top: 2px;
+    opacity: 1;
+    transform: translateY(0);
+    border-color: var(--edge);
     background: color-mix(in srgb, var(--glass2) 55%, transparent);
-    backdrop-filter: blur(10px);
 }
 .sc-panel[hidden] {
     display: none;
+}
+/* 内层：控件网格（四组控件自适应排布）。外壳已改成 block + max-height，
+   这一层就只管自己的网格布局，不参与高度过渡。 */
+.sc-panel-in {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px 18px;
+    padding: 14px 16px;
+    /* 0fr 时内层必须能被压到 0：min-height:0 + overflow:hidden 是必要条件，
+       少了任何一条，外壳的外壳收缩时内层会顶住，外壳高度就减不下去。 */
+    min-height: 0;
+    overflow: hidden;
+}
+/* 系统开了减少动效就直接切，不做位移与淡入 */
+@media (prefers-reduced-motion: reduce) {
+    .sc-panel {
+        transition: none;
+    }
 }
 .sc-pf {
     display: flex;
@@ -1536,14 +1590,22 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 
 @media (max-width: 768px) {
-    /* 搜索独占一行：输入框吃满宽度，两个按钮并排到下一行，绝不把输入框挤没 */
+    /* 【2026-10-25 主人要求：移动端筛选框与搜索框必须同一行】
+       原来是「搜索独占整行 + 按钮换行到下一行」，现在改成两者同行：
+       筛选按钮宽度由内容撑开（图标 + 文字，约 76px），搜索框吃掉剩余宽度。
+       不再 flex-wrap —— 允许换行就可能在窄机上意外折成两行。 */
     .sc-find {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         max-width: none;
     }
+    .sc-btn-f {
+        /* 窄屏收紧内边距，避免按钮把搜索框挤到看不见首字 */
+        padding: 0 11px;
+        flex: none;
+    }
     .sc-q {
-        flex: 1 1 100%;
-        order: -1;
+        flex: 1 1 auto;
+        min-width: 0;
     }
     .sc-q-in {
         height: 44px;
@@ -1569,9 +1631,12 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         flex: 1 1 auto;
         min-width: 0;
     }
+    /* 窄屏：网格改单列（作用在内层，外壳已经不承载网格了） */
     .sc-panel {
-        grid-template-columns: minmax(0, 1fr);
         max-width: none;
+    }
+    .sc-panel-in {
+        grid-template-columns: minmax(0, 1fr);
         padding: 12px 13px;
     }
     .sc-pf-in {
@@ -1631,7 +1696,13 @@ html.sc-js .sc-find {
 html.sc-js .sc-active:not([hidden]) {
     display: block;
 }
-/* 面板展开时才显示（收起态是 hidden，不需要这条也藏不住） */
+/* 面板：脚本跑起来才参与布局。注意这里是 display:block 而不是 grid ——
+   外壳只做 max-height/opacity 过渡，网格在 .sc-panel-in 里。
+   （2026-10-25 曾写成 grid，结果它把外壳的 display 覆盖成 grid，
+     顺手让 .sc-panel 上的 grid-template-columns 也作用到外壳，
+     展开后面板塌成 2px —— 排查了三轮才定位。） */
+/* 必须是 grid（不是 block）：grid-template-rows 动画只对 grid 容器生效。
+   2026-10-25 这里曾误写成 block，结果 0fr→1fr 完全无效、面板打不开。 */
 html.sc-js .sc-panel {
     display: grid;
 }
