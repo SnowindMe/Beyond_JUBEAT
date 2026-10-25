@@ -16,7 +16,24 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 >
 > 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国服两卡切换 + 分区筛选 + 搜索 + 四维筛选 + **七种排序**，**默认 songId 升序**）。⚑ 服务端建桶的排序必须与前端默认排序（`DEFAULT_SORT = 'id-asc'`）**同构**：前端只写 CSS `order`、不重排 DOM，两者不一致就会出现「刷新先看到定数降序、脚本跑完又跳成 songId 升序」的闪烁（v1.19.2 修的）。它标了 `prerender = false`：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。`/recent/`、`/songs/[songId]/`、`/songs/gen/[gen]/` 与登录/账户/管理页同样是 SSR。
 >
-> **导航只列真实存在的页面，没有死链**（v1.9.1 起）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」六个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已全部撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。「最近更改」是已做出来的页面，见下。
+> **导航只列真实存在的页面，没有死链**（v1.9.1 起）。当前顶栏文字链是 **曲目 / Jubility / 最近更改**（v1.21.0 起 Jubility 排在曲目后面）。「Emblem / 伙伴 / 成就 / 关于 / 登录」五个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。
+
+**Jubility 层级 /jubility/**（v1.21.0 上线，与 `/songs/` 同为 `prerender = false` 的 SSR 页）：服务器选项卡（日服 / 国服，按钮里直接带该服理论值）→ 理论值概览 → 11 档层级阶梯 → 公式与口径说明。**数据全部按曲库现算**，不维护任何手工常数：曲库加一首曲，理论值与各档的「均分 / 可填槽位」自动跟着变。口径都在 `src/lib/jubility.ts`，页面只负责画。
+
+| 概念 | 口径 |
+| --- | --- |
+| 单曲 jubility | `ROUNDDOWN(定数 × 12.5 × MUSIC RATE ÷ 99, 1)`；MUSIC RATE 上限 100%（NORMAL）/ 120%（HARD EXC）；定数 8 以下按 8.0 计 |
+| TOTAL 理论值 | COMMON 上位 30 谱面 + PICK UP 上位 30 谱面，**谱面为单位**（BSC/ADV/EXT 与 `[2]` 各自独立参评） |
+| COMMON / PICK UP | 直接复用 `lib/song-view.ts` 的 `isPickUp()`——与 `/songs/` 的「范围」筛选同一个函数，两页不会打架 |
+| 视图去重 | 与 `/songs/` 的 `rowsIn` 同判据：国服视图里双服同曲只留国服行 |
+
+十档分数线是官方的（BEMANIWiki 的「ネームカラー」表，festo 起沿用至今）：NORMAL 0 / YELLOW GREEN 250 / GREEN 750 / LIGHT BLUE 1500 / BLUE 2500 / VIOLET 4000 / PURPLE 5500 / PINK 7000 / ORANGE 8500 / GOLD 9500。**第 11 档 PRIME GOLD 是本站自创**（游戏内没有）：要求 TOTAL ≥ 理论值的 99%，且该阈值低于 9500 时不设此档——否则曲库小的服务器会轻易白拿最高档。它的图标是站长另做的金黄色棒棒糖（`/assets/jubility/tier-10.webp`）。
+
+阶梯每行四组数字各有含义，别混：「区间」= 分数线跨度；「占理论值」= 该档在 0 → 理论值刻度尺上的位置（顶两档只有 1–2% 宽，是数据事实不是画错）；「均分」= 分数线 ÷ 60，即每张谱面平均要打出多少；「可填」= 本服曲库里单曲理论值够得着该均分的谱面能凑出几个槽（COMMON 30 + PICK UP 30 上限），**只有 60/60 才是这一档真正可达**。日服实测 GOLD 52/60、PRIME GOLD 45/60（理论值本身达不到这两档），国服 55/60 与 44/60。
+
+两处独立校验（改动公式或去重口径后要重跑）：①国服现算 4832.8 + 4809.1 = **9641.9**，与源表 `data/xlsx/sheet4.json` 表头 MAX 完全吻合；②日服现算 4879.5 + 4797.0 = **9676.5**，与 BEMANIWiki 记载的 COMMON / PICK UP / TOTAL 理论值逐项吻合。**注意源表 sheet4 的 60 首是按「国服曲池」挑的，拿日服曲库对会对不上**（表里 少年は空を辿る / 此岸の戯事 是 COMMON 池、海神 是 PICK UP 池，且 DIAMOND CROSSING 记 10.4 而库里是 10.6）——那是源表口径差异，不是数据错。
+
+该页必须列进 `wrangler.jsonc` 的 `run_worker_first`（`/jubility` 与 `/jubility/*` 两条），否则会被资源层按 `not_found_handling` 截成 404.html 进不了 Worker——这一步漏了的表现就是「本地 build 成功、访问仍是 404」。
 
 页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
 

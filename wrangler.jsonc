@@ -55,6 +55,10 @@
     //   /api/*   = 注册/登录/退出/改密/自荐/审批/曲目编辑等表单提交端点
     "run_worker_first": [
       "/songs", "/songs/*",
+      //   /jubility = Jubility 层级页（2026-10-26 加）。它和 /songs/ 一样要在运行时
+      //   读 D1 现算理论值（曲库一加曲，理论值就要跟着变），所以必须走 Worker，
+      //   否则会被资源层按 not_found_handling 直接截成 404.html。
+      "/jubility", "/jubility/*",
       "/login", "/login/*",
       "/register", "/register/*",
       "/account", "/account/*",

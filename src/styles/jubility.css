@@ -1,0 +1,495 @@
+/* Jubility 层级页（/jubility/）专用样式。
+   与 songs.css 的关系：这里只复用 theme.css 的变量与 .band/.panel 骨架，
+   控件语汇（chips / 小徽章 / 数据字体）刻意与曲目页一致，但不 import songs.css
+   —— 那一页 1600+ 行，为一页引入整份样式会把首屏 CSS 撑大一倍。 */
+
+/* ---------- 服务器选项卡 ---------- */
+.jb-srv {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: clamp(16px, 2vw, 22px);
+}
+.jb-srv-b {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    /* 44px 是触控下限，和曲目页的工具按钮同高 */
+    min-height: 44px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink2);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--pill);
+    padding: 6px 15px 6px 9px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.jb-srv-b img {
+    height: 26px;
+    width: auto;
+    max-width: 84px;
+    object-fit: contain;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+/* bta 字标是黑色线稿：深色主题反相（与 /songs/ 同策） */
+html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-g="ripples"]):not([data-g="saucer"]):not([data-g="yymf"]) .jb-srv-b img.jb-line {
+    filter: invert(1);
+}
+.jb-srv-b b {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--ink3);
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+.jb-srv-b:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+}
+.jb-srv-b:hover img,
+.jb-srv-b.is-on img {
+    opacity: 1;
+}
+.jb-srv-b.is-on {
+    color: var(--ink);
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 16%, transparent);
+}
+.jb-srv-b.is-on b {
+    color: color-mix(in srgb, var(--acc) 82%, var(--ink));
+}
+.jb-srv-b:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
+/* 无 JS 时两套面板都露出来（下面 .jb-pane[hidden] 的覆写见文件末尾） */
+.jb-pane[hidden] {
+    display: none;
+}
+
+/* ---------- 理论值概览 ---------- */
+.jb-sum {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.6fr);
+    gap: clamp(16px, 2.4vw, 30px);
+    align-items: center;
+}
+.jb-sum-total {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.jb-sum-k {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink3);
+}
+/* 主数字用数据字体等宽，避免切换服务器时位移 */
+.jb-sum-v {
+    font-family: var(--font-data);
+    font-size: clamp(34px, 4.4vw, 52px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+.jb-sum-v i {
+    font-style: normal;
+    font-size: 0.42em;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: var(--ink3);
+    margin-left: 4px;
+}
+.jb-sum-sub {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink3);
+}
+
+/* 两池拆分条：宽度 = 该池占理论值的比例 */
+.jb-pools {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+}
+.jb-pool {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+}
+.jb-pool-k {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--ink2);
+    white-space: nowrap;
+}
+.jb-pool-rail {
+    position: relative;
+    height: 8px;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    overflow: hidden;
+}
+.jb-pool-rail i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: var(--pill);
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--acc) 55%, transparent),
+        var(--acc)
+    );
+}
+.jb-pool-v {
+    font-family: var(--font-data);
+    font-size: 12px;
+    color: var(--ink);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.jb-pool-v em {
+    font-style: normal;
+    font-size: 10.5px;
+    color: var(--ink3);
+    margin-left: 5px;
+}
+/* PRIME GOLD 那一条是「阈值刻线」而不是占比填充：左两条（COMMON+PICK UP）相加才等于
+   理论值，这一条只是标在 99% 的位置上。所以轨道不加填充，只画一根竖刻线 + 标签。 */
+.jb-pool-mark .jb-pool-rail {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.jb-tick {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--c, var(--acc));
+    box-shadow: 0 0 8px color-mix(in srgb, var(--acc) 70%, transparent);
+}
+
+/* ---------- 层级阶梯 ---------- */
+.jb-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin: 0 0 12px;
+    font-size: 11.5px;
+    color: var(--ink3);
+    line-height: 1.7;
+}
+.jb-legend b {
+    color: var(--ink2);
+    font-weight: 700;
+}
+
+.jb-ladder {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+/* 一行一档。列：阶数 / 图标 / 名称+区间 / 轨道 / 均分 / 够格谱面数 */
+.jb-row {
+    display: grid;
+    grid-template-columns: 30px 56px minmax(126px, 1fr) minmax(110px, 1.9fr) 86px 82px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    border: 1px solid transparent;
+    transition: background 0.18s, border-color 0.18s;
+}
+.jb-row:hover {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border-color: var(--edge);
+}
+.jb-idx {
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+}
+/* 图标：定高 + contain，11 张原图长宽比各不相同（0.81–1.37），
+   不锁高度会让每行高度跳来跳去。 */
+.jb-ico {
+    width: 56px;
+    height: 46px;
+    object-fit: contain;
+    /* 原图带一圈粉色描边，主色本身很淡；用主色做一层柔光把档位颜色带出来 */
+    filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 62%, transparent));
+}
+.jb-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.jb-name b {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    white-space: nowrap;
+}
+/* 档位名前的色点：一列同宽的色带，扫一眼就知道颜色顺序 */
+.jb-name b::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: 1px;
+    background: var(--c);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--c) 70%, transparent);
+}
+.jb-name span {
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+}
+/* 轨道：整条 = 0 → 理论值，本档的区段（--f 到 --t）高亮。
+   高度 12 → 14：GOLD / PRIME GOLD 的区段只有 1%（4–5px），12px 高时读成一根竖线，
+   加高后仍窄但能看出是「贴着右端的短块」。 */
+.jb-rail {
+    position: relative;
+    height: 14px;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
+    overflow: hidden;
+}
+/* 顶部两档（GOLD / PRIME GOLD）的区段只占理论值的 1–2%，只有 4–8px 宽，
+   这是数据事实（9500→9676.5 本来就很窄），不是 bug。所以给它一个最小宽度，
+   让色块本身可辨认；右端用 right:0 对齐，不因为加宽而越过刻度。 */
+.jb-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--f);
+    width: max(7px, calc(var(--t) - var(--f)));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--c) 88%, transparent);
+    /* 内描边保证浅色档（NORMAL / YELLOW GREEN）在浅色主题的浅轨上仍有边界 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 26%, transparent);
+}
+/* 贴着轨道右端的档（最高两档）：改成 right 对齐，避免最小宽度把色块推出轨道 */
+.jb-row[data-edge] .jb-seg {
+    left: auto;
+    right: 0;
+}
+/* PRIME GOLD：轨道用斜纹表示「自创档」 */
+.jb-row[data-prime] .jb-seg {
+    background:
+        repeating-linear-gradient(
+            -45deg,
+            color-mix(in srgb, var(--c) 92%, transparent) 0 6px,
+            color-mix(in srgb, var(--c) 52%, transparent) 6px 12px
+        );
+}
+/* 阶梯行：越往上越收窄，形成阶梯。原来 9px/档 共 90px，实测在 1118px 宽下
+   看不出阶梯感，反而让各行右端参差不齐、数字列左右错位。
+   改成 14px/档（0→140px），并把收窄只作用在行容器左侧留白上，右端保持齐平——
+   数字列对齐比「真·梯形」更重要，读者要竖着比均分。 */
+@media (min-width: 900px) {
+    .jb-row {
+        margin-left: calc(var(--step, 0) * 14px);
+    }
+    /* 列头的左边距跟着最高一行对齐，不然表头会飘在阶梯外面 */
+    .jb-head {
+        margin-left: 0;
+    }
+}
+.jb-per {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    text-align: right;
+    font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
+}
+.jb-per b {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+}
+.jb-per span {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+}
+/* 窄屏这一行只有约 33px 宽（数字列），「每谱面」三个字换成「均分」两字才不换行。
+   选择器必须写成 .jb-per span.jb-per-k（0,2,1）：上面的 .jb-per span（0,1,1）优先级更高，
+   只写 .jb-per-k 会被它压回去，结果「均分」和「每谱面」同时显示。 */
+@media (max-width: 780px) {
+    .jb-per span.jb-per-k {
+        font-size: 0;
+    }
+    .jb-per span.jb-per-k::before {
+        content: "均分";
+        font-size: 10px;
+    }
+}
+/* 可填槽位：库里单曲理论值够得着该均分的谱面能凑出几个槽（上限 60） */
+.jb-fit {
+    text-align: right;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.jb-fit em {
+    font-style: normal;
+    font-size: 10px;
+    color: var(--ink3);
+    margin-left: 0;
+}
+/* 「可填」前缀：只在窄屏出现（宽屏有列头，重复标反而吵） */
+.jb-fit-k {
+    display: none;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink3);
+    margin-right: 4px;
+}
+/* 可填满 60/60 = 这一档真正可达。这是本页唯一一处「能不能做到」的判断，
+   必须一眼看得出来，所以只给它提亮 + 加粗。 */
+.jb-fit[data-reach] {
+    color: var(--ink);
+    font-weight: 700;
+}
+.jb-fit[data-reach] em {
+    color: color-mix(in srgb, var(--acc) 78%, var(--ink));
+}
+
+/* 列头：与 .jb-row 同一套 grid 列宽，让它读起来像一张表 */
+.jb-head {
+    display: grid;
+    grid-template-columns: 30px 56px minmax(126px, 1fr) minmax(110px, 1.9fr) 86px 82px;
+    gap: 12px;
+    padding: 0 12px 7px;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+}
+.jb-head span:nth-child(3),
+.jb-head span:nth-child(4),
+.jb-head span:nth-child(5),
+.jb-head span:nth-child(6) {
+    text-align: right;
+}
+.jb-head span:nth-child(3) {
+    text-align: left;
+}
+/* 未成立的档（PRIME 在理论值 < 9500 时）整体压暗 + 标注 */
+.jb-row[data-off] {
+    opacity: 0.42;
+}
+.jb-off {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: var(--ink3);
+    padding-left: 2px;
+}
+.jb-off::before {
+    content: "· ";
+}
+
+/* ---------- 说明 ---------- */
+.jb-notes {
+    display: grid;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.85;
+    color: var(--ink2);
+}
+.jb-notes p {
+    margin: 0;
+}
+.jb-notes code {
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    padding: 1px 5px;
+    border-radius: var(--r-xs);
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    color: var(--ink);
+}
+.jb-notes b {
+    color: var(--ink);
+}
+
+/* ---------- 窄屏 ---------- */
+@media (max-width: 780px) {
+    .jb-sum {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    /* 窄屏重排成三行：左侧编号+图标竖跨整行，右侧依次是 名称/均分 → 刻度 → 可填。
+       原来把 rail 和 fit 各占一整行（跨满 4 列），于是「45/60」孤悬在最左边，
+       与上方右对齐的数字列对不上，读起来像漏了一格。现在这两行只跨右侧三列。 */
+    .jb-row {
+        grid-template-columns: 26px 44px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "idx ico name per"
+            "idx ico rail rail"
+            "idx ico fit  fit";
+        row-gap: 7px;
+        column-gap: 10px;
+        padding: 10px 4px;
+        border-radius: var(--r-xs);
+    }
+    .jb-idx { grid-area: idx; }
+    .jb-ico { grid-area: ico; width: 44px; height: 38px; }
+    .jb-name { grid-area: name; }
+    .jb-rail { grid-area: rail; }
+    .jb-per { grid-area: per; align-self: center; }
+    /* 可填：右对齐到数字列，并补一个「可填」前缀——窄屏没有列头，不标就不知道 45/60 是什么 */
+    .jb-fit { grid-area: fit; text-align: right; }
+    .jb-fit-k { display: inline; }
+    /* 窄屏可填那块要带「可填」前缀，宽度一下子变宽；
+       数字列（第四列 auto）会跟着变宽，所以给个最小宽度让各行对齐。 */
+    .jb-fit { min-width: 0; }
+    /* 窄屏隐藏列头：宽屏那套是 6 列 grid，与这里的 4 区域布局对不上，
+       留着只会把「均分 / 可填」甩到屏幕最右边。 */
+    .jb-head { display: none; }
+    /* 窄屏不做阶梯收窄（每行左移会把右侧数字列推得参差） */
+    .jb-row { margin-left: 0; }
+    .jb-pool {
+        grid-template-columns: 66px minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .jb-row,
+    .jb-srv-b,
+    .jb-srv-b img {
+        transition: none;
+    }
+}
+/* 无 JS：JS 才会加 html.jb-js。没有它时两套面板都显示，
+   免得国服数据在脚本被禁用时整块消失（曲目页是直接隐藏的，这页做得更稳一点）。 */
+html:not(.jb-js) .jb-pane[hidden] {
+    display: block;
+}

@@ -1,0 +1,271 @@
+---
+// Jubility 层级页 /jubility/
+//
+// 两件事：①显示每个服务器的 TOTAL jubility 理论值（按曲库现算）；②把 11 档层级
+// 画成一条阶梯——每档标出分数区间、达成该档「平均每谱面」需要多少、库里有多少谱面
+// 单曲理论值够得着这个均分。
+//
+// 为什么是 SSR：理论值依赖曲库（D1），曲库一加曲就要跟着变，不能在构建期焊死。
+// 与 /songs/ 同一条数据链、同一套视图口径（lib/song-view.ts + lib/jubility.ts）。
+import Layout from '../layouts/Base.astro';
+import '../styles/jubility.css';
+import { pageTitle } from '../lib/title';
+import { getAllSongs } from '../lib/db';
+import {
+  chartsOf,
+  theoryOf,
+  tierBands,
+  primeThreshold,
+  fillableSlots,
+  SLOT_COUNT,
+  TIERS,
+  type ChartEntry,
+  type Theory,
+} from '../lib/jubility';
+import { env } from 'cloudflare:workers';
+
+export const prerender = false;
+
+const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+
+// 与曲目页同档缓存策略：曲库变化慢，浏览器 30s / 边缘 300s。
+Astro.response.headers.set(
+  'cache-control',
+  'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
+);
+
+const SRVS = [
+  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
+  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
+] as const;
+const DEFAULT_SRV: (typeof SRVS)[number]['id'] = 'jp';
+
+// 每服一套：谱面池 → 理论值 → 层级区间。一次算好，渲染与脚本都不用再算。
+const VIEW = Object.fromEntries(
+  SRVS.map((s) => {
+    const charts = chartsOf(ALL, s.id);
+    const theory = theoryOf(charts);
+    return [s.id, { charts, theory, bands: tierBands(theory.total) }];
+  })
+) as Record<(typeof SRVS)[number]['id'], { charts: ChartEntry[]; theory: Theory; bands: ReturnType<typeof tierBands> }>;
+
+/** 该档最多能填多少槽（COMMON 30 + PICK UP 30 上限），< 60 即理论值本身达不到该档。 */
+const slotsOf = (charts: ChartEntry[], per: number) => fillableSlots(charts, per).total;
+
+/** 理论值里各定数的谱面分布（上位 60 谱面），按定数降序排好给页面直接渲染。 */
+const levelRows = (t: Theory) =>
+  Object.entries(t.top60Levels)
+    .map(([lv, n]) => ({ lv: Number(lv), n }))
+    .sort((a, b) => b.lv - a.lv);
+
+// 曲池构成（给说明区用）：让读者知道这个理论值是从多少谱面里挑出来的。
+const poolInfo = (srv: (typeof SRVS)[number]['id']) => {
+  const charts = VIEW[srv].charts;
+  const songs = new Set(charts.map((c) => c.song.id));
+  return { charts: charts.length, songs: songs.size };
+};
+const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
+  VIEW[srv].charts.filter((c) => c.scope === 'pick').length;
+---
+
+<Layout
+  title={pageTitle('Jubility 层级')}
+  canonicalPath="/jubility/"
+  description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
+>
+  <section class="band" id="jbRoot" data-srv={DEFAULT_SRV}>
+    {/* 标题行沿用 /recent/ 的 .band-h 写法（h1 + 右侧计数），不自造一套。 */}
+    <div class="band-h">
+      <h1>Jubility 层级</h1>
+      <em>{SRVS.find((s) => s.id === DEFAULT_SRV)?.name} {VIEW[DEFAULT_SRV].theory.total}</em>
+    </div>
+
+    {/*
+      服务器选项卡。与曲目页的「服务器卡」不是同一控件：那边是大卡片（带 logo + 曲数），
+      这页只需要切一个数值视角，做成一行 pill 就够，不占半屏。
+    */}
+    <div class="jb-srv" role="group" aria-label="切换服务器">
+      {SRVS.map((s) => (
+        <button
+          type="button"
+          class={`jb-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`}
+          data-srv={s.id}
+          aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}
+        >
+          <img class={s.line ? 'jb-line' : ''} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="84" height="26" loading="eager" decoding="async" />
+          <span>{s.name}</span>
+          <b>{VIEW[s.id].theory.total}</b>
+        </button>
+      ))}
+    </div>
+
+    {SRVS.map((s) => {
+      const { theory, bands, charts } = VIEW[s.id];
+      const prime = primeThreshold(theory.total);
+      const pool = poolInfo(s.id);
+      return (
+        <div class="jb-pane" data-srv={s.id} hidden={s.id !== DEFAULT_SRV}>
+          {/* ---------- 概览 ---------- */}
+          <div class="panel jb-sum" style="margin-bottom:18px">
+            <div class="jb-sum-total">
+              <span class="jb-sum-k">TOTAL jubility 理论值</span>
+              <span class="jb-sum-v">{theory.total}<i>pt</i></span>
+              <span class="jb-sum-sub">
+                NORMAL 模式 {theory.totalN} · 由 {pool.charts} 张谱面中取上位 {SLOT_COUNT} 张
+              </span>
+            </div>
+            <div class="jb-pools">
+              <div class="jb-pool">
+                <span class="jb-pool-k">COMMON</span>
+                <span class="jb-pool-rail"><i style={`width:${(theory.common / theory.total) * 100}%`}></i></span>
+                <span class="jb-pool-v">{theory.common}<em>池 {theory.commonPool}</em></span>
+              </div>
+              <div class="jb-pool">
+                <span class="jb-pool-k">PICK UP</span>
+                <span class="jb-pool-rail"><i style={`width:${(theory.pick / theory.total) * 100}%`}></i></span>
+                <span class="jb-pool-v">{theory.pick}<em>池 {theory.pickPool}</em></span>
+              </div>
+              {/* COMMON / PICK UP 两条是「加和 = 理论值」的占比，PRIME GOLD 是一条阈值刻线。
+                  两者语义不同（左两条相加 100%，这一条只是标在 99% 处），所以不用同一种填充条，
+                  否则读者会以为三者加起来是 200%。 */}
+              {prime !== null && (
+                <div class="jb-pool jb-pool-mark">
+                  <span class="jb-pool-k">PRIME GOLD</span>
+                  <span class="jb-pool-rail">
+                    <i class="jb-tick" style={`left:${(prime / theory.total) * 100}%;--c:${TIERS[TIERS.length - 1].c}`}></i>
+                  </span>
+                  <span class="jb-pool-v">{prime}<em>阈值 · 理论值 99%</em></span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ---------- 阶梯 ---------- */}
+          <div class="panel">
+            <p class="jb-legend">
+              <span>「均分」= 分数线 ÷ <b>{SLOT_COUNT}</b>，即 {SLOT_COUNT} 张谱面每张平均要打出多少 jubility；
+                「可填」= 本服曲库里单曲理论值够得着该均分的谱面能凑出几个槽（COMMON 30 + PICK UP 30），
+                <b>{SLOT_COUNT}/{SLOT_COUNT}</b> 才算这一档真正可达。</span>
+            </p>
+            <div class="jb-head" aria-hidden="true">
+              <span>#</span>
+              <span>图标</span>
+              <span>层级 / 区间</span>
+              <span>0 → 理论值</span>
+              <span>均分</span>
+              <span>可填</span>
+            </div>
+            <ol class="jb-ladder">
+              {bands
+                .slice()
+                .reverse()
+                .map((b) => {
+                  const off = !b.active;
+                  const per = off ? 0 : b.perChart;
+                  const slots = off ? 0 : slotsOf(charts, per);
+                  const reach = slots >= SLOT_COUNT;
+                  const f = Math.min(100, (b.from / theory.total) * 100);
+                  const t = b.to === null ? 100 : Math.min(100, (b.to / theory.total) * 100);
+                  // 区段宽度 < 2% 的档（GOLD / PRIME GOLD）改成右端对齐，避免最小宽度溢出轨道
+                  const edge = t - f < 2;
+                  return (
+                    <li
+                      class="jb-row"
+                      data-prime={b.tier.k === 'prime' ? '1' : undefined}
+                      data-off={off ? '1' : undefined}
+                      data-edge={edge ? '1' : undefined}
+                      style={`--c:${b.tier.c};--f:${f}%;--t:${t}%;--step:${b.idx}`}
+                    >
+                      <span class="jb-idx">#{String(b.idx).padStart(2, '0')}</span>
+                      <img class="jb-ico" src={b.icon} alt="" width="56" height="46" loading="lazy" decoding="async" />
+                      <span class="jb-name">
+                        <b>{b.tier.n}</b>
+                        <span>
+                          {off
+                            ? '当前理论值下不成立'
+                            : b.to === null
+                              ? `≥ ${b.from}`
+                              : `${b.from} – ${b.to}`}
+                        </span>
+                      </span>
+                      <span class="jb-rail" aria-hidden="true">
+                        {!off && <i class="jb-seg" style={`--f:${f}%;--t:${t}%`}></i>}
+                      </span>
+                      <span class="jb-per">
+                        <b>{off ? '—' : per}</b>
+                        <span class="jb-per-k">每谱面</span>
+                      </span>
+                      <span class="jb-fit" data-reach={!off && reach ? '1' : undefined}>
+                        <span class="jb-fit-k">可填</span>
+                        {off ? '—' : slots}
+                        {!off && <em>/{SLOT_COUNT}</em>}
+                      </span>
+                    </li>
+                  );
+                })}
+            </ol>
+          </div>
+
+          {/* ---------- 定数分布 + 说明 ---------- */}
+          <div class="panel" style="margin-top:18px">
+            <div class="jb-notes">
+              <p>
+                <b>上位 {SLOT_COUNT} 谱面的定数构成</b>：
+                {levelRows(theory)
+                  .map((r) => `${r.lv.toFixed(1)} × ${r.n}`)
+                  .join(' · ')}
+              </p>
+              <p>
+                <b>单曲 jubility</b> = <code>定数 × 12.5 × (MUSIC RATE ÷ 99)</code>，
+                小数第 2 位以下切舍。HARD MODE 下 EXC 的 MUSIC RATE 为 120%，
+                所以单曲理论上限 = <code>定数 × 12.5 × 120 ÷ 99</code>；
+                NORMAL MODE 上限按 100% 算，约为 HARD 的 83%。
+                定数 8 以下没有小数，一律按 8.0 计。
+              </p>
+              <p>
+                <b>{s.name}的 PICK UP</b> 口径与曲目页的「范围」筛选完全一致
+                （{s.id === 'jp' ? 'beyond the Ave. 世代' : '音乐魔方世代 + Ave. 世代 + 解禁II 曲目'}），
+                本服当前 {pickCharts(s.id)} 张谱面计入 PICK UP 池。
+                双服同曲在本页只算一次，与曲目页的视图去重是同一套判据。
+              </p>
+              <p>
+                <b>PRIME GOLD</b> 是本站自创的第 11 档（游戏内只有十档）：要求 TOTAL jubility
+                达到理论值的 <b>99%</b>，且阈值低于 9500 时不设此档。
+                {s.name}的理论值是 {theory.total}，99% 为 {prime ?? 0}
+                {prime === null ? '（低于 9500，本服不成立）' : `（≥ 9500，本服成立）`}。
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </section>
+
+  <script is:inline>
+    /* 选项卡：只切显隐，不重排 DOM，也不发请求（两套面板都已渲染好）。
+       与曲目页同一套做法：按钮 aria-pressed + 面板 hidden，键盘天然可达。 */
+    (function () {
+      var root = document.getElementById('jbRoot');
+      if (!root) return;
+      document.documentElement.classList.add('jb-js');
+      var btns = root.querySelectorAll('.jb-srv-b');
+      var panes = root.querySelectorAll('.jb-pane');
+      function apply(id) {
+        root.setAttribute('data-srv', id);
+        for (var i = 0; i < btns.length; i++) {
+          var on = btns[i].getAttribute('data-srv') === id;
+          btns[i].classList.toggle('is-on', on);
+          btns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        for (var j = 0; j < panes.length; j++) {
+          panes[j].hidden = panes[j].getAttribute('data-srv') !== id;
+        }
+      }
+      for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener('click', function () {
+          apply(this.getAttribute('data-srv'));
+        });
+      }
+    })();
+  </script>
+</Layout>

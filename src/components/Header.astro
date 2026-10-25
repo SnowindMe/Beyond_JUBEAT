@@ -22,15 +22,16 @@ const user = Astro.locals.user;
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
     <div class="nav-txt">
-      {/* 只列真的存在的页面：Jubility / Emblem / 伙伴 / 成就 等二级页还没做，
-          先不上导航（主人 2026-10-22：先砍死链，以后计划做再加回来）。
-          做出来一页就在 .nav-txt 和 .nav-drawer 两处同步加回一条。 */}
-      {/* 导航只留两个内容页。账户相关（登录 / 管理 / 昵称）全部收进右侧人形图标的
+      {/* 只列真的存在的页面：Emblem / 伙伴 / 成就 等二级页还没做，先不上导航
+          （主人 2026-10-22：先砍死链，以后计划做再加回来）。
+          做出来一页就在 .nav-txt 和 .nav-drawer 两处同步加回一条。
+          导航文字链：曲目 / Jubility / 最近更改（2026-10-26 加 Jubility，放在曲目后面）。
+          账户相关（登录 / 管理 / 昵称）全部收进右侧人形图标的
           账户菜单——主人 2026-10-25 的两次要求：「标记一可以不要，全部整合进标记二里」
           「标记1的【登录】也不要」。所以这里是白的，游客也只走图标进 /login/。
           窄屏抽屉里仍保留一条文字入口（抽屉是手机上的主入口，图标在 ≤414px 那一档
           会被收窄，留一条文字更稳）。 */}
-      <a href="/songs/" class:list={[{ on: path === '/songs/' || path.startsWith('/songs/') }]} aria-current={path.startsWith('/songs/') ? 'page' : undefined}>曲目</a><a href="/recent/" class:list={[{ on: path === '/recent/' }]} aria-current={path === '/recent/' ? 'page' : undefined}>最近更改</a>
+      <a href="/songs/" class:list={[{ on: path === '/songs/' || path.startsWith('/songs/') }]} aria-current={path.startsWith('/songs/') ? 'page' : undefined}>曲目</a><a href="/jubility/" class:list={[{ on: path === '/jubility/' || path.startsWith('/jubility/') }]} aria-current={path.startsWith('/jubility/') ? 'page' : undefined}>Jubility</a><a href="/recent/" class:list={[{ on: path === '/recent/' }]} aria-current={path === '/recent/' ? 'page' : undefined}>最近更改</a>
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
@@ -70,6 +71,7 @@ const user = Astro.locals.user;
   {/* 窄屏导航抽屉：与 .nav-txt 同一组链接，展开时覆盖在顶栏下方 */}
   <div class="nav-drawer" id="navDrawer" data-open="0" role="group" aria-label="站点导航">
     <a href="/songs/" class:list={[{ on: path.startsWith('/songs/') }]}>曲目</a>
+    <a href="/jubility/" class:list={[{ on: path.startsWith('/jubility/') }]}>Jubility</a>
     <a href="/recent/" class:list={[{ on: path === '/recent/' }]}>最近更改</a>
     {user ? (
       <>{isStaff(user) && <a href="/admin/" class:list={[{ on: path === '/admin/' }]}>管理</a>}<a class:list={[{ on: path === '/account/' }]} href="/account/">{user.name}</a></>

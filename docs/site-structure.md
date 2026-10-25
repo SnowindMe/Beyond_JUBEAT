@@ -37,8 +37,11 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │       ├─ ✅ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
 │       └─ ✅ /songs/ 的世代分组标题链到对应页（点世代名进，不是整条吸顶标题）
 │
-├─ 🚧 Jubility /jubility/
-│   ├─ 💭 理论值总表（按定数排序）
+├─ ✅ Jubility 层级 /jubility/（2026-10-26 上线 v1.21.0；SSR 读 D1，与 /songs/ 同一套视图口径）
+│   ├─ ✅ 服务器选项卡（日服 / 国服，按钮内直接显示该服理论值）
+│   ├─ ✅ 理论值概览：TOTAL + COMMON / PICK UP 拆分 + PRIME GOLD 阈值刻线（按曲库现算，无手工常数）
+│   ├─ ✅ 11 档层级阶梯：区间 / 占理论值刻度 / 均分（分数线÷60）/ 可填槽位（60/60 才可达）
+│   ├─ ✅ 公式与口径说明（单曲 jubility 公式、PICK UP 归属、PRIME GOLD 自创规则）
 │   └─ 💭 与曲目详情双向链接
 │
 ├─ 🚧 Emblem /emblem/
@@ -143,7 +146,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 | `index.astro` | 首页 | ✅ 首页 | 新版改成单屏 Hero + 主题切换 |
 | `songs.astro` | 曲目库 | ✅ /songs/ | 已上线（三卡切换 + 分区筛选） |
 | `songs/[songId].astro` | 曲目详情 | ✅ /songs/[songId]/ | 已上线（v1.10.0）；谱面预览 v1.13.0 下线 |
-| `jubility.astro` | Jubility 理论值 | 💭 /jubility/ | 待实现，导航已撤 |
+| `jubility.astro` | Jubility 层级 | ✅ /jubility/ | v1.21.0 上线，导航已加（排在曲目后） |
 | `versions.astro` | 版本沿革 | 💭 /versions/ | 导航未列，候选 |
 | `gameplay.astro` | 玩法与判定 | 💭 /gameplay/ | 导航未列，候选 |
 | `unlock.astro` | 隐藏曲充能 | 💭 /unlock/ | 导航未列，候选 |
@@ -167,7 +170,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 1. ~~**/songs/ 曲目库**~~ ✅ 已完成（v1.6.0；v1.7.0 改成读 D1 的 SSR）
 2. ~~**/songs/[songId]/ 曲目详情**~~ ✅ 已完成（v1.10.0；谱面预览 v1.13.0 下线）
-3. **/jubility/**（数据需先补进 `data.json`）
+3. ~~**/jubility/**~~ ✅ 已完成（v1.21.0，数据从曲库现算，不进 `data.json`）
 4. **/about/**（纯文案，成本最低，可先做）
 5. **/login/**（需要后端，建议等 D1 + Workers 接入后再做）
 6. **/emblem/ · /partners/ · /achievements/**（数据尚未整理，最后做）
