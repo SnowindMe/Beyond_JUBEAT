@@ -6,9 +6,13 @@
 //   VIOLET 4000 / PURPLE 5500 / PINK 7000 / ORANGE 8500 / GOLD 9500
 // 前作 festo 的分数线与此完全相同，国服「音乐魔方」沿用同一套。
 //
-// 【第 11 档 PRIME GOLD】站长自创，游戏内不存在：TOTAL jubility 达到理论值的 99%
-// 才算，且该阈值低于 9500 时不设此档（否则曲库小的服务器会轻易「白拿」最高档）。
-// 判定见 primeThreshold()；层级图标 jby_ttljby_gauge_10 就是为它准备的。
+// 【两个自创档，游戏内都不存在】
+//   ① PEACH（图标 gauge_11）：**NORMAL 模式**理论值的 99% 才算，低于 7000 不设此档。
+//      按分数落在 PINK(7000) 与 ORANGE(8500) 之间，所以数组里插在中间，
+//      但图标编号显式指定为 11（见 Tier.icon）——编号顺序与分数顺序在这里不一致。
+//   ② PRIME GOLD（图标 gauge_10）：HARD 口径 TOTAL 理论值的 99% 才算，低于 9500
+//      不设此档（否则曲库小的服务器会轻易「白拿」最高档）。
+// 判定分别见 peachThreshold() / primeThreshold()。
 //
 // 【单曲 jubility 公式】官方原文：
 //   jubility = LEVEL × 12.5 × (MUSIC RATE / 99)，小数第 2 位以下切舍
@@ -38,14 +42,20 @@ export interface Tier {
   k: string;
   /** 显示名（游戏内就是这串拉丁字母，不是翻译壳） */
   n: string;
-  /** 该档起始分数（含）；PRIME GOLD 用 -1 表示「按下界现算」 */
+  /** 该档起始分数（含）；自创档（PEACH / PRIME GOLD）用 -1 表示「按下界现算」 */
   min: number;
   /** 层级图标主色：由原图去白底加权采样得到，只作装饰（描边/辉光），
    *  不用于文字，避免 NORMAL / YELLOW GREEN 这类浅色档对比度不足。 */
   c: string;
+  /** 图标文件名里的编号（/assets/jubility/tier-NN.webp）。
+   *  不写则默认等于数组下标 —— 只有「图标编号 ≠ 分数顺序」时才需要显式给。
+   *  PEACH 就是这种情况：图标是站长做的第 11 张（gauge_11），
+   *  但分数线落在 PINK 与 ORANGE 之间，所以插在数组中间而图标仍是 11。 */
+  icon?: number;
 }
 
-// 数组下标 = 图标文件名下标（/assets/jubility/tier-NN.webp），改动顺序会同时改错图。
+// 数组顺序 = 分数顺序（阶梯就是按这个顺序画的）。图标默认取同一下标，
+// 但可用 Tier.icon 覆盖（PEACH 用 11）；改动顺序前先确认图标编号是否跟着变。
 export const TIERS: Tier[] = [
   { k: 'normal', n: 'NORMAL', min: 0, c: '#eddfda' },
   { k: 'ygreen', n: 'YELLOW GREEN', min: 250, c: '#e5dba3' },
@@ -55,11 +65,18 @@ export const TIERS: Tier[] = [
   { k: 'violet', n: 'VIOLET', min: 4000, c: '#e49cdb' },
   { k: 'purple', n: 'PURPLE', min: 5500, c: '#b386da' },
   { k: 'pink', n: 'PINK', min: 7000, c: '#faa8c6' },
-  { k: 'orange', n: 'ORANGE', min: 8500, c: '#f5996a' },
-  { k: 'gold', n: 'GOLD', min: 9500, c: '#fdc365' },
+  // PEACH 是自创第 11 档（图标 gauge_11），但阈值按 NORMAL 理论值算、落在 7000–8500
+  // 区间内，所以这里按「分数顺序」插在 PINK 与 ORANGE 之间，图标编号显式指定。
+  { k: 'peach', n: 'PEACH', min: -1, c: '#fda78b', icon: 11 },
+  // ↓ 以下三档的图标编号全部显式写出：插入 PEACH 后它们的数组下标各 +1，
+  //   若靠「下标 = 图标号」的默认值会集体错位（ORANGE 会拿到 GOLD 的图、
+  //   GOLD 拿到 PRIME 的图、PRIME 拿到 PEACH 的图）。
+  //   实际素材是固定的：tier-08=ORANGE / tier-09=GOLD / tier-10=PRIME GOLD / tier-11=PEACH。
+  { k: 'orange', n: 'ORANGE', min: 8500, c: '#f5996a', icon: 8 },
+  { k: 'gold', n: 'GOLD', min: 9500, c: '#fdc365', icon: 9 },
   // PRIME GOLD 的图由站长另做（原 gauge_10 偏珊瑚粉，2026-10-26 换成金黄色棒棒糖），
   // 主色按新图重新采样 = #f8c94a。
-  { k: 'prime', n: 'PRIME GOLD', min: -1, c: '#f8c94a' },
+  { k: 'prime', n: 'PRIME GOLD', min: -1, c: '#f8c94a', icon: 10 },
 ];
 
 /** 每档参评谱面数：COMMON 30 + PICK UP 30。算「平均每谱面」用，别散落成魔数。 */
@@ -69,6 +86,20 @@ export const SLOT_COUNT = 60;
 export function primeThreshold(theory: number): number | null {
   const v = Math.floor(theory * 0.99 * 10) / 10;
   return v >= 9500 ? v : null;
+}
+
+/**
+ * PEACH 阈值：**NORMAL 模式**理论值的 99%（切到 0.1），低于 7000 时该档不成立。
+ *
+ * 与 PRIME GOLD 的区别只有两点：一是基数是 totalN（NORMAL 上限 100%）而不是
+ * total（HARD 上限 120%），二是下界取 7000 而不是 9500。
+ * 下界取 7000 的理由：PEACH 按分数排在 PINK(7000) 与 ORANGE(8500) 之间，
+ * 若 99% 算出来低于 7000，它会掉到 PINK 之下，与「PINK → PEACH → ORANGE」的
+ * 排序矛盾 —— 那种情况下这一档在本服不成立。
+ */
+export function peachThreshold(theoryN: number): number | null {
+  const v = Math.floor(theoryN * 0.99 * 10) / 10;
+  return v >= 7000 ? v : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,13 +204,26 @@ export function theoryOf(charts: ChartEntry[]): Theory {
   };
 }
 
-/** 落在哪一档（含 PRIME GOLD；未达 PRIME 阈值时退回 GOLD）。 */
-export function tierOf(value: number, theory: number): Tier {
-  const prime = primeThreshold(theory);
-  if (prime !== null && value >= prime) return TIERS[TIERS.length - 1];
-  let hit = TIERS[0];
-  for (const t of TIERS) if (t.min >= 0 && value >= t.min) hit = t;
-  return hit;
+/** 自创档的横向阈值（小写 k → 该理论值下的阈值，不成立为 null）。 */
+export function customThresholds(theory: number, theoryN: number): Record<string, number | null> {
+  return { peach: peachThreshold(theoryN), prime: primeThreshold(theory) };
+}
+
+/**
+ * 落在哪一档（含 PEACH / PRIME GOLD 两个自创档）。
+ *
+ * 判据是「从高到低，第一个 value >= from 的档」——不能写成「先试自创档」，
+ * 因为自创档的阈值不一定比官方档高（PEACH 只有 7983.6，比 ORANGE 8500 低，
+ * 若先试自创档会把 8500 误判成 PEACH）。tierBands 的 from 已验证严格递增，
+ * 所以倒序扫一遍就是正确答案。
+ */
+export function tierOf(value: number, theory: number, theoryN: number): Tier {
+  const bands = tierBands(theory, theoryN);
+  for (let i = bands.length - 1; i >= 0; i--) {
+    const b = bands[i];
+    if (b.active && value >= b.from) return b.tier;
+  }
+  return TIERS[0];
 }
 
 /** 完整区间（含上界与 PRIME 阈值），页面画阶梯与刻度尺用。 */
@@ -193,8 +237,9 @@ export interface TierBand {
   active: boolean;
   /** 达成该档需要的平均每谱面 jubility（from / 60） */
   perChart: number;
-  /** 图标路径 */
+  /** 图标路径（编号可能不等于 idx，见 Tier.icon） */
   icon: string;
+  /** 数组下标 = 分数顺序（阶梯显示的顺序号） */
   idx: number;
 }
 
@@ -212,20 +257,28 @@ export function fillableSlots(charts: ChartEntry[], perChart: number): { common:
   return { common, pick, total: common + pick };
 }
 
-export function tierBands(theory: number): TierBand[] {
-  const prime = primeThreshold(theory);
+/** 某档的起始分数：自创档（min<0）按下界现算，其余用 min。 */
+function fromOf(tier: Tier, th: Record<string, number | null>): number {
+  if (tier.min >= 0) return tier.min;
+  const v = th[tier.k];
+  return v === null || v === undefined ? Number.POSITIVE_INFINITY : v;
+}
+
+export function tierBands(theory: number, theoryN: number): TierBand[] {
+  const th = customThresholds(theory, theoryN);
   return TIERS.map((tier, idx) => {
-    const isPrime = tier.k === 'prime';
-    const from = isPrime ? prime ?? Number.POSITIVE_INFINITY : tier.min;
+    const isCustom = tier.min < 0;
+    const from = fromOf(tier, th);
     const next = TIERS[idx + 1];
-    const to = next ? (next.k === 'prime' ? prime : next.min) : null;
+    const to = next ? fromOf(next, th) : null;
     return {
       tier,
       from,
       to,
-      active: !isPrime || prime !== null,
+      active: !isCustom || Number.isFinite(from),
       perChart: Number.isFinite(from) ? round1(from / SLOT_COUNT) : 0,
-      icon: `/assets/jubility/tier-${String(idx).padStart(2, '0')}.webp`,
+      // 图标编号：显式给了用显式值（PEACH=11），否则默认等于数组下标
+      icon: `/assets/jubility/tier-${String(tier.icon ?? idx).padStart(2, '0')}.webp`,
       idx,
     };
   });

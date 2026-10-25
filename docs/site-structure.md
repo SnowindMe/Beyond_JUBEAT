@@ -37,11 +37,11 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │       ├─ ✅ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
 │       └─ ✅ /songs/ 的世代分组标题链到对应页（点世代名进，不是整条吸顶标题）
 │
-├─ ✅ Jubility 层级 /jubility/（2026-10-26 上线 v1.21.0；SSR 读 D1，与 /songs/ 同一套视图口径）
+├─ ✅ Jubility 层级 /jubility/（2026-10-26 上线 v1.21.0、v1.22.0 加 PEACH；SSR 读 D1，与 /songs/ 同一套视图口径）
 │   ├─ ✅ 服务器选项卡（日服 / 国服，按钮内直接显示该服理论值）
-│   ├─ ✅ 理论值概览：TOTAL + COMMON / PICK UP 拆分 + PRIME GOLD 阈值刻线（按曲库现算，无手工常数）
-│   ├─ ✅ 11 档层级阶梯：区间 / 占理论值刻度 / 均分（分数线÷60）/ 可填槽位（60/60 才可达）
-│   ├─ ✅ 公式与口径说明（单曲 jubility 公式、PICK UP 归属、PRIME GOLD 自创规则）
+│   ├─ ✅ 理论值概览：TOTAL + COMMON / PICK UP 拆分 + PEACH / PRIME GOLD 两条阈值刻线（按曲库现算，无手工常数）
+│   ├─ ✅ 12 档层级阶梯：区间 / 占理论值刻度 / 均分（分数线÷60）/ 可填槽位（60/60 才可达）
+│   ├─ ✅ 公式与口径说明（单曲 jubility 公式、PICK UP 归属、PEACH 与 PRIME GOLD 两个自创档的规则）
 │   └─ 💭 与曲目详情双向链接
 │
 ├─ 🚧 Emblem /emblem/

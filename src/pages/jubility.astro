@@ -1,9 +1,9 @@
 ---
 // Jubility 层级页 /jubility/
 //
-// 两件事：①显示每个服务器的 TOTAL jubility 理论值（按曲库现算）；②把 11 档层级
-// 画成一条阶梯——每档标出分数区间、达成该档「平均每谱面」需要多少、库里有多少谱面
-// 单曲理论值够得着这个均分。
+// 两件事：①显示每个服务器的 TOTAL jubility 理论值（按曲库现算）；②把全部档位
+// （官方十档 + 自创 PEACH / PRIME GOLD）画成一条阶梯——每档标出分数区间、达成该档
+// 「平均每谱面」需要多少、库里有多少谱面单曲理论值够得着这个均分。
 //
 // 为什么是 SSR：理论值依赖曲库（D1），曲库一加曲就要跟着变，不能在构建期焊死。
 // 与 /songs/ 同一条数据链、同一套视图口径（lib/song-view.ts + lib/jubility.ts）。
@@ -16,6 +16,7 @@ import {
   theoryOf,
   tierBands,
   primeThreshold,
+  peachThreshold,
   fillableSlots,
   SLOT_COUNT,
   TIERS,
@@ -45,7 +46,7 @@ const VIEW = Object.fromEntries(
   SRVS.map((s) => {
     const charts = chartsOf(ALL, s.id);
     const theory = theoryOf(charts);
-    return [s.id, { charts, theory, bands: tierBands(theory.total) }];
+    return [s.id, { charts, theory, bands: tierBands(theory.total, theory.totalN) }];
   })
 ) as Record<(typeof SRVS)[number]['id'], { charts: ChartEntry[]; theory: Theory; bands: ReturnType<typeof tierBands> }>;
 
@@ -71,7 +72,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
 <Layout
   title={pageTitle('Jubility 层级')}
   canonicalPath="/jubility/"
-  description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
+  description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PEACH / PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
 >
   <section class="band" id="jbRoot" data-srv={DEFAULT_SRV}>
     {/* 标题行沿用 /recent/ 的 .band-h 写法（h1 + 右侧计数），不自造一套。 */}
@@ -102,6 +103,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
     {SRVS.map((s) => {
       const { theory, bands, charts } = VIEW[s.id];
       const prime = primeThreshold(theory.total);
+      const peach = peachThreshold(theory.totalN);
       const pool = poolInfo(s.id);
       return (
         <div class="jb-pane" data-srv={s.id} hidden={s.id !== DEFAULT_SRV}>
@@ -128,11 +130,20 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
               {/* COMMON / PICK UP 两条是「加和 = 理论值」的占比，PRIME GOLD 是一条阈值刻线。
                   两者语义不同（左两条相加 100%，这一条只是标在 99% 处），所以不用同一种填充条，
                   否则读者会以为三者加起来是 200%。 */}
+              {peach !== null && (
+                <div class="jb-pool jb-pool-mark">
+                  <span class="jb-pool-k">PEACH</span>
+                  <span class="jb-pool-rail">
+                    <i class="jb-tick" style={`left:${(peach / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'peach')?.c}`}></i>
+                  </span>
+                  <span class="jb-pool-v">{peach}<em>阈值 · NORMAL 理论值 99%</em></span>
+                </div>
+              )}
               {prime !== null && (
                 <div class="jb-pool jb-pool-mark">
                   <span class="jb-pool-k">PRIME GOLD</span>
                   <span class="jb-pool-rail">
-                    <i class="jb-tick" style={`left:${(prime / theory.total) * 100}%;--c:${TIERS[TIERS.length - 1].c}`}></i>
+                    <i class="jb-tick" style={`left:${(prime / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'prime')?.c}`}></i>
                   </span>
                   <span class="jb-pool-v">{prime}<em>阈值 · 理论值 99%</em></span>
                 </div>
@@ -172,10 +183,14 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                     <li
                       class="jb-row"
                       data-prime={b.tier.k === 'prime' ? '1' : undefined}
+                      data-peach={b.tier.k === 'peach' ? '1' : undefined}
+                      data-custom={b.tier.min < 0 ? '1' : undefined}
                       data-off={off ? '1' : undefined}
                       data-edge={edge ? '1' : undefined}
                       style={`--c:${b.tier.c};--f:${f}%;--t:${t}%;--step:${b.idx}`}
                     >
+                      {/* 序号按分数顺序（= 数组下标），不是图标编号：PEACH 图标是 11 号但排位是第 09 位。
+                          读者看不到文件名，所以这里只表达「第几档」，与阶梯上下顺序一致。 */}
                       <span class="jb-idx">#{String(b.idx).padStart(2, '0')}</span>
                       <img class="jb-ico" src={b.icon} alt="" width="56" height="46" loading="lazy" decoding="async" />
                       <span class="jb-name">
@@ -229,10 +244,18 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                 双服同曲在本页只算一次，与曲目页的视图去重是同一套判据。
               </p>
               <p>
-                <b>PRIME GOLD</b> 是本站自创的第 11 档（游戏内只有十档）：要求 TOTAL jubility
+                <b>PEACH</b> 是本站自创的档位（游戏内只有十档）：要求 TOTAL jubility 达到
+                <b>NORMAL 模式理论值的 99%</b>，且该阈值低于 7000 时不设此档（否则会掉到 PINK 之下）。
+                {s.name}的 NORMAL 理论值是 {theory.totalN}，99% 为 {peach ?? 0}
+                {peach === null ? '（低于 7000，本服不成立）' : '（≥ 7000，本服成立）'}。
+                它的图标编号是 11，但分数落在 PINK 与 ORANGE 之间，所以阶梯按<b>分数</b>排、
+                序号看位置而不看图标编号。
+              </p>
+              <p>
+                <b>PRIME GOLD</b> 是本站自创的最高档（游戏内只有十档）：要求 TOTAL jubility
                 达到理论值的 <b>99%</b>，且阈值低于 9500 时不设此档。
                 {s.name}的理论值是 {theory.total}，99% 为 {prime ?? 0}
-                {prime === null ? '（低于 9500，本服不成立）' : `（≥ 9500，本服成立）`}。
+                {prime === null ? '（低于 9500，本服不成立）' : '（≥ 9500，本服成立）'}。
               </p>
             </div>
           </div>
