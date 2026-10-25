@@ -294,6 +294,44 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     /* 内描边保证浅色档（NORMAL / YELLOW GREEN）在浅色主题的浅轨上仍有边界 */
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 26%, transparent);
 }
+/* 【浅色主题专项】色块与轨道的对比度实测只有 1.02–1.49（NORMAL / YELLOW GREEN /
+   LIGHT BLUE / GOLD / PRIME GOLD / PINK 六档都在 1.5 以下），色块几乎是「白上加白」。
+   深色主题同一算式是 4.5–9.6，完全没问题——所以只对 6 套浅色主题加描边与压暗，
+   不动 10 套深色的观感。账面数据来自 tmp/jb-ratio2.cjs（--glass 叠 --base 后算）。 */
+html[data-g="knit"] .jb-seg,
+html[data-g="prop"] .jb-seg,
+html[data-g="qubell"] .jb-seg,
+html[data-g="ripples"] .jb-seg,
+html[data-g="saucer"] .jb-seg,
+html[data-g="yymf"] .jb-seg {
+    /* 色块做实（88% → 100%）并压深：浅底上纯色块本身亮度就高，靠叠加暗化拉出层次 */
+    background: color-mix(in srgb, var(--c) 74%, var(--ink));
+    /* 描边从 26% 提到 58%：它是浅色下唯一能把 1.02:1 的色块从轨道上分离出来的东西 */
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 58%, transparent);
+}
+/* 同一批主题里轨道也压深一点，让「未达到的区间」与面板底色分得开 */
+html[data-g="knit"] .jb-rail,
+html[data-g="prop"] .jb-rail,
+html[data-g="qubell"] .jb-rail,
+html[data-g="ripples"] .jb-rail,
+html[data-g="saucer"] .jb-rail,
+html[data-g="yymf"] .jb-rail {
+    background: color-mix(in srgb, var(--ink) 13%, transparent);
+}
+/* PRIME GOLD 的斜纹在浅色主题下也走同一套压深 */
+html[data-g="knit"] .jb-row[data-prime] .jb-seg,
+html[data-g="prop"] .jb-row[data-prime] .jb-seg,
+html[data-g="qubell"] .jb-row[data-prime] .jb-seg,
+html[data-g="ripples"] .jb-row[data-prime] .jb-seg,
+html[data-g="saucer"] .jb-row[data-prime] .jb-seg,
+html[data-g="yymf"] .jb-row[data-prime] .jb-seg {
+    background:
+        repeating-linear-gradient(
+            -45deg,
+            color-mix(in srgb, var(--c) 78%, var(--ink)) 0 6px,
+            color-mix(in srgb, var(--c) 46%, var(--ink)) 6px 12px
+        );
+}
 /* 贴着轨道右端的档（最高两档）：改成 right 对齐，避免最小宽度把色块推出轨道 */
 .jb-row[data-edge] .jb-seg {
     left: auto;
