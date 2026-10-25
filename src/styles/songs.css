@@ -188,6 +188,7 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 
 .sc-body[hidden],
 .sc-cat-set[hidden],
+.sc-scope-set[hidden],
 .sc-sec[hidden] {
     display: none;
 }
@@ -1612,6 +1613,22 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     flex-wrap: wrap;
     gap: 6px;
 }
+/* 范围 chip 组（PICK UP / COMMON，2026-10-25）。
+   【为什么必须显式写这两条】我漏了它们，结果三个 button 以 inline 方式排成一行、
+   彼此**零间距**——主人一句「怎么挨得这么紧啊」就是这个（截图里 PICK UP 与 COMMON 贴在一起）。
+   教训：新加一组控件时，容器类名要和已有分组（.sc-cat-set）对齐，别只写模板不写样式。
+   gap 用 8px 而不是 .sc-pf-chips 的 6px：这里只有 3 个片、横向留白够，稍微松一点也不至于折行。 */
+.sc-scope {
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.sc-scope-set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
 
 /* ---------- 自定义下拉（2026-10-25）---------- */
 /* 原生 select 藏起来但仍留在 DOM：它是数据源也是无障碍载体，
@@ -1771,20 +1788,83 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     justify-content: flex-end;
 }
 
-/* 命中提示：细字一行，跟在工具条下面 */
+/* ---------- 命中提示条（2026-10-25 主人要求重做） ----------
+   原来是工具条下面一行裸字「命中 142 首」，没有边界、贴着搜索框，
+   主人截图圈出来说太挤。现在做成一**根横条**：左侧状态点 + 「匹配到 N 首」，
+   右侧同一行给耗时，两端对齐，用细边框与极淡底色收成一个整体。
+   为什么不做成玻璃板/大圆角卡：这页的卡片已经够重，提示条是「状态反馈」不是内容，
+   给一条 1px 边 + 几乎透明的底就够；圆角收到 r-xs，避免看起来像第二张卡。 */
 .sc-active {
+    /* 横跨内容区，与搜索行**同一套居中规则**（width:100% + max-width:760px + 父级居中）。
+       【踩过的两坑，别重犯】
+       ① 写成 max-width:900px：条比搜索行（760）宽，右边多出一截、左边缘也对不上。
+       ② 加 align-self: stretch 想让它是"整条"：stretch 在 align-items:center 的容器里
+          会把子项推到**交叉轴起点**，而 .sc-find 仍居中 —— 实测左边缘差 204px
+          （条 261 / 搜索行 465）。所以这里不写 align-self，让它跟搜索行一样被居中。
+       width:100% 在 align-items:center 下仍然是相对容器内容宽度，不会缩成文字宽。 */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 760px;
     margin: 0;
-    font-family: var(--font-data);
-    font-size: 11.5px;
-    letter-spacing: 0.08em;
+    padding: 7px 12px;
+    font-size: 12px;
+    letter-spacing: 0.01em;
     color: var(--ink3);
+    background: color-mix(in srgb, var(--glass2) 34%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-xs);
 }
 .sc-active[hidden] {
     display: none;
 }
-.sc-active span {
-    color: var(--acc);
+/* 左侧状态点：强调色小圆点，表示「当前有筛选条件生效」 */
+.sc-active-i {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--acc);
+}
+.sc-active-t {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+/* 数字用数据字体、加重 + 强调色（与 chip 上的计数同一套语汇） */
+.sc-active-t b {
+    font-family: var(--font-data);
+    font-size: 13px;
     font-weight: 700;
+    color: var(--acc);
+    padding: 0 1px;
+}
+/* 耗时：右端、等宽数据字体、压弱。它只是参考信息，不该和命中数抢注意力 */
+.sc-active-cost {
+    flex: none;
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    opacity: 0.85;
+    white-space: nowrap;
+}
+.sc-active-cost[hidden] {
+    display: none;
+}
+.sc-active-cost i {
+    font-style: normal;
+}
+/* 窄屏：条内边距收紧，耗时仍然留在同一行右端（它很短，不会被挤掉） */
+@media (max-width: 768px) {
+    .sc-active {
+        max-width: none;
+        padding: 7px 10px;
+        gap: 7px;
+    }
+    .sc-active-t b {
+        font-size: 12.5px;
+    }
 }
 
 /* ---------- 空态 ---------- */
@@ -1914,6 +1994,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sc-q-x[hidden],
 .sc-body[hidden],
 .sc-cat-set[hidden],
+.sc-scope-set[hidden],
 .sc-sec[hidden],
 .sc-gen[hidden],
 .sc-card[hidden] {
@@ -1939,8 +2020,11 @@ html.sc-js .sc-find {
    它不再需要单独防 FOUC：父级 .sc-panel 默认 display:none、且收起态是 hidden，
    整块都在隐藏容器里，不存在"先亮一下"的窗口。
    所以这里删掉原来的 .sc-cats 隐藏/显示两条规则，否则面板展开后分区仍然看不见。 */
+/* 命中条是 flex（状态点 / 文案 / 耗时三段，两端对齐）。
+   这里必须写 flex 而不是 block：曾经写 block，作者样式会盖掉 .sc-active 的
+   display:flex，三段变成块级竖排、耗时掉到第二行 —— 条就垮了。 */
 html.sc-js .sc-active:not([hidden]) {
-    display: block;
+    display: flex;
 }
 /* 面板：脚本跑起来才参与布局。注意这里是 display:block 而不是 grid ——
    外壳只做 max-height/opacity 过渡，网格在 .sc-panel-in 里。

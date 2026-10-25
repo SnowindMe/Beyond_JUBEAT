@@ -469,9 +469,16 @@ const SORTS = [
         </div>{/* /.sc-panel-in */}
       </div>
 
-      {/* 命中提示：只有真的在筛的时候才出现（未筛选时整个条隐藏，不占地方） */}
+      {/* 命中提示条（2026-10-25 主人：「命中」可以做成一根条，写着「匹配到X首，耗时XXms」）。
+          只有真的在筛的时候才出现（未筛选时整个条隐藏，不占地方）。
+          结构：左侧一个状态点 + 「匹配到 N 首」+ 右侧耗时。整条横跨内容区，
+          用细边框收边（不是玻璃板，也不抢卡片）。
+          aria-live=polite：筛选是连续动作，读屏等用户停手再播报，别每敲一个字都念。
+          耗时由脚本写进 #scCostTxt；无 JS 时整条根本不显示（.sc-active 默认 display:none）。 */}
       <p class="sc-active" id="scActive" hidden aria-live="polite">
-        <span id="scActiveTxt">命中 0 首</span>
+        <span class="sc-active-i" aria-hidden="true"></span>
+        <span class="sc-active-t">匹配到 <b id="scActiveTxt">0</b> 首</span>
+        <span class="sc-active-cost" id="scCost" hidden><i id="scCostTxt">—</i></span>
       </p>
     </div>
 
@@ -551,6 +558,8 @@ const SORTS = [
       var emptyBox = document.getElementById('scEmpty');
       var activeBox = document.getElementById('scActive');
       var activeTxt = document.getElementById('scActiveTxt');
+      var activeCost = document.getElementById('scCost');
+      var activeCostTxt = document.getElementById('scCostTxt');
 
       var state = {
         srv: root.getAttribute('data-srv') || 'jp',
@@ -703,6 +712,11 @@ const SORTS = [
 
       // ---- 主流程 ----
       function apply() {
+        // 耗时从「用户操作」到「列表已更新」为准，取 performance.now() 的差值。
+        // 注意只能量到 JS 这一层（改 hidden / 写 CSS order），不含浏览器重绘与图片解码 ——
+        // 那部分浏览器不给我们回调，所以条上写「耗时 Xms」指的是**筛选计算**的耗时，
+        // 不是「页面看起来变快的那一瞬」，别把它当 FPS 指标用。
+        var t0 = performance.now();
         root.setAttribute('data-srv', state.srv);
 
         for (var i = 0; i < srvBtns.length; i++) {
@@ -794,12 +808,14 @@ const SORTS = [
         // 两个状态共用一个 class 会互相覆盖——展开时把「有筛选」的强调抹掉，收起时又反过来。
         if (panelBtn) panelBtn.classList.toggle('has-filter', activeCount > 0);
 
-        // 命中提示条：只有真的在筛/排序时才出现
+        // 命中提示条（2026-10-25 主人要求）：一根横条，写「匹配到 X 首，耗时 Y ms」。
+        // 只有真的在筛/排序时才出现。
         var filtering = !!state.q || activeCount > 0 || state.sort !== DEFAULT_SORT_INLINE;
         if (activeBox) {
           activeBox.hidden = !filtering;
           // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值
-          if (activeTxt) activeTxt.textContent = filtering ? '命中 ' + totalMine + ' 首' : '';
+          if (activeTxt) activeTxt.textContent = filtering ? String(totalMine) : '';
+          if (activeCost) activeCost.hidden = !filtering;
         }
 
         // aria-pressed 在这里统一收口（2026-10-23 收尾）。
@@ -810,6 +826,12 @@ const SORTS = [
 
         applySort();
         stagger();
+
+        // 耗时写在最后：它要包含上面全部筛选 + 排序 + 错开入场的标记，
+        // 但**不含**浏览器重绘。渲染固定两位小数以下取整，避免出现「耗时 0.30000000000000004ms」。
+        if (activeCostTxt && filtering) {
+          activeCostTxt.textContent = Math.round(performance.now() - t0) + ' ms';
+        }
       }
 
       // 把 state → aria-pressed / .is-on 的映射集中在一处

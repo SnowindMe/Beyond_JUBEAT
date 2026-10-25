@@ -183,6 +183,13 @@ const CHECKS = [
   //   深色世代：color = acc 88% + ink 12%，底 = acc 12% 叠页面基色
   //   浅色世代（knit/ripples/qubell/saucer/prop/yymf）：color = ink，底 = acc 14% 叠基色
   // 实测 min 5.96（clan_blue）/ 11.76（ripples），都过 4.5。改了颜色这两条会立刻报出来。
+  // 命中提示条（2026-10-25 加）：ink3 小字 + 强调色数字，底是极淡玻璃。按小字 4.5 判。
+  {
+    name: '命中提示条 (.sc-active)',
+    fg: 'ink3',
+    bg: (t) => over(t.ink, 0.03, t.panel),
+    min: 4.5,
+  },
   {
     name: 'PICK UP 徽章（深色世代 .sc-pick）',
     fg: 'acc88',
