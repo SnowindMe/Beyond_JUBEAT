@@ -498,6 +498,141 @@ html[data-g="knit"] .mark b .til {
     stroke-linejoin: round;
 }
 
+/* ---------- 账户菜单（2026-10-25 主人：导航里的「管理/昵称」收进人形图标） ----------
+   结构照主人给的参考图：顶部账号信息 → 菜单项组 → 分隔线 → 红色退出登录。
+   z-index 40 高于主题切换弹层的 30：两个弹层都在右上角，同时打开时账户菜单在上。 */
+.acm {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.acm-pop {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 40;
+    /* 参考图那种窄竖列表：宽度按内容走，但要给「我的账户」这类四字项留出边距，
+       同时不能超过视口（窄屏 calc 兜底） */
+    width: max-content;
+    min-width: 176px;
+    max-width: calc(100vw - 24px);
+    padding: 6px;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--edge2);
+    /* 弹层必须实色：绝不能吃 --pop-bg（那是 rgba(255,255,255,0.94)，
+       浅色主题下曲绘会透上来，实测截图中 "Happy/FLOWER/Mermaid girl" 全透出来了）。
+       这里给自己的令牌，默认 = --base 实色；浅色主题下用 --acm-bg 提亮一档。 */
+    background: var(--acm-bg, var(--base));
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    /* 关闭态真正移出无障碍树与 Tab 序列；延时到淡出走完 */
+    visibility: hidden;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0s linear 0.18s;
+}
+.acm-pop[data-open='1'] {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0s;
+}
+/* 顶部账号信息：昵称（主）+ 身份（次），下面一条细线分开 */
+.acm-id {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 10px 9px;
+    border-bottom: 1px solid var(--edge2);
+    margin-bottom: 4px;
+}
+.acm-id b {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 46vw;
+}
+.acm-id span {
+    flex: none;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink3);
+}
+.acm-list {
+    display: flex;
+    flex-direction: column;
+}
+/* 选择器必须带 .top nav 前缀（= .top nav .acm-list a，2 类 1 元素）才能压过
+   .top nav a（1 类 2 元素）：那条规则里的 justify-content:center 是给顶栏条目的，
+   菜单项继承后会把「我的账户」推成居中（实测截图就是这样，很怪），
+   而且它的 padding/min-height 也会盖掉下面这些值。 */
+.top nav .acm-list a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* 菜单项也要够点：44 高是本站统一的可点下限（顶栏/抽屉同标准） */
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: var(--r-xs);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+        background 0.16s,
+        color 0.16s;
+}
+.top nav .acm-list a:hover {
+    background: var(--pop-hi, color-mix(in srgb, var(--acc) 16%, transparent));
+}
+.top nav .acm-list a.on {
+    color: var(--acc);
+    background: var(--pop-on, color-mix(in srgb, var(--acc) 14%, transparent));
+}
+.acm-sep {
+    height: 1px;
+    margin: 5px 4px;
+    background: var(--edge2);
+}
+.acm-foot form {
+    display: contents;
+}
+/* 退出登录：参考图里是红色文字，这里用同一个信号色（不跟 --acc 走，
+   避免主题色变换后「退出」看着跟普通项一样） */
+.acm-out {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--r-xs);
+    background: transparent;
+    /* 危险色走 --danger 令牌：深色主题 #e5484d、浅色主题压深到 #a8312f。
+       纯 #e5484d 在浅色弹层（rgba 白 0.94）上只有约 3.6:1，不达标。 */
+    color: var(--danger, #e5484d);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.acm-out:hover {
+    background: color-mix(in srgb, #e5484d 14%, transparent);
+}
+
 /* ---------- hero ---------- */
 .hero {
     display: grid;
@@ -1410,8 +1545,17 @@ html[data-g="ripples"],
 html[data-g="saucer"],
 html[data-g="yymf"] {
     --pop-bg: rgba(255, 255, 255, 0.94);
+    /* 账户菜单的实色底（不能用上面那个 0.94 的玻璃，声明 → 透出曲绘）。
+       比 --base 亮一档，浅色主题下才像一张独立卡片。 */
+    --acm-bg: #fbfaf6;
     --pop-hi: rgba(16, 27, 33, 0.06);
     --pop-on: rgba(16, 27, 33, 0.1);
+    /* 危险色（账户菜单的「退出登录」）：浅底上要压深才有 4.5 以上。
+       深色主题不定义这个令牌，回落成亮一点的 #e5484d。 */
+    --danger: #a8312f;
+}
+:root {
+    --danger: #e5484d;
 }
 
 /* 背景图不再走 body::after，改由 .bgv 的 A/B 两条板交叉淡入（见文件上方 .bgv 注释）。
@@ -1881,6 +2025,15 @@ html[data-g="yymf"] {
     .tsw-pop {
         width: min(296px, calc(100vw - 32px));
         right: 0;
+    }
+    /* 账户菜单窄屏同样贴右 0：人形图标在图标组里靠右，但菜单 176px 宽仍可能
+       越过视口右缘（图标组到右边界不足该宽度时会顶出去） */
+    .acm-pop {
+        right: 0;
+        min-width: 168px;
+    }
+    .acm-id b {
+        max-width: 40vw;
     }
     .hero {
         grid-template-columns: 1fr;

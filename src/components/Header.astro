@@ -25,11 +25,12 @@ const user = Astro.locals.user;
       {/* 只列真的存在的页面：Jubility / Emblem / 伙伴 / 成就 等二级页还没做，
           先不上导航（主人 2026-10-22：先砍死链，以后计划做再加回来）。
           做出来一页就在 .nav-txt 和 .nav-drawer 两处同步加回一条。 */}
-      <a href="/songs/" class:list={[{ on: path === '/songs/' || path.startsWith('/songs/') }]} aria-current={path.startsWith('/songs/') ? 'page' : undefined}>曲目</a><a href="/recent/" class:list={[{ on: path === '/recent/' }]} aria-current={path === '/recent/' ? 'page' : undefined}>最近更改</a>{user ? (
-        <>{isStaff(user) && <a href="/admin/" class:list={[{ on: path === '/admin/' }]}>管理</a>}<a class:list={[{ on: path === '/account/' }]} href="/account/" aria-current={path === '/account/' ? 'page' : undefined}>{user.name}</a></>
-      ) : (
-        <a href="/login/" class:list={[{ on: path === '/login/' || path === '/register/' }]} aria-current={path === '/login/' ? 'page' : undefined}>登录</a>
-      )}
+      {/* 导航只留两个内容页。账户相关（登录 / 管理 / 昵称）全部收进右侧人形图标的
+          账户菜单——主人 2026-10-25 的两次要求：「标记一可以不要，全部整合进标记二里」
+          「标记1的【登录】也不要」。所以这里是白的，游客也只走图标进 /login/。
+          窄屏抽屉里仍保留一条文字入口（抽屉是手机上的主入口，图标在 ≤414px 那一档
+          会被收窄，留一条文字更稳）。 */}
+      <a href="/songs/" class:list={[{ on: path === '/songs/' || path.startsWith('/songs/') }]} aria-current={path.startsWith('/songs/') ? 'page' : undefined}>曲目</a><a href="/recent/" class:list={[{ on: path === '/recent/' }]} aria-current={path === '/recent/' ? 'page' : undefined}>最近更改</a>
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
@@ -41,13 +42,20 @@ const user = Astro.locals.user;
       <a class="nav-i nav-i-recent" href="/recent/" aria-label="最近更改" title="最近更改">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg>
       </a>
-      <a class="nav-i nav-i-user" href={user ? '/account/' : '/login/'} aria-label={user ? `我的账户：${user.name}` : '登录'} title={user ? '我的账户' : '登录'}>
-        {user ? (
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/></svg>
-        ) : (
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/><path d="M17.4 3.4l3.2 3.2"/></svg>
-        )}
-      </a>
+      {/* 账户入口（2026-10-25 主人：「标记一可以不要，全部整合进标记二里」）：
+          登录后不再在导航里摊开「管理 / 昵称」，全部收进这个人形图标的菜单，
+          样式对齐图二那种下拉（顶部账号信息 → 菜单项 → 分隔线 → 红色退出登录）。
+          游客仍是一个直达 /login/ 的普通链接，不需要 JS 也能用。 */}
+      <div class="acm" id="acm">
+        <a class="nav-i nav-i-user" id="acmBtn" href={user ? '/account/' : '/login/'} aria-label={user ? `账户：${user.name}` : '登录'} title={user ? '账户' : '登录'}>
+          {user ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/><path d="M17.4 3.4l3.2 3.2"/></svg>
+          )}
+        </a>
+        <div class="acm-pop" id="acmPop" data-open="0" role="menu" aria-label="账户菜单"></div>
+      </div>
     </div>
     <div class="tsw">
       <button type="button" class="tsw-btn" id="tswBtn" aria-expanded="false" aria-haspopup="true" aria-controls="tswPop" aria-label="切换世代主题" title="切换世代主题">
@@ -73,41 +81,136 @@ const user = Astro.locals.user;
     <a href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>
   <script is:inline>
-    // 登录态同步：静态页在构建期生成，顶栏永远是「登录」。
-    // 这里在客户端问一次 /api/auth/me，把顶栏换成「昵称 / 我的账户 / 管理」。
-    // 失败静默——接口挂了不该影响页面其余部分。
+    // 登录态同步 + 账户菜单（2026-10-25 主人要求：导航里的「管理 / 昵称」不要了，
+    // 全部收进右侧人形图标的下拉菜单，样式对齐图二：顶部账号信息 → 菜单项 → 分隔线 → 红色退出）。
+    //
+    // 为什么菜单是 JS 建的而不是服务端渲染：本站绝大多数页是构建期预渲染的静态 HTML，
+    // 生成时没有会话，顶栏永远是游客态（见 /api/auth/me 里同一段说明）。
+    // 所以按钮在 HTML 里就是一个普通链接（游客直达 /login/，无 JS 也能用），
+    // 登录后脚本再把它升级成「点开菜单」。
     (function () {
       if (!window.fetch) return;
+      var pop = document.getElementById('acmPop');
+      var btn = document.getElementById('acmBtn');
+      var box = document.getElementById('acm');
+      if (!pop || !btn || !box) return;
+
+      var ROLE = { player: '玩家', maintainer: '维护者', owner: '站长' };
+
+      /* 菜单结构：header(id) + 项目组 + footer(退出登录)。
+         只放真实存在的页面——本站没有「配置/账单/外观/语言/时区」这些项，
+         照图二硬塞进去就是死链或空壳，宁可少放。 */
+      function build(u) {
+        pop.innerHTML = '';
+
+        var head = document.createElement('div');
+        head.className = 'acm-id';
+        var nm = document.createElement('b');
+        nm.textContent = u.name;
+        var rl = document.createElement('span');
+        rl.textContent = ROLE[u.role] || '玩家';
+        head.appendChild(nm);
+        head.appendChild(rl);
+        pop.appendChild(head);
+
+        var list = document.createElement('div');
+        list.className = 'acm-list';
+        function item(href, text, on) {
+          var a = document.createElement('a');
+          a.href = href;
+          a.setAttribute('role', 'menuitem');
+          a.textContent = text;
+          if (on) a.className = 'on';
+          list.appendChild(a);
+          return a;
+        }
+        var here = location.pathname;
+        item('/account/', '我的账户', here === '/account/');
+        if (u.staff) item('/admin/', '管理后台', here === '/admin/' || here.indexOf('/admin/') === 0);
+        pop.appendChild(list);
+
+        var sep = document.createElement('div');
+        sep.className = 'acm-sep';
+        pop.appendChild(sep);
+
+        var foot = document.createElement('div');
+        foot.className = 'acm-list acm-foot';
+        // 退出必须是 POST：/api/auth/logout 只接受 POST（防 CSRF 的 GET 预取，
+        // 浏览器/爬虫随手 GET 一次就会被踢下线）。所以这里用一个真表单提交。
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/api/auth/logout';
+        var b = document.createElement('button');
+        b.type = 'submit';
+        b.className = 'acm-out';
+        b.setAttribute('role', 'menuitem');
+        b.textContent = '退出登录';
+        form.appendChild(b);
+        foot.appendChild(form);
+        pop.appendChild(foot);
+      }
+
+      /* 开合：与主题切换器同一套行为——点按钮切、点外部关、Esc 关并把焦点还回按钮。
+         关闭态靠 CSS 的 visibility（延后到淡出走完），不额外加 hidden 属性：
+         两套机制叠加会让「重开」那一帧丢掉过渡（display 从 none 回来不跑 transition）。 */
+      function setOpen(v, opts) {
+        pop.setAttribute('data-open', v ? '1' : '0');
+        btn.setAttribute('aria-expanded', v ? 'true' : 'false');
+        if (v) {
+          var first = pop.querySelector('a,button');
+          if (first) first.focus();
+        } else if (!opts || opts.returnFocus !== false) {
+          var act = document.activeElement;
+          if (!act || act === document.body || pop.contains(act)) btn.focus();
+        }
+      }
+
+      var isOpen = function () { return pop.getAttribute('data-open') === '1'; };
+
       fetch('/api/auth/me', { credentials: 'same-origin', headers: { accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (d) {
           var u = d && d.user;
-          if (!u) return; // 游客：保持「登录」不变
-          // 宽屏文字链接：把「登录」换成 昵称，前面插「管理」（staff 才有）
-          var navTxt = document.querySelector('.nav-txt');
-          var drawer = document.getElementById('navDrawer');
-          function fill(box, sep) {
-            if (!box) return;
-            var login = box.querySelector('a[href="/login/"]');
-            if (!login) return;
-            if (u.staff) {
-              var man = document.createElement('a');
-              man.href = '/admin/';
-              man.textContent = '管理';
-              login.parentNode.insertBefore(man, login);
+          if (!u) return; // 游客：保持直达 /login/ 的普通链接
+          build(u);
+          btn.href = '/account/';
+          btn.setAttribute('aria-label', '账户菜单：' + u.name);
+          btn.setAttribute('aria-haspopup', 'true');
+          btn.setAttribute('aria-expanded', 'false');
+          btn.setAttribute('aria-controls', 'acmPop');
+          btn.title = '账户菜单';
+
+          // 点按钮 = 开菜单，不再是跳转（但 href 留着，中键/新标签仍可直达账户页）
+          btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            setOpen(!isOpen());
+          });
+          document.addEventListener('click', function (ev) {
+            if (!isOpen()) return;
+            if (box.contains(ev.target)) return;
+            setOpen(false, { returnFocus: false });
+          });
+          document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && isOpen()) {
+              setOpen(false);
+              btn.focus();
             }
-            login.href = '/account/';
-            login.textContent = u.name;
-            login.setAttribute('aria-current', location.pathname === '/account/' ? 'page' : 'false');
-          }
-          fill(navTxt);
-          fill(drawer);
-          // 图标入口：href 与 aria-label 换成账户
-          var ico = document.querySelector('.nav-i-user');
-          if (ico) {
-            ico.href = '/account/';
-            ico.setAttribute('aria-label', '我的账户：' + u.name);
-            ico.title = '我的账户';
+          });
+          // 窄屏抽屉里的「昵称」也直接指向账户页（抽屉不放大菜单，省一次点击）
+          var drawer = document.getElementById('navDrawer');
+          if (drawer) {
+            var login = drawer.querySelector('a[href="/login/"]');
+            if (login) {
+              if (u.staff) {
+                var man = document.createElement('a');
+                man.href = '/admin/';
+                man.textContent = '管理后台';
+                login.parentNode.insertBefore(man, login);
+              }
+              login.href = '/account/';
+              login.textContent = u.name;
+            }
           }
         })
         .catch(function () {});

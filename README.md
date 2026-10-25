@@ -43,7 +43,9 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 一个必须知道的坑：中间件里**不能顶层 `import { env } from 'cloudflare:workers'`**。本机预渲染走 Node（`prerenderEnvironment: 'node'`），Node 的 ESM loader 不认识 `cloudflare:` 协议，会在「预渲染 /404」这步直接崩 `ERR_UNSUPPORTED_ESM_URL_SCHEME`。改成在 SSR 分支里动态 `await import()`。同理，所有 API 端点都要标 `export const prerender = false`。
 
-> 静态页的登录态：本站绝大多数页面是构建期预渲染的，生成时没有会话，顶栏渲染出来永远是「登录」。`/api/auth/me` 接口 + Header 里的内联脚本在客户端把顶栏换成「昵称 / 我的账户 / 管理」。所以**不要在静态页里写死任何按用户变化的文案**。
+> 静态页的登录态：本站绝大多数页面是构建期预渲染的，生成时没有会话，顶栏渲染出来永远是游客态。`/api/auth/me` 接口 + Header 里的内联脚本在客户端把右侧人形图标升级成账户菜单。所以**不要在静态页里写死任何按用户变化的文案**。
+
+> **账户菜单**（v1.19.0）：导航文字区只留「曲目 / 最近更改」，登录、管理、昵称全部收进右侧人形图标的下拉（主人 2026-10-25 两次要求：「标记一可以不要，全部整合进标记二里」「标记1的【登录】也不要」）。菜单结构 = 昵称+身份 → 我的账户 / 管理后台（staff 才有）→ 分隔线 → 红色退出登录。游客看到的人形图标仍是直达 `/login/` 的普通链接，**无 JS 也能登录**；登录后脚本才把它改成点开菜单（href 保留，中键/新标签仍可直达账户页）。退出用 POST 表单提交 `/api/auth/logout`——那个端点只接受 POST，防止爬虫/预取随手 GET 就把人踢下线。菜单底色用 `--acm-bg` 实色，**不能吃 `--pop-bg`**（后者是 rgba 0.94 的玻璃，浅色主题下曲绘会透上来叠字）。
 
 **/recent/ 最近更改**（v1.15.0 起为真实数据页）：记录维护者对站点内容的编辑。该页 `prerender = false`（与 `/songs/` 一样是 SSR），运行时查 D1 的 `recent_changes` 表，每条含 `changed_at` / `user` / `target_label` / `target_href` / `summary` / `before_text` / `after_text`。前后差异用原生 `<details>/<summary>` 折叠，**这一页没有任何脚本**，无 JS 也能展开。写入源是 `/api/admin/song-update`（维护者每次成功编辑曲目写一条）。库里没有记录时显示空态三行说明。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
@@ -305,7 +307,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | --- | --- | --- |
 | 字标 | 世代站标原本全部渲染、靠 CSS 隐藏 → 改成单个 `<img id="wordLogo">` 按当前世代设 src | 少下 10 张，约 -160 KB |
 | 曲绘 | 78 张缩到 144x144（显示 84 CSS px，够了） | 1344 → 438 KB |
-| 背景 | 世代背景缩到 1440 宽 q62 | 单张 5–62 KB |
+| 背景 | 世代背景缩到 1440 宽 q62（festo 2026-10-25 换新图为 q72） | 单张 5–64 KB |
 | 站标 | PNG → WebP，360 宽 q88 | 421 → 179 KB |
 | 字体 | woff2 子集化到拉丁区（U+0020-007E） | 168 → 113 KB |
 | 缓存 | `_headers` 给 `/_astro/*` 加一年 immutable | 二次访问不再回源取 CSS |
