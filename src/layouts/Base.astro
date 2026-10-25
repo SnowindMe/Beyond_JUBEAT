@@ -118,7 +118,16 @@ const BUILD_DATE = (() => {
          /assets/images/* 是 immutable 一年缓存，不改文件名的话老访客永远看旧图；
          只有这里登记过的图才会带参数，其余 14 张照旧命中缓存。 */
       window.JB_BGVER = { festo: 2 };
-      var FONTFILE = { F: 'jost-500.woff2', C: 'rye-400.woff2', D: 'playfair-700.woff2', E: 'caveat-700.woff2', G: 'shrikhand-400.woff2' };
+      /* 字体走 fontsource + jsdmirror（2026-10-25，见 theme.css 顶部）：仓库不再存字体二进制，
+         所以这里直接拼第三方 URL。键仍是「字体代号 → 完整 URL 路径」，与 @font-face 一一对应。 */
+      var FONTCDN = 'https://cdn.jsdmirror.com/npm/@fontsource/';
+      var FONTFILE = {
+        F: 'jost/files/jost-latin-500-normal.woff2',
+        C: 'rye/files/rye-latin-400-normal.woff2',
+        D: 'playfair-display/files/playfair-display-latin-700-normal.woff2',
+        E: 'caveat/files/caveat-latin-700-normal.woff2',
+        G: 'shrikhand/files/shrikhand-latin-400-normal.woff2'
+      };
       function pre(href, as, type) {
         var l = document.createElement('link');
         l.rel = 'preload';
@@ -131,7 +140,9 @@ const BUILD_DATE = (() => {
       }
       pre('/assets/images/bg/' + g + '.webp' + (window.JB_BGVER[g] ? '?v=' + window.JB_BGVER[g] : ''), 'image');
       var ff = FONTFILE[FONT[g]];
-      if (ff) pre('/assets/fonts/' + ff, 'font', 'font/woff2');
+      /* preload 地址必须与 @font-face 的 src **完全一致**（含域名），否则浏览器当成
+         两个 URL、字体会被下载两次。改字体时 theme.css 与这里要同改。 */
+      if (ff) pre(FONTCDN + ff, 'font', 'font/woff2');
     })();
   </script>
 </head>

@@ -61,6 +61,12 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 页面支持 **15 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
 
+> **字体走第三方 CDN（2026-10-25）**：仓库不再存字体二进制（`public/assets/fonts/` 已清空），6 款主题字体全部由 [@fontsource](https://fontsource.org/) 的官方字体包经 `cdn.jsdmirror.com` 分发：
+> `https://cdn.jsdmirror.com/npm/@fontsource/<pkg>/files/<pkg>-latin-<weight>-normal.woff2`
+> 选 jsdmirror 而非 jsdelivr 原站是实测结论：同一文件 avg ttfb **1.86s → 0.31s**（对照：本站 CF 1.16s、fontelio 2.19s 且首次 4.7s）。
+> 代价：fontsource 是通用拉丁集，比原来自裁剪的子集大 48%（105.6 → 156.6 KB）；首屏只加载当前世代 1 款，实际约 +20 KB。
+> 两个易错点：①路径必须带 `-normal.woff2`；②Playfair 的包名是 `@fontsource/playfair-display`（不是 `@fontsource/playfair`）。改字体时 `theme.css` 的 `@font-face` 与 `Base.astro` 的 preload **必须同改**（地址不一致会被下载两次）。
+
 页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
 
 ## 项目清单
@@ -111,7 +117,7 @@ Beyond_JUBEAT/
 │  │  ├─ images/jackets/      1305 张曲绘 webp（11 MB，144px）
 │  │  ├─ images/logo/         12 张世代站标 webp（244 KB，570 宽 DPR2）
 │  │  ├─ images/og/           og:image 分享图（1200x630 png）
-│  │  ├─ fonts/               7 个 woff2 主题/装饰字体（113 KB，拉丁子集）
+│  │  ├─ fonts/               （已清空）主题字体改由 fontsource CDN 提供，见下方「字体」
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
 │  ├─ apple-touch-icon.png    iOS 主屏图标（180x180，由 favicon 渲染）
@@ -144,7 +150,7 @@ Beyond_JUBEAT/
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
 │  ├─ gen-brand-assets.cjs   生成 og 分享图与 apple-touch-icon（素材变了才跑）
 │  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
-│  ├─ subset-fonts.py         字体子集化（woff2 只留拉丁字符）
+│  ├─ subset-fonts.py         历史脚本：字体子集化（现字体走 CDN，已不再需要）
 │  ├─ probe/                  历史探测脚本（Playwright 时代留下的）
 │  ├─ screenshots/ logs/ tmp/ 过程产物
 │  └─ README.md
@@ -187,7 +193,7 @@ npm run check            # 四段：引用完整性(源码) → 引用完整性(
                          # 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），真实渲染会有 0.5–1.0 偏差，
                          # 验收仍以实机渲染为准，脚本只作回归护栏。
 npm run opt              # 压缩 public/assets/images 下的图片
-npm run fonts            # woff2 字体子集化（需 python + fonttools）
+# 字体已改为 CDN 分发（fontsource + jsdmirror），不需要本地子集化
 ```
 
 改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
@@ -311,7 +317,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | 曲绘 | 78 张缩到 144x144（显示 84 CSS px，够了） | 1344 → 438 KB |
 | 背景 | 世代背景缩到 1440 宽 q62（festo 2026-10-25 换新图为 q72） | 单张 5–64 KB |
 | 站标 | PNG → WebP，360 宽 q88 | 421 → 179 KB |
-| 字体 | woff2 子集化到拉丁区（U+0020-007E） | 168 → 113 KB |
+| 字体 | 改走 fontsource CDN（见下方「字体」一节） | 仓库不再存字体二进制 |
 | 缓存 | `_headers` 给 `/_astro/*` 加一年 immutable | 二次访问不再回源取 CSS |
 | 主题 | head 里内联预热脚本，先读 localStorage 再渲染 | 老用户刷新不闪 ave |
 

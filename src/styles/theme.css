@@ -27,35 +27,51 @@
 }
 /* 世代字标字体（2026-10-19 按卡面「NEXT... 4×4 QUESTION!」识别结果定）：
    A 霓虹细几何 / B 宽字距几何 / C 西部粗 slab(Rye) / D Didone(Playfair) /
-   E 笔刷手写(Caveat, prop) / F 复古气泡连笔(Yellowtail, festo) / F 亦作几何科技(Jost, ave·bta·copious·saucer 系) */
+   E 笔刷手写(Caveat, prop) / F 复古气泡连笔(Yellowtail, festo) / F 亦作几何科技(Jost, ave·bta·copious·saucer 系)
+
+   【字体走第三方 CDN：@fontsource + cdn.jsdmirror（2026-10-25）】
+   主人明确「不想把字体文件放在自己仓库里」，所以字体不再由本站 /assets/fonts/ 提供，
+   也不再走自家仓库的 GitHub 镜像，改用 fontsource 官方字体包分发：
+       https://cdn.jsdmirror.com/npm/@fontsource/<pkg>/files/<pkg>-latin-<weight>-normal.woff2
+
+   为什么是 jsdmirror 而不是 jsdelivr 原站（连打 3 次实测，同一 rye 文件）：
+       fontsource@jsdelivr    avg ttfb 1.86s
+       fontsource@jsdmirror   avg ttfb 0.31s
+       （对照：本站 CF 1.16s；fontelio 2.19s 且首次 4.7s）
+   代价（已知并接受）：fontsource 是通用拉丁集，比本站自裁剪子集大 48%（105.6→156.6KB）；
+   首屏只加载当前世代 1 款，实际约 +20KB。换来的是仓库里不再存二进制字体。
+
+   注意：路径一律要带 -normal.woff2；Playfair 的包名是 @fontsource/playfair-display
+   （不是 @fontsource/playfair），写错会 404 且只在浏览器控制台可见。 */
 @font-face {
     font-family: "Jost Local";
-    src: url("/assets/fonts/jost-500.woff2") format("woff2");
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/jost/files/jost-latin-500-normal.woff2") format("woff2");
     font-weight: 500; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Rye Local";
-    src: url("/assets/fonts/rye-400.woff2") format("woff2");
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/rye/files/rye-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Playfair Local";
-    src: url("/assets/fonts/playfair-700.woff2") format("woff2");
+    /* 包名是 playfair-display，写成 @fontsource/playfair 会 404 */
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Caveat Local";
-    src: url("/assets/fonts/caveat-700.woff2") format("woff2");
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/caveat/files/caveat-latin-700-normal.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Yellowtail Local";
-    src: url("/assets/fonts/yellowtail-400.woff2") format("woff2");
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/yellowtail/files/yellowtail-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Shrikhand Local";
-    src: url("/assets/fonts/shrikhand-400.woff2") format("woff2");
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/shrikhand/files/shrikhand-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 html[data-font="A"] {
