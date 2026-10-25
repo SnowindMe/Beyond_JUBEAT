@@ -179,6 +179,10 @@ const user = Astro.locals.user;
           btn.setAttribute('aria-expanded', 'false');
           btn.setAttribute('aria-controls', 'acmPop');
           btn.title = '账户菜单';
+          /* 这个 <a> 已经不是链接了，是开菜单的按钮。必须打标记，否则
+             BootScreen 的 document-capture 点击监听器会先于我们的 preventDefault 看到
+             href，误判成「要跳走」并点亮 LOADING 遮罩（实撞：点账户菜单闪 loading）。 */
+          btn.setAttribute('data-boot-skip', '');
 
           // 点按钮 = 开菜单，不再是跳转（但 href 留着，中键/新标签仍可直达账户页）
           btn.addEventListener('click', function (ev) {

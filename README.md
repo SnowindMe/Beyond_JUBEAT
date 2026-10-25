@@ -47,6 +47,8 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > **账户菜单**（v1.19.0）：导航文字区只留「曲目 / 最近更改」，登录、管理、昵称全部收进右侧人形图标的下拉（主人 2026-10-25 两次要求：「标记一可以不要，全部整合进标记二里」「标记1的【登录】也不要」）。菜单结构 = 昵称+身份 → 我的账户 / 管理后台（staff 才有）→ 分隔线 → 红色退出登录。游客看到的人形图标仍是直达 `/login/` 的普通链接，**无 JS 也能登录**；登录后脚本才把它改成点开菜单（href 保留，中键/新标签仍可直达账户页）。退出用 POST 表单提交 `/api/auth/logout`——那个端点只接受 POST，防止爬虫/预取随手 GET 就把人踢下线。菜单底色用 `--acm-bg` 实色，**不能吃 `--pop-bg`**（后者是 rgba 0.94 的玻璃，浅色主题下曲绘会透上来叠字）。
 
+> **约定：被 JS 接管、点击后不导航的 `<a>` 必须带 `data-boot-skip`**（v1.19.1）。BootScreen 的「点链接先亮 LOADING」监听器挂在 `document` 的 **capture 阶段**，比链接自己的 `preventDefault` 先跑——它看到 href 还在，就当成「要跳走了」而 `begin(160)`。实撞：账户菜单把 `<a href="/account/">` 改成开菜单的触发器后，每次点它都闪一下 LOADING，还得等 3 秒兜底才收。所以这类触发器要打 `data-boot-skip`，遮罩监听器见到就跳过。反向要验：普通站内链接点击仍必须点亮遮罩（实测 `bootRun:true`），别把拦截做成「所有导航都不亮」。
+
 **/recent/ 最近更改**（v1.15.0 起为真实数据页）：记录维护者对站点内容的编辑。该页 `prerender = false`（与 `/songs/` 一样是 SSR），运行时查 D1 的 `recent_changes` 表，每条含 `changed_at` / `user` / `target_label` / `target_href` / `summary` / `before_text` / `after_text`。前后差异用原生 `<details>/<summary>` 折叠，**这一页没有任何脚本**，无 JS 也能展开。写入源是 `/api/admin/song-update`（维护者每次成功编辑曲目写一条）。库里没有记录时显示空态三行说明。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
 
 > 为什么改了 SSR：此前读的是 `src/data/recent-changes.json` 这份构建期快照，编辑记录是运行时数据，构建期永远不知道，列表恒为空。那个文件现在只留作 dev 退路（见 `src/lib/db.ts`）。副作用：`dist/client/recent/` 不再生成，`check-refs` 的 dist 引用基线从 46 变为 42。

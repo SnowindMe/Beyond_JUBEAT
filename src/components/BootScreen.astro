@@ -437,6 +437,13 @@
     if (!a) return;
     if (a.target && a.target !== '_self') return;
     if (a.hasAttribute('download')) return;
+    /* 被 JS 接管、点击后并不导航的链接：自己不跳，却会被这里当成「要走了」而点亮遮罩。
+       实撞（v1.19.0）：顶栏账户菜单把 <a href="/account/"> 改成了开菜单的触发器，
+       它的 click 处理器 preventDefault，但本监听器挂在 document 的 capture 阶段，
+       **比它先跑**，看到的还是「href 存在且同源」→ begin(160) 点亮 LOADING，
+       于是每次点账户菜单都闪一下 loading，且要等 3 秒兜底才收。
+       约定：这类触发器必须带 data-boot-skip（见 Header.astro 设置 aria-haspopup 那段）。 */
+    if (a.hasAttribute('data-boot-skip')) return;
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#') return;
     if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
