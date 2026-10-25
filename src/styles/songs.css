@@ -611,6 +611,69 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     outline: 2px solid var(--acc);
     outline-offset: 2px;
 }
+/* ---------- PICK UP 标记（2026-10-25） ----------
+   位置：曲绘下、曲名上——视线从图落到文字的必经点，一眼能扫到；
+   同时避开曲绘右上角 [2] 与曲名下的难度徽章这两处已被占用的位置。
+   形态：星标 + PICK UP 小字，横向一条（不做角标，角标会盖住曲绘）。
+   配色：强调色字 + 强调色淡底（不是实心强调色块）。理由见下。
+   为什么不用「实心强调色底 + 深字」：实测 15 套主题里 saucer(#37474F)/yymf(#3f6fd8)/
+   prop(#e0338f)/qubell(#3E8FBF) 的强调色本来就偏深，深字压上去只有 1.94–4.50，
+   低于 4.5 门槛。而「强调色字 + 自身 12% 叠底」在深色主题最差 5.01（clan_blue），
+   浅色主题最差 3.29（prop，11px 粗体按小字要 4.5 不够）——所以浅色世代单独走深色令牌。
+   最终：默认走强调色系；knit/ripples/qubell/saucer/prop/yymf 这 6 套浅底主题
+   改成 var(--ink) 字 + 强调色描边，对比度全部 ≥ 5.2（浅底上的深字天然够）。 */
+.sc-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-start;
+    max-width: calc(100% - 4px);
+    margin: 6px 2px 0;
+    padding: 2px 7px 2px 5px;
+    font-family: var(--font-data);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: color-mix(in srgb, var(--acc) 88%, var(--ink));
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 42%, transparent);
+    border-radius: var(--r-xs);
+}
+.sc-pick svg {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    fill: currentColor;
+    stroke: none;
+}
+/* 浅色世代（白底彩图）上的强调色太浅，换成深字保对比度 */
+html[data-g="knit"] .sc-pick,
+html[data-g="ripples"] .sc-pick,
+html[data-g="qubell"] .sc-pick,
+html[data-g="saucer"] .sc-pick,
+html[data-g="prop"] .sc-pick,
+html[data-g="yymf"] .sc-pick {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 窄屏卡片只有 ~96px 宽：星标 + 「PICK UP」放得下，但字要再收一点 */
+@media (max-width: 768px) {
+    .sc-pick {
+        font-size: 9px;
+        letter-spacing: 0.06em;
+        padding: 2px 5px;
+        gap: 3px;
+        margin-top: 5px;
+    }
+    .sc-pick svg {
+        width: 8px;
+        height: 8px;
+    }
+}
+
 /* 双服标记 .sc-dual 已于 2026-10-24 移除（主人：「【双】徽章可以不用」）。
    国服视图几乎每张卡都带它，满屏同一标记等于没有信息量，还挤占曲名宽度。
    样式一并删除，避免留下「有规则没有元素」的死代码。

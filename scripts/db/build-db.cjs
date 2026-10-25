@@ -65,6 +65,14 @@ function main() {
   // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
   const genOverrides = readGenOverrides();
 
+  // 解禁标记（2026-10-25 修）：以 sheet1 I 列（国服官方更新表）为准，archive 只当补充。
+  // 起因：主人指出「解禁II 不是有 61 首吗」，而库里只有 55 首 —— 差的 6 首全是 [2] 长押曲
+  // （70001001 / 80001002 / 80001003 / 80001004 / 80001014 / 80001015）+ 1 首 concon。
+  // 真因是 unlock_note 只从 archive/wiki-v3-songs.json 回查，而那份旧站快照对这几首
+  // 恰好没有 unlockPool（实测快照 55 首 poolPhase=2，源表 61 首）。
+  // 现在按「源表优先、快照兜底」取，覆盖 186 首 = sheet1 I 列全部解禁标记行。
+  const s1Unlock = readSheet1Unlock();
+
   // songId 修正（2026-10-25）：见 readIdFixes 注释。占位 id 与错位 id 都走这里，
   // 重映射后再写库，因此库里的 song_id 一律是官方 id（除少数确实拿不到的）。
   const idFixes = readIdFixes();
@@ -97,7 +105,7 @@ function main() {
     bsc, adv, ext, alt, cover, added_at, unlock_note
   ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0 };
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0 };
   const problems = [];
 
   db.exec('BEGIN');
@@ -130,8 +138,12 @@ function main() {
       const arc = archiveById.get(srcId) || {};
       if (arc.bpm) stat.jpBpm++;
       if (arc.addedAt) stat.jpAdded++;
-      const note = jpUnlockNote(arc);
+      const note = jpUnlockNote(arc, s1Unlock.get(srcId));
       if (note) stat.jpNote++;
+      // 解禁期次计数：与 sheet1 I 列的独立推算对比（见自检），不写死数字。
+      if (s1Unlock.has(srcId)) {
+        if (s1Unlock.get(srcId).phase === 2) stat.unlockII++; else stat.unlockI++;
+      }
       // server_cn 两个来源，任一成立即为国服已上线：
       //   ① 国服 sheet2 里同曲（dualKey 匹配，含 [2] 长押行）；
       //   ② sheet1 打 √ 的旧框已有曲（按官方 songId 精确匹配，不猜）。
@@ -196,6 +208,9 @@ function main() {
     cnTotal: tickInJp + dualJpNotTick + cnRows.length,
     // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
     dualTotal: tickInJp + dualJpNotTick + stat.cnDual,
+    // 解禁期次：直接数 sheet1 I 列，与库里的 unlock_note 对照（2026-10-25 加）。
+    unlockI: [...s1Unlock.values()].filter((v) => v.phase === 1).length,
+    unlockII: [...s1Unlock.values()].filter((v) => v.phase === 2).length,
   };
   // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
   // 并且新 id 不能被两条修正挤到同一个（否则 INSERT OR REPLACE 会静默吞掉一条）。
@@ -237,12 +252,45 @@ function main() {
 }
 
 // 解禁信息合成一条人类可读文本：解禁池 + 期次 / 兑换价。三样都没有就留 NULL。
-function jpUnlockNote(arc) {
+//
+// 【两个来源的优先级（2026-10-25 定）】解禁池/期次以 **sheet1 I 列**（国服官方更新表）为准，
+// archive 快照只在源表没有该曲时兜底。原因：
+//   ① 源表是国服运营方的原始记录，B 站/旧站快照是二手转抄；
+//   ② 实测两者重叠 179 首、值完全一致（0 处冲突），说明口径同源，谁补谁都安全；
+//   ③ 但快照缺 7 首（6 首 [2] 长押曲 + concon），源表全有 —— 只信快照就会少 6 首解禁II。
+// 兑换价 / 限时这两项源表没有，仍只从快照取，不与解禁池来源混淆。
+function jpUnlockNote(arc, s1) {
   const parts = [];
-  if (arc.unlockPool) parts.push('解禁' + (arc.poolPhase ? (arc.poolPhase === 1 ? 'I' : 'II') : '') + ' - ' + arc.unlockPool);
+  const pool = s1 && s1.pool ? s1 : (arc.unlockPool ? { pool: arc.unlockPool, phase: arc.poolPhase } : null);
+  if (pool) parts.push('解禁' + (pool.phase ? (pool.phase === 1 ? 'I' : 'II') : '') + ' - ' + pool.pool);
   if (arc.exchangeCost) parts.push('兑换 ' + arc.exchangeCost);
   if (arc.limited && arc.limitedPeriod && arc.limitedPeriod.endsOn) parts.push('限时至 ' + arc.limitedPeriod.endsOn);
   return parts.length ? parts.join(' / ') : null;
+}
+
+// sheet1 I 列（索引 8）的解禁标记：「解禁I - POOL」/「解禁II - POOL」。
+// 该列还有「——」「空」「2026.02.10」这类值（日期或占位），一律不认 —— 只取解禁池写法。
+// 解析失败的写法直接抛错而不是静默跳过：静默跳过就表现为「数据少了几首」，最难查。
+function readSheet1Unlock() {
+  const p = path.join(XLSX_DIR, 'sheet1.json');
+  if (!fs.existsSync(p)) {
+    throw new Error('缺少 ' + path.relative(ROOT, p) + '：先跑 node scripts/db/parse-xlsx.cjs');
+  }
+  const rows = JSON.parse(fs.readFileSync(p, 'utf8')).rows;
+  const map = new Map();
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i] || [];
+    const songId = String(r[0] == null ? '' : r[0]).trim();
+    if (!/^\d{6,}$/.test(songId)) continue;
+    const raw = String(r[8] == null ? '' : r[8]).trim();
+    if (!raw || !raw.includes('解禁')) continue;
+    const m = /^解禁(II|I)\s*-\s*(\S+)$/.exec(raw);
+    if (!m) {
+      throw new Error('sheet1 I 列解禁写法无法解析: ' + songId + ' -> ' + JSON.stringify(raw));
+    }
+    map.set(songId, { phase: m[1] === 'II' ? 2 : 1, pool: m[2] });
+  }
+  return map;
 }
 
 // 曲绘入库即归一化为站点素材名：日服源文件是 idN.gif，build-data 转档产物统一叫 idN.webp。
@@ -424,6 +472,10 @@ function selfCheck(db, stat, problems, expect) {
     // sheet2 的 Big Daddy 是国服独有一行、把它自己的日服行也标成双服（共 2 行同曲）。
     ['  双服行（国服已上线的日服曲 + Big Daddy）', dualN, expect.dualTotal],
     ['两服标志全 0 的行', noneN, 0],
+    // 解禁期次（2026-10-25）：期望值从 sheet1 I 列独立数出来，不写死。
+    // 这两条守的是「源表里写了解禁的曲子必须真的带上解禁标记」——上一轮正是这里少了 6 首解禁II。
+    ['  解禁I 曲数', db.prepare("SELECT COUNT(*) c FROM songs WHERE unlock_note LIKE '解禁I %'").get().c, expect.unlockI],
+    ['  解禁II 曲数', db.prepare("SELECT COUNT(*) c FROM songs WHERE unlock_note LIKE '解禁II %'").get().c, expect.unlockII],
   ];
   console.log('=== 一致性自检 ===');
   let bad = 0;

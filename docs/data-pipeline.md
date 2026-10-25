@@ -132,8 +132,8 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 | 2 | 国框更新音乐魔方进度 | 可见 | **入库**（国服独有 91 行） | 91 条数据行，SongId 全为 9 位且唯一。A=SongId、B=曲名、C=艺人、D=BPM、E/F/G=BSC/ADV/EXT、H=分类（华立独占 / KONAMI/机种移植 / 音乐魔方原创 / 音乐魔方流行 / 流行（限时））、I=移植机种或联动、J=更新日期 |
 | 3 | 国框Jubiility理论值 | **隐藏** | **不入库** | 2026-06-16 版理论值，60 首。与表 4 仅 36 首重合，属历史快照，见 §4 |
 | 4 | 国框Jubiility理论值 【20261015】 | 可见 | 暂不入库（波次二用） | 2026-10-15 版，60 首。E 列 Normal 理论值求和 = G2 MAX 8034.7，F 列 = H2 MAX 9641.9，逐行吻合 |
-| 5 | 国框跑图II歌曲详情 | **隐藏** | 参考 | 解禁II 五池（CHERRY/KUMQUAT/LIME/BLUEBERRY/RAINBOW）横向并排明细，61 首；与表 1 的 I 列 `解禁II` 完全一致，唯一增量是 Basic/Advanced 定数 |
-| 6 | pick up（10+） | 可见 | 参考 | 定数 10.0–10.9 的 pick up 池统计（68 格，含 3 首同曲双难度）。右侧初出代统计块漏计 `jubeat prop` 1 首（合计 67 ≠ 68），不可当权威 |
+| 5 | 国框跑图II歌曲详情 | **隐藏** | 参考 | 解禁II 五池（CHERRY/KUMQUAT/LIME/BLUEBERRY/RAINBOW）横向并排明细，61 首；与表 1 的 I 列 `解禁II` 完全一致，唯一增量是 Basic/Advanced 定数。**注（2026-10-25）**：此表一直是 61 首，而库里一度只有 55 —— 因为 `unlock_note` 当时只从旧站快照回查，而快照缺 6 首 `[2]` 长押曲（70001001 / 80001002 / 80001003 / 80001004 / 80001014 / 80001015）+ concon(30000127) 的 `解禁I`。已改为以表 1 的 I 列为权威（见 §3 的 unlock_note 行），并加了「解禁I/II 曲数」两条自检 |
+| 6 | pick up（10+） | 可见 | 参考 | 定数 10.0–10.9 的 pick up 池统计（68 格，含 3 首同曲双难度）。右侧初出代统计块漏计 `jubeat prop` 1 首（合计 67 ≠ 68），不可当权威。**⚠️ 名字撞车（2026-10-25）**：这里的 "pick up" 是「**高定数曲**」的意思（按定数分池），与页面上的 PICK UP / COMMON **范围筛选**毫无关系——后者指「本世代的重点推荐曲」（日服 bta 世代 / 国服音乐魔方+Ave.+解禁II）。两者同名不同义，接数据时别串 |
 | 7 | pick up（9+） | 可见 | 参考 | 定数 9.0–9.9，69 格，左右统计块均与逐行计数吻合 |
 
 ### 3.1 songs 表怎么由三份输入拼出来
@@ -154,7 +154,7 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 | alt | resolved.json `alt` | 标题匹配 `[ 2 ]` |
 | cover | `jacketFile` 的 `.gif` → `.webp` | wiki-v3 快照的 md5 名 → `.webp`；7 首新曲按 `id<songId>.webp` 回退（素材库 png 或已转档 webp 任一存在） |
 | added_at | 从快照回查 | sheet2 J 的 `YYYY.MM.DD` → `YYYY-MM-DD` |
-| unlock_note | 快照的 `unlockPool`/`poolPhase`/`exchangeCost`/`limitedPeriod` 合成一句 | sheet2 I（移植机种 / 联动） |
+| unlock_note | **解禁池/期次以 sheet1 的 I 列为准**；快照 `unlockPool`/`poolPhase` 只在源表没有该曲时才兜底。`exchangeCost`/`limitedPeriod` 源表没有，仍只取快照 → 合成一句 | sheet2 I（移植机种 / 联动） |
 
 **缺失值一律 NULL，不猜。** 日服 1150 首里 721 首没有占位 id、快照里也不存在，BPM / 上线日期就保持 NULL。
 

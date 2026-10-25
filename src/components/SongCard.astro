@@ -11,17 +11,23 @@
 // data-lv 是三档定数拼成的一串（"7 10.5 10.9"），只给搜索用：
 // 用户常直接打「10.5」找歌，光靠曲名/曲师/songId 三个字段搜不到。
 import type { Song } from '../lib/db';
-import { catOf } from '../lib/song-view';
+import { catOf, isPickUp } from '../lib/song-view';
 
 interface Props {
   song: Song;
   /** 首屏图给 eager + high，其余 lazy + low（一次开 1200+ 请求会被浏览器排队拖慢） */
   eager?: boolean;
-  /** 当前视图服务器：决定该卡属于哪个分区（catOf 的口径在 lib/song-view.ts） */
+  /** 当前视图服务器：决定该卡属于哪个分区、算不算 PICK UP（口径都在 lib/song-view.ts） */
   srv?: 'jp' | 'cn';
+  /** 是否画 PICK UP 标记。/songs/ 传 true；世代页不传——那页没有服务器上下文，
+      整页同标或全不标都会误导。范围值本身仍写进 data-scope，筛选逻辑不受影响。 */
+  markPick?: boolean;
 }
 
-const { song: s, eager = false, srv = 'jp' } = Astro.props;
+const { song: s, eager = false, srv = 'jp', markPick = false } = Astro.props;
+// 范围（PICK UP / COMMON）：与分区正交的第二个维度，判定在 lib/song-view.ts 的 isPickUp()，
+// 这里只把它落成 data-scope 供前端筛选，顺带决定要不要画标记。
+const pick = isPickUp(s, srv);
 // 徽章颜色按难度固定（2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 ---
@@ -36,6 +42,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-adv={s.lv.adv ?? ''}
   data-ext={s.lv.ext ?? ''}
   data-lv={`${s.lv.bsc ?? ''} ${s.lv.adv ?? ''} ${s.lv.ext ?? ''}`}
+  data-scope={pick ? 'pick' : 'common'}
 >
   <div class="sc-j">
     {s.cover ? (
@@ -53,6 +60,15 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
     )}
     {s.alt ? <span class="sc-alt">[2]</span> : null}
   </div>
+  {/* PICK UP 标记（2026-10-25 主人要求）。放在曲绘下、曲名上：那里是视线从图上
+      落到文字的必经点，一眼能扫到；也避开了曲绘右上角 [2] 与右下难度徽章这两处已占用位。
+      只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}
+  {markPick && pick ? (
+    <b class="sc-pick" title="PICK UP 曲目">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.6 6.1.7-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6L3.3 9.9l6.1-.7z"/></svg>
+      <span>PICK UP</span>
+    </b>
+  ) : null}
   {/* 整卡可点（2026-10-22 主人指出只点标题进不去太难用）。
       做法是卡内嵌一个绝对定位铺满的 <a>，而不是把整张卡包成 <a>：
       包成 <a> 会把曲绘、双服徽章、三个难度徽章全卷进链接名里，

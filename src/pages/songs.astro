@@ -18,7 +18,7 @@ import GenBlock from '../components/GenBlock.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN, slugOf } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
-import { CATS, catOf, inView, songKey, type Srv } from '../lib/song-view';
+import { CATS, catOf, inView, isPickUp, pickGen, songKey, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
@@ -166,15 +166,38 @@ const countOf = (srv: Srv, cat?: string) =>
   rowsIn(srv).filter((s) => !cat || catOf(s, srv) === cat).length;
 const srvTotal = (srv: Srv) => rowsIn(srv).length;
 
+// PICK UP / COMMON 的计数（2026-10-25）。与卡片上的 data-scope 同一个判据 isPickUp()，
+// 与 rowsIn 同一套视图去重——三处必须是同一个数，否则会出现「chip 写 142、页面数出 141」。
+// 实测（2026-10-25 按本页口径）：日服 142 / 1008；国服 158 / 365（合计 523）。
+const pickUpIn = (srv: Srv) => rowsIn(srv).filter((s) => isPickUp(s, srv));
+const countScope = (srv: Srv, scope: 'pick' | 'common') => {
+  const pick = pickUpIn(srv).length;
+  const total = srvTotal(srv);
+  return scope === 'pick' ? pick : total - pick;
+};
+
 const DEFAULT_SRV: Srv = 'jp';
 
-// 首屏曲绘：默认视图（日服 · 授权 · 前两个世代）里的前 18 张优先加载，
+// 首屏曲绘：默认视图（日服 · 授权 · 从前几个世代取够 18 张）优先加载，
 // 其余一律 lazy + low，避免一次开 1200+ 请求。
+//
+// 【2026-10-25 修正】把 PICK UP 世代（bta）从取图范围里排除。
+// 原因：bta 的 songId 是 11000xxx / 11001xxx（8 位、最大），在「songId 升序」下
+// 整块排在日服列表最末尾，屏幕外。按原来「按世代顺序累加到 18 张」的写法，
+// 头 18 张会全部落在 bta（实测 GEN_ORDER 最后一个世代正好是 bta，前面各世代的授权曲
+// 一凑就超 18），于是真正的首屏一张都没预加载、末尾反而预加载了一堆看不见的图 ——
+// 首屏 LCP 白等。排除后取的 18 张落在 Ave. 的授权曲（实测为默认视图可见区）。
+// 判据必须与前端 isPickUp() 同一口径，所以这里用同一个函数，别另写一份。
+const EAGER_PICKUP_GENS = new Set(GEN_JP.filter((g) => pickGen(g.k, 'jp')).map((g) => g.k));
 const EAGER = new Set(
-  GEN_JP.map((g) => bucket.jp['授权'][g.k] ?? [])
-    .reduce((acc, arr) => acc.concat(arr), [])
-    .slice(0, 18)
-    .map((s) => s.id),
+  bucket.jp['授权']
+    ? Object.keys(bucket.jp['授权'])
+        .filter((k) => !EAGER_PICKUP_GENS.has(k))
+        .map((k) => bucket.jp['授权'][k])
+        .reduce((acc, arr) => acc.concat(arr), [])
+        .slice(0, 18)
+        .map((s) => s.id)
+    : [],
 );
 
 // 曲师筛选面板只放「常用曲师」：库里 710 位，全塞进下拉会变成一条没人翻得完的列表。
@@ -330,6 +353,23 @@ const SORTS = [
       */}
       <div class="sc-panel" id="scPanel" data-open="false" hidden>
         <div class="sc-panel-in">
+        {/* 范围：PICK UP / COMMON（2026-10-25 主人要求）。
+            与「分区」正交的第二个维度——一首歌可以既是原创又是 PICK UP，
+            所以它是独立的一组 chip，判定走 lib/song-view.ts 的 isPickUp()，
+            不并进 CATS、也不参与 catOf。计数与卡片上的 data-scope 同一判据。 */}
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">范围</span>
+          <div class="sc-scope" role="group" aria-label="按 PICK UP / COMMON 筛选">
+            {(['jp', 'cn'] as const).map((srv) => (
+              <div class="sc-scope-set" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
+                <button type="button" class="sc-chip sc-chip-sm is-on" data-scope="all" aria-pressed="true">全部<b>{srvTotal(srv)}</b></button>
+                <button type="button" class="sc-chip sc-chip-sm" data-scope="pick" aria-pressed="false">PICK UP<b>{countScope(srv, 'pick')}</b></button>
+                <button type="button" class="sc-chip sc-chip-sm" data-scope="common" aria-pressed="false">COMMON<b>{countScope(srv, 'common')}</b></button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* 分区选择：按服务器各一套 chips，切服时由 apply() 显隐（sets 变量仍指向它们）。 */}
         <div class="sc-pf sc-pf-wide">
           <span class="sc-pf-k">分区</span>
@@ -453,7 +493,7 @@ const SORTS = [
             <em>{srvTotal(srv)} 首</em>
           </header>
           {srvGenOrder(srv).map((gen) => (
-            <GenBlock gen={gen} list={byGen[srv][gen]} year={yearOf(gen)} eager={EAGER} srv={srv} />
+            <GenBlock gen={gen} list={byGen[srv][gen]} year={yearOf(gen)} eager={EAGER} srv={srv} markPick />
           ))}
         </section>
 
@@ -499,6 +539,8 @@ const SORTS = [
 
       var srvBtns = root.querySelectorAll('.sc-srv-b');
       var sets = root.querySelectorAll('.sc-cat-set');
+      // 范围 chip 组（PICK UP / COMMON）：与分区 chips 同构，两服各一套，切服时显隐
+      var scopeSets = root.querySelectorAll('.sc-scope-set');
       var bodies = root.querySelectorAll('.sc-body');
       var search = document.getElementById('scSearch');
       var clearBtn = document.getElementById('scClear');
@@ -518,6 +560,7 @@ const SORTS = [
         artist: 'all',
         diff: 'all',   // all | bsc | adv | ext
         band: 'all',   // all | lt7 | 7 | 8 | 9 | 10
+        scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         sort: DEFAULT_SORT_INLINE
       };
 
@@ -558,6 +601,11 @@ const SORTS = [
         // 对隐藏 body，state.cat 可能属于另一个服务器的分区名，此时不该按它过滤（否则会把它自己的卡全判否）。
         var catApplies = state.cat !== 'all' && bodySrv === state.srv;
         if (catApplies && card.getAttribute('data-cat') !== state.cat) return false;
+        // 范围过滤（2026-10-25）：data-scope 是服务端按 isPickUp() 算好的，前端只比字符串。
+        // 与分区一样，只在「该 body 就是当前视图」时才有意义——state.scope 里的 pick/common
+        // 是按当前服务器的口径算的，拿去筛隐藏 body 会得出另一套结果。
+        if (state.scope !== 'all' && bodySrv === state.srv &&
+            card.getAttribute('data-scope') !== state.scope) return false;
         if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
         if (state.artist !== 'all' && card.getAttribute('data-a') !== state.artist) return false;
 
@@ -665,6 +713,9 @@ const SORTS = [
         for (var j = 0; j < sets.length; j++) {
           sets[j].hidden = sets[j].getAttribute('data-srv') !== state.srv;
         }
+        for (var j2 = 0; j2 < scopeSets.length; j2++) {
+          scopeSets[j2].hidden = scopeSets[j2].getAttribute('data-srv') !== state.srv;
+        }
 
         // totalMine = **当前服务器**的命中数，给「命中 N 首」提示条与空态判断用。
         //
@@ -737,7 +788,7 @@ const SORTS = [
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
                           (state.artist !== 'all' ? 1 : 0) + (state.diff !== 'all' ? 1 : 0) +
-                          (state.band !== 'all' ? 1 : 0);
+                          (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
         // 两个状态共用一个 class 会互相覆盖——展开时把「有筛选」的强调抹掉，收起时又反过来。
@@ -766,6 +817,9 @@ const SORTS = [
         syncGroup('[data-diff]', 'data-diff', state.diff);
         syncGroup('[data-band]', 'data-band', state.band);
         syncGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
+        // 范围 chip 只同步当前服务器那一套：隐藏那套的选中态由它自己被显示时重新算
+        // （两服 PICK UP 集合不同，把 jp 的「pick」选中态抄到 cn 上会显示错误计数）
+        syncGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', 'data-scope', state.scope);
       }
 
       function syncGroup(sel, attr, want) {
@@ -1008,7 +1062,8 @@ const SORTS = [
 
       function resetAll() {
         state.q = ''; state.gen = 'all'; state.artist = 'all';
-        state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE; state.cat = 'all';
+        state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
+        state.cat = 'all'; state.scope = 'all';
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
@@ -1019,6 +1074,8 @@ const SORTS = [
         setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
         var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');
         if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
+        var scSet = root.querySelector('.sc-scope-set[data-srv="' + state.srv + '"]');
+        if (scSet) setChipGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', scSet.querySelector('.sc-chip[data-scope="all"]'));
         apply();
       }
 
@@ -1036,8 +1093,11 @@ const SORTS = [
           // festo，而国服只有音乐魔方一个世代，于是整页 0 命中、只剩空态，看着像坏了。
           // 搜索 / 曲师 / 难度档 / 定数区间 是全局维度，跨服仍然有意义，保留。
           if (nextSrv !== state.srv) {
+            // 范围也要归零：两服的 PICK UP 集合毫无重叠（日服=bta 世代，国服=音乐魔方+Ave.+解禁II），
+            // 保留「pick」切过去会得到另一批曲甚至 0 命中，看着像坏了。
             state.cat = 'all';
             state.gen = 'all';
+            state.scope = 'all';
             var genSel = document.getElementById('scGen');
             if (genSel) genSel.value = 'all';
             var chipsAll = root.querySelectorAll('.sc-cat-set .sc-chip');
@@ -1046,6 +1106,8 @@ const SORTS = [
               chipsAll[i].classList.toggle('is-on', isAll);
               chipsAll[i].setAttribute('aria-pressed', isAll ? 'true' : 'false');
             }
+            // scope 的选中态不用在这里手写：下面 state.srv 赋值后调 apply()，
+            // syncPressed() 会按新服务器那一套重新同步（手写一遍反而可能与它打架）。
           }
           state.srv = nextSrv;
           apply(); return;
@@ -1062,6 +1124,16 @@ const SORTS = [
         if (bChip) {
           state.band = bChip.getAttribute('data-band');
           setChipGroup('[data-band]', bChip);
+          apply(); return;
+        }
+
+        // 范围 chip（PICK UP / COMMON）：与分区 chip 一样「只认自己服务器那一套」
+        var sChip = t.closest('[data-scope]');
+        if (sChip) {
+          var sSet = sChip.closest('.sc-scope-set');
+          if (!sSet || sSet.getAttribute('data-srv') !== state.srv) return;
+          state.scope = sChip.getAttribute('data-scope');
+          setChipGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', sChip);
           apply(); return;
         }
 

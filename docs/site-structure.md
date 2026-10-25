@@ -19,7 +19,8 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 ├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0；v1.7.0 起改 SSR 读 D1）
 │   ├─ ✅ 日服 / 国际服 / 国服三卡切换（logo 上、名在下；国际服暂共用日服曲库）
 │   ├─ ✅ 分区筛选（2026-10-24 改名：日服 授权/原创；国服 独占/KONAMI/原创/流行）+ 世代分组
-│   ├─ ✅ 搜索 + 筛选（2026-10-25 整合，v1.17.0）：搜索框留在工具条（按曲名/曲师/songId/定数即输即筛，debounce 120ms，匹配读卡片 data-*）；**分区选择 + 排序 + 世代 + 曲师 + 难度档 + 定数区间全部收进「筛选」按钮展开的面板**（工具条只留服务器卡 / 搜索 / 筛选按钮），按钮显示「筛选 · N」角标提示有几项生效；排序七种（songId 升序（默认）/ songId 降序 / 定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
+│   ├─ ✅ 范围筛选 PICK UP / COMMON（2026-10-25 加，v1.20.0）：与「分区」**正交**的第二维，同一首歌可以既是原创又是 PICK UP，所以单独一组 chip、单独判定（`src/lib/song-view.ts` 的 `isPickUp()`），不并进 CATS、不参与 catOf。口径（主人原话）：「日服的 PICK UP 歌曲：bta 分区；国服的 PICK UP 歌曲：音乐魔方分区+Ave分区+解禁II歌曲」。**注意这两个「分区」指世代而不是 category 值**（国服 category 只有 独占/KONAMI/原创/流行）。实测：日服 1150 → PICK UP 142 / COMMON 1008；国服 523 → PICK UP 164 / COMMON 359。卡片写 `data-scope`，选 PICK UP 时卡上画「★ PICK UP」标记（世代页不画，但 data-scope 照写）
+│   ├─ ✅ 搜索 + 筛选（2026-10-25 整合，v1.17.0）：搜索框留在工具条（按曲名/曲师/songId/定数即输即筛，debounce 120ms，匹配读卡片 data-*）；**范围 + 分区 + 排序 + 世代 + 曲师 + 难度档 + 定数区间全部收进「筛选」按钮展开的面板**（工具条只留服务器卡 / 搜索 / 筛选按钮），按钮显示「筛选 · N」角标提示有几项生效；排序七种（songId 升序（默认）/ songId 降序 / 定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
 │   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
 │   ├─ ✅ 卡片区跳过链接 .sc-skip（Tab 第 9 位 → 直达列表锚点 #scList）
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；

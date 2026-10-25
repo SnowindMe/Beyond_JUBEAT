@@ -139,15 +139,22 @@ const readTheme = ({ key, block }) => {
   const get = (n) => tokenIn(block, n) ?? tokenIn(ROOT_BLOCK, n);
   const base = get('--base');
   const ink = get('--ink');
+  const acc = get('--acc');
   const glass = parseColor(get('--glass'));
   const panel = glass ? over(glass.color, glass.alpha, base) : base;
+  // 浅底 / 深底：按 --base 的相对亮度判（> 0.5 视为浅色世代）。
+  // PICK UP 徽章在浅底上换了一套配色，所以 CHECKS 需要按这个分类挑主题。
+  const baseRgb = hexToRgb(base);
+  const isLight = baseRgb ? luminance(baseRgb) > 0.5 : false;
   return {
     key,
     base,
     ink,
     ink2: get('--ink2'),
     ink3: get('--ink3'),
+    acc,
     panel,
+    isLight,
   };
 };
 
@@ -171,6 +178,24 @@ const CHECKS = [
     fg: 'ink3',
     bg: (t) => t.panel,
     min: 4.5,
+  },
+  // PICK UP 徽章（2026-10-25 加）。两套配色分别在两批主题上生效，所以拆成两条：
+  //   深色世代：color = acc 88% + ink 12%，底 = acc 12% 叠页面基色
+  //   浅色世代（knit/ripples/qubell/saucer/prop/yymf）：color = ink，底 = acc 14% 叠基色
+  // 实测 min 5.96（clan_blue）/ 11.76（ripples），都过 4.5。改了颜色这两条会立刻报出来。
+  {
+    name: 'PICK UP 徽章（深色世代 .sc-pick）',
+    fg: 'acc88',
+    bg: (t) => over(t.acc, 0.12, t.base),
+    min: 4.5,
+    themes: 'dark',
+  },
+  {
+    name: 'PICK UP 徽章（浅色世代 .sc-pick）',
+    fg: 'ink',
+    bg: (t) => over(t.acc, 0.14, t.base),
+    min: 4.5,
+    themes: 'light',
   },
 ];
 
@@ -205,9 +230,24 @@ const themes = THEMES.map(readTheme).filter((t) => t.base && t.panel);
 const results = [];
 let failed = 0;
 
+// 前景色解析：除 'ink'/'ink2'/'ink3' 这类令牌名，还支持「令牌按比例」写法，
+// 例如 'acc88' = --acc 以 88% 叠在 --ink 上（PICK UP 徽章就是这么上色的）。
+const fgOf = (t, spec) => {
+  if (spec === 'ink' || spec === 'ink2' || spec === 'ink3') return t[spec];
+  const m = /^(acc|ink|ink2|ink3)(\d{1,3})$/.exec(spec);
+  if (!m) return spec;
+  const a = Number(m[2]) / 100;
+  return over(t[m[1]], a, t.ink);
+};
+
 for (const c of CHECKS) {
-  const rows = themes
-    .map((t) => ({ theme: t.key, ratio: contrast(t[c.fg], c.bg(t)) }))
+  // themes: 'dark' | 'light' 可选，不写则跑全部 —— 两套配色各自只在对应底色上生效，
+  // 混在一起跑会把「另一套配色」算进来，得出全部不达标的假结论。
+  const pool = c.themes === 'light' ? themes.filter((t) => t.isLight)
+    : c.themes === 'dark' ? themes.filter((t) => !t.isLight)
+    : themes;
+  const rows = pool
+    .map((t) => ({ theme: t.key, ratio: contrast(fgOf(t, c.fg), c.bg(t)) }))
     .filter((r) => r.ratio !== null);
   if (!rows.length) continue;
   const worst = rows.reduce((a, b) => (a.ratio <= b.ratio ? a : b));

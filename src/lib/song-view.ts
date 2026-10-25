@@ -69,3 +69,39 @@ export const songKey = (s: Song) =>
 // 世代页的归属：世代名本身就是精确归属（一个世代只属于一个服务器），
 // 不必再过 inView 的服务器标志——否则「双服都有的那行」会在日服世代页里被漏掉。
 export const inGen = (s: Song, gen: string) => s.gen === gen;
+
+// ---------------------------------------------------------------------------
+// PICK UP / COMMON（2026-10-25 主人定）
+//
+// 这是与「分区」**正交**的第二维：一首歌可以既属「原创」又是 PICK UP，两者不互斥。
+// 所以单独一个判定函数、单独一组 chip，绝不并进 CATS，也不参与 catOf。
+//
+// 口径（主人原话）：
+//   日服的 PICK UP 歌曲：bta 分区
+//   国服的 PICK UP 歌曲：音乐魔方分区 + Ave 分区 + 解禁II 歌曲
+//
+// 实测（src/data/songs.json 1241 行，按本文件的 inView + 国服去重口径）：
+//   日服视图 1150 行 → PICK UP 142（= bta 世代全部）/ COMMON 1008
+//   国服视图  523 行 → PICK UP 158（音乐魔方 91 + Ave. 24 + 解禁II 55，其中 12 首
+//                      同时属 Ave.，去重后新增 43）/ COMMON 365
+//
+// 【为什么用世代名而不是分区名】「音乐魔方分区」与「Ave 分区」在库里都没有同名
+//   category 列（国服 category 只有 独占/KONAMI/原创/流行）。它们指的是**世代**：
+//   音乐魔方 = 国服自己的世代；Ave 分区 = 首登于日服 Ave. 世代、现已上线国服的曲目。
+//   按世代判与按 category 判会得到完全不同的集合，别混。
+//
+// 【「解禁II」只存在于 unlock_note 这一个人类可读字段】源表没有布尔列，值形如
+//   「解禁II - BLUEBERRY」（可能带「/ 兑换 U点:…」后缀）。匹配用 /解禁II(?!I)/
+//   而不是 includes('解禁')——后者会把 124 首「解禁I」一起算进来（实测 55 + 124 = 179）。
+//   也不能锚定 ^：将来若有人把兑换信息拼在前面就会漏判。
+// ---------------------------------------------------------------------------
+// 拆成两维：世代维 / 解禁注释维。这样只关心世代的地方（如首屏取图要排除 PICK UP 世代）
+// 可以直接问 pickGen(gen)，不必造半截 Song 对象；组合口径仍只有 isPickUp 一处。
+export const pickGen = (gen: string, srv: Srv) =>
+  srv === 'jp' ? gen === 'beyond the Ave.' : gen === '音乐魔方' || gen === 'Ave.';
+export const pickNote = (unlock: string | null | undefined) => /解禁II(?!I)/.test(unlock ?? '');
+export const isPickUp = (s: Song, srv: Srv) => pickGen(s.gen, srv) || (srv === 'cn' && pickNote(s.unlock));
+
+/** 范围筛选的三种状态（'all' = 不筛）。给页面 chip 与前端 state 共用一份取值。 */
+export const PICK_SCOPE = ['all', 'pick', 'common'] as const;
+export type PickScope = (typeof PICK_SCOPE)[number];

@@ -15,9 +15,15 @@
 | --- | --- | --- |
 | `article` | **1241** | 曲目卡，要数的就是它 |
 | `button` | 7 | 分区筛选 chip（jp/cn 各一套，`all` 出现 2 次）|
+| `button`（data-scope）| 6 | 范围 chip PICK UP / COMMON / 全部，jp/cn 各一套 —— 注意这是另一个属性，与上一行不重叠 |
 | `section` | 2 | jp / cn 两个 `.sc-sec-all` 容器 |
 
 **全页匹配 `data-cat` 会多算 9 个**（7 + 2）。只排除 `button` 仍会多算 2 个 `section`。
+
+**2026-10-25 又踩一次（v1.20.0，加了范围筛选后）**：`data-scope`（PICK UP / COMMON）
+出现在两处——`article` 1673 个（要数的）与 `button` 6 个（两服各 3 个范围 chip）。
+用 `grep data-scope="pick"` 全页数会得到 306 而真实卡片是 300（多 6，正好是 chip 数）。
+正确写法：`<article[^>]*data-scope="pick"`。这条和第 1 条是同一个坑，只是属性从 data-cat 换成了 data-scope。
 
 正确写法：
 

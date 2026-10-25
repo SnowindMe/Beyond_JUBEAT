@@ -14,9 +14,11 @@ type Props = {
   year: string;
   eager: Set<string>;
   srv?: 'jp' | 'cn';
+  /** 是否在卡片上画 PICK UP 标记（只有 /songs/ 传 true，世代页不画），见 SongCard 的说明 */
+  markPick?: boolean;
 };
 
-const { gen, list, year, eager, srv = 'jp' } = Astro.props;
+const { gen, list, year, eager, srv = 'jp', markPick = false } = Astro.props;
 const slug = slugOf(gen);
 ---
 <div class="sc-gen" data-y={year || '0'}>
@@ -39,7 +41,7 @@ const slug = slugOf(gen);
   </div>
   <div class="sc-grid">
     {list.map((s) => (
-      <SongCard song={s} eager={eager.has(s.id)} srv={srv} />
+      <SongCard song={s} eager={eager.has(s.id)} srv={srv} markPick={markPick} />
     ))}
   </div>
 </div>
