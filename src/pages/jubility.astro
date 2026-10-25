@@ -75,27 +75,29 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
   description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PEACH / PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
 >
   <section class="band" id="jbRoot" data-srv={DEFAULT_SRV}>
-    {/* 标题行沿用 /recent/ 的 .band-h 写法（h1 + 右侧计数），不自造一套。 */}
-    <div class="band-h">
-      <h1>Jubility 层级</h1>
-      <em>{SRVS.find((s) => s.id === DEFAULT_SRV)?.name} {VIEW[DEFAULT_SRV].theory.total}</em>
-    </div>
+    {/* 标题行已去掉（主人 2026-10-26：「【Jubility层级】行可以不要」）。
+        但 h1 不能删：下面分区名是 h2/h3，没了 h1 页面标题层级就断了。
+        改用与 /songs/ 同一个视觉隐藏法，屏幕阅读器仍读得到。 */}
+    <h1 class="jb-hide">Jubility 层级</h1>
 
     {/*
-      服务器选项卡。与曲目页的「服务器卡」不是同一控件：那边是大卡片（带 logo + 曲数），
-      这页只需要切一个数值视角，做成一行 pill 就够，不占半屏。
+      服务器选项卡：与 /songs/ 的服务器卡完全同一套（主人 2026-10-26 要求「样式保持一致」）——
+      logo 在上、名称与计数两枚并排小徽章在下，卡宽 200px。
+      这里显示的计数是该服 TOTAL jubility 理论值，单位 pt（曲目页那边是「首」）。
     */}
-    <div class="jb-srv" role="group" aria-label="切换服务器">
+    <div class="sc-srv" role="group" aria-label="切换服务器">
       {SRVS.map((s) => (
         <button
           type="button"
-          class={`jb-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`}
+          class={`sc-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`}
           data-srv={s.id}
           aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}
         >
-          <img class={s.line ? 'jb-line' : ''} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="84" height="26" loading="eager" decoding="async" />
-          <span>{s.name}</span>
-          <b>{VIEW[s.id].theory.total}</b>
+          <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
+          <span class="sc-srv-meta">
+            <b class="sc-tag sc-tag-n">{s.name}</b>
+            <b class="sc-tag sc-tag-c">{VIEW[s.id].theory.total}<i>pt</i></b>
+          </span>
         </button>
       ))}
     </div>
@@ -128,7 +130,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                 <span class="jb-pool-v">{theory.pick}<em>池 {theory.pickPool}</em></span>
               </div>
               {/* COMMON / PICK UP 两条是「加和 = 理论值」的占比，PRIME GOLD 是一条阈值刻线。
-                  两者语义不同（左两条相加 100%，这一条只是标在 99% 处），所以不用同一种填充条，
+                  两者语义不同（左两条相加 100%，这两条只是分别标在 96% 与 99% 处），所以不用同一种填充条，
                   否则读者会以为三者加起来是 200%。 */}
               {peach !== null && (
                 <div class="jb-pool jb-pool-mark">
@@ -136,7 +138,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                   <span class="jb-pool-rail">
                     <i class="jb-tick" style={`left:${(peach / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'peach')?.c}`}></i>
                   </span>
-                  <span class="jb-pool-v">{peach}<em>阈值 · NORMAL 理论值 99%</em></span>
+                  <span class="jb-pool-v">{peach}<em>阈值 · NORMAL 理论值 96%</em></span>
                 </div>
               )}
               {prime !== null && (
@@ -245,8 +247,8 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
               </p>
               <p>
                 <b>PEACH</b> 是本站自创的档位（游戏内只有十档）：要求 TOTAL jubility 达到
-                <b>NORMAL 模式理论值的 99%</b>，且该阈值低于 7000 时不设此档（否则会掉到 PINK 之下）。
-                {s.name}的 NORMAL 理论值是 {theory.totalN}，99% 为 {peach ?? 0}
+                <b>NORMAL 模式理论值的 96%</b>，且该阈值低于 7000 时不设此档（否则会掉到 PINK 之下）。
+                {s.name}的 NORMAL 理论值是 {theory.totalN}，96% 为 {peach ?? 0}
                 {peach === null ? '（低于 7000，本服不成立）' : '（≥ 7000，本服成立）'}。
                 它的图标编号是 11，但分数落在 PINK 与 ORANGE 之间，所以阶梯按<b>分数</b>排、
                 序号看位置而不看图标编号。
@@ -271,7 +273,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
       var root = document.getElementById('jbRoot');
       if (!root) return;
       document.documentElement.classList.add('jb-js');
-      var btns = root.querySelectorAll('.jb-srv-b');
+      var btns = root.querySelectorAll('.sc-srv-b');
       var panes = root.querySelectorAll('.jb-pane');
       function apply(id) {
         root.setAttribute('data-srv', id);
