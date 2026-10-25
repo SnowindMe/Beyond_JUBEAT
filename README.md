@@ -14,7 +14,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
 >
-> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国际服/国服三卡切换 + 分区筛选 + 搜索 + 四维筛选 + 五种排序）。它标了 `prerender = false`：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。`/recent/`、`/songs/[songId]/`、`/songs/gen/[gen]/` 与登录/账户/管理页同样是 SSR。
+> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国服两卡切换 + 分区筛选 + 搜索 + 四维筛选 + **七种排序**，**默认 songId 升序**）。⚑ 服务端建桶的排序必须与前端默认排序（`DEFAULT_SORT = 'id-asc'`）**同构**：前端只写 CSS `order`、不重排 DOM，两者不一致就会出现「刷新先看到定数降序、脚本跑完又跳成 songId 升序」的闪烁（v1.19.2 修的）。它标了 `prerender = false`：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。`/recent/`、`/songs/[songId]/`、`/songs/gen/[gen]/` 与登录/账户/管理页同样是 SSR。
 >
 > **导航只列真实存在的页面，没有死链**（v1.9.1 起）。「Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录」六个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已全部撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。「最近更改」是已做出来的页面，见下。
 
@@ -332,3 +332,9 @@ npx wrangler dev         # 本机起不来（见上），要验 SSR 只能看线
 ## 说明
 
 `archive/` 里四代旧项目体积约 1.6 GB，由 `archive/.gitignore` 忽略（内含 `materials/`、`legacy/`），不会进仓库。
+
+---
+
+本项目在 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 中开发。
+
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)

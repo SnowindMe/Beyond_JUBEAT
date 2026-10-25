@@ -1255,6 +1255,49 @@ html[data-g="saucerfulfill"] .sub {
     color: var(--ink3);
     letter-spacing: 0.16em;
 }
+/* 「powered by dsh」署名：官方徽章自带底色，不要给它套主题色/滤镜，
+   只做尺寸与间距约束。上边距 2px 让它在 Enjoy Yourself 下方不贴死。 */
+.foot-dsh {
+    display: inline-flex;
+    margin-top: 2px;
+    line-height: 0;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+.foot-dsh:hover {
+    opacity: 1;
+}
+.foot-dsh img {
+    display: block;
+    width: 121px;
+    height: 20px;
+}
+/* 文字兜底：平时藏着，只有外链图加载失败（.is-err）时才露出来。
+   样式照官方徽章的骨架（左深右蓝、11px、圆角 3px），但不复制 logo——
+   它是「图挂了」的降级态，不该被当成正常徽章。 */
+.foot-dsh-txt {
+    display: none;
+    align-items: center;
+    height: 20px;
+    border-radius: 3px;
+    overflow: hidden;
+    font-family: var(--mono, ui-monospace, monospace);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    background: #4d6bfe;
+    color: #fff;
+}
+.foot-dsh-txt::first-line {
+    color: inherit;
+}
+.foot-dsh.is-err img {
+    display: none;
+}
+.foot-dsh.is-err .foot-dsh-txt {
+    display: inline-flex;
+    padding: 0 7px;
+}
 /* 页脚品牌字：沿用顶栏 .mark 的世代字体与符号处理，只把尺寸收小一号 */
 .foot .mark-sm {
     gap: 7px;

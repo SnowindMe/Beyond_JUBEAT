@@ -64,9 +64,26 @@ const SRV_CARDS = [
   { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
 ] as const;
 
-// 按 视图服务器 → 分区 → 世代 建桶，桶内按 EXT 定数降序（同一曲的长押谱排在原谱后面）。
+// 按 视图服务器 → 分区 → 世代 建桶。
+//
+// 【桶内顺序必须与前端默认排序一致（2026-10-25 修「刷新先看到难度降序再跳到 songId 升序」）】
+// 前端排序只写 CSS order、不重排 DOM，而默认排序已改成 songId 升序（DEFAULT_SORT = 'id-asc'）。
+// 原来服务端按 EXT 降序输出 DOM，于是首屏绘制的是「定数高→低」，脚本跑完才被 order 改写成
+// songId 升序 —— 两者之间的时间差就是用户看到的「先难度降序、再跳一下」。
+// 现在服务端直接按 songId 升序输出，首帧即最终顺序，没有可闪的空档。
 // 「哪些行进哪个视图、算哪个分区」的口径在 lib/song-view.ts，与世代页共用，别在这里重写。
-const extOf = (s: Song) => s.lv.ext ?? -1;
+/** 与前端 sortCards('id-asc') 完全同构的比较器：
+ *  songId 是「8 位日服 / 9 位国服」两种长度，必须按数值比，字符串比会把 991000007 排到
+ *  11000228 前面；非纯数字 id（日服占位 BTA-xxxxxx）排在数字之后，同 id 才比曲名。
+ *  改这里必须同步改前端那段，否则又会出现「首帧一个顺序、脚本跑完另一个顺序」。 */
+const byIdAsc = (a: Song, b: Song) => {
+  const na = /^\d+$/.test(a.id) ? Number(a.id) : null;
+  const nb = /^\d+$/.test(b.id) ? Number(b.id) : null;
+  if (na === null && nb !== null) return 1;
+  if (nb === null && na !== null) return -1;
+  const c = na === null || nb === null ? a.id.localeCompare(b.id) : na - nb;
+  return c !== 0 ? c : a.t.localeCompare(b.t);
+};
 const bucket: Record<string, Record<string, Record<string, Song[]>>> = { jp: {}, cn: {} };
 for (const srv of ['jp', 'cn'] as const) {
   for (const cat of CATS[srv]) {
@@ -96,7 +113,7 @@ for (const srv of ['jp', 'cn'] as const) {
 for (const srv of ['jp', 'cn'] as const) {
   for (const cat of CATS[srv]) {
     for (const gen of CAT_GENS[srv][cat]) {
-      bucket[srv][cat][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
+      bucket[srv][cat][gen].sort(byIdAsc);
     }
   }
 }
@@ -118,7 +135,7 @@ for (const srv of ['jp', 'cn'] as const) {
     if (g) g.push(s);
   }
   for (const gen of Object.keys(byGen[srv])) {
-    byGen[srv][gen].sort((a, b) => extOf(b) - extOf(a) || a.t.localeCompare(b.t));
+    byGen[srv][gen].sort(byIdAsc);
   }
 }
 // 该服务器视图下按 **GEN_ORDER 的自然顺序（旧→新：jubeat 2008 → beyond the Ave. 2024）**

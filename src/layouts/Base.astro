@@ -155,16 +155,43 @@ const BUILD_DATE = (() => {
         <span class="foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
       </div>
       <div class="foot-r">
-        <span class="mark mark-sm" translate="no">
+        <span class="mark mark-sm" translate="no" id="footR">
           <i></i>
           <span class="mark-x">
             <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
           </span>
         </span>
         <span class="foot-slogan">Enjoy Yourself</span>
+        {/* 「powered by dsh」署名（主人 2026-10-25 要求加水印）。
+            用官方 shields.io 徽章原样嵌入，尺寸按规范 121×20、不改配色与文案；
+            走外链图片是为了长期拿到官方更新，同时不往仓库塞第三方 PNG。
+            rel="noopener" + target=_blank：外链一律新开，不打断站内流程。 */}
+        <a class="foot-dsh" href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener" title="本项目在 DeepSeek Harness 中开发">
+          <img src="https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white" alt="powered by dsh" width="121" height="20" loading="lazy" decoding="async" />
+          {/* 兜底：shields.io 在某些网络下会被挡（本机就常走代理），破图比没有更难看。
+              图加载失败时给 .foot-dsh 挂 is-err，CSS 把 img 藏起来、露出这行同款文字。 */}
+          <span class="foot-dsh-txt" aria-hidden="true">powered by dsh</span>
+        </a>
       </div>
     </footer>
   </div>
+  <script is:inline>
+    // 页脚「powered by dsh」徽章的文字兜底：shields.io 被挡/超时时，破图比不显示更难看。
+    // 用 error 事件而不是 onload 池，是因为 img 可能在脚本执行前就已经失败（缓存/快速失败），
+    // 所以先查一次 complete && naturalWidth === 0 的状态，再把后续失败也接上。
+    (function () {
+      var a = document.querySelector('.foot-dsh');
+      if (!a) return;
+      var img = a.querySelector('img');
+      if (!img) return;
+      function fail() { a.classList.add('is-err'); }
+      if (img.complete && img.naturalWidth === 0) fail();
+      img.addEventListener('error', fail);
+      img.addEventListener('load', function () {
+        if (img.naturalWidth === 0) fail();
+      });
+    })();
+  </script>
   <BackTop />
   <ThemeScript />
 </body>
