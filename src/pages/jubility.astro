@@ -50,6 +50,13 @@ const VIEW = Object.fromEntries(
   })
 ) as Record<(typeof SRVS)[number]['id'], { charts: ChartEntry[]; theory: Theory; bands: ReturnType<typeof tierBands> }>;
 
+/**
+ * 区间上界的显示值 = 下一档起点 − 0.1（切成闭区间写法）。
+ * 分数精度是 0.1，所以「8500 – 9500」实际覆盖到 9499.9；写成 8500 – 9499.9 读者才不会
+ * 误以为 9499.95 也算。下界仍含（≥），上界也含，所以相邻两档不会出现缝隙或重叠。
+ */
+const toMax = (to: number) => (Math.round(to * 10) - 1) / 10;
+
 /** 该档最多能填多少槽（COMMON 30 + PICK UP 30 上限），< 60 即理论值本身达不到该档。 */
 const slotsOf = (charts: ChartEntry[], per: number) => fillableSlots(charts, per).total;
 
@@ -70,7 +77,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
 ---
 
 <Layout
-  title={pageTitle('Jubility 层级')}
+  title={pageTitle('Jubility')}
   canonicalPath="/jubility/"
   description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PEACH / PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
 >
@@ -78,7 +85,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
     {/* 标题行已去掉（主人 2026-10-26：「【Jubility层级】行可以不要」）。
         但 h1 不能删：下面分区名是 h2/h3，没了 h1 页面标题层级就断了。
         改用与 /songs/ 同一个视觉隐藏法，屏幕阅读器仍读得到。 */}
-    <h1 class="jb-hide">Jubility 层级</h1>
+    <h1 class="jb-hide">Jubility</h1>
 
     {/*
       服务器选项卡：与 /songs/ 的服务器卡完全同一套（主人 2026-10-26 要求「样式保持一致」）——
@@ -202,7 +209,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                             ? '当前理论值下不成立'
                             : b.to === null
                               ? `≥ ${b.from}`
-                              : `${b.from} – ${b.to}`}
+                              : `${b.from} – ${toMax(b.to)}`}
                         </span>
                       </span>
                       <span class="jb-rail" aria-hidden="true">
