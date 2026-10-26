@@ -808,6 +808,9 @@ html[data-g="clan_red"] .word-l {
 html[data-g="festo"] .word-l {
     display: flex;
 }
+html[data-g="jubeat"] .word-l {
+    display: flex;
+}
 html[data-g="ripples"] .word-l {
     display: flex;
 }
@@ -866,6 +869,10 @@ html[data-g="festo"] .word-t,
 html[data-g="festo"] .sub {
     display: none;
 }
+html[data-g="jubeat"] .word-t,
+html[data-g="jubeat"] .sub {
+    display: none;
+}
 html[data-g="ripples"] .word-t,
 html[data-g="ripples"] .sub {
     display: none;
@@ -892,9 +899,16 @@ html[data-g="yymf"] .sub {
     html[data-g="clan_purple"] .word-l,
     html[data-g="clan_red"] .word-l { aspect-ratio: 360 / 163; }
     html[data-g="festo"] .word-l { aspect-ratio: 287 / 210; }
+    html[data-g="jubeat"] .word-l { aspect-ratio: 486 / 136; }
     html[data-g="ripples"] .word-l { aspect-ratio: 570 / 171; }
     html[data-g="yymf"] .word-l { aspect-ratio: 1180 / 593; }
 }
+/* jubeat 字标是纯白：深蓝底上本来就够亮，但背景格架的青色高光会从字身
+   边缘透过来抢对比，只做轻微提亮 + 加一点点门限感，不加投影（其他世代同策）。 */
+html[data-g="jubeat"] #wordLogo {
+    filter: brightness(1.04) contrast(1.12);
+}
+
 /* ripples 背景压暗后，字标自带的浅薄荷绿在雾面底上偏灰：
    加深一档并提饱和，PNG 原色不动，只在渲染时滤镜。 */
 html[data-g="ripples"] #wordLogo {
@@ -1545,6 +1559,22 @@ html[data-g="saucerfulfill"] {
     --title: #f2f5f6;
     --tshadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
+/* jubeat（初代，2008）：唯一的「深色 + 纯白字标」主题。
+   底板是 2026-10-26 从官方 PROFILE 卡提取的蓝色霓虹立方格架（BGR #4E1A03 / H=112），
+   字标是该卡上的纯白 jubeat 字标，抠成透明 PNG。
+   主色取格架霓虹高光 BGR(200,132,23) → #1784C8 再向纯蓝提亮，得到 #2f86e6；
+   次色取同一批高光的亮端 #7fc4ff，保证在深底上做小符号时不会糊。 */
+html[data-g="jubeat"] {
+    color-scheme: dark;
+    --bgop: 0.72;
+    --scrim: rgba(2, 8, 20, 0.42);
+    --base: #050e22;
+    --acc: #2f86e6;
+    --acc2: #7fc4ff;
+    --title: #e8f4ff;
+    --tshadow: 0 0 24px rgba(47, 134, 230, 0.8), 0 0 64px rgba(47, 134, 230, 0.32);
+}
+
 /* ripples：底板是白/薄荷浅色，太晃眼。用深墨绿的半透明遮罩把它压暗一档
    （--veil 由 body::before 铺满视口，压在背景图之上、正文之下），
    仍保持浅色世代：深字 + 白卡片，只是底子从「白得发光」变成「灰绿雾面」。
@@ -1660,6 +1690,12 @@ html[data-g="saucer"] {
 }
 html[data-g="saucerfulfill"] {
     --bgauto: url("/assets/images/bg/saucerfulfill.webp");
+}
+html[data-g="jubeat"] {
+    /* ?v=2：本主题图在建好后被我覆盖过一次同名文件，
+       /assets/images/* 是 immutable 一年缓存，不带参数老访客会一直看旧图。
+       换图时同步改这里与 Base.astro 的 JB_BGVER。 */
+    --bgauto: url("/assets/images/bg/jubeat.webp?v=2");
 }
 html[data-g="ripples"] {
     --bgauto: url("/assets/images/bg/ripples.webp");

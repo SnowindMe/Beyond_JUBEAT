@@ -115,10 +115,24 @@ const colorBlockLines = (selector) => {
 };
 
 const ROOT_BLOCK = blockOf(':root');
-const GEN_KEYS = [
-  'ave', 'bta', 'clan_blue', 'clan_green', 'clan_purple', 'clan_red', 'copious',
-  'knit', 'ripples', 'saucer', 'saucerfulfill', 'qubell', 'prop', 'festo', 'yymf',
-];
+/* 主题 key 不再手写一份清单：手写会与 ThemeScript 的 GEN 数组悄悄脱钩——
+   2026-10-26 加 jubeat 主题时实测，手写表里漏了它，脚本仍然打印「16 套」（默认 + 15），
+   数字看起来对得上、其实新主题一天都没被检查过。
+   这里直接从 ThemeScript 的 GEN 数组读，那才是唯一权威（它同时决定切换器顺序）。 */
+const THEME_SCRIPT = readFileSync(path.join(ROOT, 'src/components/ThemeScript.astro'), 'utf8');
+const GEN_KEYS = (() => {
+  const m = /var\s+GEN\s*=\s*\[([\s\S]*?)\];/.exec(THEME_SCRIPT);
+  if (!m) {
+    console.error('无法从 ThemeScript.astro 解析 GEN 数组；配色自检不能静默跳过主题。');
+    process.exit(1);
+  }
+  const keys = [...m[1].matchAll(/\{\s*k:\s*'([^']+)'/g)].map((x) => x[1]);
+  if (!keys.length) {
+    console.error('ThemeScript 的 GEN 数组解析出 0 个主题 key。');
+    process.exit(1);
+  }
+  return keys;
+})();
 const THEMES = [
   { key: '默认(:root)', block: ROOT_BLOCK },
   ...GEN_KEYS.map((g) => ({ key: g, block: blockOf(`html[data-g="${g}"]`) })),

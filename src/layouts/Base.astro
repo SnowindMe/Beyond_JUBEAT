@@ -108,7 +108,7 @@ const BUILD_DATE = (() => {
       同时提前 preload 该世代背景图（背景由 JS 设 background-image，浏览器发现得晚）。 */}
   <script is:inline>
     (function () {
-      var FONT = { ave: 'F', bta: 'F', clan_blue: 'C', clan_green: 'C', clan_purple: 'C', clan_red: 'C', copious: 'F', festo: 'G', knit: 'D', prop: 'E', qubell: 'D', saucer: 'F', saucerfulfill: 'F', ripples: 'F', yymf: 'F' };
+      var FONT = { ave: 'F', bta: 'F', clan_blue: 'C', clan_green: 'C', clan_purple: 'C', clan_red: 'C', copious: 'F', festo: 'G', jubeat: 'F', knit: 'D', prop: 'E', qubell: 'D', saucer: 'F', saucerfulfill: 'F', ripples: 'F', yymf: 'F' };
       var g = 'ave';
       try { g = localStorage.getItem('jubeat-gen') || 'ave'; } catch (e) {}
       if (!FONT[g]) g = 'ave';
@@ -118,13 +118,13 @@ const BUILD_DATE = (() => {
       /* theme-color 先给一个与世代相符的值：CSS 尚未应用时 getComputedStyle 读不到
          --base，所以这里用内联色表兜住首帧；ThemeScript 的 commit() 之后会按
          解析后的 --base 再校一次（那里是唯一权威）。 */
-      var THEME_BG = { ave: '#0a1418', bta: '#190f08', clan_blue: '#0a1424', clan_green: '#08160f', clan_purple: '#120b1c', clan_red: '#1a0a0c', copious: '#080d22', festo: '#12100c', knit: '#f2eee4', prop: '#f7f6f4', qubell: '#f4f1ea', saucer: '#eceff1', saucerfulfill: '#141414', ripples: '#dfeeea', yymf: '#e9eefb' };
+      var THEME_BG = { ave: '#0a1418', bta: '#190f08', clan_blue: '#0a1424', clan_green: '#08160f', clan_purple: '#120b1c', clan_red: '#1a0a0c', copious: '#080d22', festo: '#12100c', jubeat: '#050e22', knit: '#f2eee4', prop: '#f7f6f4', qubell: '#f4f1ea', saucer: '#eceff1', saucerfulfill: '#141414', ripples: '#dfeeea', yymf: '#e9eefb' };
       var mt = document.querySelector('meta[name="theme-color"]');
       if (mt && THEME_BG[g]) mt.setAttribute('content', THEME_BG[g]);
       /* 换过图的世代在这里登记版本号：背景 URL 会拼成 <k>.webp?v=N。
          /assets/images/* 是 immutable 一年缓存，不改文件名的话老访客永远看旧图；
          只有这里登记过的图才会带参数，其余 14 张照旧命中缓存。 */
-      window.JB_BGVER = { festo: 2 };
+      window.JB_BGVER = { festo: 2, jubeat: 2 };
       /* 字体走 fontsource + jsdmirror（2026-10-25，见 theme.css 顶部）：仓库不再存字体二进制，
          所以这里直接拼第三方 URL。键仍是「字体代号 → 完整 URL 路径」，与 @font-face 一一对应。 */
       var FONTCDN = 'https://cdn.jsdmirror.com/npm/@fontsource/';

@@ -1,0 +1,8 @@
+feat(theme): 新增第16套世代主题 jubeat（排在 ripples 之前）
+
+- 背景与字标取自官方 PROFILE 卡：提取纯白透明字标、重建被面板遮挡的背景
+- 主题色 --base #050e22 / --acc #2f86e6 / --acc2 #7fc4ff
+- 背景带 ?v=2 破缓存（同名覆盖 + immutable 一年缓存会看旧图）
+- 修 check-contrast 的 GEN_KEYS 硬编码：改为从 ThemeScript 解析，
+  否则新主题虽加入却不被检查（16 套=默认+15，数字看着对其实漏检）
+- README / docs 同步 16 套；版本号 1.23.3
