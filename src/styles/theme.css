@@ -665,54 +665,68 @@ html[data-g="knit"] .mark b .til {
     flex-direction: column;
     min-width: 0;
 }
-/* 字标下方的一句招呼：WELCOME TO jubeat ~
-   「WELCOME TO」走系统字、宽字距做小标；jubeat 用世代品牌字体 + 强调色，
-   ~ 收在末尾做装饰。主人 2026-10-20 要求放在 logo 下面。 */
-.welcome {
-    align-self: flex-start;
+/* ---------- 首屏标题行：WELCOME TO + 世代字标 + ~ （2026-10-26 主人点子） ----------
+   改前是两块：上面一张世代字标图（自带 jubeat 字样），下面单独一行
+   「WELCOME TO jubeat ~」——同一个词出现两次。
+   改后拼成一行：WELCOME TO 放大成前缀，字标图直接充当 jubeat 这个词，末尾一个 ~。
+
+   难点：16 张字标图的构图完全不同（有的字身带压在图顶、有的在中间，
+   还各自带圆弧/菱形/色条/副标题）。要把它们和文字对成一句话，必须知道
+   **每张图里「jubeat 字身带」上下界在图高的哪个比例**，于是按世代量了一组
+   --bh（字身带高度占比）、--bc（字身带中心占比），见下方各代主题块。
+   对齐方式：把图按「字身带 = 1em」缩放，再整体上移，让字身带中心落在文字中线上。 */
+.word-line {
     display: flex;
-    align-items: baseline;
-    gap: 0.62em;
-    margin-top: clamp(13px, 1.6vw, 19px);
-    font-size: clamp(11.5px, 1.1vw, 13px);
-    font-weight: 700;
-    letter-spacing: 0.32em;
-    color: var(--ink2);
+    align-items: center;
+    gap: 0;
+    min-width: 0;
+    max-width: 100%;
+    /* 统一参考字号：字标「字身带」高度、WELCOME TO 字号、~ 字号都锚在这一个值上，
+       所以三者天然同高，换世代不会一大一小 */
+    /* 2026-10-26 主人反馈「桌面版还要大一些」，参考字号提到 26~44px。
+       这个值同时决定：WELCOME TO 字号、字标字身带高度、~ 字号。 */
+    --wl-em: clamp(26px, 2.5vw, 44px);
     animation: welcomeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.welcome i {
-    align-self: center;
-    width: clamp(18px, 2.2vw, 30px);
-    height: 2px;
-    border-radius: 2px;
+/* 前缀：「WELCOME TO」宽字距小标，字号跟字身带同高，读起来像「WELCOME TO jubeat」一句话 */
+.wl-pre {
     flex: none;
-    background: linear-gradient(90deg, transparent, var(--acc));
-}
-.welcome b {
-    font-family: var(--font-label);
-    font-size: 1.5em;
+    font-family: var(--font-data);
+    /* 字号锚到 --wl-em（= 字标字身带高度），读起来就是一句话；
+       行高设为 1 并靠 flex 的 center 对齐，视觉中线正好落在字身带中线上。 */
+    font-size: var(--wl-em, 22px);
     font-weight: 700;
+    letter-spacing: 0.24em;
+    /* 与字标之间的间隔：字距本身已在末尾多撑出一点，这里再明确留出 0.5em，
+       否则「TO」和字标会贴在一起（主人 2026-10-27 反馈间隔偏小）。 */
+    margin-right: 0;
+    padding-right: 0.5em;
     line-height: 1;
-    letter-spacing: 0.01em;
-    color: var(--acc);
-    text-shadow: 0 2px 14px color-mix(in srgb, var(--acc) 35%, transparent);
+    white-space: nowrap;
+    color: var(--ink2);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
-.welcome em {
+/* 末尾 ~：跟字身带同高，用强调色 */
+.wl-tilde {
+    flex: none;
     font-style: normal;
     font-weight: 700;
-    font-size: 1.3em;
+    font-size: var(--wl-em, 22px);
     line-height: 1;
     letter-spacing: 0;
-    margin-left: -0.2em;
+    margin-left: 0.1em;
     color: var(--acc2);
 }
-/* 浅底世代（knit / saucer / Qubell）的 --acc2 是奶油色/淡青，
-   做 ~ 装饰时直接融进背景，改为跟 jubeat 字同色。 */
-html[data-g="knit"] .welcome em,
-html[data-g="saucer"] .welcome em,
-html[data-g="qubell"] .welcome em {
+/* 浅底世代（knit / saucer / Qubell / prop / ripples / yymf）的 --acc2 偏淡，
+   做 ~ 时融进浅背景，改为跟强调色同色。 */
+html[data-g="knit"] .wl-tilde,
+html[data-g="saucer"] .wl-tilde,
+html[data-g="saucerfulfill"] .wl-tilde,
+html[data-g="qubell"] .wl-tilde,
+html[data-g="prop"] .wl-tilde,
+html[data-g="ripples"] .wl-tilde,
+html[data-g="yymf"] .wl-tilde {
     color: var(--acc);
-    opacity: 0.9;
 }
 @keyframes welcomeIn {
     from {
@@ -736,37 +750,61 @@ html[data-g="qubell"] .welcome em {
     color: var(--title, var(--ink));
     text-shadow: var(--tshadow, 0 4px 26px rgba(0, 0, 0, 0.45));
 }
-/* 字标：所有世代统一缩放到 285px 宽（原图比例不变，高度随比例走）。
-   位置：水平贴 h1 左边（居左），垂直在 h1 内居中（宽为居中）。 */
+/* 字标视框（2026-10-26 定稿：整图完整显示，字身带对上文字中线）。
+   演进：最初锁 285px 宽 → 拼进标题行后各代大小不一；
+   中途试过裁成只剩字身带，但主人要求「logo 图标要完整显示」，
+   装饰（圆弧、菱形、色条、副标题）本来就是标识的一部分，不能裁。
+   定稿口径：整图按 --bh 缩放到「jubeat 字身带 = 1em 高」，
+   再用 --bc 把字身带中心挪到文字中线上——
+   于是「jubeat」这几个字和 WELCOME TO 天然同高、同基线，
+   装饰按原比例完整保留，悬在字身上下。 */
 .word-l {
     display: none;
-    /* 桌面沿用原口径：统一 285px 宽，高度按原图比例（主人 2026-10-22 反馈锁高度
-       把桌面字标改小了）。尺寸统一只在移动端按高度做，见文件末尾移动端段。 */
-    width: 285px;
-    height: auto;
-    max-width: 100%;
-    /* 字标不能参与 flex 伸缩：一旦被 flex:1 拉成整栏宽，图片会跟着被放大/被
-       max-width 压窄，视觉大小就随世代乱跳。它只负责占住中段，垂直居中。 */
     flex: 0 0 auto;
-    min-height: 0;
-    align-items: center;
-    overflow: visible;
+    /* 宽度由内部 img 撑开：img 不定位、按比例缩放，视框自动跟随，
+       写死宽度会因四舍五入把最右一个字母裁掉（实测 jubeat 的 t、qubell 尾部都缺角）。 */
+    width: max-content;
+    min-width: 0;
+    max-width: none;
     line-height: 0;
+    --wl-s: calc(1 / var(--bh, 0.5));
+    /* 上移量：把字身带中心（图高 × --bc 处）挪到视框中线（50%） */
+    margin-top: calc(var(--wl-em, 22px) * 0.5 - var(--wl-em, 22px) * var(--wl-s) * var(--bc, 0.5));
 }
 .word-l #wordLogo {
     display: block;
     /* 切世代时字标是整张换图（硬切），淡入一下让「换代」有过渡感：
        display 由 none 变 block 会重新触发动画，不需要 JS 监听。 */
     animation: logoIn 0.4s ease both;
-    /* 统一宽 285、高按原图比例算：各世代字标长短差一倍多（knit 3.47:1、ave 1.35:1），
-       只锁宽度才能让它们视觉宽度一致，锁高度会让宽的那个缩成一坨。 */
-    width: 285px;
-    height: auto;
-    max-width: 100%;
-    /* 不设 object-fit：width/height 都是 auto，图片按原图像素显示；
-       视框被 max-width 压窄时按比例整体缩小（object-fit:none 会按原始像素绘制、
-       右半边被裁掉，窄屏就只剩半个字标）。 */
+    /* 整图高度 = 字身带高（1em）× (1 / --bh)，宽度按原图比例自动撑开视框 */
+    height: calc(var(--wl-em, 22px) * var(--wl-s));
+    width: auto;
+    max-width: none;
 }
+/* ---------- 字标「jubeat 字身带」实测表（2026-10-26） ----------
+   三个值都用「占整图高度的比例」表示，取自 13 张字标 PNG 的逐像素实测：
+     --bh  字身带高度（把「jubeat」缩成统一 1em 高）
+     --bc  字身带中心的纵向位置（对齐到标题行中线）
+     --bt  字身带上缘的纵向位置（留档用，便于核对字身带范围）
+   量法：逐行统计 alpha>40 的墨量 / 横向跨度 / 墨迹段数，取「段数≥4 且跨度≥85%」
+   的连续带；带大装饰的世代（festo/ave/bta/yymf/qubell/clan）另放大标尺目测校正。
+   改字标图或换 logo 时必须同步这三个值，否则标题行会错位。 */
+html[data-g="jubeat"] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; }
+html[data-g="ripples"] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; }
+html[data-g="knit"] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; }
+html[data-g="copious"] { --bh: 0.5547; --bc: 0.2773; --bt: 0; }
+html[data-g="saucer"] { --bh: 0.4759; --bc: 0.2517; --bt: 0.0138; }
+html[data-g="saucerfulfill"] { --bh: 0.4268; --bc: 0.2195; --bt: 0.0061; }
+html[data-g="prop"] { --bh: 0.4071; --bc: 0.2107; --bt: 0.0071; }
+html[data-g="qubell"] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; }
+html[data-g="festo"] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; }
+html[data-g="ave"] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+html[data-g="bta"] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+html[data-g="yymf"] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; }
+html[data-g="clan_blue"],
+html[data-g="clan_green"],
+html[data-g="clan_purple"],
+html[data-g="clan_red"] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; }
 /* 所有字标都已裁掉透明留白并左对齐到 WELCOME 行 / 统计卡的同一条竖线，
    视框随图自身尺寸撑开，不再有 object-position / align-self 的人工补偿。 */
 html[data-g="ave"] .word-l {
@@ -881,28 +919,12 @@ html[data-g="yymf"] .word-t,
 html[data-g="yymf"] .sub {
     display: none;
 }
-/* 字标占位比例按世代写死：15 张 logo 的宽高比差 2.5 倍（ave 1.35、knit 3.46、
+/* 字标占位比例按世代写死：13 张 logo 的宽高比差 4 倍多（ave 1.35、knit 3.46、
    ripples 3.33、yymf 1.99），img 的 width/height 属性只能给一个兜底比例。
    在字标图解码完成之前按各自真实比例占位，图到货时高度不再跳一下。
-   只在宽屏生效：窄屏（≤768px）走锁高度那套，见文件末尾移动端段。 */
-@media (min-width: 769px) {
-    html[data-g="ave"] .word-l { aspect-ratio: 284 / 210; }
-    html[data-g="bta"] .word-l { aspect-ratio: 285 / 210; }
-    html[data-g="knit"] .word-l { aspect-ratio: 360 / 104; }
-    html[data-g="copious"] .word-l { aspect-ratio: 360 / 128; }
-    html[data-g="saucer"] .word-l { aspect-ratio: 360 / 145; }
-    html[data-g="saucerfulfill"] .word-l { aspect-ratio: 360 / 164; }
-    html[data-g="prop"] .word-l { aspect-ratio: 360 / 140; }
-    html[data-g="qubell"] .word-l { aspect-ratio: 360 / 162; }
-    html[data-g="clan_blue"] .word-l,
-    html[data-g="clan_green"] .word-l,
-    html[data-g="clan_purple"] .word-l,
-    html[data-g="clan_red"] .word-l { aspect-ratio: 360 / 163; }
-    html[data-g="festo"] .word-l { aspect-ratio: 287 / 210; }
-    html[data-g="jubeat"] .word-l { aspect-ratio: 486 / 136; }
-    html[data-g="ripples"] .word-l { aspect-ratio: 570 / 171; }
-    html[data-g="yymf"] .word-l { aspect-ratio: 1180 / 593; }
-}
+   2026-10-26 起这些比例同时是「字身带 = 1em」反推出来的宽度基准：
+   视框高由 --bh 定量，宽度靠这里的 aspect-ratio 撑开，装饰才能按原比例溢出。
+   窄屏（≤768px）另有字号收敛，见文件末尾移动端段。 */
 /* jubeat 字标是纯白：深蓝底上本来就够亮，但背景格架的青色高光会从字身
    边缘透过来抢对比，只做轻微提亮 + 加一点点门限感，不加投影（其他世代同策）。 */
 html[data-g="jubeat"] #wordLogo {
@@ -2060,22 +2082,17 @@ html[data-g="yymf"] {
         font-size: 14px;
         letter-spacing: 0;
     }
-    /* 移动端字标：各代 logo 宽高比 1.35~3.46 差 2.5 倍，锁 285px 宽会让扁的
-       （knit/ripples）在窄屏缩成一条、高的（ave/bta）撑满整栏。窄屏改用锁高度，
-       每代视觉分量一致（主人 2026-10-22：「移动端各主题logo没有统一好尺寸」）。 */
-    .word-l,
-    .word-l #wordLogo {
-        width: auto;
-        height: auto;
+    /* 移动端标题行：字号收敛一档，字标仍按「字身带 = 1em」缩放，
+       所以窄屏和宽屏看到的是同一套对齐，只是整体更小。
+       原来这里锁的是「整图高度 46~64px」，字标拼进标题行后那个口径会让
+       带大装饰的世代（festo/ave）字身小到读不出来。 */
+    .word-line {
+        --wl-em: clamp(14px, 3.6vw, 20px);
+        flex-wrap: wrap;
+        row-gap: 2px;
     }
-    .word-l {
-        height: clamp(46px, 13vw, 64px);
-    }
-    .word-l #wordLogo {
-        height: 100%;
-        width: auto;
-        max-width: 100%;
-        object-fit: contain;
+    .wl-pre {
+        letter-spacing: 0.18em;
     }
 
     /* 移动端：文字链接收进汉堡抽屉，顶栏只留 汉堡 + 图标组 + 世代切换（主人 2026-10-22） */

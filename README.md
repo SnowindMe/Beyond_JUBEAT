@@ -102,6 +102,8 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 页面支持 **16 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」，2026-10-26 新增初代「jubeat」——排在 ripples 之前，背景与白色字标取自官方 PROFILE 卡），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
 
+**首屏标题行是「WELCOME TO + 字标 + ~」拼成的一句**（v1.24.0。原先字标和「WELCOME TO jubeat ~」上下各说一遍 jubeat）：世代字标图直接充当 jubeat 这个词，前缀与 `~` 锚在同一个 `--wl-em` 上，因此三者天然同高。难点是 13 张字标构图完全不同（字身带有的压图顶、有的居中，还各带圆弧/菱形/色条/副标题），所以按世代量了对照表写进 `theme.css`：`--bh`（「jubeat」字身带占图高比例，把字身缩成统一 1em）、`--bc`（字身带中心位置，对齐到行中线）、`--bt`（字身带上缘，留档核对）。**换字标图必须重算这三值**，否则标题行会错位。量法：以最干净的 `logo/jubeat.webp` 为模板，对各字标做归一化互相关扫描（缩放 0.5–2.6×、全纵向偏移），取得分最高的窗口；外围圆弧会让「段数+跨度」这类判据误判，实测过 `--bh` 被带到 0.4857 导致 ave 字标缩成一半。
+
 > **字体走第三方 CDN（2026-10-25）**：仓库不再存字体二进制（`public/assets/fonts/` 已清空），6 款主题字体全部由 [@fontsource](https://fontsource.org/) 的官方字体包经 `cdn.jsdmirror.com` 分发：
 > `https://cdn.jsdmirror.com/npm/@fontsource/<pkg>/files/<pkg>-latin-<weight>-normal.woff2`
 > 选 jsdmirror 而非 jsdelivr 原站是实测结论：同一文件 avg ttfb **1.86s → 0.31s**（对照：本站 CF 1.16s、fontelio 2.19s 且首次 4.7s）。
