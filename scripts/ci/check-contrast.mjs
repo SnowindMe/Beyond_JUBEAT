@@ -169,6 +169,8 @@ const readTheme = ({ key, block }) => {
     acc,
     panel,
     isLight,
+    // WELCOME TO 的用色：浅底世代压暗过（见 theme.css 的 --wl-acc），缺省沿用 --acc
+    wlAcc: get('--wl-acc') ?? acc,
   };
 };
 
@@ -218,6 +220,22 @@ const CHECKS = [
     min: 4.5,
     themes: 'light',
   },
+  // 首屏标题行「WELCOME TO」（2026-10-27 改用主题色 --acc）。它是大字，按 3:1 判。
+  // 浅底世代走 --wl-acc（knit/ripples 的 --acc 只有 1.83/2.23，已各自压暗）。
+  {
+    name: '首屏标题行 WELCOME TO（深色世代）',
+    fg: (t) => t.wlAcc,
+    bg: (t) => t.base,
+    min: 3,
+    themes: 'dark',
+  },
+  {
+    name: '首屏标题行 WELCOME TO（浅色世代）',
+    fg: (t) => t.wlAcc,
+    bg: (t) => t.base,
+    min: 3,
+    themes: 'light',
+  },
 ];
 
 // ---------- 先跑自检：颜色块唯一性 ----------
@@ -254,6 +272,8 @@ let failed = 0;
 // 前景色解析：除 'ink'/'ink2'/'ink3' 这类令牌名，还支持「令牌按比例」写法，
 // 例如 'acc88' = --acc 以 88% 叠在 --ink 上（PICK UP 徽章就是这么上色的）。
 const fgOf = (t, spec) => {
+  // spec 可以是函数（需要用 --wl-acc 这种非标准令牌时）
+  if (typeof spec === 'function') return spec(t);
   if (spec === 'ink' || spec === 'ink2' || spec === 'ink3') return t[spec];
   const m = /^(acc|ink|ink2|ink3)(\d{1,3})$/.exec(spec);
   if (!m) return spec;

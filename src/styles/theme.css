@@ -43,89 +43,135 @@
 
    注意：路径一律要带 -normal.woff2；Playfair 的包名是 @fontsource/playfair-display
    （不是 @fontsource/playfair），写错会 404 且只在浏览器控制台可见。 */
+/* 世代字体（2026-10-27 按主人提供的「主题字体.csv」逐世代指定）：
+   每套世代各自一款字体，不再按 A-G 分组。字体仍走 @fontsource + cdn.jsdmirror，
+   仓库不存二进制（见下方 CDN 说明）。CSV 里的世代名与实际 key 对应关系：
+   clan_resd → clan_red、Qubell → qubell、saucer fulfill → saucerfulfill、
+   音乐魔方 → yymf（ZCOOL KuaiLe 只取 latin 子集 5.3KB；完整中文子集 726KB，
+   prop 原 CSV 指定 Great Vibes，主人 2026-10-27 要求换成 Caveat（手写体更易读）；
+   同日再调整：festo Dancing Script → Pacifico、clan 四色统一 Oswald Bold、
+   saucer Poppins Light → Raleway Light（ave/bta 的 Montserrat Medium 与
+   saucerfulfill 的 Raleway Light 本来就是这个，无需改动），
+   首屏不加载，中文正文仍走系统字体）。 */
 @font-face {
-    font-family: "Jost Local";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/jost/files/jost-latin-500-normal.woff2") format("woff2");
+    font-family: "Montserrat Medium";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/montserrat/files/montserrat-latin-500-normal.woff2") format("woff2");
     font-weight: 500; font-style: normal; font-display: swap;
 }
 @font-face {
-    font-family: "Rye Local";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/rye/files/rye-latin-400-normal.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Playfair Local";
-    /* 包名是 playfair-display，写成 @fontsource/playfair 会 404 */
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/playfair-display/files/playfair-display-latin-700-normal.woff2") format("woff2");
+    font-family: "Montserrat Bold";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
-    font-family: "Caveat Local";
+    font-family: "Dancing Script";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/dancing-script/files/dancing-script-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Roboto Slab Bold";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/roboto-slab/files/roboto-slab-latin-700-normal.woff2") format("woff2");
+    font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Bangers";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/bangers/files/bangers-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Anton";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/anton/files/anton-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Oswald Bold";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/oswald/files/oswald-latin-700-normal.woff2") format("woff2");
+    font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Lora";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/lora/files/lora-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Quicksand Medium";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/quicksand/files/quicksand-latin-500-normal.woff2") format("woff2");
+    font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Great Vibes";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Raleway Light";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/raleway/files/raleway-latin-300-normal.woff2") format("woff2");
+    font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Poppins Light";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/poppins/files/poppins-latin-300-normal.woff2") format("woff2");
+    font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Playfair Display";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2") format("woff2");
+    font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+    font-family: "Caveat";
     src: url("https://cdn.jsdmirror.com/npm/@fontsource/caveat/files/caveat-latin-700-normal.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
-    font-family: "Yellowtail Local";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/yellowtail/files/yellowtail-latin-400-normal.woff2") format("woff2");
+    font-family: "Pacifico";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/pacifico/files/pacifico-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
-    font-family: "Shrikhand Local";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/shrikhand/files/shrikhand-latin-400-normal.woff2") format("woff2");
+    font-family: "ZCOOL KuaiLe";
+    src: url("https://cdn.jsdmirror.com/npm/@fontsource/zcool-kuaile/files/zcool-kuaile-latin-400-normal.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
-html[data-font="A"] {
-    --font-label: "Bahnschrift SemiCondensed", "Bahnschrift", sans-serif;
-}
-html[data-font="B"] {
-    --font-label:
-        "Bahnschrift Light Condensed", "Bahnschrift Condensed", sans-serif;
-}
-html[data-font="C"] {
-    --font-label: "Rye Local", "Bookman Old Style", "Georgia", serif;
-}
-html[data-font="D"] {
-    --font-label: "Playfair Local", "Times New Roman", "Garamond", serif;
-}
-html[data-font="E"] {
-    --font-label: "Caveat Local", "Segoe Script", "Monotype Corsiva", cursive;
-}
-html[data-font="F"] {
-    --font-label: "Jost Local", "Bahnschrift", sans-serif;
-}
-html[data-font="G"] {
-    --font-label: "Shrikhand Local", "Yellowtail Local", "Segoe Script", cursive;
-}
-html[data-font="A"] .word {
-    letter-spacing: 0.02em;
-    font-weight: 800;
-}
-html[data-font="B"] .word {
-    letter-spacing: 0.3em;
-    font-weight: 300;
-}
-html[data-font="C"] .word {
-    letter-spacing: -0.02em;
-    font-weight: 400;
-}
-html[data-font="D"] .word {
-    letter-spacing: 0.06em;
-    font-weight: 700;
-}
-html[data-font="E"] .word {
-    letter-spacing: 0.01em;
-    font-weight: 600;
-    font-size: clamp(72px, 10.3vw, 130px);
-}
-html[data-font="F"] .word {
-    letter-spacing: 0.12em;
-    font-weight: 500;
-}
-html[data-font="G"] .word {
-    letter-spacing: 0.01em;
-    font-weight: 400;
-    font-size: clamp(68px, 9.8vw, 122px);
-}
+
+/* 世代 → --font-label 映射（品牌字与 WELCOME TO 共用） */
+html[data-g="jubeat"][data-g] { --font-label: "Montserrat Bold", "Bahnschrift", sans-serif; }
+html[data-g="ripples"][data-g] { --font-label: "Quicksand Medium", "Segoe UI", sans-serif; }
+html[data-g="knit"][data-g] { --font-label: "Playfair Display", "Times New Roman", serif; }
+html[data-g="copious"][data-g] { --font-label: "Raleway Light", "Segoe UI", sans-serif; }
+html[data-g="saucer"][data-g] { --font-label: "Raleway Light", "Segoe UI", sans-serif; }
+html[data-g="saucerfulfill"][data-g] { --font-label: "Raleway Light", "Segoe UI", sans-serif; }
+html[data-g="prop"][data-g] { --font-label: "Caveat", "Segoe Script", "Monotype Corsiva", cursive; }
+html[data-g="qubell"][data-g] { --font-label: "Lora", Garamond, serif; }
+html[data-g="clan_red"][data-g] { --font-label: "Oswald Bold", "Arial Narrow", sans-serif; }
+html[data-g="clan_blue"][data-g] { --font-label: "Oswald Bold", "Arial Narrow", sans-serif; }
+html[data-g="clan_green"][data-g] { --font-label: "Oswald Bold", "Arial Narrow", sans-serif; }
+html[data-g="clan_purple"][data-g] { --font-label: "Oswald Bold", "Arial Narrow", sans-serif; }
+html[data-g="festo"][data-g] { --font-label: "Pacifico", "Segoe Script", cursive; }
+html[data-g="ave"][data-g] { --font-label: "Montserrat Medium", "Bahnschrift", sans-serif; }
+html[data-g="bta"][data-g] { --font-label: "Quicksand Medium", "Segoe UI", sans-serif; }
+html[data-g="yymf"][data-g] { --font-label: "ZCOOL KuaiLe", "Microsoft YaHei", sans-serif; }
+
+/* WELCOME TO 的墨迹高度校准（2026-10-27）：14 款字体的 cap-height 各不相同，
+   实测墨迹比 0.73（Poppins/Quicksand）~ 0.89（Anton），同一字号下肉眼差 22%。
+   这里按字体把墨迹归一到 0.74 的基准，16 个世代换过去「WELCOME TO」看起来一般大。
+   系数 = 0.74 / 该字体实测墨迹比，用 canvas actualBoundingBoxAscent 量的。 */
+html[data-g="jubeat"][data-g] { --wl-ink: 1.0137; }  /* Montserrat Bold: 墨迹 0.73 → 0.74 */
+html[data-g="ripples"][data-g] { --wl-ink: 1.0137; }  /* Quicksand Medium: 墨迹 0.73 → 0.74 */
+html[data-g="knit"][data-g] { --wl-ink: 1.0000; }  /* Playfair Display: 墨迹 0.74 → 0.74 */
+html[data-g="copious"][data-g] { --wl-ink: 1.0000; }  /* Raleway Light: 墨迹 0.74 → 0.74 */
+html[data-g="saucer"][data-g] { --wl-ink: 1.0000; }  /* Raleway Light: 墨迹 0.74 → 0.74 */
+html[data-g="saucerfulfill"][data-g] { --wl-ink: 1.0000; }  /* Raleway Light: 墨迹 0.74 → 0.74 */
+html[data-g="prop"][data-g] { --wl-ink: 1.0571; }  /* Caveat: 墨迹 0.70 → 0.74（实测 actualBoundingBox） */
+html[data-g="qubell"][data-g] { --wl-ink: 1.0000; }  /* Lora: 墨迹 0.74 → 0.74 */
+html[data-g="clan_red"][data-g] { --wl-ink: 0.9024; }  /* Oswald Bold: 墨迹 0.82 → 0.74 */
+html[data-g="clan_blue"][data-g] { --wl-ink: 0.9024; }  /* Oswald Bold: 墨迹 0.82 → 0.74 */
+html[data-g="clan_green"][data-g] { --wl-ink: 0.9024; }  /* Oswald Bold: 墨迹 0.82 → 0.74 */
+html[data-g="clan_purple"][data-g] { --wl-ink: 0.9024; }  /* Oswald Bold: 墨迹 0.82 → 0.74 */
+html[data-g="festo"][data-g] { --wl-ink: 0.8409; }  /* Pacifico: 墨迹 0.88 → 0.74（实测 actualBoundingBox） */
+html[data-g="ave"][data-g] { --wl-ink: 1.0137; }  /* Montserrat Medium: 墨迹 0.73 → 0.74 */
+html[data-g="bta"][data-g] { --wl-ink: 1.0137; }  /* Quicksand Medium: 墨迹 0.73 → 0.74 */
+html[data-g="yymf"][data-g] { --wl-ink: 0.9867; }  /* ZCOOL KuaiLe: 墨迹 0.75 → 0.74 */
 
 * {
     box-sizing: border-box;
@@ -282,30 +328,6 @@ img {
    主人 2026-10-19：「在wiki里不同的主题用与其对应的字体」 */
 .mark b {
     font-family: var(--font-label);
-}
-html[data-font="C"] .mark b {
-    font-weight: 400;
-    font-size: 19px;
-    letter-spacing: 0.02em;
-}
-html[data-font="D"] .mark b {
-    font-weight: 700;
-    font-size: 21px;
-}
-html[data-font="E"] .mark b {
-    font-weight: 700;
-    font-size: 22px;
-    letter-spacing: 0;
-}
-html[data-font="F"] .mark b {
-    font-weight: 500;
-    font-size: 21px;
-    letter-spacing: 0.04em;
-}
-html[data-font="G"] .mark b {
-    font-weight: 400;
-    font-size: 22px;
-    letter-spacing: 0;
 }
 /* 品牌字标里的符号（↑ ♪ ~）：世代字体都是拉丁装饰体，大多没有 ↑ 和 ♪ 的字形
    （实测只有 Playfair 带 ↑，七个字体全都没有 ♪），落到系统字体就必然是另一个
@@ -684,17 +706,19 @@ html[data-g="knit"] .mark b .til {
     /* 统一参考字号：字标「字身带」高度、WELCOME TO 字号、~ 字号都锚在这一个值上，
        所以三者天然同高，换世代不会一大一小 */
     /* 2026-10-26 主人反馈「桌面版还要大一些」，参考字号提到 26~44px。
-       这个值同时决定：WELCOME TO 字号、字标字身带高度、~ 字号。 */
+       这个值同时决定：WELCOME TO 字号与字标字身带高度（~ 已于 2026-10-27 移除）。 */
     --wl-em: clamp(26px, 2.5vw, 44px);
     animation: welcomeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* 前缀：「WELCOME TO」宽字距小标，字号跟字身带同高，读起来像「WELCOME TO jubeat」一句话 */
 .wl-pre {
     flex: none;
-    font-family: var(--font-data);
+    /* 跟品牌字同源：--font-label 按世代切换（见下方字体映射），
+       于是 WELCOME TO 和顶栏品牌字总是同一款字体。 */
+    font-family: var(--font-label);
     /* 字号锚到 --wl-em（= 字标字身带高度），读起来就是一句话；
        行高设为 1 并靠 flex 的 center 对齐，视觉中线正好落在字身带中线上。 */
-    font-size: var(--wl-em, 22px);
+    font-size: calc(var(--wl-em, 22px) * var(--wl-ink, 1));
     font-weight: 700;
     letter-spacing: 0.24em;
     /* 与字标之间的间隔：字距本身已在末尾多撑出一点，这里再明确留出 0.5em，
@@ -703,30 +727,26 @@ html[data-g="knit"] .mark b .til {
     padding-right: 0.5em;
     line-height: 1;
     white-space: nowrap;
-    color: var(--ink2);
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    /* 主题色（主人 2026-10-27：「给 WELCOME TO 加上主题色」）。
+       原来用 --ink2 的灰，和字标彩色的分量配不上。 */
+    color: var(--wl-acc, var(--acc));
+    /* 深色主题上 --acc 是亮色，加一层同色微光让它在背景图上不糊；
+       浅色主题（knit/saucer/qubell/prop/ripples/yymf）的 --acc 偏深，
+       不加光晕，否则会糊成一团。 */
+    text-shadow: 0 2px 12px color-mix(in srgb, var(--wl-acc, var(--acc)) 40%, transparent);
 }
-/* 末尾 ~：跟字身带同高，用强调色 */
-.wl-tilde {
-    flex: none;
-    font-style: normal;
-    font-weight: 700;
-    font-size: var(--wl-em, 22px);
-    line-height: 1;
-    letter-spacing: 0;
-    margin-left: 0.1em;
-    color: var(--acc2);
-}
-/* 浅底世代（knit / saucer / Qubell / prop / ripples / yymf）的 --acc2 偏淡，
-   做 ~ 时融进浅背景，改为跟强调色同色。 */
-html[data-g="knit"] .wl-tilde,
-html[data-g="saucer"] .wl-tilde,
-html[data-g="saucerfulfill"] .wl-tilde,
-html[data-g="qubell"] .wl-tilde,
-html[data-g="prop"] .wl-tilde,
-html[data-g="ripples"] .wl-tilde,
-html[data-g="yymf"] .wl-tilde {
-    color: var(--acc);
+/* knit / ripples 的 --acc 在各自浅底上只有 1.83 / 2.23 对比度，当正文色看不清。
+   这两套的 --wl-acc 压暗一档（实测 4.66 / 4.62，大字 3:1 门槛之上），
+   直接写在各自主题块里——不要另起 html[data-g=...] 块，
+   scripts/ci/check-contrast.mjs 的 blockOf() 只认每个主题的第一个颜色块。 */
+html[data-g="knit"] .wl-pre,
+html[data-g="saucer"] .wl-pre,
+html[data-g="saucerfulfill"] .wl-pre,
+html[data-g="qubell"] .wl-pre,
+html[data-g="prop"] .wl-pre,
+html[data-g="ripples"] .wl-pre,
+html[data-g="yymf"] .wl-pre {
+    text-shadow: none;
 }
 @keyframes welcomeIn {
     from {
@@ -789,22 +809,22 @@ html[data-g="yymf"] .wl-tilde {
    量法：逐行统计 alpha>40 的墨量 / 横向跨度 / 墨迹段数，取「段数≥4 且跨度≥85%」
    的连续带；带大装饰的世代（festo/ave/bta/yymf/qubell/clan）另放大标尺目测校正。
    改字标图或换 logo 时必须同步这三个值，否则标题行会错位。 */
-html[data-g="jubeat"] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; }
-html[data-g="ripples"] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; }
-html[data-g="knit"] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; }
-html[data-g="copious"] { --bh: 0.5547; --bc: 0.2773; --bt: 0; }
-html[data-g="saucer"] { --bh: 0.4759; --bc: 0.2517; --bt: 0.0138; }
-html[data-g="saucerfulfill"] { --bh: 0.4268; --bc: 0.2195; --bt: 0.0061; }
-html[data-g="prop"] { --bh: 0.4071; --bc: 0.2107; --bt: 0.0071; }
-html[data-g="qubell"] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; }
-html[data-g="festo"] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; }
-html[data-g="ave"] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
-html[data-g="bta"] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
-html[data-g="yymf"] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; }
+html[data-g="jubeat"][data-g] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; }
+html[data-g="ripples"][data-g] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; }
+html[data-g="knit"][data-g] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; }
+html[data-g="copious"][data-g] { --bh: 0.5547; --bc: 0.2773; --bt: 0; }
+html[data-g="saucer"][data-g] { --bh: 0.4759; --bc: 0.2517; --bt: 0.0138; }
+html[data-g="saucerfulfill"][data-g] { --bh: 0.4268; --bc: 0.2195; --bt: 0.0061; }
+html[data-g="prop"][data-g] { --bh: 0.4071; --bc: 0.2107; --bt: 0.0071; }
+html[data-g="qubell"][data-g] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; }
+html[data-g="festo"][data-g] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; }
+html[data-g="ave"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+html[data-g="bta"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+html[data-g="yymf"][data-g] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; }
 html[data-g="clan_blue"],
 html[data-g="clan_green"],
 html[data-g="clan_purple"],
-html[data-g="clan_red"] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; }
+html[data-g="clan_red"][data-g] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; }
 /* 所有字标都已裁掉透明留白并左对齐到 WELCOME 行 / 统计卡的同一条竖线，
    视框随图自身尺寸撑开，不再有 object-position / align-self 的人工补偿。 */
 html[data-g="ave"] .word-l {
@@ -1375,18 +1395,6 @@ html[data-g="saucerfulfill"] .sub {
     letter-spacing: 0.01em;
     color: var(--ink2);
 }
-/* 世代字体档位把 .mark b 抬到 19–22px，页脚这组只要 13–16px：
-   选择器带 data-font 才能压过，逗号合并成一条，别分散在多处。 */
-html[data-font="C"] .foot .mark-sm b,
-html[data-font="D"] .foot .mark-sm b,
-html[data-font="E"] .foot .mark-sm b,
-html[data-font="F"] .foot .mark-sm b,
-html[data-font="G"] .foot .mark-sm b {
-    font-size: 15px;
-}
-html[data-font="C"] .foot .mark-sm b {
-    font-size: 13px;
-}
 .foot .mark-sm .mark-x {
     gap: 0;
 }
@@ -1476,6 +1484,8 @@ html[data-g="festo"] {
 }
 html[data-g="knit"] {
     color-scheme: light;
+    /* WELCOME TO 用色：--acc #e0a92e 在 #f2eee4 上只有 1.83，压暗到 4.66 */
+    --wl-acc: #86651c;
     /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
     --focus: #6b6257;
     --bgop: 0.65;
@@ -1605,6 +1615,8 @@ html[data-g="ripples"] {
     color-scheme: light;
     /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
     --focus: #1f7a6c;
+    /* WELCOME TO 用色：--acc #4fae9e 在 #dfeeea 上只有 2.23，压暗到 4.62 */
+    --wl-acc: #347368;
     --bgop: 0.9;
     --veil: linear-gradient(180deg, rgba(18, 52, 47, 0.30) 0%, rgba(18, 52, 47, 0.20) 55%, rgba(18, 52, 47, 0.32) 100%);
     --scrim: rgba(0, 0, 0, 0.2);
@@ -2076,7 +2088,7 @@ html[data-g="yymf"] {
         display: none;
     }
     /* 品牌字不许折行：图标组占位后 "Beyond ↑ JUBEAT ♪~" 在窄屏会断成两行。
-       选择器要压过 html[data-font="C"/"D"/"E"] .mark b 那几档字号。 */
+       选择器要带同样的属性选择器才压得过 .mark b（见下方 data-font 说明）。 */
     html[data-font] .mark b {
         white-space: nowrap;
         font-size: 14px;

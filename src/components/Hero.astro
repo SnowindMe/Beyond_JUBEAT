@@ -32,11 +32,11 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
     {/* 首屏标题行（2026-10-26 主人点子的落地）：
         原来「字标」和「WELCOME TO jubeat ~」是上下两块，各说一遍 jubeat。
         现在拼成同一行：WELCOME TO 作前缀大字，世代字标图直接充当 jubeat 这个词，
-        末尾跟一个 ~。字标图里含各代装饰（圆弧、菱形、色条、副标题），所以用
+        （末尾的 ~ 已于 2026-10-27 按主人要求去掉）。字标图里含各代装饰（圆弧、菱形、色条、副标题），所以用
         --bh/--bc 两个按世代量出来的比例，只把「jubeat 字身带」对齐到文字基线上，
         装饰自然溢出到行外——这就是「联动」的手感。
         h1 仍保留完整可访问名（字标图是 aria-hidden + alt=""）。 */}
-    <h1 class="word" id="wordMark" aria-label="欢迎来到 jubeat 音乐魔方"><span class="word-t" aria-hidden="true">jubeat</span><span class="word-line"><span class="wl-pre" aria-hidden="true">WELCOME TO</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" width="285" height="210" decoding="async" fetchpriority="high" /></span><em class="wl-tilde" aria-hidden="true">~</em></span></h1>
+    <h1 class="word" id="wordMark" aria-label="欢迎来到 jubeat 音乐魔方"><span class="word-t" aria-hidden="true">jubeat</span><span class="word-line"><span class="wl-pre" aria-hidden="true">WELCOME TO</span><span class="word-l" aria-hidden="true"><img id="wordLogo" alt="" width="285" height="210" decoding="async" fetchpriority="high" /></span></span></h1>
     {/* 字标图紧跟 img 就地设 src：HTML 里不写 src 就不会先下 ave，再由主题脚本换成保存的世代。
         这段必须紧贴 img（is:inline 同步执行），否则浏览器已按空 src 判定过一次。 */}
     <script is:inline>
