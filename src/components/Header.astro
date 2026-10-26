@@ -87,6 +87,32 @@ const user = Astro.locals.user;
     <a href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener">GitHub 仓库</a>
   </div>
   <script is:inline>
+    // 顶栏三个浮层（导航抽屉 / 账户菜单 / 主题切换）互斥协调器（主人 2026-10-26：
+    // 「展开时不能重叠，一个打开，其他的就要收起」）。
+    //
+    // 为什么单独抽一层，而不是让三个模块互相调用：
+    // 它们分属三个不同的 <script>（Header 两个 + ThemeScript 一个），彼此拿不到对方的
+    // setOpen 函数；硬要互相引用就得靠全局变量，容易漏。所以这里只做一个登记处——
+    // 每个浮层注册「我要开的时候顺便把别人关掉」的 close 函数，由 openOne 统一调度。
+    //
+    // 约定：closeOthers(self) 关掉除 self 之外所有已登记的浮层。
+    window.jbPop = window.jbPop || (function () {
+      var regs = [];
+      return {
+        register: function (name, closeFn, isOpenFn) {
+          regs.push({ name: name, close: closeFn, isOpen: isOpenFn });
+        },
+        closeOthers: function (self) {
+          for (var i = 0; i < regs.length; i++) {
+            var r = regs[i];
+            if (r.name === self) continue;
+            try { if (r.isOpen && r.isOpen()) r.close(); } catch (e) {}
+          }
+        }
+      };
+    })();
+  </script>
+  <script is:inline>
     // 登录态同步 + 账户菜单（2026-10-25 主人要求：导航里的「管理 / 昵称」不要了，
     // 全部收进右侧人形图标的下拉菜单，样式对齐图二：顶部账号信息 → 菜单项 → 分隔线 → 红色退出）。
     //
@@ -160,6 +186,8 @@ const user = Astro.locals.user;
          关闭态靠 CSS 的 visibility（延后到淡出走完），不额外加 hidden 属性：
          两套机制叠加会让「重开」那一帧丢掉过渡（display 从 none 回来不跑 transition）。 */
       function setOpen(v, opts) {
+        // 开之前先把其他浮层收起（主人 2026-10-26：一个打开，其他就要收起）
+        if (v && window.jbPop) window.jbPop.closeOthers('acm');
         pop.setAttribute('data-open', v ? '1' : '0');
         btn.setAttribute('aria-expanded', v ? 'true' : 'false');
         if (v) {
@@ -172,6 +200,13 @@ const user = Astro.locals.user;
       }
 
       var isOpen = function () { return pop.getAttribute('data-open') === '1'; };
+
+      // 登记到互斥协调器：别的浮层要打开时，通过这里把我们收起来
+      if (window.jbPop) {
+        window.jbPop.register('acm', function () {
+          if (isOpen()) setOpen(false, { returnFocus: false });
+        }, isOpen);
+      }
 
       fetch('/api/auth/me', { credentials: 'same-origin', headers: { accept: 'application/json' } })
         .then(function (r) { return r.ok ? r.json() : null; })
@@ -233,9 +268,17 @@ const user = Astro.locals.user;
       var drawer = document.getElementById('navDrawer');
       if (!btn || !drawer) return;
       function set(open) {
+        // 开抽屉前先收起其他浮层（同上，主人 2026-10-26 要求互斥）
+        if (open && window.jbPop) window.jbPop.closeOthers('drawer');
         drawer.setAttribute('data-open', open ? '1' : '0');
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         btn.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+      }
+      // 登记到互斥协调器
+      if (window.jbPop) {
+        window.jbPop.register('drawer', function () {
+          if (drawer.getAttribute('data-open') === '1') set(false);
+        }, function () { return drawer.getAttribute('data-open') === '1'; });
       }
       btn.addEventListener('click', function (e) {
         e.stopPropagation();

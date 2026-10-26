@@ -172,6 +172,8 @@
      读屏与键盘的下一次 Tab 就从「不存在的位置」算起。
      opts.returnFocus=false 用于点击弹层外关闭：那种情况焦点本来就在别处，抢回来反而烦人。 */
   function setOpen(v, opts){
+    // 开之前先收起其他浮层（主人 2026-10-26：一个打开，其他就要收起）
+    if(v && window.jbPop) window.jbPop.closeOthers('tsw');
     tswPop.setAttribute('data-open',v?'1':'0');
     tswBtn.setAttribute('aria-expanded',v?'true':'false');
     if(v){
@@ -183,6 +185,11 @@
       if(!act || act===document.body || tswPop.contains(act)) tswBtn.focus();
     }
   }
+  // 登记到互斥协调器：别的浮层打开时把我们收起来
+  if(window.jbPop) window.jbPop.register('tsw',function(){
+    if(tswPop.getAttribute('data-open')==='1') setOpen(false,{returnFocus:false});
+  },function(){ return tswPop.getAttribute('data-open')==='1'; });
+
   tswBtn.addEventListener('click',function(ev){
     ev.stopPropagation();
     setOpen(tswPop.getAttribute('data-open')!=='1');
