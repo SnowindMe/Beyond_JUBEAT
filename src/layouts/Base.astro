@@ -81,6 +81,13 @@ const BUILD_DATE = (() => {
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="sitemap" href="/sitemap.xml" />
+  {/* PWA：让手机浏览器可以把站点「添加到主屏幕」（2026-10-26 主人要求）。
+      manifest 提供名称/图标/start_url；sw.js 只缓存静态资源，HTML 与 /api/ 一律直通
+      ——本站多为 SSR 查 D1，缓存页面会让用户看到过期数据。 */}
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="JUBEAT" />
   {/* 站点是单页 + 大量施工中的占位导航，canonical 固定到首页，避免 /foo/ 这类
       被 CF 兜到 404 页后仍被索引成重复内容。 */}
   {canonical && <link rel="canonical" href={canonical} />}
@@ -202,6 +209,17 @@ const BUILD_DATE = (() => {
         if (img.naturalWidth === 0) fail();
       });
     })();
+  </script>
+  <script is:inline>
+    // Service Worker 注册（PWA「添加到主屏幕」的必要条件之一，2026-10-26）。
+    // 只在 https 或 localhost 下注册：http 的局域网调试地址（如 192.168.x.x）没有
+    // Service Worker，硬注册会抛错并污染控制台。
+    // load 后再注册，不跟首屏抢带宽。
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function () { /* 注册失败不影响页面功能 */ });
+      });
+    }
   </script>
   <BackTop />
   <ThemeScript />

@@ -1,0 +1,54 @@
+{
+  "name": "Beyond ↑ JUBEAT ♪~",
+  "short_name": "JUBEAT",
+  "description": "jubeat（音乐魔方）中文资料站：曲目库、Jubility 层级、最近更改。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1a22",
+  "theme_color": "#0b1a22",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "categories": [
+    "reference",
+    "games"
+  ],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "曲目库",
+      "short_name": "曲目",
+      "url": "/songs/"
+    },
+    {
+      "name": "Jubility 层级",
+      "short_name": "Jubility",
+      "url": "/jubility/"
+    },
+    {
+      "name": "最近更改",
+      "short_name": "最近更改",
+      "url": "/recent/"
+    }
+  ]
+}

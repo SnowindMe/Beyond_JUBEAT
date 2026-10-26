@@ -1,0 +1,223 @@
+---
+// 「添加到屏幕」入口（主人 2026-10-26 要求）。
+//
+// 为什么是组件而不是顶栏里写死一个按钮：不是所有环境都能装。
+// ① 安卓/桌面 Chrome、Edge 会触发 beforeinstallprompt，这时按钮才有意义；
+// ② iOS Safari 不支持 beforeinstallprompt，只能教用户手动「分享 → 添加到主屏幕」；
+// ③ 站内已经是独立窗口（display-mode: standalone）时完全不该再提示。
+// 所以按钮默认隐藏，由脚本判断后再决定是否显示，避免给一个点了没反应的按钮。
+//
+// 无 JS 时整块不显示（.pwa[data-on="0"]）——安装本身就必须有 JS，不显示比显示死按钮好。
+---
+
+<div class="pwa" id="pwaBox" data-on="0" hidden>
+  <button type="button" class="pwa-b" id="pwaBtn" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3v11" />
+      <path d="M7.5 9.5 12 14l4.5-4.5" />
+      <path d="M5 17.5v1.2A2.3 2.3 0 0 0 7.3 21h9.4A2.3 2.3 0 0 0 19 18.7v-1.2" />
+    </svg>
+    <span class="pwa-t" id="pwaLabel">添加到屏幕</span>
+  </button>
+</div>
+
+<div class="pwa-dlg" id="pwaDlg" data-open="0" hidden>
+  <div class="pwa-dlg-in" role="dialog" aria-modal="true" aria-labelledby="pwaDlgH">
+    <h2 class="pwa-dlg-h" id="pwaDlgH">添加到屏幕</h2>
+    <div class="pwa-dlg-body" id="pwaDlgBody"></div>
+    <div class="pwa-dlg-foot">
+      <button type="button" class="pwa-dlg-x" id="pwaDlgClose">知道了</button>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  /* 入口：挂在顶栏右侧图标组末尾（.nav-ico 里插入），样式沿用 .nav-i 的 44px 圆角块 */
+  .pwa { display: contents; }
+  .pwa[hidden] { display: none; }
+
+  .top nav .pwa-b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 42%, transparent);
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+  }
+  .top nav .pwa-b:hover {
+    background: color-mix(in srgb, var(--acc) 26%, transparent);
+    border-color: color-mix(in srgb, var(--acc) 68%, transparent);
+  }
+  .top nav .pwa-b:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+  .pwa-b svg {
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* 窄屏只留图标，文字收起（顶栏在 390px 宽里放不下） */
+  @media (max-width: 768px) {
+    .top nav .pwa-b { padding: 0; min-width: 44px; }
+    .top nav .pwa-b .pwa-t { display: none; }
+  }
+
+  /* iOS 说明弹层 */
+  .pwa-dlg {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: color-mix(in srgb, #000 52%, transparent);
+    backdrop-filter: blur(3px);
+  }
+  .pwa-dlg[hidden] { display: none; }
+  .pwa-dlg-in {
+    width: min(400px, 100%);
+    padding: 20px 20px 16px;
+    border-radius: var(--r);
+    color: var(--ink);
+    background: color-mix(in srgb, var(--base) 94%, #fff);
+    border: 1px solid var(--edge2);
+    box-shadow: 0 24px 60px -24px rgb(0 0 0 / 0.55);
+  }
+  .pwa-dlg-h {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .pwa-dlg-body {
+    font-size: 13px;
+    line-height: 1.75;
+    color: var(--ink2);
+  }
+  .pwa-dlg-body ol {
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+  .pwa-dlg-body b { color: var(--ink); }
+  .pwa-dlg-foot {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+  }
+  .pwa-dlg-x {
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 8px 16px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--acc) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 52%, transparent);
+    border-radius: var(--pill);
+    cursor: pointer;
+  }
+  .pwa-dlg-x:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+  }
+</style>
+
+<script is:inline>
+  // 安装入口的三条分支：
+  // ① beforeinstallprompt（Chrome/Edge/安卓）→ 记下事件，点按钮时 prompt()
+  // ② iOS Safari（无 beforeinstallprompt）→ 点按钮弹手动说明
+  // ③ 已是独立窗口 / 已安装 → 完全隐藏
+  (function () {
+    var box = document.getElementById('pwaBox');
+    var btn = document.getElementById('pwaBtn');
+    var dlg = document.getElementById('pwaDlg');
+    var dlgBody = document.getElementById('pwaDlgBody');
+    var dlgClose = document.getElementById('pwaDlgClose');
+    if (!box || !btn) return;
+
+    var deferred = null;
+
+    // 已安装/独立窗口：直接不显示
+    var standalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+    if (standalone) return;
+
+    function show() {
+      box.hidden = false;
+      box.setAttribute('data-on', '1');
+    }
+
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferred = e;
+      show();
+    });
+
+    // 装完就藏起来
+    window.addEventListener('appinstalled', function () {
+      deferred = null;
+      box.hidden = true;
+      box.setAttribute('data-on', '0');
+    });
+
+    // iOS：没有任何事件可监听，靠 UA 判断
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) {
+      setTimeout(show, 1200);
+      btn.addEventListener('click', function () {
+        dlgBody.innerHTML =
+          '用 Safari 打开本站后，按下面两步即可把图标放到桌面：' +
+          '<ol><li>点浏览器底部的<b>分享</b>按钮（方框带向上箭头）</li>' +
+          '<li>在列表里选<b>「添加到主屏幕」</b>，再点右上角「添加」</li></ol>' +
+          '<p style="margin:10px 0 0">桌面上的图标会以独立窗口打开，没有地址栏。</p>';
+        dlg.hidden = false;
+        dlg.setAttribute('data-open', '1');
+        dlgClose.focus();
+      });
+    } else {
+      btn.addEventListener('click', function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.then(function (res) {
+          if (res && res.outcome === 'accepted') {
+            box.hidden = true;
+            box.setAttribute('data-on', '0');
+          }
+          deferred = null;
+        });
+      });
+    }
+
+    function closeDlg() {
+      dlg.hidden = true;
+      dlg.setAttribute('data-open', '0');
+      btn.focus();
+    }
+    if (dlgClose) dlgClose.addEventListener('click', closeDlg);
+    if (dlg) {
+      dlg.addEventListener('click', function (e) {
+        if (e.target === dlg) closeDlg();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && dlg.getAttribute('data-open') === '1') closeDlg();
+      });
+    }
+  })();
+</script>

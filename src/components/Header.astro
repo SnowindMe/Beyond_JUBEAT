@@ -8,6 +8,7 @@
 // 登录态（2026-10-23 加）：宽屏 .nav-txt 末尾显示「登录」或昵称，
 // 抽屉里同一条；图标组 .nav-ico 加一个人形图标（窄屏入口）。
 import { isStaff } from '../lib/auth';
+import InstallPrompt from './InstallPrompt.astro';
 
 const path = Astro.url.pathname;
 const user = Astro.locals.user;
@@ -35,6 +36,9 @@ const user = Astro.locals.user;
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
+      {/* 添加到屏幕入口（主人 2026-10-26）：默认隐藏，由组件内脚本判断能否安装后再显形；
+          不能装的环境（iOS 走手动说明、已是独立窗口则完全不出现）不会出现死按钮。 */}
+      <InstallPrompt />
       <a class="nav-i nav-i-github" href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 20.6v-1.9c-2.7.5-3.5-1.1-3.5-1.1-.3-.9-.9-1.3-.9-1.3-.8-.5 0-.5 0-.5.9.1 1.3.9 1.3.9.7 1.3 1.9 1 2.4.8.1-.6.3-1 .5-1.2-2.2-.3-4.4-1.1-4.4-4.8 0-1.1.4-1.9 1-2.6-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1 .8-.2 1.6-.3 2.5-.3s1.7.1 2.5.3c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.5 1 2.6 0 3.7-2.2 4.5-4.4 4.8.3.3.6.9.6 1.8v2.8"/></svg>
       </a>

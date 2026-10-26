@@ -18,3 +18,20 @@
 
 /favicon.svg
   Cache-Control: public, max-age=86400
+
+# PWA 资源（2026-10-26 加「添加到屏幕」）。
+# sw.js 绝不能长缓存：浏览器更新 SW 时会对同一 URL 重新取，长缓存会让旧 SW 一直留着。
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/icon-192.png
+  Cache-Control: public, max-age=604800
+
+/icon-512.png
+  Cache-Control: public, max-age=604800
+
+/icon-maskable-512.png
+  Cache-Control: public, max-age=604800

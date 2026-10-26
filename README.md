@@ -18,6 +18,22 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 >
 > **导航只列真实存在的页面，没有死链**（v1.9.1 起）。当前顶栏文字链是 **曲目 / Jubility / 最近更改**（v1.21.0 起 Jubility 排在曲目后面）。「Emblem / 伙伴 / 成就 / 关于 / 登录」五个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。
 
+
+**PWA「添加到屏幕」**（v1.23.0 起）：顶栏右侧有安装入口，手机/桌面浏览器可把站点装成独立窗口应用。
+
+| 文件 | 作用 |
+| --- | --- |
+| `public/manifest.webmanifest` | 名称、图标（192/512/maskable）、start_url、三个快捷方式（曲目 / Jubility / 最近更改） |
+| `public/sw.js` | Service Worker：**只缓存静态资源**，HTML 与 `/api/` 一律走网络 |
+| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` | 由 favicon 的几何按 4 倍超采样重绘，与站标一致 |
+| `src/components/InstallPrompt.astro` | 安装按钮 + iOS 手动说明弹层 |
+
+**为什么 SW 不缓存 HTML**：本站 `/songs/`、`/jubility/`、`/recent/` 等都是 SSR 查 D1，曲库和登录态随时会变。缓存 HTML 会让用户看到过期数据或别人的登录态——这比「离线可用」严重得多。所以 fetch 处理器只接管 `/_astro/`、`/assets/` 与带 hash 的静态文件，`mode === 'navigate'` 直接 return 放行。实测缓存 23 项、全是静态资源。
+
+**安装入口分三支**：① Chrome/Edge/安卓有 `beforeinstallprompt`，记下事件后点按钮调 `prompt()`；② iOS Safari 没有这个事件，只能教用户「分享 → 添加到主屏幕」；③已是独立窗口（`display-mode: standalone`）时完全不显示。不做成「一律显示的按钮」，否则在不能装的环境里就是死按钮。
+
+**`sw.js` 的缓存头必须是 `max-age=0, must-revalidate`**（见 `public/_headers`）：浏览器更新 SW 时会对同一 URL 重新取，长缓存会让旧 SW 一直留着、新版本永远不生效。
+
 **Jubility 层级 /jubility/**（v1.21.0 上线、v1.22.0 加 PEACH 档，与 `/songs/` 同为 `prerender = false` 的 SSR 页）：服务器选项卡（日服 / 国服，按钮里直接带该服理论值）→ 理论值概览 → 12 档层级阶梯（官方十档 + PEACH + PRIME GOLD）→ 公式与口径说明。
 
 | 概念 | 口径 |
