@@ -45,8 +45,8 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 十档分数线是官方的（BEMANIWiki 的「ネームカラー」表，festo 起沿用至今）：NORMAL 0 / YELLOW GREEN 250 / GREEN 750 / LIGHT BLUE 1500 / BLUE 2500 / VIOLET 4000 / PURPLE 5500 / PINK 7000 / ORANGE 8500 / GOLD 9500。**两个档位是本站自创**（游戏内都没有）：
 
-- **PEACH**（v1.22.0 起）：要求 TOTAL ≥ **NORMAL 模式**理论值的 96%，阈值低于 7000 时不设此档。日服 8064.3 × 96% = **7741.7**、国服 8034.7 × 96% = **7713.3**，都落在 PINK(7000) 与 ORANGE(8500) 之间，所以**按分数排**在两者中间（阶梯序号 #08），但图标是站长做的第 11 张（`/assets/jubility/tier-11.webp`）——**图标编号与分数顺序在这里故意不一致**，靠 `Tier.icon` 显式指定。
-- **PRIME GOLD**：要求 TOTAL ≥ 理论值的 99%，阈值低于 9500 时不设此档——否则曲库小的服务器会轻易白拿最高档。图标是金黄色棒棒糖（`/assets/jubility/tier-10.webp`）。
+- **PEACH**（v1.22.0 起）：要求 TOTAL ≥ **NORMAL 模式**理论值的 96.5%，阈值低于 7000 时不设此档。日服 8064.3 × 96.5% = **7782.0**、国服 8034.7 × 96.5% = **7753.4**，都落在 PINK(7000) 与 ORANGE(8500) 之间，所以**按分数排**在两者中间（阶梯序号 #08），但图标是站长做的第 11 张（`/assets/jubility/tier-11.webp`）——**图标编号与分数顺序在这里故意不一致**，靠 `Tier.icon` 显式指定。
+- **PRIME GOLD**：要求 TOTAL ≥ 理论值的 99.5%，阈值低于 9500 时不设此档——否则曲库小的服务器会轻易白拿最高档。图标是金黄色棒棒糖（`/assets/jubility/tier-10.webp`）。
 
 > 图标编号是**素材固定**的：tier-00…07 = NORMAL…PINK，tier-08 = ORANGE，tier-09 = GOLD，tier-10 = PRIME GOLD，tier-11 = PEACH。往 `TIERS` 中间插一档会让后面所有档的数组下标 +1，所以 ORANGE / GOLD / PRIME GOLD 三档的 `icon` 都是显式写死的；新增档位时同样要核对每档取到的图对不对。
 

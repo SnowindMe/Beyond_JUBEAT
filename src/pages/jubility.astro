@@ -137,7 +137,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                 <span class="jb-pool-v">{theory.pick}<em>池 {theory.pickPool}</em></span>
               </div>
               {/* COMMON / PICK UP 两条是「加和 = 理论值」的占比，PRIME GOLD 是一条阈值刻线。
-                  两者语义不同（左两条相加 100%，这两条只是分别标在 96% 与 99% 处），所以不用同一种填充条，
+                  两者语义不同（左两条相加 100%，这两条只是分别标在 96.5% 与 99.5% 处），所以不用同一种填充条，
                   否则读者会以为三者加起来是 200%。 */}
               {peach !== null && (
                 <div class="jb-pool jb-pool-mark">
@@ -145,7 +145,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                   <span class="jb-pool-rail">
                     <i class="jb-tick" style={`left:${(peach / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'peach')?.c}`}></i>
                   </span>
-                  <span class="jb-pool-v">{peach}<em>阈值 · NORMAL 理论值 96%</em></span>
+                  <span class="jb-pool-v">{peach}<em>阈值 · NORMAL 理论值 96.5%</em></span>
                 </div>
               )}
               {prime !== null && (
@@ -154,7 +154,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                   <span class="jb-pool-rail">
                     <i class="jb-tick" style={`left:${(prime / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'prime')?.c}`}></i>
                   </span>
-                  <span class="jb-pool-v">{prime}<em>阈值 · 理论值 99%</em></span>
+                  <span class="jb-pool-v">{prime}<em>阈值 · 理论值 99.5%</em></span>
                 </div>
               )}
             </div>
@@ -254,16 +254,16 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
               </p>
               <p>
                 <b>PEACH</b> 是本站自创的档位（游戏内只有十档）：要求 TOTAL jubility 达到
-                <b>NORMAL 模式理论值的 96%</b>，且该阈值低于 7000 时不设此档（否则会掉到 PINK 之下）。
-                {s.name}的 NORMAL 理论值是 {theory.totalN}，96% 为 {peach ?? 0}
+                <b>NORMAL 模式理论值的 96.5%</b>，且该阈值低于 7000 时不设此档（否则会掉到 PINK 之下）。
+                {s.name}的 NORMAL 理论值是 {theory.totalN}，96.5% 为 {peach ?? 0}
                 {peach === null ? '（低于 7000，本服不成立）' : '（≥ 7000，本服成立）'}。
                 它的图标编号是 11，但分数落在 PINK 与 ORANGE 之间，所以阶梯按<b>分数</b>排、
                 序号看位置而不看图标编号。
               </p>
               <p>
                 <b>PRIME GOLD</b> 是本站自创的最高档（游戏内只有十档）：要求 TOTAL jubility
-                达到理论值的 <b>99%</b>，且阈值低于 9500 时不设此档。
-                {s.name}的理论值是 {theory.total}，99% 为 {prime ?? 0}
+                达到理论值的 <b>99.5%</b>，且阈值低于 9500 时不设此档。
+                {s.name}的理论值是 {theory.total}，99.5% 为 {prime ?? 0}
                 {prime === null ? '（低于 9500，本服不成立）' : '（≥ 9500，本服成立）'}。
               </p>
             </div>

@@ -7,10 +7,10 @@
 // 前作 festo 的分数线与此完全相同，国服「音乐魔方」沿用同一套。
 //
 // 【两个自创档，游戏内都不存在】
-//   ① PEACH（图标 gauge_11）：**NORMAL 模式**理论值的 96% 才算，低于 7000 不设此档。
+//   ① PEACH（图标 gauge_11）：**NORMAL 模式**理论值的 96.5% 才算，低于 7000 不设此档。
 //      按分数落在 PINK(7000) 与 ORANGE(8500) 之间，所以数组里插在中间，
 //      但图标编号显式指定为 11（见 Tier.icon）——编号顺序与分数顺序在这里不一致。
-//   ② PRIME GOLD（图标 gauge_10）：HARD 口径 TOTAL 理论值的 99% 才算，低于 9500
+//   ② PRIME GOLD（图标 gauge_10）：HARD 口径 TOTAL 理论值的 99.5% 才算，低于 9500
 //      不设此档（否则曲库小的服务器会轻易「白拿」最高档）。
 // 判定分别见 peachThreshold() / primeThreshold()。
 //
@@ -82,14 +82,15 @@ export const TIERS: Tier[] = [
 /** 每档参评谱面数：COMMON 30 + PICK UP 30。算「平均每谱面」用，别散落成魔数。 */
 export const SLOT_COUNT = 60;
 
-/** PRIME GOLD 阈值：理论值的 99%（切到 0.1），低于 9500 时该档不成立、返回 null。 */
+/** PRIME GOLD 阈值：理论值的 99.5%（切到 0.1），低于 9500 时该档不成立、返回 null。
+ *  比例历史：2026-10-26 初版 99%，当日主人改为 99.5%。 */
 export function primeThreshold(theory: number): number | null {
-  const v = Math.floor(theory * 0.99 * 10) / 10;
+  const v = Math.floor(theory * 0.995 * 10) / 10;
   return v >= 9500 ? v : null;
 }
 
 /**
- * PEACH 阈值：**NORMAL 模式**理论值的 96%（切到 0.1），低于 7000 时该档不成立。
+ * PEACH 阈值：**NORMAL 模式**理论值的 96.5%（切到 0.1），低于 7000 时该档不成立。
  *
  * 与 PRIME GOLD 的区别只有两点：一是基数是 totalN（NORMAL 上限 100%）而不是
  * total（HARD 上限 120%），二是下界取 7000 而不是 9500。
@@ -97,10 +98,10 @@ export function primeThreshold(theory: number): number | null {
  * 若算出来低于 7000，它会掉到 PINK 之下，与「PINK → PEACH → ORANGE」的
  * 排序矛盾 —— 那种情况下这一档在本服不成立。
  *
- * 比例历史：2026-10-26 初版取 99%（日服 7983.6 / 国服 7954.3），当日主人改为 96%。
+ * 比例历史：2026-10-26 初版 99%（日服 7983.6 / 国服 7954.3）→ 当日改 96% → 再改 96.5%。
  */
 export function peachThreshold(theoryN: number): number | null {
-  const v = Math.floor(theoryN * 0.96 * 10) / 10;
+  const v = Math.floor(theoryN * 0.965 * 10) / 10;
   return v >= 7000 ? v : null;
 }
 
