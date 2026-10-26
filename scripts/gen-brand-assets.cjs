@@ -53,12 +53,15 @@ const PUB = path.join(ROOT, 'public');
     .png({ quality: 90, compressionLevel: 9 })
     .toFile(path.join(ogDir, 'cover.png'));
 
-  // ---- apple-touch-icon: 180x180，直接渲染 favicon.svg ----
-  const icon = fs.readFileSync(path.join(PUB, 'favicon.svg'));
-  await sharp(icon, { density: 720 })
-    .resize(180, 180, { fit: 'contain', background: { r: 11, g: 26, b: 34, alpha: 1 } })
-    .png({ compressionLevel: 9 })
-    .toFile(path.join(PUB, 'apple-touch-icon.png'));
+  /* ---- apple-touch-icon ----
+     2026-10-27 起图标由 scripts/gen-brand-logo.cjs 统一从品牌母版生成，
+     本脚本不再重复产出（原来在这里渲染 favicon.svg，那个 SVG 已随换标识删除）。
+     这条只做校验：文件必须在，否则给出提示。 */
+  const ati = path.join(PUB, 'apple-touch-icon.png');
+  if (!fs.existsSync(ati)) {
+    console.error('缺少 apple-touch-icon.png —— 先跑 node scripts/gen-brand-logo.cjs');
+    process.exit(1);
+  }
 
   for (const f of [path.join(ogDir, 'cover.png'), path.join(PUB, 'apple-touch-icon.png')]) {
     const s = fs.statSync(f);

@@ -16,7 +16,14 @@
 /404.html
   Cache-Control: public, max-age=0, must-revalidate
 
-/favicon.svg
+# 站点图标（2026-10-27 换品牌标识后从 svg 改为多尺寸 png）
+/favicon-32.png
+  Cache-Control: public, max-age=86400
+
+/favicon-16.png
+  Cache-Control: public, max-age=86400
+
+/apple-touch-icon.png
   Cache-Control: public, max-age=86400
 
 # PWA 资源（2026-10-26 加「添加到屏幕」）。

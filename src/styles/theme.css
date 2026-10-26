@@ -311,13 +311,22 @@ img {
 .mark:hover b {
     color: var(--acc);
 }
-.mark i {
-    width: 9px;
-    height: 9px;
-    border-radius: 3px;
-    background: var(--acc);
+/* 品牌标识图（2026-10-27 替换原来的 9×9 色点 .mark i）。
+   源图 2048²、已裁到内容（长宽比 1.326），出图 126×96。
+   按「高度」定尺寸、宽度按比例走，换分辨率不会变形。
+   高度取 26px：略高于 17px 的品牌字，视觉上是「标识 + 名字」而不是两个平级的词。 */
+.mark-logo {
+    height: 26px;
+    width: auto;
     flex: none;
-    box-shadow: 0 0 12px var(--acc);
+    /* 图形自带彩色（青绿/柠檬黄/湖蓝），不跟主题色走——标识要保持识别一致性。
+       轻微描影让它在深色背景图上不糊，浅色主题下也不至于发飘。 */
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.28));
+}
+/* 页脚那枚跟着更小的品牌字（13px）缩到 18px，避免比正文还抢眼 */
+.mark-sm .mark-logo {
+    height: 18px;
+    filter: none;
 }
 .mark b {
     font-size: 17px;
@@ -2093,6 +2102,16 @@ html[data-g="yymf"] {
         white-space: nowrap;
         font-size: 14px;
         letter-spacing: 0;
+    }
+    /* 品牌标识窄屏收小：实测 375px 下 26px 的标识比旧的 9px 色点宽 25px，
+       会把最右的主题切换器挤出视口（用 CDP 量的：标识版右侧超出 36px、
+       旧色点版 11px）。缩到 20px 后增加量降到约 14px。
+       注：窄屏本就有约 11px 的既有溢出（不是这次换标识引起的），另行处理。 */
+    .mark-logo {
+        height: 20px;
+    }
+    .mark-sm .mark-logo {
+        height: 16px;
     }
     /* 移动端标题行：字号收敛一档，字标仍按「字身带 = 1em」缩放，
        所以窄屏和宽屏看到的是同一套对齐，只是整体更小。

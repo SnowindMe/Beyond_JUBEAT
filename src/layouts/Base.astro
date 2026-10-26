@@ -78,7 +78,10 @@ const BUILD_DATE = (() => {
       作为「脚本被禁用」时的兜底（原来的 #0b1a22 与 15 套主题全都不一致）。 */}
   <meta name="theme-color" content="#0a1418" />
   {noindex && <meta name="robots" content="noindex,follow" />}
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  {/* 2026-10-27 换品牌标识：源图是位图（主人给的 PNG），所以 favicon 从 SVG 改成
+      多尺寸 PNG。16/32 两档覆盖浏览器标签页与书签栏的实际取值。 */}
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="sitemap" href="/sitemap.xml" />
   {/* PWA：让手机浏览器可以把站点「添加到主屏幕」（2026-10-26 主人要求）。
@@ -174,7 +177,8 @@ const BUILD_DATE = (() => {
       </div>
       <div class="foot-r">
         <span class="mark mark-sm" translate="no" id="footR">
-          <i></i>
+          {/* 与顶栏同一枚标识，尺寸由 .mark-sm .mark-logo 压小（见 theme.css） */}
+          <img class="mark-logo" src="/assets/images/logo/brand.webp" alt="" aria-hidden="true" width="126" height="96" loading="lazy" decoding="async" />
           <span class="mark-x">
             <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
           </span>

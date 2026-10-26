@@ -25,7 +25,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 | --- | --- |
 | `public/manifest.webmanifest` | 名称、图标（192/512/maskable）、start_url、三个快捷方式（曲目 / Jubility / 最近更改） |
 | `public/sw.js` | Service Worker：**只缓存静态资源**，HTML 与 `/api/` 一律走网络 |
-| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` | 由 favicon 的几何按 4 倍超采样重绘，与站标一致 |
+| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` / `favicon-16/32.png` / `apple-touch-icon.png` | 全部由 `scripts/gen-brand-logo.cjs` 从品牌母版（`archive/materials/brand/`）生成；maskable 版按安全圆缩放 |
 | `src/components/InstallPrompt.astro` | 安装按钮 + iOS 手动说明弹层 |
 
 **为什么 SW 不缓存 HTML**：本站 `/songs/`、`/jubility/`、`/recent/` 等都是 SSR 查 D1，曲库和登录态随时会变。缓存 HTML 会让用户看到过期数据或别人的登录态——这比「离线可用」严重得多。所以 fetch 处理器只接管 `/_astro/`、`/assets/` 与带 hash 的静态文件，`mode === 'navigate'` 直接 return 放行。实测缓存 23 项、全是静态资源。
@@ -118,6 +118,11 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 >
 > ⚠️ **这些表必须写成 `html[data-g="x"][data-g]`**：`scripts/ci/check-contrast.mjs` 的 `blockOf()` 取每个主题**第一个** `html[data-g="x"]{` 块。若把字体/字身带表写成同形选择器且位置靠前，CI 会取到只有一两个变量的空块、令牌全回退 `:root`，于是 16 套主题都按深色默认值算、浅色断言根本没跑——**这是假绿灯，比红灯危险**。`[data-g]` 是重复同一属性，特异性与语义都不变，但不再被抢先命中。
 
+**品牌标识（v1.27.0）**：主人 2026-10-27 交付两张同稿不同底的 PNG——**白底版**用于 PWA 图标与浏览器标签页图标，**透明版**用于顶栏/页脚品牌字左边（替换原来的 9×9 色点 `.mark i`）。母版归档在 `archive/materials/brand/`，产物统一由 `scripts/gen-brand-logo.cjs` 生成，**换标识只改母版再跑这个脚本**，不要手改 `public/` 下的图。两个必须记住的量化口径：
+
+> 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
+> 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
+
 页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
 
 ## 项目清单
@@ -171,9 +176,10 @@ Beyond_JUBEAT/
 │  │  ├─ fonts/               （已清空）主题字体改由 fontsource CDN 提供，见下方「字体」
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
-│  ├─ apple-touch-icon.png    iOS 主屏图标（180x180，由 favicon 渲染）
+│  ├─ apple-touch-icon.png    iOS 主屏图标（180x180）
+│  ├─ favicon-16.png   favicon-32.png   浏览器标签页图标（两档尺寸）
 │  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
-│  └─ favicon.svg             站点图标
+│  └─ icon-192/512/maskable-512.png     PWA 图标
 │
 ├─ docs/                      设计与验收文档
 │  ├─ measurement-caliber.md  **统计口径（做任何计数前先读）**：data-cat 三处 / 世代块 12 vs 13 / grep 单行陷阱 / Tab 分视口 / 断言数看运行时
@@ -199,7 +205,8 @@ Beyond_JUBEAT/
 │  ├─ ci/check-contrast.mjs   对比度自检（16 套主题 × 三条组合取 min；输出公式理论值，不含背景图）
 │  ├─ scrape-beyond-ave.cjs   上游曲目抓取（beyond the Ave. 站点 → data/upstream/*.json）
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
-│  ├─ gen-brand-assets.cjs   生成 og 分享图与 apple-touch-icon（素材变了才跑）
+│  ├─ gen-brand-assets.cjs   生成 og 分享图（图标另由 gen-brand-logo.cjs 产出）
+│  ├─ gen-brand-logo.cjs     从品牌母版生成 favicon / PWA 图标 / 顶栏标识（换标识时跑）
 │  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
 │  ├─ subset-fonts.py         历史脚本：字体子集化（现字体走 CDN，已不再需要）
 │  ├─ probe/                  历史探测脚本（Playwright 时代留下的）
@@ -324,7 +331,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
 | `/_astro/*` | `max-age=31536000, immutable`（文件名带内容 hash，天然不可变） |
 | `/index.html`、`/404.html` | `max-age=0, must-revalidate`（每次都回源确认） |
-| `/favicon.svg` | `max-age=86400` |
+| `/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
 
 ### SEO 与站点图标
 
@@ -332,7 +339,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | --- | --- | --- |
 | `robots.txt` / `sitemap.xml` | `public/`（构建时生成） | `npm run build` 先跑 `scripts/gen-seo.cjs`，lastmod 是当天；只收录首页，施工中的二级页不进 sitemap |
 | og:image | `public/assets/images/og/cover.png` | 1200x630，字标反相后压在 ave 背景上；`scripts/gen-brand-assets.cjs` 生成 |
-| apple-touch-icon | `public/apple-touch-icon.png` | 180x180，由 `favicon.svg` 渲染 |
+| apple-touch-icon | `public/apple-touch-icon.png` | 180x180，由 `scripts/gen-brand-logo.cjs` 从品牌母版生成 |
 | canonical / og / twitter | `src/layouts/Base.astro` | 默认拼 `https://wiki.byd-ub.top` + `canonicalPath`；404 页传 `canonicalPath=""` 且 `noindex`，不输出 canonical |
 
 素材（背景/站标/字体）换了之后跑一次 `node scripts/gen-brand-assets.cjs` 重生成分享图。
