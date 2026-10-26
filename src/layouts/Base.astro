@@ -124,7 +124,7 @@ const BUILD_DATE = (() => {
       /* 换过图的世代在这里登记版本号：背景 URL 会拼成 <k>.webp?v=N。
          /assets/images/* 是 immutable 一年缓存，不改文件名的话老访客永远看旧图；
          只有这里登记过的图才会带参数，其余 14 张照旧命中缓存。 */
-      window.JB_BGVER = { festo: 2, jubeat: 2 };
+      window.JB_BGVER = { festo: 3, jubeat: 2 };
       /* 字体走 fontsource + jsdmirror（2026-10-25，见 theme.css 顶部）：仓库不再存字体二进制，
          所以这里直接拼第三方 URL。键仍是「字体代号 → 完整 URL 路径」，与 @font-face 一一对应。 */
       var FONTCDN = 'https://cdn.jsdmirror.com/npm/@fontsource/';
