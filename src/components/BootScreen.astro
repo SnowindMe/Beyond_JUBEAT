@@ -1,17 +1,19 @@
 ---
-// 街机开机风的 LOADING 遮罩。
-// 三种用法共用同一套视觉，但只有「真的要等」时才会亮：
-//   1) 首访开屏：每会话一次，页面 load 后淡出
-//   2) 点导航去下一页：延迟 160ms 才亮，下一页快就直接不出现
+// 页内加载提示：视口最顶一条 3px 进度条（2026-10-27 主人要求「不想做成遮罩，想做成页内 loading」）。
+// 改前的形态是全屏遮罩：铺满视口 + 圆孔动画 + overflow:hidden 锁滚动。问题有三个：
+//   ① 每次点击导航都整页盖一层，视觉很重；② 锁滚动会让人以为页面卡住；
+//   ③ 遮罩「点亮后必须有人收」——历史上出过三次「卡在 loading 页」。
+// 现在改成一条不挡内容、不锁滚动的细条，三种触发共用：
+//   1) 首访：从 0 走到 ~90% 的假进度，页面 load 后走满淡出
+//   2) 点导航去下一页：延迟 160ms 才亮，新页来得快就完全不出现
 //   3) 切世代主题：新背景/字标没命中缓存时才亮，命中就一点不闪
-// 遮罩的 4×4 方块 + LOADING...... + 进度条 + 扫描线是固定的街机配色，
-// 不跟世代主题走。样式与脚本都 is:inline：必须在首帧之前生效。
+// 样式与脚本都 is:inline：必须首帧前生效，否则会先闪一下再出现。
 ---
 
 <script is:inline>
   (function () {
     var d = document.documentElement;
-    // 减少动效偏好：整套都不启动
+    // 减少动效偏好：整条都不启动（进度条本身也属于装饰性动效）
     try {
       if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) {
         d.setAttribute('data-boot', 'off');
@@ -19,9 +21,8 @@
       }
     } catch (e) {}
     d.setAttribute('data-boot', 'on');
-    // 首访才放开屏；同一会话里翻页不再整页盖一层。
-    // 这里只打标记、不加 boot-run：遮罩必须先以 opacity:0 完成首帧，
-    // 主脚本再用 rAF 加 class，才有「渐入」而不是第一帧就整块糊上来。
+    // 首访才走「0→90%」那段假进度；同一会话里翻页不再重复。
+    // 与旧版一致：这里只打标记，真正点亮交给主脚本，避免首帧就整条糊上来。
     try {
       if (sessionStorage.getItem('jb-boot') !== '1') {
         sessionStorage.setItem('jb-boot', '1');
@@ -33,282 +34,126 @@
   })();
 </script>
 
-
 <style is:inline>
-  /* 遮罩：不依赖主题变量，固定街机配色，切换世代时也不变色。
-     两种用法共用这一套视觉：
-       1) 首访开屏（每会话一次）
-       2) 真的要等的时候（点导航加载下一页 / 切世代要下新背景与字标）
-     只在「预计超过 ~150ms」时才亮，缓存命中时根本不出现，避免每次点击都闪一下。 */
-  /* 中心圆孔半径（百分比 = 到最远角的距离）：
-       -30% 时圆孔不存在 → 遮罩盖满；130% 时圆孔超出四角 → 遮罩完全看不见。
-     注册成可插值的属性，才能让遮罩半径平滑生长（普通自定义属性只能跳变）。 */
-  @property --boot-r {
-    syntax: "<percentage>";
-    inherits: false;
-    initial-value: -30%;
-  }
+  /* 进度条容器：固定在最顶端，不占布局高度、不吃点击、不锁滚动。
+     z-index 高于顶栏（顶栏是 50），因为它要盖在顶栏上沿那一条。 */
   .boot {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
     z-index: 9999;
-    /* 常驻 grid：display 不参与过渡，切 none↔grid 会吃掉淡入淡出 */
-    display: grid;
-    place-items: center;
-    background: #05090c;
-    font-family: Bahnschrift, "Bahnschrift SemiCondensed", Consolas, monospace;
-    color: #8ff5e4;
-    -webkit-tap-highlight-color: transparent;
-    /* 常驻布局、默认全透明：display 不能做过渡，只有常驻元素才能淡入淡出。
+    pointer-events: none;
+    /* 常驻布局、默认全透明：display 不参与过渡，只有常驻元素才能淡出。
        visibility 延迟到淡出结束才隐藏，避免渐隐途中被提前摘掉。 */
     opacity: 0;
     visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.32s ease, visibility 0s linear 0.32s;
-    /* 圆孔遮罩：中心透明、外围不透明。半径缩小时可见区从四角往中心收，
-       半径长大时又从中心往四周退——正是「四周→中间淡入 / 中间→四周淡出」。 */
-    --boot-r: -30%;
-    --boot-soft: 26%;
-    -webkit-mask-image: radial-gradient(circle at 50% 50%,
-      transparent calc(var(--boot-r) - var(--boot-soft)),
-      #000 calc(var(--boot-r) + var(--boot-soft)));
-    mask-image: radial-gradient(circle at 50% 50%,
-      transparent calc(var(--boot-r) - var(--boot-soft)),
-      #000 calc(var(--boot-r) + var(--boot-soft)));
+    transition: opacity 0.28s ease, visibility 0s linear 0.28s;
+    /* 轨道底色跟主题走一点点，不跟也看得清；这里用半透明黑，
+       深浅主题下都能衬出下面的彩色条 */
+    background: rgba(0, 0, 0, 0.12);
   }
+  /* 进场不写 animation/transition，改由 JS 直接设 inline style（见 show()）：
+     ① 过渡在「首次显示」时会被浏览器跳过（没有已渲染的前一帧）；
+     ② 动画时钟在窗口最小化/后台时冻结，实测 computed opacity 一直停在 0。
+     两者都让「靠 CSS 表现进场」不可靠。进度条只有 3px，直接出现完全可接受，
+     可靠性优先——和旧版看门狗那条设计取向一致。
+     退场仍保留 CSS 的 opacity 过渡（那时元素已渲染过多帧、且是不是淡出并不关键），
+     另有 JS 定时器兜底强制隐藏。 */
   html.boot-run .boot {
     opacity: 1;
     visibility: visible;
-    pointer-events: auto;
-    transition: opacity 0.32s ease, visibility 0s;
-    /* 进场用动画而不是过渡：动画一定会从 0% 播起，
-       而「首帧就挂 class」时浏览器会跳过过渡（没有前一帧的已渲染样式），
-       那才会出现遮罩「啪」地整块出现。退场仍走上面的 opacity 过渡。 */
-    animation: bootIn 0.32s ease;
   }
-  @keyframes bootIn {
-    from { opacity: 0; }
+  /* 真正的进度条：宽度由 JS 写 transform: scaleX()，走合成层、不触发布局。
+     **故意不加 transition**：过渡依赖动画时钟，窗口最小化/标签页在后台时会被冻结，
+     实测条宽会停在旧值不动（连 opacity 的进场过渡都推进不了）。
+     条宽改由 JS 用定时器阶梯推进，任何环境下都能看到它在涨。 */
+  .boot-bar {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, var(--acc, #3ee6ff), var(--acc2, #7dfbe0));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--acc, #3ee6ff) 55%, transparent);
   }
-  /* 支持圆孔遮罩的浏览器走这套：四周→中间淡入、中间→四周淡出 */
-  html.boot-iris.boot-run .boot {
-    animation: bootIrisIn 0.42s cubic-bezier(0.22, 0.68, 0.28, 1) both;
-    transition: none;
-  }
-  /* 退场：圆孔从中心往四周涨开（--boot-r -30% → 130%），
-     同时把 opacity 一起收到 0。opacity 必须由动画收到 0，
-     否则动画播完摘掉 boot-out 的那一帧会退回基础态（遮罩盖满 + opacity 1），
-     屏幕会黑一下再淡出——那就成了「整块黑幕淡出」而不是圆孔退开。 */
-  html.boot-iris.boot-out .boot {
-    visibility: visible;
-    pointer-events: none;
-    animation: bootIrisOut 0.42s cubic-bezier(0.22, 0.68, 0.28, 1) both;
-    transition: none;
-  }
-  /* 进场：圆孔从「比四角还大」缩到不存在。
-     半径大 = 中间透明区大 = 只剩四角可见，随着半径变小可见区由四周向中心收拢。 */
-  @keyframes bootIrisIn {
-    from { --boot-r: 130%; opacity: 0; }
-    to { --boot-r: -30%; opacity: 1; }
-  }
-  @keyframes bootIrisOut {
-    from { --boot-r: -30%; opacity: 1; }
-    to { --boot-r: 130%; opacity: 0; }
-  }
-  /* 遮罩期间锁住滚动：底部内容被拖动会在遮罩边缘露出来 */
-  html.boot-run,
-  html.boot-run body,
-  html.boot-out,
-  html.boot-out body {
-    overflow: hidden;
-  }
-  /* 扫描线 + 中心辉光：让纯色底看起来像机台屏幕而不是一块黑板 */
-  .boot::before {
+  /* 顶端再叠一道更亮的细高光，让它看起来像「发光的一条」而不是色块 */
+  .boot-bar::after {
     content: "";
     position: absolute;
     inset: 0;
-    pointer-events: none;
-    background:
-      repeating-linear-gradient(180deg, rgba(143, 245, 228, 0.05) 0 1px, transparent 1px 3px),
-      radial-gradient(120% 90% at 50% 42%, rgba(62, 230, 255, 0.13), transparent 62%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 70%);
   }
-  .boot-in {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: clamp(18px, 2.6vw, 26px);
-    padding: 24px;
-    text-align: center;
-  }
-  /* 4×4 方块阵列：jubeat 的演奏盘面，逐格点亮成一道斜向波 */
-  .boot-pad {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: clamp(5px, 0.7vw, 7px);
-  }
-  .boot-pad i {
-    width: clamp(24px, 3.2vw, 34px);
-    height: clamp(24px, 3.2vw, 34px);
-    border-radius: 3px;
-    background: rgba(143, 245, 228, 0.1);
-    box-shadow: inset 0 0 0 1px rgba(143, 245, 228, 0.22);
-    animation: bootCell 1.15s ease-in-out infinite;
-  }
-  .boot-pad i:nth-child(1) { animation-delay: 0s; }
-  .boot-pad i:nth-child(2) { animation-delay: 0.07s; }
-  .boot-pad i:nth-child(3) { animation-delay: 0.14s; }
-  .boot-pad i:nth-child(4) { animation-delay: 0.21s; }
-  .boot-pad i:nth-child(5) { animation-delay: 0.07s; }
-  .boot-pad i:nth-child(6) { animation-delay: 0.14s; }
-  .boot-pad i:nth-child(7) { animation-delay: 0.21s; }
-  .boot-pad i:nth-child(8) { animation-delay: 0.28s; }
-  .boot-pad i:nth-child(9) { animation-delay: 0.14s; }
-  .boot-pad i:nth-child(10) { animation-delay: 0.21s; }
-  .boot-pad i:nth-child(11) { animation-delay: 0.28s; }
-  .boot-pad i:nth-child(12) { animation-delay: 0.35s; }
-  .boot-pad i:nth-child(13) { animation-delay: 0.21s; }
-  .boot-pad i:nth-child(14) { animation-delay: 0.28s; }
-  .boot-pad i:nth-child(15) { animation-delay: 0.35s; }
-  .boot-pad i:nth-child(16) { animation-delay: 0.42s; }
-  @keyframes bootCell {
-    0%, 55%, 100% {
-      background: rgba(143, 245, 228, 0.1);
-      box-shadow: inset 0 0 0 1px rgba(143, 245, 228, 0.22);
-    }
-    18% {
-      background: #7dfbe0;
-      box-shadow: inset 0 0 0 1px #7dfbe0, 0 0 14px rgba(125, 251, 224, 0.55);
-    }
-  }
-  .boot-txt {
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    font-size: clamp(13px, 1.5vw, 16px);
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    /* 字距会把行首推开，用左侧等量内边距拉回视觉中心 */
-    padding-left: 0.42em;
-    text-transform: uppercase;
-  }
-  .boot-dots i {
-    opacity: 0;
-    animation: bootDot 1.2s steps(1, end) infinite;
-  }
-  .boot-dots i:nth-child(1) { animation-delay: 0s; }
-  .boot-dots i:nth-child(2) { animation-delay: 0.15s; }
-  .boot-dots i:nth-child(3) { animation-delay: 0.3s; }
-  .boot-dots i:nth-child(4) { animation-delay: 0.45s; }
-  .boot-dots i:nth-child(5) { animation-delay: 0.6s; }
-  .boot-dots i:nth-child(6) { animation-delay: 0.75s; }
-  @keyframes bootDot {
-    0%, 100% { opacity: 0; }
-    1%, 80% { opacity: 1; }
-  }
-  /* 进度条：首访是 1s 走满；「等下一页」时是来回扫，不知道多久就不假装知道进度 */
-  .boot-bar {
-    position: relative;
-    width: clamp(168px, 18vw, 210px);
-    height: 3px;
-    border-radius: 2px;
-    background: rgba(143, 245, 228, 0.16);
-    overflow: hidden;
-  }
-  .boot-bar i {
+  /* 等待态的扫光：宽度不确定时在已填充段里来回扫，表示「还在动」。
+     只在 is-wait 时出现，首访的假进度不用它。 */
+  .boot.is-wait .boot-bar::before {
+    content: "";
     position: absolute;
-    inset: 0 auto 0 0;
-    width: 0;
-    background: linear-gradient(90deg, #3ee6ff, #7dfbe0);
-    box-shadow: 0 0 10px rgba(125, 251, 224, 0.6);
-    animation: bootFill 1s cubic-bezier(0.22, 0.68, 0.28, 1) forwards;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    animation: bootSweep 1.05s ease-in-out infinite;
   }
-  @keyframes bootFill {
-    to { width: 100%; }
+  @keyframes bootSweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
   }
-  .boot.is-wait .boot-bar i {
-    width: 42%;
-    animation: bootSlide 1.05s ease-in-out infinite;
+  /* 页面已经在走了（导航已发起）：让条子稍微亮一点，暗示「这就换页了」 */
+  html.boot-out .boot {
+    opacity: 1;
+    visibility: visible;
   }
-  @keyframes bootSlide {
-    0% { transform: translateX(-105%); }
-    100% { transform: translateX(280%); }
-  }
-  .boot-meta {
-    font-size: 10px;
-    letter-spacing: 0.3em;
-    color: rgba(143, 245, 228, 0.55);
-    text-transform: uppercase;
-  }
-  /* 退场即回到基础态：移除 boot-run 后 opacity 过渡到 0，
-     visibility 在 0.32s 后才变 hidden，命中「淡出」而不是「瞬间消失」。 */
   @media (prefers-reduced-motion: reduce) {
     .boot,
     html.boot-run .boot,
-    html.boot-iris.boot-out .boot { transition: none; animation: none; }
-    .boot-pad i,
-    .boot-bar i,
-    .boot-dots i {
-      animation: none;
-    }
-    .boot-dots i { opacity: 1; }
-    .boot-bar i { width: 100%; }
+    html.boot-out .boot,
+    .boot-bar { transition: none; }
+    .boot.is-wait .boot-bar::before { animation: none; }
   }
 </style>
 <div class="boot" id="boot" role="status" aria-live="polite" aria-label="页面加载中">
-  <div class="boot-in">
-    <div class="boot-pad" aria-hidden="true">
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-    </div>
-    <div class="boot-txt">Loading<span class="boot-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i><i>.</i><i>.</i><i>.</i></span></div>
-    <div class="boot-bar" aria-hidden="true"><i></i></div>
-    <div class="boot-meta">Beyond ↑ jubeat ♪~</div>
-  </div>
+  <div class="boot-bar" id="bootBar"></div>
 </div>
 
 <script is:inline>
 (function () {
   var d = document.documentElement;
   var el = document.getElementById('boot');
-  if (!el || d.getAttribute('data-boot') !== 'on') { window.jbBoot = { show: function () {}, hide: function () {}, begin: function () { return function () {}; }, hold: function () { return function () {}; } }; return; }
-
-  // 圆孔遮罩能力检测：需要可插值的自定义属性（@property）+ mask-image。
-  // 两者缺一就退回原来的整体淡入淡出，不让动画变成「啪」地跳。
-  var iris = false;
-  try {
-    var css = window.CSS;
-    var maskOk = !!css && (css.supports('mask-image', 'radial-gradient(#000, transparent)') ||
-      css.supports('-webkit-mask-image', 'radial-gradient(#000, transparent)'));
-    var propOk = !!css && typeof css.registerProperty === 'function' && !!window.CSSPropertyRule;
-    iris = !!(maskOk && propOk);
-  } catch (e) { iris = false; }
-  if (iris) d.classList.add('boot-iris');
+  var bar = document.getElementById('bootBar');
+  if (!el || !bar || d.getAttribute('data-boot') !== 'on') {
+    // 关掉时给一套空实现，调用方不用判断存在性
+    window.jbBoot = { show: function () {}, hide: function () {}, begin: function () { return function () {}; }, hold: function () { return function () {}; } };
+    return;
+  }
 
   var firstRun = d.classList.contains('boot-first');
-  // 遮罩一律经 show() 点亮（head 脚本只留 boot-first 标记），所以 shown 从 false 起。
-  // 曾经 head 脚本直接加 boot-run、这里又要 shown=firstRun 才不会「收不起来」，
-  // 现在改成单一路径，别再往 head 脚本里加 class。
   var shown = false;
+  var fakeTimer = 0;   // 首访那段假进度的推进器
+  var value = 0;       // 当前进度 0~1，仅用于算下一次该涨多少
 
-  /* ---- 看门狗：遮罩一旦可见，最多挂 MAX_VISIBLE 毫秒，到点无条件收起 ----
-     2026-10-24 主人反馈「有时候加载会卡在 loading 页」，实测复现出三条永久卡死路径：
-       ① 点站内链接时 click 处理器调了 begin(160) 却把返回的 end() 丢掉（真实代码就是这样）。
-          导航一旦慢、失败或被取消，就再没人收遮罩 —— 实测 10 秒后仍 opacity:1 且
-          overflow:hidden、pointer-events:auto，elementFromPoint 返回 none，整页点不动、滚不动。
-       ② bfcache 恢复时 shown===true，pageshow 处理器只清 boot-out 不摘 boot-run，停在可见态。
-       ③ 任何 show()/hold() 之后抛异常，end 永远不执行。
-     共同点是「点亮之后，收尾责任全压在调用方手上」。调用方一漏、一抛，或那次导航压根没发生，
-     就没人兜底。所以加一道与调用方完全无关的看门狗：进入可见态就挂表，到点强制收起。
-     这不是补某个已知 bug，而是让「不可收起」这个状态在结构上不可能存在。 */
+  /* 看门狗：条一旦可见，最多挂 MAX_VISIBLE 毫秒，到点无条件收。
+     旧版全屏遮罩靠它兜住「卡死」，现在虽然不挡内容，但一条永远在爬的进度条
+     同样是错的信息（暗示还有东西没加载完），所以这道保险继续留着。 */
   var MAX_VISIBLE = 8000;
   var watchdog = 0;
-  // 导航时 begin(160) 返回的收尾函数：页面若没真的跳走，下一次交互或 pageshow 要能收掉它。
   var pendingEnd = null;
   function armWatchdog() {
     clearTimeout(watchdog);
-    // 不判断任何条件，到点就收：遮罩挂满 8 秒已经不是「加载中」而是故障，
-    // 让用户看到内容，远比继续假装还在加载有价值。
     watchdog = setTimeout(function () { hide(); }, MAX_VISIBLE);
+  }
+
+  function setBar(v) {
+    value = Math.max(0, Math.min(1, v));
+    bar.style.transform = 'scaleX(' + value + ')';
+  }
+  /* 假进度：越接近 1 涨得越慢，永远不到 100%。
+     真实的加载完成时刻由 hide() 走满——这样「走满」这个动作只代表「真的好了」，
+     不会出现进度条自己走满、页面却还在转的假象。 */
+  function creep() {
+    if (!shown) return;
+    var next = value + (1 - value) * 0.16;
+    if (next > 0.92) next = 0.92;
+    setBar(next);
+    fakeTimer = setTimeout(creep, 260 + Math.random() * 240);
   }
 
   var outT = 0;
@@ -316,32 +161,47 @@
     if (shown) return;
     shown = true;
     armWatchdog();
+    clearTimeout(outT);
     el.classList.toggle('is-wait', !!waitMode);
-    if (iris) {
-      // 上一轮退场还没走完就又要亮：先掐掉退场，再重新播进场
-      clearTimeout(outT);
-      d.classList.remove('boot-out');
-    }
-    // 加 class 即触发进场动画（iris 是半径从四周收到中心，
-    // 不支持时退回 bootIn 的整体透明度渐入），不依赖「上一帧已渲染」。
+    d.classList.remove('boot-out');
     d.classList.add('boot-run');
+    /* 直接写 inline style 点亮，不靠 CSS 动画/过渡：那两者的时钟在窗口最小化、
+       标签页在后台时会被浏览器冻结，实测 computed opacity 一直停在 0。
+       inline 优先级最高，CSS 里 .boot 的 opacity:0 被它覆盖。 */
+    el.style.transition = 'none';
+    el.style.opacity = '1';
+    el.style.visibility = 'visible';
+    if (waitMode) {
+      // 等待态：先给一小段基础宽度，再靠扫光表达「还在动」。
+      // 不爬假进度——不知道要等多久就不假装知道（和旧版进度条口径一致）。
+      setBar(0.18);
+    } else {
+      setBar(0);
+      // 下一帧再涨，让 scaleX(0) 先提交，否则首帧就是最终宽度、没有生长过程
+      requestAnimationFrame(function () { creep(); });
+    }
   }
   function hide() {
     if (!shown) return;
     shown = false;
     clearTimeout(watchdog);
+    clearTimeout(fakeTimer);
     el.classList.remove('is-wait');
-    if (iris) {
-      // 圆孔从中心向四周退开：--boot-r 过渡到 130%，走完再摘 boot-out。
-      // 退场期间元素已经渲染过多帧，过渡起点是真实的，所以这里能用过渡。
-      d.classList.add('boot-out');
-      d.classList.remove('boot-run');
-      clearTimeout(outT);
-      outT = setTimeout(function () { d.classList.remove('boot-out'); }, 460);
-    } else {
-      // 只摘 boot-run：opacity 从 1 过渡回 0，visibility 延迟到过渡结束
-      d.classList.remove('boot-run');
-    }
+    // 收尾时走满，让「完成」有一个明确的视觉终点
+    setBar(1);
+    d.classList.add('boot-out');
+    clearTimeout(outT);
+    /* 交回 CSS 过渡做淡出（此时元素已渲染过多帧，起点是真实的、能看到渐隐）。
+       随后那道 setTimeout 是**不依赖时钟的兜底**：无论过渡有没有推进，
+       260ms 后一律强制隐藏，保证不会留下一条永远挂着的进度条。 */
+    el.style.transition = '';
+    el.style.opacity = '0';
+    outT = setTimeout(function () {
+      el.style.transition = 'none';
+      el.style.visibility = 'hidden';
+      d.classList.remove('boot-run', 'boot-out');
+      setBar(0);
+    }, 260);
   }
   /* 延迟显示：调用后 delay 毫秒内结束就完全不出现（缓存命中时就是这条路）。
      返回的 end() 既能「取消这次显示」也能「立刻收起」，两种调用都安全。 */
@@ -354,7 +214,7 @@
       hide();
     };
   }
-  /* 立刻亮起的等待（用于已经知道一定要等的场景，比如切换世代且图没缓存） */
+  /* 立刻亮起的等待（已经知道一定要等，比如切世代且图没缓存） */
   function hold() {
     show(true);
     var ended = false;
@@ -363,51 +223,36 @@
 
   window.jbBoot = { show: show, hide: hide, begin: begin, hold: hold };
 
-  /* ---- 进 bfcache 之前主动摘掉遮罩（2026-10-24 主人反馈「进详情后按 back 有概率卡 loading」）----
-     根因链：列表页点进详情 → begin(160) 在 160ms 后点亮遮罩 → 若导航比 160ms 慢，
-     遮罩已经亮了，此时列表页被冻结进 bfcache，**快照里就带着 boot-run**。
-     按 back 恢复时脚本不重跑、闭包 state 保持原样，页面直接从坏快照复活。
-     这也解释了「有概率」：导航快于 160ms → 遮罩没亮 → 快照干净 → 正常；
-     慢于 160ms → 遮罩亮着 → 卡死。越快越正常，越慢越卡。
-
-     pageshow 里补一次复位是「事后救」，但更彻底的是**不让坏状态进入快照**：
-     pagehide 时先把遮罩摘干净，bfcache 存下的就是干净状态，back 回来天然正常。
-     两道保险都留着：pagehide 保证快照干净，pageshow 兜住其他来源的脏状态。 */
+  /* ---- bfcache：进缓存前把条子复位，避免按 back 回来还挂着一条 ----
+     旧版踩过「back 卡 loading」，根因是遮罩亮着被冻进快照。进度条虽然不挡操作，
+     但一条永远在爬的条同样是坏状态，所以这条保险照留。 */
   window.addEventListener('pagehide', function (ev) {
-    // 只有进 bfcache 才需要管；真正的卸载（persisted=false）不用做任何事，
-    // 反正页面就要销毁了，多改 class 反而多一次样式计算。
     if (!ev.persisted) return;
     clearTimeout(outT);
     clearTimeout(watchdog);
+    clearTimeout(fakeTimer);
     shown = false;
     pendingEnd = null;
     d.classList.remove('boot-run', 'boot-out', 'boot-first');
-    el.classList.remove('is-wait', 'boot-first');
+    el.classList.remove('is-wait');
+    setBar(0);
   });
-
-  // 前进/后退走 bfcache 恢复时脚本不会重跑，但 class 会原样留着：
-  // 若恢复时正卡在退场里，html.boot-out 的 overflow:hidden 会把滚动永久锁死。
   window.addEventListener('pageshow', function (ev) {
     if (!ev.persisted) return;
+    // 从缓存回来意味着这一页早就加载完了，条子没有任何继续存在的理由：
+    // 无条件复位，并把 shown 归零，否则后续 show() 会因为 shown 仍为 true 而直接 return。
     clearTimeout(outT);
-    d.classList.remove('boot-out');
-    // 【2026-10-24 修】原来写的是 if (!shown) d.classList.remove('boot-run')。
-    // bfcache 恢复时若遮罩正亮着（shown===true），这一句就不执行，boot-run 留在 html 上，
-    // 恢复出来的页面直接停在 LOADING —— 实测可复现。
-    // 从缓存里回来意味着**这一页早就加载完了**，遮罩没有任何继续存在的理由，
-    // 所以这里无条件复位，并把 shown 一起归零（否则后续 show() 会因为 shown 仍为 true 而直接 return）。
     clearTimeout(watchdog);
+    clearTimeout(fakeTimer);
     shown = false;
-    // 导航残留的收尾函数也要一并作废，否则它以后可能把一次新的遮罩误收掉。
     pendingEnd = null;
-    d.classList.remove('boot-run', 'boot-first');
-    el.classList.remove('is-wait', 'boot-first');
+    d.classList.remove('boot-run', 'boot-out', 'boot-first');
+    el.classList.remove('is-wait');
+    setBar(0);
   });
 
-  // ---- 首访开屏：load 后收，最短 900ms / 最长 3s ----
+  // ---- 首访：走假进度，load 后收（最短 700ms，避免一闪而过）----
   if (firstRun) {
-    // head 脚本只加了 boot-first 标记，这里才真正点亮：双 rAF 保证
-    // 「opacity:0」这一帧已经绘制，随后的 boot-run 才会走出渐入过渡。
     var t0 = (window.performance && performance.now) ? performance.now() : 0;
     var closed = false;
     requestAnimationFrame(function () {
@@ -416,16 +261,15 @@
     function closeBoot() {
       if (closed) return;
       closed = true;
-      var left = Math.max(0, 900 - ((window.performance && performance.now ? performance.now() : 0) - t0));
+      var left = Math.max(0, 700 - ((window.performance && performance.now ? performance.now() : 0) - t0));
       setTimeout(function () {
-        el.classList.remove('boot-first');
         d.classList.remove('boot-first');
         hide();
-        d.classList.remove('boot-run');
       }, left);
     }
     if (document.readyState === 'complete') closeBoot();
     else window.addEventListener('load', closeBoot, { once: true });
+    // 兜底：3 秒还没 load 完也收（条子会自己停在 ~92%，不能永远挂着）
     setTimeout(closeBoot, 3000);
   }
 
@@ -437,39 +281,29 @@
     if (!a) return;
     if (a.target && a.target !== '_self') return;
     if (a.hasAttribute('download')) return;
-    /* 被 JS 接管、点击后并不导航的链接：自己不跳，却会被这里当成「要走了」而点亮遮罩。
+    /* 被 JS 接管、点击后并不导航的链接：自己不跳，却会被这里当成「要走了」而亮条。
        实撞（v1.19.0）：顶栏账户菜单把 <a href="/account/"> 改成了开菜单的触发器，
-       它的 click 处理器 preventDefault，但本监听器挂在 document 的 capture 阶段，
-       **比它先跑**，看到的还是「href 存在且同源」→ begin(160) 点亮 LOADING，
-       于是每次点账户菜单都闪一下 loading，且要等 3 秒兜底才收。
+       它 preventDefault，但本监听器挂在 document 的 capture 阶段、**比它先跑**。
        约定：这类触发器必须带 data-boot-skip（见 Header.astro 设置 aria-haspopup 那段）。 */
     if (a.hasAttribute('data-boot-skip')) return;
     var href = a.getAttribute('href');
     if (!href || href.charAt(0) === '#') return;
     if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
-    // 站外链接不挡（新开会自己跳走，同标签也由浏览器接管）
     var url;
     try { url = new URL(a.href, location.href); } catch (e) { return; }
     if (url.origin !== location.origin) return;
     // 同页只改 hash 不算跳转
     if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
-    // 【2026-10-24】begin(160) 的返回值是「收尾函数」，原来直接丢掉了：
-    // 导航若慢/失败/被取消，遮罩就永远没人收（实测卡死）。
-    // 现在把它挂到 document 上，由下一次 pageshow 或看门狗兜底；
-    // 这里不主动 end，因为点击之后页面很快就要卸载，主动 end 反而会让遮罩白闪一下。
     var endBoot = begin(160);
     pendingEnd = endBoot;
     // 导航本该在几十毫秒内卸载本页。若 3 秒后我们还活着，说明那次导航失败/被取消
-    // （服务器 502、离线、用户按了 Esc、target 被 JS 拦下……），必须自己把遮罩收掉。
-    // 只在「本页仍然可见」时收：如果页面已经进了后台（visibilityState === 'hidden'），
-    // 说明导航确实在进行中，这时收掉反而会露出旧页面。
+    // （服务器 502、离线、用户按了 Esc、target 被 JS 拦下……），必须自己把条收掉。
+    // 只在「本页仍然可见」时收：页面已经进后台说明导航确实在进行中。
     setTimeout(function () {
       if (document.visibilityState !== 'visible') return;
       pendingEnd = null;
       endBoot();
     }, 3000);
   }, true);
-
-  // ---- 切世代：ThemeScript 会调用 jbBoot.begin() 包住换图过程 ----
 })();
 </script>
