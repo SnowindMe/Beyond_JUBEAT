@@ -2248,10 +2248,11 @@ html[data-g="yymf"] {
        所以「添加到屏幕」这个 PWA 入口在窄屏隐藏（桌面仍保留），
        顶栏正好剩 登录 → 主题 → 汉堡 三个同形状方块。 */
     .nav-txt,
-    .nav-sep,
-    .pwa-b {
+    .nav-sep {
         display: none;
     }
+    /* 「添加到屏幕」入口在 ≤768px 也隐藏——规则写在 InstallPrompt.astro 里，
+       因为它的 display 由组件作用域的 .top nav .pwa-b 控制，写在这里会被压过去。 */
     .nav-burger {
         display: inline-flex;
         flex: none;

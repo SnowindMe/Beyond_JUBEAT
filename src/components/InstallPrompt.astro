@@ -73,10 +73,13 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  /* 窄屏只留图标，文字收起（顶栏在 390px 宽里放不下） */
+  /* 窄屏隐藏整个安装入口（主人 2026-10-28：「移动端导航栏只有登录/汉堡/主题三个图标」）。
+     原先这里是「只留图标、文字收起」，现在连图标也收走——手机上顶栏只留三个同形状方块，
+     安装入口仍在桌面保留，iOS 的说明弹层也照常（用户可在系统菜单里手动添加）。
+     注意：这条必须写在这里而不是 theme.css——.pwa-b 的 display 由本组件作用域的
+     .top nav .pwa-b 决定（优先级 0,2,1），theme.css 里单写 .pwa-b 会被压过去。 */
   @media (max-width: 768px) {
-    .top nav .pwa-b { padding: 0; min-width: 44px; }
-    .top nav .pwa-b .pwa-t { display: none; }
+    .top nav .pwa-b { display: none; }
   }
 
   /* iOS 说明弹层 */
