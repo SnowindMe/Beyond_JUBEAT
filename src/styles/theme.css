@@ -356,7 +356,11 @@ img {
 .mark b .til {
     font-family:
         "Segoe UI Symbol", "Apple Symbols", "Segoe UI", system-ui, sans-serif;
-    color: var(--acc2-ink);   /* 可读版主题色：浅色代上 --acc 只有 1.8~3.9:1，小符号会糊 */
+    /* 【2026-10-28 对比度修正】原为 --acc2-ink。它是按「符号属 3:1 的图形」定的，
+       但这几个符号实际会被测成 16.15px 非粗体文字（WCAG 的 large text 门槛是
+       18.66px 或 14px 粗体），须 4.5:1。prop/qubell/saucer 上实测只有 3.02。
+       符号不是信息载体、不该靠压低对比度当装饰，统一跟正文 --ink 走。 */
+    color: var(--ink);
     font-weight: 600;
     letter-spacing: 0;
 }
@@ -441,7 +445,10 @@ html[data-g="knit"] .mark b .til {
 }
 /* 当前所在页：只给真实存在的二级页标（目前是曲目 / 最近更改） */
 .top nav a.on {
-    color: var(--acc);
+    /* 文字走 --acc-ink（可读版）：--acc 在浅色世代的玻璃底上只有 1.02~1.83:1，
+       而这里没有数字大前提（15px 粗体不够 18.66px 大字号线），必须 4.5:1。
+       描边/底纹仍用 --acc，品牌观感不变。 */
+    color: var(--acc-ink);
     background: color-mix(in srgb, var(--acc) 14%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 34%, transparent);
 }

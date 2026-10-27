@@ -287,8 +287,14 @@ npm run db               # 一条命令重建曲库：xlsx → sheet JSON → da
 npm run data             # 只重新生成 src/data/data.json 与 songs.json 并同步曲绘
 npm run build            # 构建到 dist/
 npm run check            # 四段：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验 → 对比度自检(16 套主题)
-                         # 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），真实渲染会有 0.5–1.0 偏差，
+                         # 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），
                          # 验收仍以实机渲染为准，脚本只作回归护栏。
+                         #
+                         # 【2026-10-28 实测校准】这个偏差远比原先写的「0.5–1.0」大：文字直接押在
+                         # 世代底图上的元素（顶栏选中态 / 难度徽章 / 段落小字），公式值 3.7~4.1 实际只有
+                         # 1.0~2.6。真实渲染链是四层：--base → .bgv(--bgop 的底图) → body::before(--veil)
+                         # → body::after(顶部 148px 的 --scrim，注意该层 opacity 也是 --bgop)。
+                         # 只读 getComputedStyle 的 backgroundColor 会漏掉底图，必须按上图取像素或用 canvas 合成。
 npm run opt              # 压缩 public/assets/images 下的图片
 # 字体已改为 CDN 分发（fontsource + jsdmirror），不需要本地子集化
 ```

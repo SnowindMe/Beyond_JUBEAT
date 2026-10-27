@@ -82,7 +82,11 @@
 .sc-tag-c {
     font-family: var(--font-data);
     font-size: 11.5px;
-    color: var(--ink3);
+    /* 【2026-10-28 对比度修正】原来是 --ink3：它是全站最浅一档，
+       原本用来配实色 --base；但这里压在 color-mix(--glass2 62%) 的半透明徽章上，
+       徽章本身又叠在世代底图上，实测只剩 2.57:1（knit）。11.5px 小字需 4.5:1，
+       改用 --ink2（次深一档），层级感仍靠字号与 mono 字体维持。 */
+    color: var(--ink2);
     /* 「1150 首」不能被拆成两行 */
     white-space: nowrap;
 }
@@ -170,7 +174,10 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     font-family: var(--font-data);
     font-size: 11px;
     font-weight: 400;
-    color: var(--ink3);
+    /* 【2026-10-28 对比度修正】原为 --ink3（全站最浅一档），但 chip 底是
+       color-mix(--glass2 62%) 的半透明徽章、下面还有世代底图，实测只有 2.1~2.6:1。
+       11px 小字需 4.5:1，改用 --ink2；数字与标签的主次差仍靠字重与字号维持。 */
+    color: var(--ink2);
     transition: color 0.2s;
 }
 .sc-chip:hover {
@@ -183,7 +190,8 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     background: color-mix(in srgb, var(--acc) 16%, transparent);
 }
 .sc-chip.is-on b {
-    color: var(--acc);
+    /* 计数徽章里的数字是 11px 小字，压在 16% 主题色底纹上，需 4.5:1 */
+    color: var(--acc-ink);
 }
 
 .sc-body[hidden],
@@ -314,7 +322,9 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    color: var(--acc);
+    /* 世代名链接压在底图上，12.5px 小字必须 4.5:1；
+       --acc 在浅色世代只有 1.83:1，改用可读版 --acc-ink（色相不变、压暗到达标）。 */
+    color: var(--acc-ink);
     white-space: nowrap;
 }
 /* 世代名前的强调色小竖条，替代原来的整条底板来提供视觉锚点 */
@@ -522,7 +532,11 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     padding: 4px 0 3px;
     border-radius: var(--r-xs);
     color: var(--ink);
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    /* 【2026-10-28 对比度修正】原来这里是 color-mix(--ink 6%, transparent)，
+       半透明底让徽章文字直接压在世代底图上：难底色在浅色世代只拿到 3.67–4.06:1，
+       达不到小字 4.5:1。改成不透明 --base 底（与卡片同一个底色），
+       底色变确定值后难底色才可反解——见下方 --d-* 的两组取值。 */
+    background: var(--base);
     border: 1px solid var(--edge);
 }
 .sc-lv .lv u {
@@ -541,11 +555,15 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     --d-adv: #e8b93a;
     --d-ext: #f0564f;
 }
+/* 【2026-10-28】浅色世代这组色按「徽章不透明 --base 底」反解过，
+   保持原色相、只压暗到 6 套主题都 >=4.5:1（原 #0f8a55/#9a6d12 在 knit 上只有 3.79/3.97）。
+   改底色时这三个值必须重算，否则会重新掉回 4.5 以下。 */
 html[data-g="knit"] .sc-lv, html[data-g="prop"] .sc-lv, html[data-g="qubell"] .sc-lv,
 html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"] .sc-lv {
-    --d-bsc: #0f8a55;
-    --d-adv: #9a6d12;
-    --d-ext: #cc2f26;
+    /* 留了约 0.15 的余量：ripples 上 #0d7a4b 正好卡在 4.50，浮点边界会被判失败 */
+    --d-bsc: #0b6f44;
+    --d-adv: #7d580e;
+    --d-ext: #b82a22;
 }
 .sc-lv .lv-bsc { color: var(--d-bsc); border-color: color-mix(in srgb, var(--d-bsc) 45%, transparent); }
 .sc-lv .lv-adv { color: var(--d-adv); border-color: color-mix(in srgb, var(--d-adv) 45%, transparent); }
