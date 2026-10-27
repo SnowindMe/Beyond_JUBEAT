@@ -23,9 +23,9 @@ const CACHE = 'jb-static-' + VERSION;
 // 忘了同步这里不会出事（只会多存一份旧 key 的副本），但别让它长期落后。
 const ASSET_V = '?v=2';
 
-// 预缓存：体积小且确定不会变的关键资源
+// 预缓存：体积小且确定不会变的关键资源。
+// 【不放 manifest】它里面写着 icons 的 ?v=N，缓存住会让「换图标」不生效——见下面的 fetch。
 const PRECACHE = [
-  '/manifest.webmanifest',
   '/icon-192.png' + ASSET_V,
   '/icon-512.png' + ASSET_V,
   '/icon-maskable-512.png' + ASSET_V,
@@ -64,6 +64,8 @@ self.addEventListener('fetch', (e) => {
   // HTML 与接口：一律网络直通，不缓存（本站 SSR 数据会变）
   if (req.mode === 'navigate' || req.destination === 'document') return;
   if (url.pathname.startsWith('/api/')) return;
+  // manifest 必须新鲜：它列着 icons 的 ?v=N，缓存住会让换图标不生效
+  if (url.pathname === '/manifest.webmanifest') return;
 
   // 静态资源：cache-first（构建产物名带 hash，内容不会变）
   const isStatic =

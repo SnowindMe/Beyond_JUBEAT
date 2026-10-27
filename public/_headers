@@ -32,9 +32,12 @@
   Cache-Control: public, max-age=86400
 
 # PWA 资源（2026-10-26 加「添加到屏幕」）。
-# sw.js 绝不能长缓存：浏览器更新 SW 时会对同一 URL 重新取，长缓存会让旧 SW 一直留着。
+# sw.js 与 manifest 都绝不能缓存：
+#   · SW：浏览器更新 SW 时会对同一 URL 重新取，长缓存会让旧 SW 一直留着；
+#   · manifest：它里面写着 icons 的 ?v=N，缓存住就会让「换图标」在最长 1 小时内不生效
+#     （2026-10-27 实测：部署后 HTML 立刻是新链接，但边缘仍回旧的 manifest、Age 1090s）。
 /manifest.webmanifest
-  Cache-Control: public, max-age=3600
+  Cache-Control: public, max-age=0, must-revalidate
 
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate

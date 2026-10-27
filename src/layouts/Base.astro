@@ -93,7 +93,10 @@ const BUILD_DATE = (() => {
   {/* PWA：让手机浏览器可以把站点「添加到主屏幕」（2026-10-26 主人要求）。
       manifest 提供名称/图标/start_url；sw.js 只缓存静态资源，HTML 与 /api/ 一律直通
       ——本站多为 SSR 查 D1，缓存页面会让用户看到过期数据。 */}
-  <link rel="manifest" href="/manifest.webmanifest" />
+  {/* ?v=2 是一次性的破缓存：部署前边缘已按旧的 max-age=3600 缓存了 manifest，换 URL 才能
+      立刻读到新的 icons 列表。之后 _headers 已改成 must-revalidate，图标再换只需 bump
+      manifest 内部三处 icons 的 ?v=N，不必再动这里的链接。 */}
+  <link rel="manifest" href="/manifest.webmanifest?v=2" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="JUBEAT" />

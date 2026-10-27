@@ -123,12 +123,14 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 > 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
 > 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
 
-**品牌资源版本（`?v=N`，v1.27.1 踩坑定稿）**：Cloudflare 的 Browser Cache TTL **会覆盖 `_headers` 里为图片扩展名写的 max-age**（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon 同样回 3600），而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
+**品牌资源版本（`?v=N`，v1.27.2 踩坑定稿）**：Cloudflare 的 Browser Cache TTL **会覆盖 `_headers` 里为图片扩展名写的 max-age**（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon 同样回 3600），而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
 
 1. `src/layouts/Base.astro` 头部四个图标链接（favicon.ico / favicon-32 / favicon-16 / apple-touch-icon）；
 2. `src/layouts/Base.astro`（页脚）与 `src/components/Header.astro`（顶栏）的 `brand.webp`；
 3. `public/manifest.webmanifest` 的三个 icons；
 4. `public/sw.js` 的 `ASSET_V` 常量（预缓存用同一套 URL；这处忘了同步只会多存一份旧 key 的副本，不会坏）。
+
+`public/manifest.webmanifest` 自身也必须**每次回源**（`_headers` 写 `max-age=0, must-revalidate`，与 `sw.js` 同理）：它里面列着三个 icons 的 `?v=N`，一旦被缓存住，「换图标」就会在最长 1 小时内不生效——2026-10-27 实测部署后 HTML 立刻是新链接，但边缘仍回旧 manifest（`Age: 1090`、旧的 `max-age=3600`）。同理 `public/sw.js` 不把 manifest 放进预缓存、也不对它走 cache-first：`fetch` 里 `url.pathname === '/manifest.webmanifest'` 直接放行。`Base.astro` 的 `\u003clink rel="manifest"\u003e` 上那个 `?v=2` 是**一次性**的破缓存（绕开部署前已躺在边缘的旧 3600 缓存），以后不必再动它。
 
 反例：**不要**为了「让浏览器认新图标」把 PNG 再包一层 SVG——源图是位图，SVG 套壳只影响矢量缩放，对缓存零作用。
 
@@ -340,7 +342,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `/*` | nosniff、SAMEORIGIN、strict-origin-when-cross-origin、收紧 Permissions-Policy |
 | `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
 | `/_astro/*` | `max-age=31536000, immutable`（文件名带内容 hash，天然不可变） |
-| `/index.html`、`/404.html` | `max-age=0, must-revalidate`（每次都回源确认） |
+| `/index.html`、`/404.html`、`/manifest.webmanifest`、服务器 `/sw.js` | `max-age=0, must-revalidate`（每次都回源确认；manifest 里列着 icons 的 `?v=N`，缓存住会让换图标不生效） |
 | `/favicon.ico`、`/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
 
 ### SEO 与站点图标
