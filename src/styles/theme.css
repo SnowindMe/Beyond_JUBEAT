@@ -802,9 +802,12 @@ html[data-g="yymf"] .wl-pre {
 }
 .word-l #wordLogo {
     display: block;
-    /* 切世代时字标是整张换图（硬切），淡入一下让「换代」有过渡感：
-       display 由 none 变 block 会重新触发动画，不需要 JS 监听。 */
-    animation: logoIn 0.4s ease both;
+    /* 切世代时字标整张换图：尺寸由按世代写死的 aspect-ratio 一次算准（见下方比例表），
+       所以换图就是硬切，不会有「先缩放一档再换图」的抖动。
+       这里刻意不做淡入：淡入必须靠 opacity 动画（from 0 / 终帧 1），
+       而动画在后台标签页会被冻结在起始帧 —— 冻结在 opacity 0 就等于整张 logo
+       消失。字标是首屏识别物，宁可硬切也不能有「可能隐身」的状态。
+       （原来的 animation: logoIn 0.4s ease both 就是这个隐患，本轮一并去掉。） */
     /* 整图高度 = 字身带高（1em）× (1 / --bh)，宽度按原图比例自动撑开视框 */
     height: calc(var(--wl-em, 22px) * var(--wl-s));
     width: auto;
@@ -954,6 +957,29 @@ html[data-g="yymf"] .sub {
    2026-10-26 起这些比例同时是「字身带 = 1em」反推出来的宽度基准：
    视框高由 --bh 定量，宽度靠这里的 aspect-ratio 撑开，装饰才能按原比例溢出。
    窄屏（≤768px）另有字号收敛，见文件末尾移动端段。 */
+/* 字标宽高比按世代写死（2026-10-27 修「切主题时 logo 先变大小再换图」）：
+   之前 img 是 height:calc(--wl-em / --bh) + width:auto，宽度由**当前那张图**的
+   固有比例决定。切世代时 data-g 先换 → 高度立刻按新世代变，可宽度还在用旧图的
+   比例算，旧图被整体缩放一档；等新图解码完固有比例一换，宽度又重排一次。
+   现在宽度也由 CSS 一次算准，与当前图无关，尺寸只变一次。
+   取值 = 各 logo 原图尺寸（public/assets/images/logo/*.webp 实测），改图要同步。 */
+html[data-g="jubeat"][data-g] #wordLogo { aspect-ratio: 486 / 136; }
+html[data-g="ripples"][data-g] #wordLogo { aspect-ratio: 570 / 171; }
+html[data-g="knit"][data-g] #wordLogo { aspect-ratio: 360 / 104; }
+html[data-g="copious"][data-g] #wordLogo { aspect-ratio: 360 / 128; }
+html[data-g="saucer"][data-g] #wordLogo { aspect-ratio: 360 / 145; }
+html[data-g="saucerfulfill"][data-g] #wordLogo { aspect-ratio: 360 / 164; }
+html[data-g="prop"][data-g] #wordLogo { aspect-ratio: 360 / 140; }
+html[data-g="qubell"][data-g] #wordLogo { aspect-ratio: 360 / 162; }
+html[data-g="clan_red"][data-g] #wordLogo,
+html[data-g="clan_green"][data-g] #wordLogo,
+html[data-g="clan_purple"][data-g] #wordLogo,
+html[data-g="clan_blue"][data-g] #wordLogo { aspect-ratio: 360 / 163; }
+html[data-g="festo"][data-g] #wordLogo { aspect-ratio: 287 / 210; }
+html[data-g="ave"][data-g] #wordLogo { aspect-ratio: 284 / 210; }
+html[data-g="bta"][data-g] #wordLogo { aspect-ratio: 285 / 210; }
+html[data-g="yymf"][data-g] #wordLogo { aspect-ratio: 1180 / 593; }
+
 /* jubeat 字标是纯白：深蓝底上本来就够亮，但背景格架的青色高光会从字身
    边缘透过来抢对比，只做轻微提亮 + 加一点点门限感，不加投影（其他世代同策）。 */
 html[data-g="jubeat"] #wordLogo {
@@ -1963,14 +1989,9 @@ html[data-g="yymf"] {
         transform: none;
     }
 }
-@keyframes logoIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
+/* 原 .logo-swap / @keyframes logoIn（切世代字标淡入）已删除，理由见
+   .word-l #wordLogo 处注释：淡入动画在后台标签页会冻结在 opacity 0，
+   导致整张 logo 不可见。字标改为硬切。 */
 .wrap {
     animation: swap 0.45s ease both;
 }
