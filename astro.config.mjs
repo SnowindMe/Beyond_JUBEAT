@@ -19,5 +19,13 @@ export default defineConfig({
   build: {
     assets: '_astro',
   },
+  vite: {
+    build: {
+      // 关掉 sourcemap（2026-10-27 构建提速）：@astrojs/cloudflare 的 server build
+      // 默认产出 41 个 .map、额外 3M 产物，打包阶段也慢。线上出错看 Worker 日志的
+      // 压缩后堆栈已够定位，需要时本地单开即可。
+      sourcemap: false,
+    },
+  },
   devToolbar: { enabled: false },
 });

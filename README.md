@@ -157,7 +157,7 @@ Beyond_JUBEAT/
 │  ├─ components/
 │  │  ├─ Header.astro         顶部导航 + 主题切换按钮
 │  │  ├─ BootScreen.astro     开屏 LOADING 遮罩（每会话一次，is:inline）
-│  │  ├─ Hero.astro           主视觉（站标 / 统计 / 曲绘方块）
+│  │  ├─ Hero.astro           主视觉（站标 / 曲绘方块：桌面 4×4，窄屏双行反向滚动）
 │  │  ├─ SongCard.astro       曲目卡（/songs/ 与 /songs/gen/ 共用的唯一一份）
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
@@ -265,6 +265,15 @@ npm run check            # 四段：引用完整性(源码) → 引用完整性(
 npm run opt              # 压缩 public/assets/images 下的图片
 # 字体已改为 CDN 分发（fontsource + jsdmirror），不需要本地子集化
 ```
+
+构建耗时（2026-10-27 实测，本机 Windows）：**约 1m24s**，从 2m10s 压下来的两处开关：
+
+| 开关 | 做法 | 效果 |
+| --- | --- | --- |
+| Astro 遥测 | `npx astro telemetry disable`（写入全局配置，一次性） | −25s：上报请求在代理环境下会长时间阻塞构建 |
+| server sourcemap | `astro.config.mjs` 里 `vite.build.sourcemap: false` | server 打包 34.6s→13.4s，产物 3.4M→1.2M、少了 41 个 `.map` |
+
+剩下的固定开销拆不开：`import('astro')` 9s + `import('@astrojs/cloudflare')` 10s 是框架自身的模块加载，vite 三段打包约 26s。`scripts/gen-seo.cjs` 只占 1s，不是瓶颈；`NODE_COMPILE_CACHE` 在这台机器上实测反而更慢（27s vs 19s），不要开。
 
 改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
 
@@ -377,7 +386,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | DOMContentLoaded | 208 ms |
 | load | 470 ms |
 
-字节构成：图片 11 KB + CSS/字体 6 KB（首屏只取当前世代的 1 张背景 + 1 张站标 + 9 张曲绘；背景 32 KB 与站标 11 KB 走 head 里的 preload，和 CSS 并行）。
+字节构成：图片 11 KB + CSS/字体 6 KB（首屏只取当前世代的 1 张背景 + 1 张站标 + 16 张曲绘；背景 32 KB 与站标 11 KB 走 head 里的 preload，和 CSS 并行）。
 
 做过这几件事：
 
@@ -393,7 +402,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 
 压缩用 `npm run opt`（sharp）、子集化用 `npm run fonts`（fonttools）。注意两个脚本都是**原地覆盖**，重复跑会越压越糊；要重压先从 git 历史取原图（`91e698e` 是最后一批原图）。
 
-图片是体积大头；整站素材（15 张背景 + 12 张站标 + 1305 张曲绘 + 7 个字体）约 11.7 MB，但首屏只取当前世代的 1 张站标 + 1 张背景 + 9 张曲绘，曲目页的曲绘全部 `loading="lazy"`，其余按需。
+图片是体积大头；整站素材（15 张背景 + 12 张站标 + 1305 张曲绘 + 7 个字体）约 11.7 MB，但首屏只取当前世代的 1 张站标 + 1 张背景 + 16 张曲绘（4×4 方阵；窄屏拆成上下两行各 8 张反向滚动，接缝靠复制一份 8 张实现），曲目页的曲绘全部 `loading="lazy"`，其余按需。
 
 曲目页在 v1.7.0 前是构建期把 1241 首全量烘进 HTML（`dist/songs/index.html` 592 KB raw / brotli 49.8 KB）；改成 SSR 读 D1 之后这份 HTML 不再存在，首屏字节由浏览器按需索取，代价是 Worker 冷启时多一次 D1 查询（命中 isolate 缓存则省掉）。
 

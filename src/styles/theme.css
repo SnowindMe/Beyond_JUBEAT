@@ -1008,51 +1008,8 @@ html[data-g="saucerfulfill"] .sub {
     flex: none;
     background: linear-gradient(90deg, transparent, var(--acc));
 }
-.stats {
-    display: flex;
-    gap: clamp(8px, 1.2vw, 12px);
-    margin-top: clamp(26px, 3.2vw, 36px);
-    flex-wrap: wrap;
-}
-.st {
-    flex: 1 1 0;
-    min-width: 92px;
-    padding: 13px 15px 14px;
-    border-radius: var(--r-sm);
-    border: 1px solid var(--edge);
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-}
-.st::after {
-    content: "";
-    position: absolute;
-    left: 15px;
-    right: 15px;
-    top: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--acc), transparent);
-    opacity: 0.75;
-}
-.st span {
-    display: block;
-    /* 10px 是审计第 12 条里最典型的一处：统计卡标签，正文级可读性下限 11px */
-    font-size: 11px;
-    color: var(--ink3);
-    letter-spacing: 0.16em;
-    margin-bottom: 3px;
-}
-.st b {
-    display: block;
-    font-size: 22px;
-    font-weight: 700;
-    font-family: var(--font-data);
-    line-height: 1.1;
-    color: var(--ink);
-    /* 统计卡的数字会随世代切换而变（曲目 1241 / 谱面 3723…），等宽数字让卡片宽度不抖 */
-    font-variant-numeric: tabular-nums;
-}
+/* 首屏统计卡（.stats / .st）已于 2026-10-27 按主人要求整体移除。
+   连带清掉的还有只为它存在的三处窄屏媒体查询——留着就是死规则。 */
 
 /* cube */
 .cubewrap {
@@ -1090,6 +1047,16 @@ html[data-g="saucerfulfill"] .sub {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
+}
+/* 曲绘墙的两条轨道容器（2026-10-27）：
+   宽屏用 display:contents 把轨道「摊平」，16 张卡直接落进上面的 4×4 网格；
+   窄屏（<=768px）才把 .cube-r 恢复成 flex 行，各自横向滚动。
+   复制段 [data-dup] 只服务窄屏的接缝，宽屏一律不显示——否则方阵会变 8 行。 */
+.cube-r {
+    display: contents;
+}
+.cube-r > i[data-dup] {
+    display: none;
 }
 .cube i {
     aspect-ratio: 1;
@@ -2052,41 +2019,7 @@ html[data-g="yymf"] {
         gap: 0;
     }
 }
-/* 双栏区间（769~1080px）左栏变窄后统计卡会折行，左栏比右栏高出一截、两栏底边对不齐；
-   这一段里四张卡强制一行，用内边距和字号收窄。<=768px 已改单列，不适用。 */
-@media (min-width: 769px) and (max-width: 1080px) {
-    .stats {
-        flex-wrap: nowrap;
-    }
-    .st {
-        min-width: 0;
-        padding: 11px 11px 12px;
-    }
-    .st b {
-        font-size: 19px;
-    }
-    .st span {
-        /* 9px 是审计第 12 条列出的最小字号；这一档四张卡必须一行，仍保持 nowrap 不换行 */
-        font-size: 10px;
-        letter-spacing: 0.1em;
-        white-space: nowrap;
-    }
-}
-/* 780 附近左栏只有 ~360px，四张卡一行时「EXT ≥ 10」会折成两行把卡片撑高，
-   底边又跟右栏错开：再收一档内边距，并让标签不换行。 */
-@media (min-width: 769px) and (max-width: 900px) {
-    .st {
-        padding: 11px 8px 12px;
-    }
-    .st span {
-        font-size: 10px;
-        letter-spacing: 0.02em;
-        white-space: nowrap;
-    }
-    .st b {
-        font-size: 18px;
-    }
-}
+/* 原「双栏区间强制四张统计卡一行」的两段媒体查询（1080px / 900px 档）随 .stats 一起删除。 */
 /* 860px 档原本只有 glegend / rank / lat / dr 四条，全是已下线区块的死规则，随死代码一并删除。 */
 @media (max-width: 768px) {
     .top {
@@ -2117,9 +2050,16 @@ html[data-g="yymf"] {
        所以窄屏和宽屏看到的是同一套对齐，只是整体更小。
        原来这里锁的是「整图高度 46~64px」，字标拼进标题行后那个口径会让
        带大装饰的世代（festo/ave）字身小到读不出来。 */
+    /* 移动端标题行居中（主人 2026-10-27「标记1在移动端视图要居中」）：
+       窄屏是单列布局，左对齐会让 WELCOME TO + 字标整体偏在左下角。
+       .word 和 .word-line 两层都要 justify：外层摆 .word-line，内层摆前缀与字标。 */
+    .word {
+        justify-content: center;
+    }
     .word-line {
         --wl-em: clamp(14px, 3.6vw, 20px);
         flex-wrap: wrap;
+        justify-content: center;
         row-gap: 2px;
     }
     .wl-pre {
@@ -2184,11 +2124,73 @@ html[data-g="yymf"] {
         padding: 24px 0 22px;
         align-items: start;
     }
-    .cube {
-        max-width: 300px;
+    /* —— 曲绘墙：4×4 方阵 → 上下双行缓慢滑动（主人 2026-10-27）——
+       窄屏方阵被压到 300px 宽、每张曲绘小到看不清，改成两条横滑轨道：
+       上排往左、下排往右，各 8 首，鼠标停在曲绘上就停。
+       无缝循环靠 [data-dup]（每行内容复制一份）——注意卡片间距必须用 margin-right
+       而不是 gap：这样轨道总宽正好是单份的 2 倍，translateX(-50%) 的落点精确落在
+       接缝上，不会每圈跳半个 gap。 */
+    /* grid 子项的自动最小尺寸是 min-content，会被「max-content 的滚动轨道」撑破列宽
+       （实测 .cube 被撑到 1502px、整页横向溢出）。必须显式归零才能让轨道被裁在列内。 */
+    .cubewrap {
+        min-width: 0;
+        max-width: 100%;
     }
-    .st {
-        min-width: calc(50% - 6px);
+    .cube {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        /* 两侧渐隐：轨道硬切在圆角卡片墙里很扎眼 */
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+    }
+    .cube-r {
+        display: flex;
+        gap: 0;
+        width: max-content;
+        animation: cube-scroll-l 44s linear infinite;
+    }
+    .cube-r > i {
+        flex: 0 0 auto;
+        /* 375px 屏约看到 4 张；320px 屏约 3.6 张 */
+        width: clamp(72px, 22vw, 94px);
+        margin-right: 8px;
+    }
+    .cube-r > i[data-dup] {
+        display: block;
+    }
+    /* 只停鼠标真正落在曲绘上的那一刻（.cube:hover 会连曲绘之间的空隙一起停） */
+    .cube:has(.cube-r > i:hover) .cube-r {
+        animation-play-state: paused;
+    }
+    .cube-r-b {
+        animation-name: cube-scroll-r;
+        animation-duration: 52s;
+    }
+    @keyframes cube-scroll-l {
+        from {
+            transform: translate3d(0, 0, 0);
+        }
+        to {
+            transform: translate3d(-50%, 0, 0);
+        }
+    }
+    @keyframes cube-scroll-r {
+        from {
+            transform: translate3d(-50%, 0, 0);
+        }
+        to {
+            transform: translate3d(0, 0, 0);
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .cube-r {
+            animation: none;
+        }
     }
     .foot {
         flex-direction: column;

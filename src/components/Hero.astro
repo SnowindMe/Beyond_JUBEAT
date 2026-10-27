@@ -3,6 +3,10 @@
 import data from '../data/data.json';
 const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo','ripples'];
 const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop();
+// 首屏曲绘墙：16 张按 8 + 8 分成上下两条轨道（2026-10-27 主人要求窄屏双行滑动）。
+// 宽屏仍是 4×4 方阵（.cube-r 用 display:contents 摊平），窄屏才变成两条反向滚动的行。
+const hero16 = data.gen.find((g) => g.k === 'Ave.')?.top16 ?? [];
+const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
 ---
 
 <script is:inline define:vars={{ cubeData: data.gen.reduce((m, g) => {
@@ -48,12 +52,9 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
     </script>
     {/* 原 .welcome（WELCOME TO jubeat ~ 独立一行）已并入上面的 h1 标题行，此处不再重复。 */}
     <div class="sub"><i></i>音乐魔方</div>
-    <div class="stats">
-      <div class="st"><span>曲目</span><b>{data.stat.songs}</b></div>
-      <div class="st"><span>谱面</span><b>{data.stat.charts}</b></div>
-      <div class="st"><span>世代</span><b>{data.stat.gens}</b></div>
-      <div class="st"><span>EXT ≥ 10</span><b>{data.gen10}</b></div>
-    </div>
+    {/* 统计卡四连（曲目/谱面/世代/EXT≥10）已于 2026-10-27 按主人要求删除：
+        这一排和右侧曲绘墙的信息重复（曲目数在 .cube-sum 里也有一份），
+        首屏留白反而更干净。theme.css 里 .stats/.st 的规则一并清掉。 */}
   </div>
   {/*
     曲绘立方体（2026-10-25 改）：
@@ -64,11 +65,22 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
   */}
   <div class="cubewrap" data-cube>
     <div class="cube" id="cubeGrid" data-cube-grid>
-      {(data.gen.find((g) => g.k === 'Ave.')?.top16 ?? []).map((s, i) => (
-        <i>
-          <img src={jacket(s.cover)} alt={s.t} width="144" height="144"
-               loading={i < 4 ? 'eager' : 'lazy'} decoding="async" />
-        </i>
+      {heroRows.map((row, ri) => (
+        <div class:list={['cube-r', ri === 0 ? 'cube-r-a' : 'cube-r-b']}>
+          {row.map((s, i) => (
+            <i>
+              <img src={jacket(s.cover)} alt={s.t} width="144" height="144"
+                   loading={ri === 0 && i < 4 ? 'eager' : 'lazy'} decoding="async" />
+            </i>
+          ))}
+          {/* 复制一份当接缝：窄屏横滑到 -50% 时首尾正好接上（宽屏 display:none）。
+              用 aria-hidden + 空 alt，读屏不会把曲名念两遍。 */}
+          {row.map((s) => (
+            <i data-dup aria-hidden="true">
+              <img src={jacket(s.cover)} alt="" width="144" height="144" loading="lazy" decoding="async" />
+            </i>
+          ))}
+        </div>
       ))}
     </div>
     {/* 总数格移出 4×4 网格（2026-10-25）：16 张曲绘正好排满 4 行 4 列，
@@ -109,13 +121,24 @@ const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop
         // 取不到就保持现状，**绝不清空**：清空会出现"一格都没有"的空方阵，
         // 比显示旧内容糟糕得多（本轮第一版就是这么踩的，cells:0）。
         if (!list || !list.length) return;
-        // 总数格已移出网格（见下方 .cube-sum），这里只重写曲绘格
+        // 总数格已移出网格（见下方 .cube-sum），这里只重写曲绘格。
+        // 结构必须和 SSR 那份完全一致：8 + 8 两条轨道，每条再复制一段做接缝
+        // （窄屏横向滚动的 -50% 落点）。宽屏 .cube-r 是 display:contents，
+        // 复制段 display:none，所以 4×4 方阵照样成立。
+        var half = Math.ceil(list.length / 2);
+        var rows = [list.slice(0, half), list.slice(half)];
         var html = '';
-        for (var i = 0; i < list.length; i++) {
-          var s = list[i];
-          if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
-          html += '<i><img src="/assets/images/jackets/' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
-                  '" width="144" height="144" loading="' + (i < 4 ? 'eager' : 'lazy') + '" decoding="async"></i>';
+        for (var r = 0; r < rows.length; r++) {
+          var one = '', dup = '';
+          for (var i = 0; i < rows[r].length; i++) {
+            var s = rows[r][i];
+            if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
+            one += '<i><img src="/assets/images/jackets/' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
+                   '" width="144" height="144" loading="lazy" decoding="async"></i>';
+            dup += '<i data-dup aria-hidden="true"><img src="/assets/images/jackets/' + s.c +
+                   '" alt="" width="144" height="144" loading="lazy" decoding="async"></i>';
+          }
+          html += '<div class="cube-r ' + (r === 0 ? 'cube-r-a' : 'cube-r-b') + '">' + one + dup + '</div>';
         }
         grid.innerHTML = html;
       }
