@@ -74,10 +74,14 @@
     color: var(--ink2);
     transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
+/* ⚠️ 本文件从 songs.css 复制了一份 .sc-srv-* / .sc-tag-* 样式（同一套服务器卡）。
+   改对比度/配色时必须两处都改，否则 /jubility/ 会停在旧值——2026-10-28 的
+   「1150 首 2.57:1」就是这么漏掉的。根治办法是抽成公共样式，待办。 */
 .sc-tag-c {
     font-family: var(--font-data);
     font-size: 11.5px;
-    color: var(--ink3);
+    /* --ink3 是全站最浅一档，压在玻璃卡与世代底图上实测 2.57:1，小字需 4.5 → --ink2 */
+    color: var(--ink2);
     white-space: nowrap;
 }
 .sc-tag-c i {
@@ -95,14 +99,14 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 }
 .sc-srv-b.is-on .sc-tag {
     border-color: color-mix(in srgb, var(--acc) 45%, transparent);
-    background: color-mix(in srgb, var(--acc) 20%, transparent);
+    /* 与 songs.css 同步：20% 主题色底叠外层 14% 底纹会把底染黄，深色小字压不住 → 实底 */
+    background: var(--base);
 }
 .sc-srv-b.is-on .sc-tag-n {
     color: var(--ink);
 }
-.sc-srv-b.is-on .sc-tag-c {
-    color: color-mix(in srgb, var(--acc) 80%, var(--ink));
-}
+/* 与 songs.css 同步：这条覆盖比上面的通用规则更具体，会把修复盖回去，整条删除。
+   计数是纯信息，选中感由边框 + 底纹 + .sc-tag-n 承担。 */
 .sc-srv-b:hover {
     color: var(--ink);
     background: color-mix(in srgb, var(--ink) 10%, transparent);
