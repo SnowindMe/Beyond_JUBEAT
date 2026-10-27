@@ -20,6 +20,8 @@ export type Song = {
   alt: number;
   unlock: string | null;
   kind: string | null;
+  /** 限时曲结束日 YYYY-MM-DD；null = 非限时。判定按真实今天算，不在数据里焊死。 */
+  lu?: string | null;
 };
 
 type D1Row = {
@@ -27,6 +29,7 @@ type D1Row = {
   bpm: string | null; gen_name: string; server_jp: number; server_cn: number; category: string;
   bsc: number | null; adv: number | null; ext: number | null; alt: number;
   cover: string | null; added_at: string | null; unlock_note: string | null;
+  limited_until: string | null;
 };
 
 // isolate 级缓存：D1 数据只在部署后变，进程存活期内缓存是安全的。
@@ -51,11 +54,13 @@ const rowToSong = (r: D1Row): Song => ({
   alt: r.alt ? 1 : 0,
   unlock: r.unlock_note,
   kind: r.id_kind,
+  // 限时曲的结束日（YYYY-MM-DD）；null = 非限时。前端按真实今天判断是否已结束。
+  lu: r.limited_until || null,
 });
 
 /** 全量曲目（按 gen_name, ext DESC 排好序，直接喂给页面分组） */
 const SQL_ALL = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-              bsc, adv, ext, alt, cover, added_at, unlock_note
+              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
          FROM songs
         ORDER BY gen_name, ext DESC`;
 
@@ -84,7 +89,7 @@ export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
 const songCache = new Map<string, { song: Song | null; at: number }>();
 
 const SQL_ONE = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-              bsc, adv, ext, alt, cover, added_at, unlock_note
+              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
          FROM songs
         WHERE song_id = ?`;
 
