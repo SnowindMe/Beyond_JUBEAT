@@ -21,10 +21,6 @@ const user = Astro.locals.user;
       因为紧邻的品牌字已经把名字读出来了，读屏再念一遍「标识」是噪声。 */}
   <a class="mark" href="/" aria-label="Beyond ↑ JUBEAT 首页" translate="no"><img class="mark-logo" src="/assets/images/logo/brand.webp?v=2" alt="" aria-hidden="true" width="126" height="96" decoding="async" /><div class="mark-x"><b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b><span translate="no">Jubeat further, explore MORE</span></div></a>
   <nav>
-    {/* 窄屏导航入口：≤768px 时 .nav-txt 收起，只留这个汉堡按钮（主人 2026-10-22） */}
-    <button type="button" class="nav-burger" id="navBurger" aria-expanded="false" aria-controls="navDrawer" aria-label="打开导航菜单" title="导航">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
     <div class="nav-txt">
       {/* 只列真的存在的页面：Emblem / 伙伴 / 成就 等二级页还没做，先不上导航
           （主人 2026-10-22：先砍死链，以后计划做再加回来）。
@@ -65,8 +61,21 @@ const user = Astro.locals.user;
         <div class="acm-pop" id="acmPop" data-open="0" role="menu" aria-label="账户菜单"></div>
       </div>
     </div>
+    {/* 窄屏导航入口（主人 2026-10-28：「移动端导航栏只有登录/汉堡/主题三个图标，
+        调换一下顺序，三个图标外形一致」）：从 .nav-txt 前面挪到图标组之后，
+        顺序变成 登录 → 主题 → 汉堡，与主人给的排列一致；
+        同时 ≤768px 起它是 .isq（图标方块）的一员，与另两个同一外形。 */}
+    <button type="button" class="nav-burger isq" id="navBurger" aria-expanded="false" aria-controls="navDrawer" aria-label="打开导航菜单" title="导航">
+      {/* 三条线各自旋转成 ×，用 transform 过渡而不是换 SVG：
+          换图会跳一下，旋转才有「收/放」的手感（主人 2026-10-28 要求加动画） */}
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="burger-ico">
+        <path class="burger-l1" d="M4 7h16"/>
+        <path class="burger-l2" d="M4 12h16"/>
+        <path class="burger-l3" d="M4 17h16"/>
+      </svg>
+    </button>
     <div class="tsw">
-      <button type="button" class="tsw-btn" id="tswBtn" aria-expanded="false" aria-haspopup="true" aria-controls="tswPop" aria-label="切换世代主题" title="切换世代主题">
+      <button type="button" class="tsw-btn isq" id="tswBtn" aria-expanded="false" aria-haspopup="true" aria-controls="tswPop" aria-label="切换世代主题" title="切换世代主题">
         <svg class="tsw-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="3.6" width="7" height="7" rx="1.7"/><rect x="13.4" y="3.6" width="7" height="7" rx="3.5"/><rect x="3.6" y="13.4" width="7" height="7" rx="3.5"/><rect x="13.4" y="13.4" width="7" height="7" rx="1.7"/></svg>
         <svg class="tsw-car" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
       </button>

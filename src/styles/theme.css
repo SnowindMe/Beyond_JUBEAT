@@ -459,23 +459,39 @@ html[data-g="knit"] .mark b .til {
     background: color-mix(in srgb, var(--acc) 14%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 34%, transparent);
 }
-/* 汉堡菜单按钮：桌面隐藏，≤768px 才出现（见文件末尾移动端段） */
-.nav-burger {
-    display: none;
+/* ---------- 顶栏图标方块（.isq）----------
+   主人 2026-10-28：「移动端三个图标外形状一致」。
+   原先三个按钮各写一套外形：汉堡 44×44/圆角 7px/无描边、登录 44×44/圆角 10px/无描边、
+   主题自己一套 pill + 描边，手机上并排看是三种形状。
+   现在三者共用 .isq 一套几何：44×44、圆角 --r-sm、1px 描边 --edge、透明底；
+   只有 hover/焦点态靠主题色淡底区分。图标本身仍按各自尺寸（17/16px）画，不改视觉重量。 */
+.isq {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: none;
     width: 44px;
     height: 44px;
     padding: 0;
-    border-radius: var(--r-xs);
-    border: 1px solid transparent;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--edge);
     background: transparent;
     color: var(--ink);
     cursor: pointer;
     font: inherit;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
-.nav-burger:hover {
+.isq:hover {
     background: color-mix(in srgb, var(--acc) 18%, transparent);
+    border-color: var(--edge2);
+}
+.isq:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+/* 汉堡菜单按钮：桌面隐藏，≤768px 才出现（见文件末尾移动端段） */
+.nav-burger {
+    display: none;
 }
 .nav-burger svg {
     width: 18px;
@@ -484,6 +500,33 @@ html[data-g="knit"] .mark b .til {
     stroke-width: 1.9;
     stroke-linecap: round;
     fill: none;
+}
+/* 汉堡 → × 的收放动画：三条线各自旋转自身中心（主人 2026-10-28 要求「给汉堡图标
+   弹出收回加上动画」）。用 transform 而不是换 SVG 路径，才有过渡；
+   transform-box:fill-box 让旋转轴落在每条线自己的中心，否则会绕 SVG 原点转，乱飞。 */
+.burger-l1,
+.burger-l2,
+.burger-l3 {
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: transform 0.28s cubic-bezier(0.22, 0.7, 0.3, 1), opacity 0.18s ease;
+}
+.nav-burger[aria-expanded="true"] .burger-l1 {
+    transform: translateY(5px) rotate(45deg);
+}
+.nav-burger[aria-expanded="true"] .burger-l3 {
+    transform: translateY(-5px) rotate(-45deg);
+}
+.nav-burger[aria-expanded="true"] .burger-l2 {
+    opacity: 0;
+    transform: scaleX(0.2);
+}
+@media (prefers-reduced-motion: reduce) {
+    .burger-l1,
+    .burger-l2,
+    .burger-l3 {
+        transition: none;
+    }
 }
 /* 抽屉：默认不渲染，data-open=1 才显示；桌面端永不显示 */
 .nav-drawer {
@@ -535,7 +578,9 @@ html[data-g="knit"] .mark b .til {
     align-items: center;
     gap: 2px;
 }
-/* 图标按钮：30px 圆角方块，描边图标，hover 用主题色淡底 */
+/* 图标按钮：与 .isq 同一套几何（44×44 / --r-sm / 1px 描边），
+   hover 用主题色淡底。2026-10-28：为让移动端三个图标外形一致，去掉原先
+   .nav-i 单独的 --r-md 无描边、以及 .tsw-btn 的 pill 方案，统一走 .isq。 */
 .top nav a.nav-i {
     display: inline-flex;
     align-items: center;
@@ -545,14 +590,17 @@ html[data-g="knit"] .mark b .til {
     width: 44px;
     height: 44px;
     padding: 0;
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
+    border: 1px solid var(--edge);
     color: var(--ink);
-    opacity: 0.72;
+    opacity: 0.86;
+    transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
 }
 .top nav a.nav-i:hover {
     color: var(--ink);
     opacity: 1;
     background: color-mix(in srgb, var(--acc) 18%, transparent);
+    border-color: var(--edge2);
 }
 /* 最近更改的图标入口只在窄屏出现（宽屏有 .nav-txt 的文字链接） */
 .top nav a.nav-i-recent {
@@ -1934,15 +1982,14 @@ html[data-g="yymf"] {
     position: relative;
 }
 .tsw-btn {
+    /* 几何交给 .isq（44×44 / --r-sm / 1px 描边）；
+       2026-10-28 前这里是 pill + 自绘 --edge2 描边，与汉堡/登录形状不一致。 */
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    min-height: 44px;
     cursor: pointer;
-    padding: 7px 12px;
-    border-radius: var(--pill);
-    border: 1px solid var(--edge2);
-    background: transparent;
+    padding: 0;
     color: var(--ink2);
     font: inherit;
     font-size: 12.5px;
@@ -2196,9 +2243,13 @@ html[data-g="yymf"] {
         letter-spacing: 0.18em;
     }
 
-    /* 移动端：文字链接收进汉堡抽屉，顶栏只留 汉堡 + 图标组 + 世代切换（主人 2026-10-22） */
+    /* 移动端：文字链接收进汉堡抽屉（主人 2026-10-22）。
+       2026-10-28 主人明确「移动端导航栏只有登录/汉堡/主题三个图标」：
+       所以「添加到屏幕」这个 PWA 入口在窄屏隐藏（桌面仍保留），
+       顶栏正好剩 登录 → 主题 → 汉堡 三个同形状方块。 */
     .nav-txt,
-    .nav-sep {
+    .nav-sep,
+    .pwa-b {
         display: none;
     }
     .nav-burger {
@@ -2230,8 +2281,9 @@ html[data-g="yymf"] {
     .tsw {
         margin-left: auto;
     }
+    /* .tsw-btn 在窄屏也是 44×44 方块（几何来自 .isq），不再需要横向 padding */
     .tsw-btn {
-        padding: 7px 8px;
+        padding: 0;
     }
     /* 隐藏态仍有布局盒（visibility 只管可见性），rigth:-6px 会顶出视口右缘，
        窄屏一律贴右 0，配合 width 上限保证右缘不越过 clientWidth。 */

@@ -32,12 +32,8 @@ export const GEN_CN = GEN_ORDER.filter((g) => g.s === 'cn');
 /** 服务器 → 中文名（世代页与分组标题共用，别在模板里各写一份） */
 export const SRV_LABEL: Record<GenMeta['s'], string> = { jp: '日服', cn: '国服' };
 
-/** 按 slug 找世代（/songs/gen/[gen]/ 用）。未知 slug 返回 undefined，页面据此回 404。 */
-export function genBySlug(slug: string | null | undefined): GenMeta | undefined {
-  return slug ? GEN_ORDER.find((g) => g.slug === slug) : undefined;
-}
-
-/** 世代名 → slug（/songs/ 的分组标题链接用）。世代名不在表里时返回 undefined。 */
-export function slugOf(k: string): string | undefined {
-  return GEN_ORDER.find((g) => g.k === k)?.slug;
-}
+/* 【2026-10-28 移除】原先这里还有 genBySlug() 与 slugOf()，服务于 /songs/gen/<slug>/
+   世代筛选页。主人要求「/songs/gen/jubeat/ 这个页面不要」，该页已删除、世代名改为纯文字，
+   两个函数再无调用方，一并删掉。
+   GEN_ORDER 里的 slug 字段暂时保留：它是世代网址段的既有口径，将来若要做世代页或
+   外部深链可复用；但当前**没有任何页面在读它**，别误以为它还在生效。 */
