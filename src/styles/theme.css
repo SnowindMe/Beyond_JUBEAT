@@ -13,6 +13,11 @@
     --mint: var(--acc2);
     --acc: #3ee6ff;
     --acc2: #7dfbe0;
+    /* 可读版主题色：浅色世代上 --acc 与底色对比度不足（1.83~4.04:1），
+       品牌字改用 --acc-ink（保持色相、压暗到 4.5:1）；符号用 --acc2-ink（3:1）。
+       深色世代不覆写，自动跟随 --acc / --acc2。 */
+    --acc-ink: var(--acc);
+    --acc2-ink: var(--acc2);
     --base: #08121b;
     --edge: rgba(255, 255, 255, 0.14);
     --edge2: rgba(255, 255, 255, 0.26);
@@ -338,6 +343,11 @@ img {
 .mark b {
     font-family: var(--font-label);
 }
+/* 顶栏品牌字用主题色（主人 2026-10-27「顶部的 Beyond ↑ JUBEAT ♪~ 也加上主题色吧」）。
+   原来只有里面的 ↑ ♪ ~ 三个符号是 --acc，字母部分是 --ink；现在整枚品牌字随主题走。 */
+.top .mark b {
+    color: var(--acc-ink);
+}
 /* 品牌字标里的符号（↑ ♪ ~）：世代字体都是拉丁装饰体，大多没有 ↑ 和 ♪ 的字形
    （实测只有 Playfair 带 ↑，七个字体全都没有 ♪），落到系统字体就必然是另一个
    气质。所以这三个符号单独剥出来：改用系统符号字体、上移基线、染色、字号补偿，
@@ -346,7 +356,7 @@ img {
 .mark b .til {
     font-family:
         "Segoe UI Symbol", "Apple Symbols", "Segoe UI", system-ui, sans-serif;
-    color: var(--acc);
+    color: var(--acc2-ink);   /* 可读版主题色：浅色代上 --acc 只有 1.8~3.9:1，小符号会糊 */
     font-weight: 600;
     letter-spacing: 0;
 }
@@ -1435,6 +1445,23 @@ html[data-g="saucerfulfill"] .sub {
 .brandblock .mark-bk b {
     font-size: clamp(22px, 2.6vw, 30px);
     letter-spacing: 0.01em;
+    /* 大字标用主题色（主人 2026-10-27「把大字标上主题色」）：
+       标识图 brand.webp 自带多色，跟主题色对不上；字标改成 var(--acc) 之后，
+       换主题时它会跟着整套配色走，和首屏 WELCOME TO 的主题色是一条线。 */
+    color: var(--acc-ink);
+}
+.brandblock .mark-bk b .sym,
+.brandblock .mark-bk b .til {
+    /* 符号（↑ ♪ ~）用 --acc2：比正文亮一档，装饰感更强，
+       也不会和同色的字身糊在一起。浅色主题下用 --acc2-ink（压暗到 3:1）。 */
+    color: var(--acc2-ink);
+}
+/* 浅色代里 html[data-g] .mark b .sym 把符号压成了 --ink（优先级更高），
+   顶栏本来就该这样（字小），但首页这枚是 22~30px 的大字标，符号要跟字身一起走主题色，
+   所以用 html[data-g] 提高一级把浅色代的覆盖也拉回 --acc2-ink。 */
+html[data-g] .brandblock .mark-bk b .sym,
+html[data-g] .brandblock .mark-bk b .til {
+    color: var(--acc2-ink);
 }
 .brandblock .mark-x {
     gap: 3px;
@@ -1541,6 +1568,8 @@ html[data-g="festo"] {
     --tshadow: 0 4px 26px rgba(0, 0, 0, 0.55);
 }
 html[data-g="knit"] {
+    --acc-ink: #86651c;
+    --acc2-ink: #ac810d;
     color-scheme: light;
     /* WELCOME TO 用色：--acc #e0a92e 在 #f2eee4 上只有 1.83，压暗到 4.66 */
     --wl-acc: #86651c;
@@ -1566,6 +1595,8 @@ html[data-g="knit"] {
     --glass2: rgba(255, 253, 247, 0.72);
 }
 html[data-g="prop"] {
+    --acc-ink: #d42080;
+    --acc2-ink: #ff3f9b;
     color-scheme: light;
     /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
     --focus: #7a2f56;
@@ -1587,6 +1618,8 @@ html[data-g="prop"] {
     --glass2: rgba(255, 255, 255, 0.74);
 }
 html[data-g="qubell"] {
+    --acc-ink: #32749a;
+    --acc2-ink: #3493c5;
     color-scheme: light;
     /* 色调（2026-10-24 主人指出「主题色是错的」后修正）：
        本代背景是冰蓝/淡青的玻璃板与立方体，实测彩色像素占 15.8%、主色相 210°。
@@ -1614,6 +1647,8 @@ html[data-g="qubell"] {
     --glass2: rgba(250, 253, 255, 0.72);
 }
 html[data-g="saucer"] {
+    --acc-ink: #37474F;
+    --acc2-ink: #748d9a;
     color-scheme: light;
     /* 色调（2026-10-24 主人指出「主题色是错的」后修正）：
        本代背景是近乎纯白的纸面，只有几条绿→黄→粉的细线（实测彩色像素仅占 0.2%），
@@ -1670,6 +1705,8 @@ html[data-g="jubeat"] {
    仍保持浅色世代：深字 + 白卡片，只是底子从「白得发光」变成「灰绿雾面」。
    主色取字标薄荷绿 #70c5b7，粉 #ff9fb2 做次色。 */
 html[data-g="ripples"] {
+    --acc-ink: #357469;
+    --acc2-ink: #e75172;
     color-scheme: light;
     /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
     --focus: #1f7a6c;
@@ -1696,6 +1733,8 @@ html[data-g="ripples"] {
 /* 音乐魔方（国服）：底板是青→粉糖果亮图，和 ripples 同策——保留浅色主题，
    用淡薰衣草 veil 把背景压暗一档，保证深字与白卡片的对比。 */
 html[data-g="yymf"] {
+    --acc-ink: #3265d5;
+    --acc2-ink: #db5a9b;
     color-scheme: light;
     /* 焦点环：--acc 在本代底上对比度不足 3:1，改用一档更深的同色系 */
     --focus: #2b4a9e;
@@ -2328,6 +2367,52 @@ html[data-g="yymf"] {
         display: none;
     }
     /* 弹层在 ≤768 已经是 right:0（见上面那个 768 块），这里不用再改。 */
+
+    /* ---------- 顶栏在 390px 里放不下（2026-10-27 实测修） ----------
+       现象：390px 视口下 .top 可用宽 354px（clientWidth 390 − 左右 padding 18×2），
+       而 .mark(181) + gap(10) + nav(194) = 385px，nav 的 flex:0 0 auto 不收缩，
+       于是最右的世代切换器被顶到 clientWidth 之外 13px，右半截被滚动条区吃掉。
+       （注意：此前记的「scrollWidth 403 > 390」其实是 innerWidth 403 − clientWidth 390
+         那条 13px 竖滚动条，不是横向溢出；真正的溢出是 nav 右缘 403 越过了
+         .top 的右缘 372。）
+       修法（按可牺牲的量从小到大排）：
+       ① 顶栏品牌字 14px → 12.5px（这是顶栏唯一可缩的文字，且只在这一档缩）；
+       ② .mark / .top / .top nav 的 gap 各收 2~4px；
+       ③ .tsw-btn 左右 padding 8 → 6px；
+       ④ .mark 允许收缩（flex:0 1 auto + min-width:0）作为兜底，
+          以后再加图标也不会把布局顶爆。 */
+    html[data-font] .mark b {
+        font-size: 12px;
+    }
+    .mark {
+        flex: 0 1 auto;
+        min-width: 0;
+        gap: 8px;
+    }
+    .top {
+        gap: 8px;
+    }
+    .top nav {
+        gap: 4px;
+    }
+    .tsw-btn {
+        padding: 7px 4px;
+    }
+}
+
+/* ≤375px 再降一档：顶栏实在放不下「标识图 + 完整品牌字 + 汉堡 + 2 个图标 + 主题切换」。
+   算式（clientWidth − 36 padding = 可用宽）：
+     360 → 324；375 → 339；390 → 354
+   品牌字 nowrap 天然宽 126px，加标识图 26px + gap 8 = 160。
+   360/375 两档即便藏了标识图也要 134+8+176=318～322，几乎顶满，且留不下任何余量。
+   所以 ≤375px 直接把顶栏标识图收起来（品牌字本身就写着站名，标识图是重复信息），
+   390px 起恢复。这样任何一档都不会把最右的世代切换器顶出视口。 */
+/* 断点取 376 而不是 375：CDP 设 375 时视口可能是 375.x 亚像素，
+   375 会判成不匹配（同 414 那档的老坑）。 */
+@media (max-width: 376px) {
+    .top .mark-logo {
+        display: none;
+    }
 }
 
 /* ---------- 最近更改（/recent/） ---------- */

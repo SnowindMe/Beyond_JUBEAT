@@ -70,14 +70,14 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
           {row.map((s, i) => (
             <i>
               <img src={jacket(s.cover)} alt={s.t} width="144" height="144"
-                   loading={ri === 0 && i < 4 ? 'eager' : 'lazy'} decoding="async" />
+                   loading="eager" decoding="async" fetchpriority={ri === 0 && i < 4 ? 'high' : 'auto'} />
             </i>
           ))}
           {/* 复制一份当接缝：窄屏横滑到 -50% 时首尾正好接上（宽屏 display:none）。
               用 aria-hidden + 空 alt，读屏不会把曲名念两遍。 */}
           {row.map((s) => (
             <i data-dup aria-hidden="true">
-              <img src={jacket(s.cover)} alt="" width="144" height="144" loading="lazy" decoding="async" />
+              <img src={jacket(s.cover)} alt="" width="144" height="144" loading="eager" decoding="async" />
             </i>
           ))}
         </div>
@@ -134,9 +134,9 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
             var s = rows[r][i];
             if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
             one += '<i><img src="/assets/images/jackets/' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
-                   '" width="144" height="144" loading="lazy" decoding="async"></i>';
+                   '" width="144" height="144" loading="eager" decoding="async"></i>';
             dup += '<i data-dup aria-hidden="true"><img src="/assets/images/jackets/' + s.c +
-                   '" alt="" width="144" height="144" loading="lazy" decoding="async"></i>';
+                   '" alt="" width="144" height="144" loading="eager" decoding="async"></i>';
           }
           html += '<div class="cube-r ' + (r === 0 ? 'cube-r-a' : 'cube-r-b') + '">' + one + dup + '</div>';
         }
