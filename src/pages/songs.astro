@@ -1084,7 +1084,21 @@ const SORTS = [
         for (var i = 0; i < dds.length; i++) if (dds[i] !== dd) ddClose(dds[i]);
         dd.setAttribute('data-open', 'true');
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
-        dd.querySelector('.sc-dd-list').hidden = false;
+        var list = dd.querySelector('.sc-dd-list');
+        list.hidden = false;
+        // 【2026-10-28 修复】弹层默认向下展开。排序/世代/曲师现在在面板最后一行，
+        // 下方到视口底只剩一点空间：实测列表底边 1075px、视口 900px，
+        // 整个弹层跑出屏幕（祖先都没裁剪，是定位越界），用户看不到也滚不到。
+        // 这里先量按钮下方的可用空间，不够放下整个列表就翻到按钮上方。
+        // 先清掉上次的方向标记再量，避免上一次的 up 影响本次判断。
+        list.removeAttribute('data-drop');
+        var btnRect = dd.querySelector('.sc-dd-b').getBoundingClientRect();
+        var listH = list.scrollHeight || list.getBoundingClientRect().height || 0;
+        var spaceBelow = window.innerHeight - btnRect.bottom - 8;
+        var spaceAbove = btnRect.top - 8;
+        if (listH > spaceBelow && spaceAbove > spaceBelow) {
+          list.setAttribute('data-drop', 'up');
+        }
         // 让当前选中项滚进视野（曲师 39 项，不滚的话要自己找）
         var cur = dd.querySelector('.sc-dd-list li[aria-selected="true"]');
         if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });

@@ -1412,6 +1412,22 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
     animation: scDdIn 0.16s ease;
 }
+/* 【2026-10-28 修复「排序下拉展开看不到」】
+   弹层默认向下（top:100%+4px）。排序/世代/曲师现在位于面板最后一行，
+   下方到视口底部只剩一点空间：实测列表底边 1075px、视口 900px，
+   整个弹层跑出屏幕，用户既看不到也滚不到（祖先没有裁剪，纯属定位越界）。
+   修法：脚本测量按钮下方剩余空间，不够就翻到按钮上方（data-drop="up"）。
+   不用 JS 也能用的兜底：data-drop 只在脚本跑过之后才写，
+   脚本不跑时保持向下展开，与原行为一致。 */
+.sc-dd-list[data-drop="up"] {
+    top: auto;
+    bottom: calc(100% + 4px);
+    animation-name: scDdInUp;
+}
+@keyframes scDdInUp {
+    from { opacity: 0; transform: translateY(4px); }
+}
+
 .sc-dd-list[hidden] {
     display: none;
 }
