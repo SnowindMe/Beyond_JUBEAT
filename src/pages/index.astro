@@ -17,11 +17,18 @@ const THEME_COUNT = 15;
 >
   <Hero />
 
-  <section class="band">
-    <div class="panel wip">
-      <div class="wip-ico" aria-hidden="true"><i></i><i></i><i></i></div>
-      <p class="wip-t">正在施工中，前面的区域以后再来探索吧……</p>
-      <span class="wip-s">under construction</span>
-    </div>
-  </section>
+  {/* 站点标识区（2026-10-27 主人要求）：原来在页脚右下角的小号 logo + 品牌字
+      挪到这里，在首页用一个居中的 div 放大显示。品牌字沿用顶栏 .mark 的世代字体
+      与符号（↑ ♪ ~）处理，标识图用 .mark-logo 的同款写法但尺寸放大。 */}
+  <div class="brandblock" translate="no">
+    <span class="mark mark-bk">
+      <img class="mark-logo" src="/assets/images/logo/brand.webp?v=2" alt="" aria-hidden="true" width="126" height="96" decoding="async" />
+      <span class="mark-x">
+        <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
+        {/* 品牌字下方的副标（主人 2026-10-27 定稿文案；
+            顶栏标识下的副标是 Jubeat further, explore MORE，两处不同，不要抄串） */}
+        <span>Enjoy JUBEAT, Enjoy Life, Enjoy Friend, And Enjoy Yourself</span>
+      </span>
+    </span>
+  </div>
 </Layout>

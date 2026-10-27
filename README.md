@@ -121,7 +121,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 >
 > ⚠️ **这些表必须写成 `html[data-g="x"][data-g]`**：`scripts/ci/check-contrast.mjs` 的 `blockOf()` 取每个主题**第一个** `html[data-g="x"]{` 块。若把字体/字身带表写成同形选择器且位置靠前，CI 会取到只有一两个变量的空块、令牌全回退 `:root`，于是 16 套主题都按深色默认值算、浅色断言根本没跑——**这是假绿灯，比红灯危险**。`[data-g]` 是重复同一属性，特异性与语义都不变，但不再被抢先命中。
 
-**品牌标识（v1.27.0）**：主人 2026-10-27 交付两张同稿不同底的 PNG——**白底版**用于 PWA 图标与浏览器标签页图标，**透明版**用于顶栏/页脚品牌字左边（替换原来的 9×9 色点 `.mark i`）。母版归档在 `archive/materials/brand/`，产物统一由 `scripts/gen-brand-logo.cjs` 生成，**换标识只改母版再跑这个脚本**，不要手改 `public/` 下的图。两个必须记住的量化口径：
+**品牌标识（v1.27.0）**：主人 2026-10-27 交付两张同稿不同底的 PNG——**白底版**用于 PWA 图标与浏览器标签页图标，**透明版**用于顶栏品牌字左边与首页标识区（替换原来的 9×9 色点 `.mark i`）。母版归档在 `archive/materials/brand/`，产物统一由 `scripts/gen-brand-logo.cjs` 生成，**换标识只改母版再跑这个脚本**，不要手改 `public/` 下的图。两个必须记住的量化口径：
 
 > 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
 > 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
@@ -129,7 +129,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 **品牌资源版本（`?v=N`，v1.27.2 踩坑定稿）**：Cloudflare 的 Browser Cache TTL **会覆盖 `_headers` 里为图片扩展名写的 max-age**（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon 同样回 3600），而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
 
 1. `src/layouts/Base.astro` 头部四个图标链接（favicon.ico / favicon-32 / favicon-16 / apple-touch-icon）；
-2. `src/layouts/Base.astro`（页脚）与 `src/components/Header.astro`（顶栏）的 `brand.webp`；
+2. `src/components/Header.astro`（顶栏）与 `src/pages/index.astro`（首页标识区）的 `brand.webp`；
 3. `public/manifest.webmanifest` 的三个 icons；
 4. `public/sw.js` 的 `ASSET_V` 常量（预缓存用同一套 URL；这处忘了同步只会多存一份旧 key 的副本，不会坏）。
 
@@ -137,7 +137,19 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 反例：**不要**为了「让浏览器认新图标」把 PNG 再包一层 SVG——源图是位图，SVG 套壳只影响矢量缩放，对缓存零作用。
 
-页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
+页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是 `powered by dsh` 徽章（窄屏靠右对齐）。**页脚原先右栏的「logo + 品牌字 + Enjoy Yourself」已于 v1.29.0 按主人要求移到首页**（见下方「首页标识区」）。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
+
+## 首页标识区（v1.29.0）
+
+页脚右栏原先的「logo + 品牌字 + Enjoy Yourself」按主人要求移到首页，做成**居中放大的一个 div**（`src/pages/index.astro` 的 `.brandblock`）：
+
+- 结构：横排一行 = 标识图（56px）+ 品牌字（`clamp(22px,2.6vw,30px)`）+ 品牌字下方的副标；整体在页面中居中。
+- 标识图沿用顶栏 `.mark-logo` 的写法（按高度定尺寸、宽度按比例走），只是放大到 56px 并加了投影。
+- 品牌字沿用顶栏 `.mark` 的世代字体与 `↑ ♪ ~` 符号处理，落在 `.mark-bk` 上；**它是纯展示（<span>）不是链接**，所以显式 `cursor: default`。
+- 副标文案：品牌字下方是 `Enjoy JUBEAT, Enjoy Life, Enjoy Friend, And Enjoy Yourself`；**顶栏标识下的副标是 `Jubeat further, explore MORE`，两处不同，别抄串**。
+- `html[data-font] .brandblock .mark-bk b` 覆盖顶栏那条 `html[data-font] .mark b`（窄屏 14px + nowrap），否则首页这枚会被压到 14px。
+
+同批改动：首页「正在施工中，前面的区域以后再来探索吧……」整块移除（`.wip` 样式保留，404 页与「最近更改」页仍在用）；窄屏页脚改成「最后一次编辑 + 版本号」与 dsh 徽章**同一行**（徽章靠右）。
 
 ## 项目清单
 
@@ -145,7 +157,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 Beyond_JUBEAT/
 ├─ src/                       Astro 源码
 │  ├─ pages/
-│  │  ├─ index.astro          首页（Hero + 施工中占位）
+│  │  ├─ index.astro          首页（Hero + 站点标识区 .brandblock）
 │  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，双服切换 + 分区筛选 + 搜索/四维筛选/5 种排序）
 │  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
 │  │  ├─ songs/gen/           世代筛选页（SSR：13 个世代各一页，slug 在 lib/gens.ts）

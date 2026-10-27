@@ -185,14 +185,8 @@ const BUILD_DATE = (() => {
         <span class="foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
       </div>
       <div class="foot-r">
-        <span class="mark mark-sm" translate="no" id="footR">
-          {/* 与顶栏同一枚标识，尺寸由 .mark-sm .mark-logo 压小（见 theme.css） */}
-          <img class="mark-logo" src="/assets/images/logo/brand.webp?v=2" alt="" aria-hidden="true" width="126" height="96" loading="lazy" decoding="async" />
-          <span class="mark-x">
-            <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
-          </span>
-        </span>
-        <span class="foot-slogan">Enjoy Yourself</span>
+        {/* 站点标识（logo + 品牌字 + Enjoy Yourself）已于 2026-10-27 按主人要求
+            从页脚移到首页居中放大显示（首页 .brandblock），页脚只留版本信息与署名。 */}
         {/* 「powered by dsh」署名（主人 2026-10-25 要求加水印）。
             用官方 shields.io 徽章原样嵌入，尺寸按规范 121×20、不改配色与文案；
             走外链图片是为了长期拿到官方更新，同时不往仓库塞第三方 PNG。

@@ -1401,6 +1401,62 @@ html[data-g="saucerfulfill"] .sub {
     gap: 0;
 }
 
+/* ---------- 首页站点标识区（2026-10-27 主人要求） ----------
+   原来这套 logo + 品牌字 + Enjoy Yourself 挤在页脚右下角，尺寸 13~18px 很小。
+   主人要求：页脚去掉它，首页做一个居中放大的 div 显示。
+   沿用 .mark 的世代字体与 ↑ ♪ ~ 符号处理，只把尺寸放大、整体居中。 */
+.brandblock {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(14px, 2vw, 26px);
+    margin: clamp(28px, 4vw, 52px) 0 0;
+    text-align: left;
+    flex-wrap: wrap;
+}
+.brandblock .mark-bk {
+    gap: 14px;
+    /* 顶栏 .mark 是可点链接，首页这枚是纯展示（<span>），
+       显式声明 cursor:default，别让浏览器给 span 画假箭头。 */
+    cursor: default;
+}
+.brandblock .mark-bk:hover {
+    opacity: 1;
+}
+.brandblock .mark-bk:hover b {
+    color: inherit;
+}
+/* 标识图放大到 56px：比顶栏 26px 大、比首屏字标小，视觉上是「站点落款」而非第二主角 */
+.brandblock .mark-logo {
+    height: 56px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+.brandblock .mark-bk b {
+    font-size: clamp(22px, 2.6vw, 30px);
+    letter-spacing: 0.01em;
+}
+.brandblock .mark-x {
+    gap: 3px;
+}
+.brandblock .mark-x > span {
+    font-size: 12px;
+    color: var(--ink3);
+    letter-spacing: 0.16em;
+}
+.brandblock .foot-slogan {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+}
+
+/* 顶栏那条 html[data-font] .mark b 的 nowrap + 14px 会连带压到首页这枚（选择器更具体），
+   窄屏也不该缩到 14px——这里显式覆盖回来，宽度不足时靠 .mark-x 的 min-width:0 换行。 */
+html[data-font] .brandblock .mark-bk b {
+    font-size: clamp(22px, 2.6vw, 30px);
+    white-space: normal;
+    letter-spacing: 0.01em;
+}
+
 /* ---------- 世代主题：底色 + 遮罩 + 字标色 ---------- */
 html[data-g="ave"] {
     color-scheme: dark;
@@ -2213,23 +2269,34 @@ html[data-g="yymf"] {
             animation: none;
         }
     }
+    /* 窄屏页脚（主人 2026-10-27：「这两个要在同一行」）：
+       「最后一次编辑 日期 + 版本号」与右侧 dsh 徽章排成一行，不要上下堆叠。
+       徽章 121px 固定宽，左栏用 flex:1 吃掉剩余空间，够宽时两栏各占一边。 */
     .foot {
-        flex-direction: column;
+        flex-direction: row;
         align-items: flex-start;
-        gap: 14px;
+        justify-content: space-between;
+        gap: 12px;
         padding-bottom: 40px;
-        /* 品牌字是 nowrap 的长串，容器必须先允许它撑开/换行，否则被 .foot 宽度裁掉 */
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         overflow: visible;
     }
-    .foot-l,
-    .foot-r {
-        width: 100%;
+    .foot-l {
+        flex: 1 1 auto;
+        min-width: 0;
         max-width: 100%;
     }
     .foot-r {
-        align-items: flex-start;
-        text-align: left;
+        flex: 0 0 auto;
+        width: auto;
+        max-width: 100%;
+    }
+    /* 窄屏页脚：dsh 徽章靠右（主人 2026-10-27「移动端页脚 dsh 徽章应该放在右边」）。
+       之前沿用宽屏的 align-items:flex-end 被窄屏段改成了 flex-start，徽章就贴到左边去了。
+       徽章本身 121px 固定宽，靠右对齐不会溢出。 */
+    .foot-r {
+        align-items: flex-end;
+        text-align: right;
     }
     /* 页脚品牌字：顶栏那条 html[data-font] .mark b 的 nowrap+14px 会连带压到这里，
        窄屏放不下就被顶出容器。页脚单独放开换行、字号收到 12px，右列不再溢出。 */
