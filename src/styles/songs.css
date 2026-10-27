@@ -110,9 +110,11 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-srv-b.is-on .sc-tag-n {
     color: var(--ink);
 }
-.sc-srv-b.is-on .sc-tag-c {
-    color: color-mix(in srgb, var(--acc) 80%, var(--ink));
-}
+/* 【2026-10-28 对比度修正】原先这里还有一条 .sc-srv-b.is-on .sc-tag-c，
+   把选中卡的计数染成 color-mix(--acc 80%, --ink)。它比上面通用的
+   .sc-srv-b:hover .sc-tag-c, .sc-srv-b.is-on .sc-tag-c 更具体，等于把那条修复
+   又盖回去：knit 上「1150 首」实测只剩 2.57:1。计数是纯信息、不该靠染主题色强调，
+   选中感已由边框 + 底纹 + .sc-tag-n 承担，所以整条删掉，让它继承 --ink2。 */
 .sc-srv-b:hover {
     color: var(--ink);
     background: color-mix(in srgb, var(--ink) 10%, transparent);
