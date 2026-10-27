@@ -105,7 +105,12 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 }
 .sc-srv-b.is-on .sc-tag {
     border-color: color-mix(in srgb, var(--acc) 45%, transparent);
-    background: color-mix(in srgb, var(--acc) 20%, transparent);
+    /* 【2026-10-28 对比度修正】原为 color-mix(--acc 20%, transparent)。
+       它叠在外层 .sc-srv-b.is-on 的 14% 主题色底纹上，两层加起来把底色染得
+       很黄，深色 --ink2 小字压不住：knit 上「1150 首」「9676.5pt」实测 2.57:1。
+       改用 --base 实底——文字底必须是确定值才可校验，选中感由 14% 外层底纹
+       + 45% 描边 + .sc-tag-n 的 --ink 承担，视觉上仍是「这卡被选中」。 */
+    background: var(--base);
 }
 .sc-srv-b.is-on .sc-tag-n {
     color: var(--ink);
