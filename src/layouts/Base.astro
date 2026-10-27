@@ -79,10 +79,16 @@ const BUILD_DATE = (() => {
   <meta name="theme-color" content="#0a1418" />
   {noindex && <meta name="robots" content="noindex,follow" />}
   {/* 2026-10-27 换品牌标识：源图是位图（主人给的 PNG），所以 favicon 从 SVG 改成
-      多尺寸 PNG。16/32 两档覆盖浏览器标签页与书签栏的实际取值。 */}
-  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
-  <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      多尺寸 PNG。16/32 两档覆盖浏览器标签页与书签栏的实际取值，另给一个多尺寸
+      favicon.ico 兜住仍会自动请求 /favicon.ico 的浏览器。
+      【⚠ 品牌资源一律带 ?v=N】见 README「品牌资源版本」：CF 边缘会把 _headers 里的
+      max-age 压成 1 小时且不随部署失效（实测源站已是新图、边缘仍回旧图标），
+      所以「换图标」只能靠 URL 变化。改图标时三处版本号同改：
+      这里、public/manifest.webmanifest、src/components/Header.astro 的 brand.webp。 */}
+  <link rel="icon" href="/favicon.ico?v=2" sizes="48x48" />
+  <link rel="icon" href="/favicon-32.png?v=2" sizes="32x32" type="image/png" />
+  <link rel="icon" href="/favicon-16.png?v=2" sizes="16x16" type="image/png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
   <link rel="sitemap" href="/sitemap.xml" />
   {/* PWA：让手机浏览器可以把站点「添加到主屏幕」（2026-10-26 主人要求）。
       manifest 提供名称/图标/start_url；sw.js 只缓存静态资源，HTML 与 /api/ 一律直通
@@ -178,7 +184,7 @@ const BUILD_DATE = (() => {
       <div class="foot-r">
         <span class="mark mark-sm" translate="no" id="footR">
           {/* 与顶栏同一枚标识，尺寸由 .mark-sm .mark-logo 压小（见 theme.css） */}
-          <img class="mark-logo" src="/assets/images/logo/brand.webp" alt="" aria-hidden="true" width="126" height="96" loading="lazy" decoding="async" />
+          <img class="mark-logo" src="/assets/images/logo/brand.webp?v=2" alt="" aria-hidden="true" width="126" height="96" loading="lazy" decoding="async" />
           <span class="mark-x">
             <b>Beyond <span class="sym">↑</span> JUBEAT <span class="sym">♪</span><span class="til">~</span></b>
           </span>

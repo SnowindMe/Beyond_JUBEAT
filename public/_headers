@@ -17,6 +17,11 @@
   Cache-Control: public, max-age=0, must-revalidate
 
 # 站点图标（2026-10-27 换品牌标识后从 svg 改为多尺寸 png）
+# 注：CF 的 Browser Cache TTL 会覆盖下面这些图片扩展名的 max-age（实测回 3600），
+#     所以换图标时真正生效的是 URL 上的 ?v=N（见 README「品牌资源版本」）。
+/favicon.ico
+  Cache-Control: public, max-age=86400
+
 /favicon-32.png
   Cache-Control: public, max-age=86400
 

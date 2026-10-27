@@ -25,7 +25,7 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 | --- | --- |
 | `public/manifest.webmanifest` | 名称、图标（192/512/maskable）、start_url、三个快捷方式（曲目 / Jubility / 最近更改） |
 | `public/sw.js` | Service Worker：**只缓存静态资源**，HTML 与 `/api/` 一律走网络 |
-| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` / `favicon-16/32.png` / `apple-touch-icon.png` | 全部由 `scripts/gen-brand-logo.cjs` 从品牌母版（`archive/materials/brand/`）生成；maskable 版按安全圆缩放 |
+| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` / `favicon.ico` / `favicon-16/32.png` / `apple-touch-icon.png` | 全部由 `scripts/gen-brand-logo.cjs` 从品牌母版（`archive/materials/brand/`）生成；maskable 版按安全圆缩放；`favicon.ico` 是脚本手写的 ICO 容器（16/32/48 三帧），**引用时都要带 `?v=N` 破 CF 边缘缓存**，见下方「品牌资源版本」 |
 | `src/components/InstallPrompt.astro` | 安装按钮 + iOS 手动说明弹层 |
 
 **为什么 SW 不缓存 HTML**：本站 `/songs/`、`/jubility/`、`/recent/` 等都是 SSR 查 D1，曲库和登录态随时会变。缓存 HTML 会让用户看到过期数据或别人的登录态——这比「离线可用」严重得多。所以 fetch 处理器只接管 `/_astro/`、`/assets/` 与带 hash 的静态文件，`mode === 'navigate'` 直接 return 放行。实测缓存 23 项、全是静态资源。
@@ -123,6 +123,15 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 > 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
 > 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
 
+**品牌资源版本（`?v=N`，v1.27.1 踩坑定稿）**：Cloudflare 的 Browser Cache TTL **会覆盖 `_headers` 里为图片扩展名写的 max-age**（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon 同样回 3600），而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
+
+1. `src/layouts/Base.astro` 头部四个图标链接（favicon.ico / favicon-32 / favicon-16 / apple-touch-icon）；
+2. `src/layouts/Base.astro`（页脚）与 `src/components/Header.astro`（顶栏）的 `brand.webp`；
+3. `public/manifest.webmanifest` 的三个 icons；
+4. `public/sw.js` 的 `ASSET_V` 常量（预缓存用同一套 URL；这处忘了同步只会多存一份旧 key 的副本，不会坏）。
+
+反例：**不要**为了「让浏览器认新图标」把 PNG 再包一层 SVG——源图是位图，SVG 套壳只影响矢量缩放，对缓存零作用。
+
 页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是品牌字 + 小灰字 `Enjoy Yourself`。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
 
 ## 项目清单
@@ -177,6 +186,7 @@ Beyond_JUBEAT/
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
 │  ├─ apple-touch-icon.png    iOS 主屏图标（180x180）
+│  ├─ favicon.ico                       多尺寸站点图标（16/32/48，兜底 /favicon.ico 请求）
 │  ├─ favicon-16.png   favicon-32.png   浏览器标签页图标（两档尺寸）
 │  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
 │  └─ icon-192/512/maskable-512.png     PWA 图标
@@ -331,7 +341,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
 | `/_astro/*` | `max-age=31536000, immutable`（文件名带内容 hash，天然不可变） |
 | `/index.html`、`/404.html` | `max-age=0, must-revalidate`（每次都回源确认） |
-| `/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
+| `/favicon.ico`、`/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
 
 ### SEO 与站点图标
 

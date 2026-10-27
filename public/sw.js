@@ -8,21 +8,39 @@
  * 其余（document、/api/）一律直接放行、不碰缓存。
  *
  * 版本号改动即触发清理旧缓存。只清理本 SW 自己的前缀，不碰其他缓存。
+ *
+ * 【2026-10-27 修】v1 的 PRECACHE 里写了 /favicon.svg，而该文件在换品牌标识时被删了
+ * （404）。cache.addAll 是「任一失败则整体 reject」，于是 install 直接失败、
+ * 新访客的 SW 根本装不上（PWA 坏掉）。两个修法一起做：①列表更新为实际存在的文件；
+ * ②预缓存改成逐个 add 并吞掉单项失败——以后某个资源改名/删除也不会拖垮整个安装。
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'jb-static-' + VERSION;
+
+// 品牌资源版本号，必须与以下三处保持一致（见 README「品牌资源版本」）：
+//   src/layouts/Base.astro 头部图标链接 / src/components/Header.astro 与
+//   src/layouts/Base.astro 的 brand.webp / public/manifest.webmanifest 的 icons。
+// 忘了同步这里不会出事（只会多存一份旧 key 的副本），但别让它长期落后。
+const ASSET_V = '?v=2';
 
 // 预缓存：体积小且确定不会变的关键资源
 const PRECACHE = [
   '/manifest.webmanifest',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/favicon.svg',
+  '/icon-192.png' + ASSET_V,
+  '/icon-512.png' + ASSET_V,
+  '/icon-maskable-512.png' + ASSET_V,
+  '/favicon.ico' + ASSET_V,
+  '/favicon-32.png' + ASSET_V,
+  '/favicon-16.png' + ASSET_V,
+  '/apple-touch-icon.png' + ASSET_V,
 ];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      // 逐项 add 且吞掉单项失败：少一个文件不该让整个 SW 装不上
+      .then((c) => Promise.all(PRECACHE.map((u) => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
   );
 });
 
