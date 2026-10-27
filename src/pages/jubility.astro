@@ -8,6 +8,7 @@
 // 为什么是 SSR：理论值依赖曲库（D1），曲库一加曲就要跟着变，不能在构建期焊死。
 // 与 /songs/ 同一条数据链、同一套视图口径（lib/song-view.ts + lib/jubility.ts）。
 import Layout from '../layouts/Base.astro';
+import '../styles/server-card.css';
 import '../styles/jubility.css';
 import { pageTitle } from '../lib/title';
 import { getAllSongs } from '../lib/db';

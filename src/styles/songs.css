@@ -24,120 +24,8 @@
     gap: 12px;
     margin-bottom: clamp(16px, 2vw, 22px);
 }
-.sc-srv {
-    display: flex;
-    justify-content: center;
-    gap: clamp(14px, 2.2vw, 26px);
-}
-/* 服务器卡：logo 在上、名称在下（主人 2026-10-21 指定三张卡）。
-   卡片是控件不是内容容器，半径收小、无阴影堆叠。 */
-.sc-srv-b {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    width: 200px;
-    font: inherit;
-    color: var(--ink2);
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-    border: 1px solid var(--edge);
-    border-radius: var(--r);
-    padding: 16px 14px 13px;
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-.sc-srv-logo {
-    height: 64px;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-    opacity: 0.85;
-    transition: opacity 0.2s;
-}
-/* 名称 + 总曲数两枚并排小徽章 */
-.sc-srv-meta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.sc-tag {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 3px;
-    font: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    line-height: 1;
-    padding: 5px 10px;
-    border-radius: var(--pill);
-    border: 1px solid var(--edge);
-    background: color-mix(in srgb, var(--glass2) 62%, transparent);
-    color: var(--ink2);
-    transition: color 0.2s, border-color 0.2s, background 0.2s;
-}
-/* 计数徽章：数据字体、数字在前，单位小一号压弱 */
-.sc-tag-c {
-    font-family: var(--font-data);
-    font-size: 11.5px;
-    /* 【2026-10-28 对比度修正】原来是 --ink3：它是全站最浅一档，
-       原本用来配实色 --base；但这里压在 color-mix(--glass2 62%) 的半透明徽章上，
-       徽章本身又叠在世代底图上，实测只剩 2.57:1（knit）。11.5px 小字需 4.5:1，
-       改用 --ink2（次深一档），层级感仍靠字号与 mono 字体维持。 */
-    color: var(--ink2);
-    /* 「1150 首」不能被拆成两行 */
-    white-space: nowrap;
-}
-.sc-tag-c i {
-    font-style: normal;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-}
-/* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样 */
-html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-g="ripples"]):not([data-g="saucer"]):not([data-g="yymf"]) .sc-line {
-    filter: invert(1);
-}
-.sc-srv-b:hover .sc-tag-c,
-.sc-srv-b.is-on .sc-tag-c {
-    color: var(--ink2);
-}
-.sc-srv-b.is-on .sc-tag {
-    border-color: color-mix(in srgb, var(--acc) 45%, transparent);
-    /* 【2026-10-28 对比度修正】原为 color-mix(--acc 20%, transparent)。
-       它叠在外层 .sc-srv-b.is-on 的 14% 主题色底纹上，两层加起来把底色染得
-       很黄，深色 --ink2 小字压不住：knit 上「1150 首」「9676.5pt」实测 2.57:1。
-       改用 --base 实底——文字底必须是确定值才可校验，选中感由 14% 外层底纹
-       + 45% 描边 + .sc-tag-n 的 --ink 承担，视觉上仍是「这卡被选中」。 */
-    background: var(--base);
-}
-.sc-srv-b.is-on .sc-tag-n {
-    color: var(--ink);
-}
-/* 【2026-10-28 对比度修正】原先这里还有一条 .sc-srv-b.is-on .sc-tag-c，
-   把选中卡的计数染成 color-mix(--acc 80%, --ink)。它比上面通用的
-   .sc-srv-b:hover .sc-tag-c, .sc-srv-b.is-on .sc-tag-c 更具体，等于把那条修复
-   又盖回去：knit 上「1150 首」实测只剩 2.57:1。计数是纯信息、不该靠染主题色强调，
-   选中感已由边框 + 底纹 + .sc-tag-n 承担，所以整条删掉，让它继承 --ink2。 */
-.sc-srv-b:hover {
-    color: var(--ink);
-    background: color-mix(in srgb, var(--ink) 10%, transparent);
-    border-color: var(--edge2);
-}
-.sc-srv-b:hover .sc-srv-logo {
-    opacity: 1;
-}
-.sc-srv-b.is-on {
-    color: var(--ink);
-    background: color-mix(in srgb, var(--acc) 14%, transparent);
-    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
-    box-shadow: 0 6px 16px -10px color-mix(in srgb, var(--acc) 70%, transparent);
-}
-.sc-srv-b.is-on .sc-srv-logo {
-    opacity: 1;
-}
-.sc-srv-b:focus-visible,
+/* 服务器切换卡（.sc-srv / .sc-srv-b / .sc-tag）已抽到 server-card.css，
+   与 /jubility/ 共用同一份。此处只留本页独有的 .sc-chip 焦点环。 */
 .sc-chip:focus-visible {
     outline: 2px solid var(--acc);
     outline-offset: 2px;
@@ -244,6 +132,8 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
 .sc-card.sc-stag {
     animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
+/* 切服务器卡时的入场 pop：/songs 独有（/jubility 不需要这个动画），
+   所以留在本文件；.sc-srv-b 的结构样式在 server-card.css。 */
 .sc-srv-b.is-on {
     animation: scPop 0.24s ease-out both;
 }
@@ -585,22 +475,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         align-items: stretch;
         gap: 10px;
     }
-    .sc-srv {
-        width: 100%;
-    }
-    .sc-srv-b {
-        flex: 1;
-        width: auto;
-        gap: 8px;
-        padding: 12px 6px 11px;
-    }
-    .sc-srv-logo {
-        height: 42px;
-    }
-    .sc-tag {
-        font-size: 11px;
-        padding: 4px 8px;
-    }
+    /* .sc-srv / .sc-srv-b / .sc-srv-logo / .sc-tag 的窄屏规则已迁到 server-card.css */
     .sc-tag-c {
         font-size: 11px;
     }
