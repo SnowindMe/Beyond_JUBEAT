@@ -483,7 +483,10 @@ html[data-g="yymf"] .jb-row[data-custom] .jb-seg {
     font-weight: 700;
 }
 .jb-fit[data-reach] em {
-    color: color-mix(in srgb, var(--acc) 78%, var(--ink));
+    /* 【2026-10-28 对比度修正】原为 color-mix(--acc 78%, --ink)：把主题色当 10px
+       小字色用，压在玻璃卡与世代底图上 knit 实测 2.66:1，需 4.5:1。
+       改 --acc-ink（同色相的压暗版）；「可填满」的强调已由父级 --ink + 700 字重承担。 */
+    color: var(--acc-ink);
 }
 
 /* 列头：与 .jb-row 同一套 grid 列宽，让它读起来像一张表 */
