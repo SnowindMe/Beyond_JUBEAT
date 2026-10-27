@@ -47,6 +47,34 @@
     gap: 6px;
     flex-wrap: wrap;
 }
+/* 【2026-10-28 显示限时曲】开关��与 .sc-chip 同高（44px 触控），
+   但形态是"勾选框 + 文字"，不是一个选项片——它不参与互斥。
+   勾选框用系统控件，不重画：这个开关不承担品牌感，自定义反而容易做坏可访问性。 */
+.sc-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--ink2);
+    user-select: none;
+}
+.sc-toggle input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--acc);
+    cursor: pointer;
+}
+.sc-toggle:hover {
+    color: var(--ink);
+}
+.sc-toggle input:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
 .sc-chip {
     display: inline-flex;
     align-items: center;
@@ -73,6 +101,10 @@
        color-mix(--glass2 62%) 的半透明徽章、下面还有世代底图，实测只有 2.1~2.6:1。
        11px 小字需 4.5:1，改用 --ink2；数字与标签的主次差仍靠字重与字号维持。 */
     color: var(--ink2);
+    /* 【2026-10-28 主人要求【范围】和【分区】的数字隐藏】
+       这两组的 <b> 是唯一挂 .sc-chip 计数的（曲师计数写在下拉项文字里），
+       所以整条隐藏即可。DOM 保留，读屏仍能念出数量关系。 */
+    display: none;
     transition: color 0.2s;
 }
 .sc-chip:hover {

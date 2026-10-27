@@ -102,10 +102,21 @@ function main() {
 
   const ins = db.prepare(`INSERT OR REPLACE INTO songs(
     song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-    bsc, adv, ext, alt, cover, added_at, unlock_note
-  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
+  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0 };
+  // 【2026-10-28 限时曲】取 archive 快照里的 limitedPeriod.endsOn（YYYY-MM-DD）。
+  // 只认 endsOn，不要 limited 布尔：实测 Will We Shine 的 limited 是 false，
+  // 但它确实有 2026-07-30~10-14 的限时区间——布尔不可靠，日期才是事实。
+  // 也不用数据里那个 daysLeft：它是生成快照当天的余量，早就过期失效。
+  const limitedUntilOf = (arc) => {
+    const p = arc && arc.limitedPeriod;
+    if (!p || !p.endsOn) return null;
+    const d = String(p.endsOn).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
+  };
+
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
   const problems = [];
 
   db.exec('BEGIN');
@@ -156,8 +167,9 @@ function main() {
         genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
-        arc.addedAt || null, note
+        arc.addedAt || null, note, limitedUntilOf(arc)
       );
+      if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
       stat.jp++;
     }
 
@@ -180,8 +192,11 @@ function main() {
         '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
         /\[\s*2\s*\]/.test(r.title) ? 1 : 0, r.cover || null,
-        isoDate(r.date), dashNull(r.pool)
+        isoDate(r.date), dashNull(r.pool),
+        // 国服行也按 songId 回查一次快照：限时曲实测都在国服（新年快乐、Will We Shine）
+        limitedUntilOf(archiveById.get(String(r.songId)))
       );
+      if (limitedUntilOf(archiveById.get(String(r.songId)))) stat.limited = (stat.limited || 0) + 1;
       if (r.cover) stat.cnCover++;
       stat.cn++;
     }

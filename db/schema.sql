@@ -25,7 +25,11 @@ CREATE TABLE songs (
   alt         INTEGER NOT NULL DEFAULT 0, -- 1 = 长押谱（标题带 [ 2 ]）
   cover       TEXT,                      -- 曲绘文件名（日服 jkt/id 图，国服 webp）
   added_at    TEXT,                      -- 上线/解禁日期 YYYY-MM-DD
-  unlock_note TEXT                       -- 解禁池或联动来源，人类可读
+  unlock_note TEXT,                      -- 解禁池或联动来源，人类可读
+  -- 【2026-10-28 主人要求「显示限时曲」】限时曲的结束日（YYYY-MM-DD）；NULL = 非限时。
+  -- 只存日期、不存布尔：判定要按**真实今天**算（主人定的口径是「区间结束才算限时」），
+  -- 存布尔会在数据生成那天就焊死，之后永远不变。前端拿它和当天日期比。
+  limited_until TEXT
 );
 CREATE INDEX idx_songs_jp_gen  ON songs(server_jp, gen_name);
 CREATE INDEX idx_songs_cn_cat  ON songs(server_cn, category);

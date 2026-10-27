@@ -28,7 +28,7 @@ const GEN_ORDER = [
 const db = new DatabaseSync(DB, { readOnly: true });
 const rows = db.prepare(`
   SELECT song_id, title, artist, bpm, gen_name, server_jp, server_cn, category,
-         bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind
+         bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind, limited_until
   FROM songs ORDER BY gen_name, ext DESC
 `).all();
 db.close();
@@ -57,6 +57,10 @@ const SONGS = rows.map((s) => ({
   cover: coverName(s.cover), d: s.added_at || null, bpm: s.bpm || null,
   gen: s.gen_name, jp: !!s.server_jp, cn: !!s.server_cn, cat: s.category, alt: s.alt ? 1 : 0,
   unlock: s.unlock_note || null, kind: s.id_kind,
+  // 【2026-10-28 限时曲】限时结束日 YYYY-MM-DD，NULL = 非限时。
+  // 传日期而不是布尔：判定要按「真实今天」算（主人定的口径：区间结束才算限时），
+  // 布尔会在数据生成那天焊死。前端拿它和当天日期比。
+  lu: s.limited_until || null,
 }));
 
 const byExtDesc = (a, b) => (ext(b) || 0) - (ext(a) || 0);

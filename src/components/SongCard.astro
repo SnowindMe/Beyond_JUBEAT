@@ -10,6 +10,9 @@
 // 否则「7.0 以下」会把没有 EXT 的曲误判成 0。
 // data-lv 是三档定数拼成的一串（"7 10.5 10.9"），只给搜索用：
 // 用户常直接打「10.5」找歌，光靠曲名/曲师/songId 三个字段搜不到。
+// data-lu（2026-10-28）：限时结束日 YYYY-MM-DD，空串 = 非限时。
+// 「是否已结束」必须由浏览器按真实今天算——在这里按构建期日期焊死的话，
+// 数据一生成就固定，第二天起就永远是错的。
 import type { Song } from '../lib/db';
 import { catOf, isPickUp } from '../lib/song-view';
 
@@ -43,6 +46,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-ext={s.lv.ext ?? ''}
   data-lv={`${s.lv.bsc ?? ''} ${s.lv.adv ?? ''} ${s.lv.ext ?? ''}`}
   data-scope={pick ? 'pick' : 'common'}
+  data-lu={s.lu ?? ''}
 >
   <div class="sc-j">
     {s.cover ? (

@@ -156,9 +156,26 @@ const srvGenOrder = (srv: Srv) =>
 // 计数必须与实际渲染同一套口径，否则就会出现「标题 524、页面 523」这种自相矛盾
 // （本轮实测：去重过滤器只加在渲染循环里，countOf/srvTotal 还在裸数 ALL）。
 // 所以先把「这个视图里到底有哪些行」抽成一个函数，桶、计数、世代清单三处共用它。
+// 【2026-10-28 限时曲】服务端就判一次，别只在前端隐藏：
+// 主人明确「服务器选项卡的歌曲总数也不要加上限时曲的数量」——若只在 JS 里藏卡片，
+// 右上角那个「1150 首」仍会把它们算进去，数字与肉眼可见对不上。
+// 口径与前端 isEndedLimited() 严格一致：结束日 < 今天 才算已结束。
+// 这里用**构建/请求当天的日期**：SSR 页每次请求都重新执行，所以它跟随真实日期；
+// 预渲染页则是构建那天——限时曲只有 2 首、且都已过期，误差窗口可接受，
+// 真要绝对精确应改成在运行时注入客户端日期（当前不必要）。
+const todayISO = (() => {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+})();
+const isLimitedEnded = (s: Song) => !!s.lu && String(s.lu) < todayISO;
+
 const rowsIn = (srv: Srv) =>
   ALL.filter((s) => {
     if (!inView(s, srv)) return false;
+    // 已结束的限时曲不进常规集合（计数、分桶、世代清单由此一并对齐）
+    if (isLimitedEnded(s)) return false;
     // 国服视图里双服曲只留国服行（与 bucket/byGen 同一判据，见上）
     if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) return false;
     return true;
@@ -218,13 +235,32 @@ const TOP_ARTISTS = [...ARTIST_TALLY.entries()]
 const GEN_OPTS = GEN_ORDER;
 
 // 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BANDS 一一对应，改一处必须改两处。
+//
+// 【2026-10-28 主人改档位】原五档（7.0 以下 / 7.x / 8.x / 9.x / 10.0 以上）
+// 改成八档：全部、7-、7、8、9、9+、10、10+。
+//
+// 主人原话：「X 指的是 X.0-X.4 这个区间，X+ 指的是 X.5-X.9 这个区间」。
+// 按字面，7 与 8 也该各有 7+ / 8+，但主人给的清单里没有——查过实际数据：
+// 全库 7.0 有 450 个谱面、8.0 有 510 个，**没有任何 7.1~7.9 或 8.1~8.9**，
+// 细分只从 9 开始（9.0~10.9）。所以 7 与 8 按整段处理即可完整覆盖：
+//   7-  = v < 7
+//   7   = 7.0 ≤ v < 8.0     （实际只有 7.0）
+//   8   = 8.0 ≤ v < 9.0     （实际只有 8.0）
+//   9   = 9.0 ≤ v < 9.5     （X.0–X.4）
+//   9+  = 9.5 ≤ v < 10      （X.5–X.9）
+//   10  = 10.0 ≤ v < 10.5
+//   10+ = v ≥ 10.5
+// 每档互不重叠、合起来 100% 覆盖。将来若出现 7.5 这类值，会落进「7」这一档
+// （不会漏），届时要拆 7+ 再说。
 const BANDS = [
   { v: 'all', label: '全部' },
-  { v: 'lt7', label: '7.0 以下' },
-  { v: '7', label: '7.0–7.9' },
-  { v: '8', label: '8.0–8.9' },
-  { v: '9', label: '9.0–9.9' },
-  { v: '10', label: '10.0 以上' },
+  { v: 'lt7', label: '7-' },
+  { v: '7', label: '7' },
+  { v: '8', label: '8' },
+  { v: '9', label: '9' },
+  { v: '9p', label: '9+' },
+  { v: '10', label: '10' },
+  { v: '10p', label: '10+' },
 ] as const;
 const DIFFS = [
   { v: 'all', label: '全部档' },
@@ -386,6 +422,20 @@ const SORTS = [
               </div>
             ))}
           </div>
+
+        {/* 【显示限时曲】（2026-10-28 主人要求）
+            默认不显示：限时曲的活动期已过，混在常规列表里会让「总数」和实际可玩对不上。
+            ⚠ 用 checkbox 而不是和「范围/分区」一样是单选 chip——它是独立开关、不是互斥选项
+            （主人原话「添加【显示限时曲】，默认不显示」）。
+            判定不在这里做：卡片的 data-lu 是结束日，「是否已结束」由脚本按真实今天算；
+            构建期焊死的话第二天起就永远是错的。 */}
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">限时曲</span>
+          <label class="sc-toggle">
+            <input type="checkbox" id="scLimited" />
+            <span>显示限时曲</span>
+          </label>
+        </div>
         </div>
 
         {/* 【下拉改自定义弹层（2026-10-25）】
@@ -394,6 +444,24 @@ const SORTS = [
             所以：原生 select 保留在 DOM 里当**数据源与无障碍载体**（读屏、键盘、
             表单语义都还靠它），但视觉上用 .sc-dd 按钮 + 自定义列表呈现。
             两者通过 syncDd() 双向同步：点列表项 → 写 select.value → 派发 change，
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">定数区间</span>
+          <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
+            {BANDS.map((b) => (
+              <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div class="sc-pf sc-pf-wide">
+          <span class="sc-pf-k">难度档</span>
+          <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
+            {DIFFS.map((d) => (
+              <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
+            ))}
+          </div>
+        </div>
+
             原来监听 select 的筛选逻辑一行都不用改。 */}
         <div class="sc-pf">
           <span class="sc-pf-k" id="scSortK">排序</span>
@@ -444,24 +512,6 @@ const SORTS = [
               <li role="option" data-v="all" aria-selected="true">全部曲师（{ARTIST_TALLY.size} 位）</li>
               {TOP_ARTISTS.map(([a, n]) => <li role="option" data-v={a} aria-selected="false">{a}（{n}）</li>)}
             </ul>
-          </div>
-        </div>
-
-        <div class="sc-pf sc-pf-wide">
-          <span class="sc-pf-k">难度档</span>
-          <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
-            {DIFFS.map((d) => (
-              <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <div class="sc-pf sc-pf-wide">
-          <span class="sc-pf-k">定数区间</span>
-          <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
-            {BANDS.map((b) => (
-              <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
-            ))}
           </div>
         </div>
 
@@ -570,19 +620,40 @@ const SORTS = [
         gen: 'all',
         artist: 'all',
         diff: 'all',   // all | bsc | adv | ext
-        band: 'all',   // all | lt7 | 7 | 8 | 9 | 10
+        band: 'all',   // all | lt7 | 7 | 8 | 9 | 9p | 10 | 10p（2026-10-28 改八档）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
+        showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
         sort: DEFAULT_SORT_INLINE
       };
 
-      // 定数区间：与页面上那五档按钮一一对应，改这里必须同步改模板里的 BANDS
+      // 定数区间：与页面上那八档按钮一一对应，改这里必须同步改模板里的 BANDS。
+      // 语义见文件上方 BANDS 定义的注释（7 / 8 是整段，9 / 10 各拆 X 与 X+ 半段）。
       var BANDS = {
         lt7: function (v) { return v < 7; },
         '7': function (v) { return v >= 7 && v < 8; },
         '8': function (v) { return v >= 8 && v < 9; },
-        '9': function (v) { return v >= 9 && v < 10; },
-        '10': function (v) { return v >= 10; }
+        '9': function (v) { return v >= 9 && v < 9.5; },
+        '9p': function (v) { return v >= 9.5 && v < 10; },
+        '10': function (v) { return v >= 10 && v < 10.5; },
+        '10p': function (v) { return v >= 10.5; }
       };
+
+      // 【2026-10-28 限时曲】卡片的 data-lu 是限时结束日（YYYY-MM-DD），空串 = 非限时。
+      // 主人定的口径：「看区间是否仍在有效期内」——结束日 < 今天 才算限时曲。
+      // 关键：今天必须是**运行时**的真日期，不能在构建期算好写进 HTML
+      // （那样数据一生成就固定，第二天起永远错）。
+      // 用字符串比较即可：YYYY-MM-DD 是字典序 = 时间序，不必建 Date 对象。
+      var TODAY = (function () {
+        var d = new Date();
+        var m = ('0' + (d.getMonth() + 1)).slice(-2);
+        var day = ('0' + d.getDate()).slice(-2);
+        return d.getFullYear() + '-' + m + '-' + day;
+      })();
+      function isEndedLimited(card) {
+        var lu = card.getAttribute('data-lu');
+        if (!lu) return false;                  // 没限时区间：常态曲
+        return lu < TODAY;                      // 结束日已过 = 限时曲（默认隐藏）
+      }
 
       // 取某张卡在当前难度档下的定数。null = 这张卡没有这一档（不是 0）
       function lvOf(card, diff) {
@@ -593,6 +664,9 @@ const SORTS = [
       }
 
       function matchCard(card, bodySrv) {
+        // 【2026-10-28】限时曲默认不显示：勾了「显示限时曲」才放行。
+        // 放在最前面短路，省掉后面一串字符串比较。
+        if (!state.showLimited && isEndedLimited(card)) return false;
         if (state.q) {
           // 匹配 曲名 / 曲师 / songId 三个字段（任务书①），外加 data-lv 的三档定数：
           // 用户常直接打「10.5」找这个定数的歌，只搜前三个字段会一无所获。
@@ -1087,9 +1161,11 @@ const SORTS = [
       function resetAll() {
         state.q = ''; state.gen = 'all'; state.artist = 'all';
         state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
-        state.cat = 'all'; state.scope = 'all';
+        state.cat = 'all'; state.scope = 'all'; state.showLimited = false;
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
+        var limBox = document.getElementById('scLimited');
+        if (limBox) limBox.checked = false;
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ai = document.getElementById('scArtist'); if (ai) ai.value = 'all';
@@ -1102,6 +1178,17 @@ const SORTS = [
         if (scSet) setChipGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', scSet.querySelector('.sc-chip[data-scope="all"]'));
         apply();
       }
+
+      // 【2026-10-28 显示限时曲】独立开关：change 即生效（不用点应用）。
+      // 它是全局维度，切服务器时不清零——两服的限时曲口径一致。
+      (function () {
+        var box = document.getElementById('scLimited');
+        if (!box) return;
+        box.addEventListener('change', function () {
+          state.showLimited = !!box.checked;
+          apply();
+        });
+      })();
 
       root.addEventListener('click', function (e) {
         var t = e.target;
