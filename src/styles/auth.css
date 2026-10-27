@@ -32,7 +32,7 @@
   color: var(--ink);
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   border: 1px solid var(--edge2);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 11px 13px;
   width: 100%;
   transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
@@ -107,7 +107,7 @@
   color: #ffb4b4;
   background: color-mix(in srgb, #ff6b6b 12%, transparent);
   border: 1px solid color-mix(in srgb, #ff6b6b 38%, transparent);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 10px 13px;
   margin: 0;
 }
@@ -140,7 +140,7 @@
   gap: 1px;
   margin: 0;
   border: 1px solid var(--edge);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 .au-roles > div {
@@ -197,7 +197,7 @@
   gap: 1px;
   margin: 0;
   border: 1px solid var(--edge);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   overflow: hidden;
 }
 .au-kv > div {
@@ -236,7 +236,7 @@
 }
 .au-req-i {
   border: 1px solid var(--edge);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   padding: 14px 16px;
   background: color-mix(in srgb, var(--ink) 3%, transparent);
   display: flex;
@@ -350,7 +350,7 @@
   color: var(--ink);
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   border: 1px solid var(--edge2);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 10px 13px;
   min-width: 0;
   appearance: none;

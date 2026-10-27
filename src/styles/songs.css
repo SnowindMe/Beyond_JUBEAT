@@ -230,7 +230,7 @@
     flex: none;
     width: 3px;
     height: 13px;
-    border-radius: 2px;
+    border-radius: var(--r-hair);
     background: currentColor;
     box-shadow: 0 0 8px color-mix(in srgb, var(--acc) 60%, transparent);
 }
@@ -289,7 +289,7 @@
     margin: -12px 0;
     color: inherit;
     text-decoration: none;
-    border-radius: 3px;
+    border-radius: var(--r-hair);
     transition: color 0.18s ease;
 }
 .sc-gen-a:hover {
@@ -341,7 +341,7 @@
 }
 .sc-j {
     position: relative;
-    border-radius: 10px;
+    border-radius: var(--r-md);
     overflow: hidden;
     aspect-ratio: 1;
     background: color-mix(in srgb, var(--ink) 7%, transparent);
@@ -615,7 +615,7 @@ html[data-g="yymf"] .sc-pick {
     /* 承托底板：浅色世代的白底彩图上，ink3 小字（世代/分区）直接压在曲线图案上会糊。
        这里给内容一层玻璃底 + 细边，圆角收到 10px（比旧的 --r:16px 克制），
        颜色全部走站内令牌，15 套主题各自成立，不硬编码。 */
-    border-radius: 10px;
+    border-radius: var(--r-md);
     border: 1px solid var(--edge);
     background: var(--glass);
     backdrop-filter: blur(12px);
@@ -719,7 +719,7 @@ html[data-g="yymf"] .sc-pick {
     position: relative;
     width: 144px;
     height: 144px;
-    border-radius: 3px;
+    border-radius: var(--r-hair);
     overflow: hidden;
     background: color-mix(in srgb, var(--ink) 8%, transparent);
     box-shadow:
@@ -755,7 +755,7 @@ html[data-g="yymf"] .sc-pick {
     font-family: var(--font-data);
     font-size: 11px;
     letter-spacing: 0.1em;
-    border-radius: 2px;
+    border-radius: var(--r-hair);
     color: var(--acc);
     border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
 }
@@ -860,14 +860,14 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sd-bar {
     position: relative;
     height: 6px;
-    border-radius: 3px;
+    border-radius: var(--r-hair);
     background: color-mix(in srgb, var(--ink) 9%, transparent);
     overflow: hidden;
 }
 .sd-bar i {
     display: block;
     height: 100%;
-    border-radius: 3px;
+    border-radius: var(--r-hair);
     transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 .sd-row-bsc .sd-bar i { background: var(--d-bsc); }
@@ -885,7 +885,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sd-row.is-empty .sd-bar {
     background: transparent;
     border: 1px dashed var(--edge2);
-    border-radius: 3px;
+    border-radius: var(--r-hair);
 }
 .sd-row.is-empty .sd-row-k,
 .sd-row.is-empty .sd-row-v {
@@ -1552,6 +1552,10 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     clip: rect(0 0 0 0);
     clip-path: inset(50%);
     white-space: nowrap;
+    /* 【2026-10-28 字号收敛】这个原生 select 是视觉隐藏的（给读屏与无 JS 降级用），
+       但没设 font-size 时会落到浏览器 UA 的 13.3333px，成为全站唯一一处
+       "刻度外的字号"（含其 60 个 option）。显式继承，让它不再制造假差异。 */
+    font: inherit;
 }
 /* 触发按钮：与 .sc-pf-in 同一套外观（整行宽、40px、自绘箭头） */
 .sc-dd-b {
@@ -1638,7 +1642,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     padding: 9px 10px;
     font-size: 12.5px;
     color: var(--ink2);
-    border-radius: 6px;
+    border-radius: var(--r-xs);
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -1671,7 +1675,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 .sc-dd-list::-webkit-scrollbar-thumb {
     border: 2px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--r-hair);
     background-clip: content-box;
     background-color: color-mix(in srgb, var(--ink3) 45%, transparent);
 }
