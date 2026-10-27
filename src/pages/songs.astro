@@ -444,6 +444,9 @@ const SORTS = [
             所以：原生 select 保留在 DOM 里当**数据源与无障碍载体**（读屏、键盘、
             表单语义都还靠它），但视觉上用 .sc-dd 按钮 + 自定义列表呈现。
             两者通过 syncDd() 双向同步：点列表项 → 写 select.value → 派发 change，
+
+            原来监听 select 的筛选逻辑一行都不用改。 */}
+
         <div class="sc-pf sc-pf-wide">
           <span class="sc-pf-k">定数区间</span>
           <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
@@ -461,8 +464,6 @@ const SORTS = [
             ))}
           </div>
         </div>
-
-            原来监听 select 的筛选逻辑一行都不用改。 */}
         <div class="sc-pf">
           <span class="sc-pf-k" id="scSortK">排序</span>
           <div class="sc-dd" data-dd="scSort">
