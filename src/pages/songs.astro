@@ -1067,16 +1067,31 @@ const SORTS = [
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
         var list = dd.querySelector('.sc-dd-list');
         list.hidden = false;
-        // 【2026-10-28 修复】弹层默认向下展开。排序/世代/曲师现在在面板最后一行，
-        // 下方到视口底只剩一点空间：实测列表底边 1075px、视口 900px，
-        // 整个弹层跑出屏幕（祖先都没裁剪，是定位越界），用户看不到也滚不到。
-        // 这里先量按钮下方的可用空间，不够放下整个列表就翻到按钮上方。
+        // 【弹层方向：按"显示高度"判，不是按 scrollHeight 判】
+        // 2026-10-29 修：原实现取 list.scrollHeight 作 listH。但弹层有 max-height:268px，
+        // 曲师列表实际内容 1490px、显示只有 268px。用 1490 去比"按钮下方还剩多少"，
+        // 几乎永远判定"下方放不下"，于是只要按钮位于上半屏、上方空间略大于下方，
+        // 就翻成向上——这就是主人看到的「下拉列表在进入上半屏时会往下弹出」的反例：
+        // 期望它往下，它却往上翻。实测 7 个滚位从 0 到 0.9 屏，列表从未真正越出视口，
+        // 方向却在中段就开始乱翻。
+        //
+        // 正确判据：量**实际会占的高度**（受 max-height 限制的 rect.height），
+        // 再比较上下剩余空间，只有下方真放不下、且上方更宽裕时才翻。
         // 先清掉上次的方向标记再量，避免上一次的 up 影响本次判断。
         list.removeAttribute('data-drop');
         var btnRect = dd.querySelector('.sc-dd-b').getBoundingClientRect();
-        var listH = list.scrollHeight || list.getBoundingClientRect().height || 0;
-        var spaceBelow = window.innerHeight - btnRect.bottom - 8;
-        var spaceAbove = btnRect.top - 8;
+        // rect.height 已受 max-height 约束，是"真正会画出来"的高度。
+        // 刚 unhide 那一帧个别浏览器可能先给 0：此时退回 max-height 上限，
+        // 宁可多判一次"放不下"，也不要因为 0 < spaceBelow 而漏判成向下。
+        var rectH = list.getBoundingClientRect().height || 0;
+        if (!rectH) {
+          var mh = parseInt(getComputedStyle(list).maxHeight, 10);
+          rectH = Number.isFinite(mh) ? Math.min(mh, list.scrollHeight || mh) : (list.scrollHeight || 0);
+        }
+        var listH = rectH;
+        var GAP = 4 + 8;
+        var spaceBelow = window.innerHeight - btnRect.bottom - GAP;
+        var spaceAbove = btnRect.top - GAP;
         if (listH > spaceBelow && spaceAbove > spaceBelow) {
           list.setAttribute('data-drop', 'up');
         }
