@@ -47,8 +47,8 @@ const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
 //
 // 色值来源：src/styles/theme.css 每个 html[data-g="x"] 块的 --acc
 // （scripts/ci 里若有主题色改动，这里是唯一需要同步的手抄点；改色请两边一起改）。
-// clan 在数据层只有一个世代，但主题层拆成 4 套；这里取 clan Red（#ff6b6b）作为
-// 世代代表色——与字标 logo 的主色一致。
+// clan 在数据层只有一个世代，但主题层拆成 4 套；clan 系列的曲子改用 EXT 等级分段取色，
+// 见下面的 clanColor()。
 const GEN_COLOR: Record<string, string> = {
   jubeat: '#2f86e6',
   ripples: '#4fae9e',
@@ -58,11 +58,30 @@ const GEN_COLOR: Record<string, string> = {
   'saucer fulfill': '#c9d2d6',
   prop: '#e0338f',
   Qubell: '#3E8FBF',
-  clan: '#ff6b6b',
   festo: '#ffd166',
   'Ave.': '#2ee8e8',
   'beyond the Ave.': '#ffa23c',
   音乐魔方: '#3f6fd8',
+};
+
+// 【2026-10-29 主人「clan 代的唱片和世代徽章颜色根据 EXT 等级来定：
+//   7 级及以下绿、8 级蓝、9 级红、10 级紫」】
+// clan 恰好自带四套主题色，这里按 EXT 分段取对应的那套，观感上是同一套视觉语言。
+// 色值取自 theme.css：clan_green #57d98a / clan_blue #5c8dff /
+// clan_red #ff6b6b / clan_purple #b07dff。
+// 边界：EXT 为空（无谱面）时退回 7 级及以下的绿色——不留空色。
+// 分段用「>= 10 → 紫，>= 9 → 红，>= 8 → 蓝，其余 → 绿」，
+// 这样 10.5 这类超 10 的定数也落在紫段，不会漏进红段。
+const CLAN_BY_EXT = [
+  { min: 10, color: '#b07dff' }, // 紫
+  { min: 9, color: '#ff6b6b' },  // 红
+  { min: 8, color: '#5c8dff' },  // 蓝
+  { min: -Infinity, color: '#57d98a' }, // 绿（7 级及以下）
+];
+const clanColor = (ext: number | null) => {
+  const v = ext == null ? 0 : ext;
+  for (const seg of CLAN_BY_EXT) if (v >= seg.min) return seg.color;
+  return CLAN_BY_EXT[CLAN_BY_EXT.length - 1].color;
 };
 
 // 世代名（数据层）与 logo 文件名（主题层）是两套标识，不能直接拼：
@@ -83,7 +102,12 @@ const GEN_LOGO: Record<string, string> = {
   音乐魔方: 'yymf',
 };
 const genLogo = song ? GEN_LOGO[song.gen] : undefined;
-const genColor = song ? GEN_COLOR[song.gen] : undefined;
+// clan 走 EXT 分段取色，其余世代用固定色（见上面两处注释）
+const genColor = song
+  ? song.gen === 'clan'
+    ? clanColor(song.lv.ext)
+    : GEN_COLOR[song.gen]
+  : undefined;
 
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
@@ -248,18 +272,35 @@ const metaFoot: Meta[] = song
     songId 与曲名都挂 data-copy，用同一段脚本处理——两处行为一致，不写两套。
     clipboard API 在非 HTTPS / 老浏览器里可能不可用，所以带回退：
     临时 textarea + execCommand('copy')，这是 2026 年仍然最稳的兜底。
-    复制成功只给一个小"已复制"提示，不弹 Toast，不打断视线。 */}
+    【2026-10-29 改】提示从"贴元素上方的小气泡"改成"从顶部向下弹出的 toast"
+    （主人原话「已复制直接换成从顶部向下弹出的toast」）——
+    气泡的问题是不管怎么摆都受宿主元素尺寸影响，长曲名会漂、移动端会被挤出屏幕；
+    页面级 toast 位置永远可预期。脚本负责创建/复用 #sdToast 节点。 */}
 <script is:inline>
   (function () {
-    var tipTimer = null;
-    function flash(el) {
-      if (!el) return;
-      var holder = el.closest('.sd-title-wrap') || el;
-      holder.classList.remove('is-copied');
-      void holder.offsetWidth; // 强制回流，连点也能重播提示动画
-      holder.classList.add('is-copied');
-      if (tipTimer) clearTimeout(tipTimer);
-      tipTimer = setTimeout(function () { holder.classList.remove('is-copied'); }, 1300);
+    var toastEl = null;
+    var toastTimer = null;
+    function ensureToast() {
+      if (toastEl) return toastEl;
+      toastEl = document.createElement('div');
+      toastEl.id = 'sdToast';
+      toastEl.className = 'sd-toast';
+      toastEl.setAttribute('role', 'status');
+      toastEl.setAttribute('aria-live', 'polite');
+      toastEl.innerHTML =
+        '<svg class="sd-toast-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>' +
+        '<span>已复制</span>';
+      document.body.appendChild(toastEl);
+      return toastEl;
+    }
+    function showToast() {
+      var t = ensureToast();
+      // 先移除再强制回流，连点也能重播滑入动画
+      t.classList.remove('is-on');
+      void t.offsetWidth;
+      t.classList.add('is-on');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.remove('is-on'); }, 1600);
     }
     function fallbackCopy(text) {
       var ta = document.createElement('textarea');
@@ -290,7 +331,7 @@ const metaFoot: Meta[] = song
         var text = el.getAttribute('data-copy') || '';
         if (!text) return;
         copy(text).then(function (ok) {
-          if (ok) flash(el);
+          if (ok) showToast();
           el.blur();
         });
       });

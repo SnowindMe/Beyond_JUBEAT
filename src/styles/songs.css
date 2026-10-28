@@ -1022,48 +1022,62 @@ html[data-bgm="playing"] .sd-disc-spin {
     outline-offset: 6px;
     border-radius: var(--r-hair);
 }
-/* 复制成功的轻提示：1.2s 后消失。不做全屏 Toast——复制是个即时小动作。
-   【2026-10-29 两个 bug，主人反馈"小提示看不见"】
-   ① 定位：原先只在 .is-copied 时才给父元素 position:relative，但伪元素是
-      position:absolute 且**没有 top/left**，默认落在静态位置 → 会跑到父元素
-      内容流之外（被 flex 行高挤走、或叠到别的元素下面）看不见。
-      改成显式 top/right，并让父元素**始终** relative（不靠状态类切换，避免时序抖动）。
-   ② 配色：同样误用 --acc-ink 当彩色底上的字（深色世代 = 与底色同亮青，等于隐形）。
-      改成 --base。 */
-.sd-title-wrap,
-.sd-sid {
-    position: relative;
-}
-.sd-title-wrap.is-copied::after,
-.sd-sid.is-copied::after {
-    content: "已复制";
-    position: absolute;
-    /* 放在元素**上方居中**而不是右侧：曲名可能很长（有的曲名 60+ 字符），
-       右侧浮出会被 .sd-main 的边界或面板 padding 裁掉；上方浮出无论多长都看得见。 */
+/* 【2026-10-29 主人「已复制直接换成从顶部向下弹出的 toast」】
+   上一版是贴在曲名上方的伪元素气泡，问题一堆（absolute 无 top/left、
+   动画 transform 覆盖居中偏移、长曲名时位置漂移）。改成**页面级 toast**：
+   固定贴顶居中，从上方滑入，1.6s 后滑出。
+   好处：位置永远可预期、不受宿主元素尺寸影响、移动端也不会被挤出屏幕。
+   实现：由脚本创建/复用一个 #sdToast 节点（见页面末尾 script），这里只管样式。 */
+.sd-toast {
+    position: fixed;
+    top: 0;
     left: 50%;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
-    padding: 3px 9px;
-    border-radius: 999px;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: 0 0 var(--r-sm) var(--r-sm);
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     white-space: nowrap;
-    color: var(--base, #0a1016);
-    background: var(--acc);
-    /* z-index 要高过曲名文字与徽章，否则会被压住 */
-    z-index: 5;
-    animation: sdCopied 1.2s ease forwards;
+    /* 彩色底 + 固定深色字：和世代徽章同一套对比度策略 */
+    color: #0b0f14;
+    background: var(--gen-c, var(--acc));
+    box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.7);
+    /* 【初始态：藏在视口上沿之外】用 translateY(-100%) 把自己整块推到可见区上方。
+       注意 opacity 也从 0 起，避免"先看到再滑走"。
+       之前写成 top:0 + translate(-50%,-100%) 时，过渡起点在 -38px，
+       截到的瞬间恰好在视口外，看起来像"没弹出来"。 */
+    transform: translate(-50%, -110%);
+    opacity: 0;
     pointer-events: none;
+    /* 只过渡 transform/opacity，不动布局（不引起重排） */
+    transition: transform 0.3s cubic-bezier(0.22, 0.7, 0.3, 1), opacity 0.18s ease;
+    will-change: transform, opacity;
 }
-/* 动画里必须带上 translateX(-50%)：transform 是覆盖式属性，
-   只写 translateY 会把定位用的居中偏移抹掉，提示会突然偏到右边去。 */
-@keyframes sdCopied {
-    0%   { opacity: 0; transform: translateX(-50%) translateY(3px); }
-    12%  { opacity: 1; transform: translateX(-50%) translateY(0); }
-    74%  { opacity: 1; transform: translateX(-50%) translateY(0); }
-    100% { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+/* 弹出态：落到贴住视口上沿 */
+.sd-toast.is-on {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+.sd-toast-ico {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+@media (prefers-reduced-motion: reduce) {
+    /* 减少动效：不做滑入，直接淡入淡出 */
+    .sd-toast {
+        transition: opacity 0.2s ease;
+        transform: translate(-50%, 0);
+    }
 }
 /* 艺术家：从曲名上方挪到下方（主人第 2 条）。
    与曲名间距 14px，字号比曲名小一档，做"作者署名"而不是"副标题"。 */
@@ -1167,29 +1181,45 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 
 @media (max-width: 700px) {
     .sd-body {
-        /* 窄屏：两栏合成一列，底部信息条仍在最后 */
-        grid-template-columns: minmax(0, 1fr);
+        /* 【2026-10-29 主人「移动端视图可以不用唱片，直接左边图片右边信息」】
+           由"上下堆叠"改成"图片在左、信息在右"的两栏：
+             aside 固定宽度（放封面），main 吃剩余。
+           底部背签仍独占一行。 */
+        grid-template-columns: auto minmax(0, 1fr);
         grid-template-areas:
-            "aside"
-            "main"
-            "foot";
-        gap: 16px;
+            "aside main"
+            "foot  foot";
+        gap: 14px 16px;
         /* 窄屏收紧内边距：390px 下 30px 的 padding 会把内容压得太瘦 */
         padding: 14px 13px 17px;
+        align-items: start;
     }
-    /* 【2026-10-28 第三版】窄屏：aside 现在只有封面，与主区仍是上下两段。
-       封面 132（桌面 208 的 ~63%，比例上不突兀），居中放置，左右留白对称。 */
+    /* 【2026-10-29】窄屏不显示唱片：小屏上那半张盘只会挤占本来就紧张的横向空间，
+       而且旋转动画在手机的省电/降噪场景下也没意义。直接藏掉，
+       封面就是左边那一块图（主人原话「不用唱片，直接左边图片右边信息」）。 */
+    .sd-disc {
+        display: none;
+    }
+    /* 唱片藏了之后，原先给露出唱片留的左内边距也不需要了。
+       【必改宽度】.sd-cover 桌面继承固定 width:208px，而窄屏 .sd-j 只有 108px；
+       容器不收窄的话 aside 仍占 208，右栏被压到只剩 103px、曲名挤成 92 宽。
+       实测：收窄后右栏 234px、曲名 223 宽，排版正常。 */
+    .sd-cover {
+        margin-left: 0;
+        width: 108px;
+    }
     .sd-aside {
         display: flex;
-        align-items: center;
-        gap: 14px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
     .sd-j {
-        width: 132px;
-        height: 132px;
+        /* 左栏固定 108：390px 宽下给右侧留出 ~250px 放曲名与定数条 */
+        width: 108px;
+        height: 108px;
         flex: none;
     }
-    /* 右栏 min-height 是给桌面 208 封面配的，窄屏封面变小后不需要 */
     .sd-main {
         min-height: 0;
         justify-content: flex-start;
@@ -1205,6 +1235,47 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     }
     .sd-gauge {
         max-width: none;
+    }
+    /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
+       实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px
+       （k 列 42 / v 列 52 / gap 14×2），进度条只剩 81px，看起来像根短线。
+       收法三管齐下：
+         · k 列 42 → 32（字号 12 → 10.5，letter-spacing 也收）；
+         · v 列 52 → 40（字号 19 → 15，够放 "10.9" 四个字符）；
+         · gap 14 → 7，两处共省 14；
+       腾出来后 bar 约 203-32-40-14 = 117px，比原来宽 44%。 */
+    .sd-row {
+        grid-template-columns: 32px minmax(0, 1fr) 40px;
+        gap: 7px;
+    }
+    .sd-row-k {
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+    }
+    .sd-row-v {
+        font-size: 15px;
+    }
+    .sd-bar {
+        height: 8px;
+    }
+    /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
+       在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */
+    .sd-artist {
+        margin-top: 10px;
+        font-size: 13px;
+    }
+    .sd-badge {
+        height: 20px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+    /* songId 行与曲名之间的间距也收紧，否则三段信息在窄屏里挤成一坨 */
+    .sd-idline {
+        margin-bottom: 7px;
+        gap: 6px;
+    }
+    .sd-sid {
+        font-size: 12px;
     }
 }
 @media (max-width: 380px) {
