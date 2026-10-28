@@ -20,7 +20,7 @@ import GenBlock from '../components/GenBlock.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
-import { CATS, catOf, inView, isPickUp, pickGen, songKey, type Srv } from '../lib/song-view';
+import { CATS, catOf, countedIn, isPickUp, pickGen, todayISO, viewRows, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
@@ -99,15 +99,13 @@ for (const srv of ['jp', 'cn'] as const) {
 // （之前 cn 只收 gen==='音乐魔方' 的行，那两行不会同时进视图，所以没暴露）。
 // 保留哪一行：优先保留国服行（gen==='音乐魔方'，它的定数/分类是国服口径），
 // 日服行只在这一首没有国服行时才留（即 432 首旧框曲，它们本来就只有日服行）。
-const cnSeen = new Set<string>();
-for (const s of ALL) {
-  if (s.cn && s.gen === '音乐魔方') cnSeen.add(songKey(s));
-}
+// 【2026-10-28 抽走】原先这里自建 cnSeen、并在 bucket / byGen / rowsIn 三处各写一遍
+// 「inView + 国服去重」的 filter；jubility 那边自己又写第四遍，且漏了限时曲。
+// 现在全部走 song-view.ts 的 viewRows() / countedIn()，单一来源。
+// cnSeen 已随之上移进 viewRows，本页不再需要持有它。
 for (const srv of ['jp', 'cn'] as const) {
-  for (const s of ALL) {
-    if (!inView(s, srv)) continue;
-    // 双服曲在国服视图里被国服行接管：日服那行跳过（它仍在日服视图里渲染）。
-    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) continue;
+  // viewRows 已内含「国服视图里双服曲只留国服行」的去重，这里不再手写一遍。
+  for (const s of viewRows(ALL, srv)) {
     const g = bucket[srv]?.[catOf(s, srv)]?.[s.gen];
     if (g) g.push(s);
   }
@@ -129,10 +127,7 @@ for (const srv of ['jp', 'cn'] as const) {
   for (const gen of GEN_JP.concat(GEN_CN).map((g) => g.k)) byGen[srv][gen] = [];
 }
 for (const srv of ['jp', 'cn'] as const) {
-  for (const s of ALL) {
-    if (!inView(s, srv)) continue;
-    // 与上面 bucket 同一套去重：国服视图里双服曲只留国服行，否则「全部曲目」也重复。
-    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) continue;
+  for (const s of viewRows(ALL, srv)) {
     const g = byGen[srv][s.gen];
     if (g) g.push(s);
   }
@@ -160,26 +155,12 @@ const srvGenOrder = (srv: Srv) =>
 // 主人明确「服务器选项卡的歌曲总数也不要加上限时曲的数量」——若只在 JS 里藏卡片，
 // 右上角那个「1150 首」仍会把它们算进去，数字与肉眼可见对不上。
 // 口径与前端 isEndedLimited() 严格一致：结束日 < 今天 才算已结束。
-// 这里用**构建/请求当天的日期**：SSR 页每次请求都重新执行，所以它跟随真实日期；
-// 预渲染页则是构建那天——限时曲只有 2 首、且都已过期，误差窗口可接受，
-// 真要绝对精确应改成在运行时注入客户端日期（当前不必要）。
-const todayISO = (() => {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
-})();
-const isLimitedEnded = (s: Song) => !!s.lu && String(s.lu) < todayISO;
+// 日期与限时曲判据、视图行都改由 song-view.ts 提供（todayISO / isLimitedEnded / countedIn）。
+// 原先这里是第 3 份手写 filter，jubility.ts 还有第 4 份且漏了限时曲——已全部收敛。
+const TODAY = todayISO();
 
-const rowsIn = (srv: Srv) =>
-  ALL.filter((s) => {
-    if (!inView(s, srv)) return false;
-    // 已结束的限时曲不进常规集合（计数、分桶、世代清单由此一并对齐）
-    if (isLimitedEnded(s)) return false;
-    // 国服视图里双服曲只留国服行（与 bucket/byGen 同一判据，见上）
-    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) return false;
-    return true;
-  });
+/** 计入统计的行（排除已结束限时曲）：计数、分桶、世代清单、谱面池由此一并对齐 */
+const rowsIn = (srv: Srv) => countedIn(ALL, srv, TODAY);
 
 const countOf = (srv: Srv, cat?: string) =>
   rowsIn(srv).filter((s) => !cat || catOf(s, srv) === cat).length;

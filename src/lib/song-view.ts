@@ -105,3 +105,58 @@ export const isPickUp = (s: Song, srv: Srv) => pickGen(s.gen, srv) || (srv === '
 /** 范围筛选的三种状态（'all' = 不筛）。给页面 chip 与前端 state 共用一份取值。 */
 export const PICK_SCOPE = ['all', 'pick', 'common'] as const;
 export type PickScope = (typeof PICK_SCOPE)[number];
+
+// ---------------------------------------------------------------------------
+// 「这个服务器视图里有哪些行」——唯一权威（2026-10-28 抽）
+//
+// 【为什么必须抽】这个判断原先散在四处：songs.astro 的 bucket、byGen、rowsIn 各一份，
+// jubility.ts 的 chartsOf 又一份。第四份漏了「限时曲」这一维，于是 /songs/ 排除已结束
+// 限时曲、/jubility/ 不排除 —— 国服谱面池 1569 vs 应 1563。当天理论值恰好 0 差异
+// （那 2 首定数不够高、挤不进上位 30），页面上完全看不出来，属静默潜伏。
+// 注释里写「口径与 /songs/ 完全一致」没有任何约束力，只有共用一个函数才有。
+// ---------------------------------------------------------------------------
+
+/** 当天日期 YYYY-MM-DD（按**真实今天**算，不在数据里焊死；SSR 每次请求重新执行） */
+export function todayISO(d: Date = new Date()): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * 限时曲是否已结束：结束日 < 今天 才算「已结束」（主人定的口径：看区间是否仍在有效期内）。
+ * 站内凡涉及「这首还算不算数」的地方都走这里——计数、分桶、理论值，
+ * 别各自写 `lu < today`。
+ */
+export const isLimitedEnded = (s: Song, today: string = todayISO()) =>
+  !!s.lu && String(s.lu) < today;
+
+/** 国服视图去重键集合：国服自己的行（gen==='音乐魔方'）接管同名的日服行 */
+export const cnOwnKeys = (songs: Song[]) =>
+  new Set(songs.filter((s) => s.cn && s.gen === '音乐魔方').map(songKey));
+
+/**
+ * 该服务器视图的全部行（inView + 国服双服去重），**含**已结束的限时曲。
+ *
+ * 注意这里**故意不排除**限时曲：曲目页要把它们渲染出来（勾了「显示限时曲」才显示，
+ * 隐藏与否是前端开关的事），所以「视图行」与「计入统计的行」是两件事。
+ * 要统计口径就走 countedIn()。
+ */
+export function viewRows(songs: Song[], srv: Srv): Song[] {
+  const seen = cnOwnKeys(songs);
+  return songs.filter((s) => {
+    if (!inView(s, srv)) return false;
+    // 国服视图里双服曲只留国服行，否则同一首出现两次
+    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && seen.has(songKey(s))) return false;
+    return true;
+  });
+}
+
+/**
+ * 计入统计的行（计数 / 谱面池 / 理论值用）：在 viewRows 基础上排除已结束的限时曲。
+ * 主人 2026-10-28 明确「服务器选项卡的歌曲总数也不要加上限时曲的数量」，
+ * 并裁定 jubility 理论值同样对齐这个口径。
+ */
+export function countedIn(songs: Song[], srv: Srv, today: string = todayISO()): Song[] {
+  return viewRows(songs, srv).filter((s) => !isLimitedEnded(s, today));
+}

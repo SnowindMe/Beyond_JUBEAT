@@ -32,7 +32,7 @@
 //         PICK UP 4797.0 / TOTAL 9676.5 逐项吻合。
 import type { Song } from './db';
 import type { Srv } from './song-view';
-import { inView, isPickUp, songKey } from './song-view';
+import { countedIn, isPickUp, todayISO } from './song-view';
 
 export type Diff = 'bsc' | 'adv' | 'ext';
 export const DIFFS: Diff[] = ['bsc', 'adv', 'ext'];
@@ -129,18 +129,15 @@ export interface ChartEntry {
 
 /**
  * 把一个服务器视图摊成「谱面」列表 —— TOTAL jubility 的参评单位。
- * 视图口径与 /songs/ 完全一致（inView + 国服双服去重），否则同一首在曲目页有、
- * 在 jubility 页没有；scope 用 isPickUp()，与范围筛选用的是同一个函数。
+ *
+ * 【2026-10-28】视图行改由 song-view.ts 的 countedIn() 统一提供。此前这里自己写了一份
+ * filter，注释自称「与 /songs/ 完全一致」，实际漏了限时曲：/songs/ 排除已结束的限时曲、
+ * 这里不排除，国服谱面池 1569 vs 应 1563。理论值当天恰好 0 差异（那 2 首挤不进上位 30），
+ * 所以页面看不出来 —— 这类「注释说一致、实现不一致」的偏差只能靠共用函数根治。
+ * scope 仍用 isPickUp()，与范围筛选用同一个函数。
  */
-export function chartsOf(songs: Song[], srv: Srv): ChartEntry[] {
-  const cnSeen = new Set(
-    songs.filter((s) => s.cn && s.gen === '音乐魔方').map(songKey)
-  );
-  const rows = songs.filter((s) => {
-    if (!inView(s, srv)) return false;
-    if (srv === 'cn' && s.gen !== '音乐魔方' && s.jp && cnSeen.has(songKey(s))) return false;
-    return true;
-  });
+export function chartsOf(songs: Song[], srv: Srv, today: string = todayISO()): ChartEntry[] {
+  const rows = countedIn(songs, srv, today);
   const out: ChartEntry[] = [];
   for (const s of rows) {
     const scope: 'pick' | 'common' = isPickUp(s, srv) ? 'pick' : 'common';

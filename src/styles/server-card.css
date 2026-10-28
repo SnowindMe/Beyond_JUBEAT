@@ -162,6 +162,11 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
         font-size: 11px;
         padding: 4px 8px;
     }
+    /* 【2026-10-28 迁入】计数徽章窄屏降一档。原先这条只写在 songs.css 的媒体查询里，
+       /jubility/ 没有 → 窄屏下同一个控件两页字号不同。控件自身的规则应跟控件一起走。 */
+    .sc-tag-c {
+        font-size: 11px;
+    }
 }
 
 /* 系统开了「减少动态效果」就全部收干净 */

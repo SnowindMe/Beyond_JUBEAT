@@ -464,10 +464,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
         align-items: stretch;
         gap: 10px;
     }
-    /* .sc-srv / .sc-srv-b / .sc-srv-logo / .sc-tag 的窄屏规则已迁到 server-card.css */
-    .sc-tag-c {
-        font-size: 11px;
-    }
+    /* .sc-srv / .sc-srv-b / .sc-srv-logo / .sc-tag / .sc-tag-c 的窄屏规则已全部迁到 server-card.css */
     .sc-cats,
     .sc-cat-set {
         width: 100%;
