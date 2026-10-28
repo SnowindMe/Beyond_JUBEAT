@@ -37,6 +37,54 @@ Astro.response.headers.set(
 // 注意：以下派生值只在 song 存在时计算。之前漏了这层保护——song 为 null 时
 // 直接读 song.gen 会抛 TypeError，线上表现为 500 而不是 404（真实踩坑）。
 const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
+
+// 【2026-10-29 主人「唱片换成对应世代的颜色 + 加世代 logo」，
+//   并明确「即使正在看 jubeat 的歌，只要切到 ripples 主题，也应当显示 jubeat 的颜色」】
+//
+// 所以这里**不能用 var(--acc)**——那是"当前主题色"，会随顶栏切主题而变。
+// 要的是「这首歌所属世代」的固定色：曲子属于 jubeat，就永远是 jubeat 的蓝，
+// 无论用户此刻套着哪套皮肤。所以把这些色值抄成本表常量。
+//
+// 色值来源：src/styles/theme.css 每个 html[data-g="x"] 块的 --acc
+// （scripts/ci 里若有主题色改动，这里是唯一需要同步的手抄点；改色请两边一起改）。
+// clan 在数据层只有一个世代，但主题层拆成 4 套；这里取 clan Red（#ff6b6b）作为
+// 世代代表色——与字标 logo 的主色一致。
+const GEN_COLOR: Record<string, string> = {
+  jubeat: '#2f86e6',
+  ripples: '#4fae9e',
+  knit: '#e0a92e',
+  copious: '#8fa6ff',
+  saucer: '#37474F',
+  'saucer fulfill': '#c9d2d6',
+  prop: '#e0338f',
+  Qubell: '#3E8FBF',
+  clan: '#ff6b6b',
+  festo: '#ffd166',
+  'Ave.': '#2ee8e8',
+  'beyond the Ave.': '#ffa23c',
+  音乐魔方: '#3f6fd8',
+};
+
+// 世代名（数据层）与 logo 文件名（主题层）是两套标识，不能直接拼：
+//   Qubell→qubell、Ave.→ave、beyond the Ave.→bta、音乐魔方→yymf、saucer fulfill→saucerfulfill。
+const GEN_LOGO: Record<string, string> = {
+  jubeat: 'jubeat',
+  ripples: 'ripples',
+  knit: 'knit',
+  copious: 'copious',
+  saucer: 'saucer',
+  'saucer fulfill': 'saucerfulfill',
+  prop: 'prop',
+  Qubell: 'qubell',
+  clan: 'clan',
+  festo: 'festo',
+  'Ave.': 'ave',
+  'beyond the Ave.': 'bta',
+  音乐魔方: 'yymf',
+};
+const genLogo = song ? GEN_LOGO[song.gen] : undefined;
+const genColor = song ? GEN_COLOR[song.gen] : undefined;
+
 const dash = (v: number | null) => (v == null ? '—' : String(v));
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
 const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
@@ -62,12 +110,11 @@ const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)
 //   统一收进底部横条——它本来就该是「唱片背签」式的密集小字区，铺满宽度。
 // 好处：两栏高度接近，版面不用硬居中；元数据集中成一区比散落两处更好扫读。
 // 仍然只渲染有值的项，不摆「—」占位。
+// 【2026-10-29】songId / 世代 / 分区 三项已挪到曲名上方的徽章行，
+// 这里不再重复——同一份信息出现两处，读起来像两个不同字段。
 type Meta = { k: string; v: string; mono?: boolean };
 const metaFoot: Meta[] = song
   ? [
-      { k: 'songId', v: song.id, mono: true },
-      { k: '世代', v: song.gen + (genMeta ? ` ${genMeta.y}` : '') },
-      { k: '分区', v: song.cat },
       { k: '服务器', v: servers },
       ...(song.bpm ? [{ k: 'BPM', v: song.bpm, mono: true }] : []),
       ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
@@ -84,7 +131,9 @@ const metaFoot: Meta[] = song
   description={song ? `${song.t}${song.a ? ' - ' + song.a : ''}｜jubeat ${song.gen} 世代，BSC ${dash(song.lv.bsc)} / ADV ${dash(song.lv.adv)} / EXT ${dash(song.lv.ext)}。` : undefined}
 >
   {!song ? <NotFound /> : (
-  <section class="band sd" id="songRoot">
+  // --gen-c = 本曲所属世代的固定色（与当前主题无关），由父级下发一次，
+  // 后代 .sd-disc / .sd-badge-gen 都读它——"唱片颜色 = 世代徽章颜色"天然一致。
+  <section class="band sd" id="songRoot" style={genColor ? `--gen-c: ${genColor}` : undefined}>
     {/* 顶部不再是「大圆角玻璃面板里塞一堆小方盒」，而是两栏唱片页式布局：
         左窄栏放曲绘与硬数据（像唱片封套背签），右栏让曲名与定数占据版面。
         曲绘原图只有 144px，放大必糊——所以不追求大图，做成贴合尺寸的实物感封面。 */}
@@ -96,19 +145,65 @@ const metaFoot: Meta[] = song
 
     <div class="sd-body">
       <aside class="sd-aside">
-        <div class={`sd-j${song.alt ? ' is-alt' : ''}`}>
-          {coverSrc ? (
-            <img src={coverSrc} alt={`${song.t} 曲绘`} width="208" height="208" loading="eager" fetchpriority="high" decoding="async" />
-          ) : (
-            <span class="sd-no">no jacket</span>
-          )}
+        {/* 【2026-10-29 主人第 1 条】曲绘下面垫一张唱片，向左露出小半个；
+            BGM 播放时唱片旋转（状态由 SongAudio 写在 html[data-bgm] 上）。
+            唱片必须在曲绘之下（z-index 更低），露出的那一弯才像"从封套里抽出来"。
+            结构：.sd-disc 是唱片本体（黑胶同心圆环），.sd-disc-spin 只是承载旋转的层，
+            两者拆开是因为旋转要独立于居中定位，混在一起会让 transform 互相覆盖。 */}
+        <div class="sd-cover" aria-hidden={coverSrc ? undefined : 'true'}>
+          {/* 唱片（主人 2026-10-29 两次修正）：
+              ① 盘面颜色 = 当前世代主题色（与世代徽章同源，都取 --acc）；
+              ② 世代 logo **印在盘面上、随唱片一起转**，不是钉在圆心。
+                 所以 logo 放进 .sd-disc-spin 里——那个层才是承载旋转的。
+                 圆心只留一个装轴孔。 */}
+          <span class="sd-disc">
+            <span class="sd-disc-spin">
+              {genLogo ? (
+                <img
+                  class="sd-disc-logo"
+                  src={`/assets/images/logo/${genLogo}.webp`}
+                  alt=""
+                  width="72"
+                  height="72"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : null}
+            </span>
+            <span class="sd-disc-hole" aria-hidden="true"></span>
+          </span>
+          <div class={`sd-j${song.alt ? ' is-alt' : ''}`}>
+            {coverSrc ? (
+              <img src={coverSrc} alt={`${song.t} 曲绘`} width="208" height="208" loading="eager" fetchpriority="high" decoding="async" />
+            ) : (
+              <span class="sd-no">no jacket</span>
+            )}
+          </div>
         </div>
         {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
       </aside>
 
       <div class="sd-main">
+        {/* 【2026-10-29 主人 4 条版式意见】
+            ①songId 用 #10000036 的形式放到曲名**上方**；
+            ②世代/分区做成两枚徽章、跟在 songId 右边（世代徽章用主题色，年份不要）；
+            ③艺术家从曲名上方挪到**曲名下方**。
+            顺序：songId + 世代徽章 + 分区徽章 → 曲名 → 艺术家。 */}
+        <p class="sd-idline">
+          <button type="button" class="sd-sid" data-copy={song.id} title="点击复制 songId">#{song.id}</button>
+          <span class="sd-badge sd-badge-gen">{song.gen}</span>
+          <span class="sd-badge sd-badge-cat">{song.cat}</span>
+        </p>
+
+        {/* 曲名：点一下复制歌名（主人 2026-10-29 要求）。用 button 而不是 h1 是为了
+            可聚焦、可键盘触发；语义上仍用 h1 包住，标题层级不断。 */}
+        <h1 class="sd-title-wrap">
+          <button type="button" class="sd-title" data-copy={song.t} title="点击复制曲名">
+            {song.t}
+          </button>
+        </h1>
+
         <p class="sd-artist">{song.a ?? '—'}</p>
-        <h1 class="sd-title">{song.t}</h1>
 
         {/* 定数条：三条横条按 0-11 刻度填充，颜色沿用难度三色。
             定数是这个站最有信息量的字段，之前缩成三个小方盒太浪费——
@@ -148,4 +243,58 @@ const metaFoot: Meta[] = song
     </div>
   </section>
   )}
+
+{/* 点击复制（主人 2026-10-29 第 5 条：点一下歌曲名可以复制到剪贴板）。
+    songId 与曲名都挂 data-copy，用同一段脚本处理——两处行为一致，不写两套。
+    clipboard API 在非 HTTPS / 老浏览器里可能不可用，所以带回退：
+    临时 textarea + execCommand('copy')，这是 2026 年仍然最稳的兜底。
+    复制成功只给一个小"已复制"提示，不弹 Toast，不打断视线。 */}
+<script is:inline>
+  (function () {
+    var tipTimer = null;
+    function flash(el) {
+      if (!el) return;
+      var holder = el.closest('.sd-title-wrap') || el;
+      holder.classList.remove('is-copied');
+      void holder.offsetWidth; // 强制回流，连点也能重播提示动画
+      holder.classList.add('is-copied');
+      if (tipTimer) clearTimeout(tipTimer);
+      tipTimer = setTimeout(function () { holder.classList.remove('is-copied'); }, 1300);
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+    function copy(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(
+          function () { return true; },
+          function () { return fallbackCopy(text); }
+        );
+      }
+      return Promise.resolve(fallbackCopy(text));
+    }
+    var targets = document.querySelectorAll('[data-copy]');
+    for (var i = 0; i < targets.length; i++) {
+      targets[i].addEventListener('click', function () {
+        var el = this;
+        var text = el.getAttribute('data-copy') || '';
+        if (!text) return;
+        copy(text).then(function (ok) {
+          if (ok) flash(el);
+          el.blur();
+        });
+      });
+    }
+  })();
+</script>
 </Layout>

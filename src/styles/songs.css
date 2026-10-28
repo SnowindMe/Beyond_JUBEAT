@@ -731,6 +731,142 @@ html[data-g="yymf"] .sc-pick {
     justify-content: center;
 }
 
+
+/* ---------- 曲绘 + 唱片（2026-10-29 主人第 1 条）---------- */
+/* 容器只负责定位：曲绘在上层、唱片在下层，唱片向左偏出小半个。
+   为什么不直接用 .sd-j 的 ::before 画唱片：曲绘有 overflow:hidden（要裁图片边角），
+   伪元素会被裁掉。所以必须真是两个兄弟元素、唱片在外面的容器里。 */
+.sd-cover {
+    position: relative;
+    flex: none;
+    /* 给左侧露出的唱片留出空间，否则它会顶到面板内边距外 */
+    margin-left: 18px;
+    width: 208px;
+}
+/* 唱片：黑胶同心圆。用 repeating-radial-gradient 画纹路，比多张图省事也清晰。
+   尺寸比封套略大、整体向左偏，只露出一弯。 */
+.sd-disc {
+    position: absolute;
+    /* 「就露出一半就行」（主人 2026-10-29 第三次修正）。
+       【算术】唱片直径 200，要露出正好一半 = 露出 100px；
+       曲绘左缘在容器 x=0，所以唱片要偏到 left: -100px
+       （占据 -100 ~ +100，曲绘盖住 0 ~ 208，实际可见 -100 ~ 0 这 100px）。
+       之前的 -132 露出 66%，明显过了——主人反馈「太出外面了」。
+       垂直仍居中：top:50% + margin-top 半个高度
+       （不写 translateY(-50%)，那个会和旋转层的 transform 打架）。 */
+    left: -100px;
+    top: 50%;
+    width: 200px;
+    height: 200px;
+    margin-top: -100px;
+    border-radius: 50%;
+    z-index: 0;
+    /* 【2026-10-29 主人两轮修正后定稿】
+       第一版：标准黑胶（近黑）→「太黑了，换成对应主题色」。
+       第二版：改用 var(--acc) → 但那是**当前主题色**，
+              主人纠正「看 jubeat 的歌、切到 ripples 主题，也应当显示 jubeat 的颜色」。
+       定稿：一律读 --gen-c（本曲所属世代固定色，由页面下发），
+             与世代徽章同源，切主题不会变色。
+       盘面构造：
+         · 底盘用世代色压深（不是纯色，纯色太扎眼、会和曲绘抢）；
+         · 细纹两档交替 → 转起来能看出在动；
+         · 盘芯留一圈更浅的衬底，把世代 logo 托出来。 */
+    background:
+        /* 盘芯内圈：更亮的衬底，托住世代 logo */
+        radial-gradient(circle at 50% 50%,
+            color-mix(in srgb, white 26%, var(--gen-c, var(--acc))) 0 30%,
+            transparent 31%),
+        /* 盘面细纹：世代色的深/更深两档交替，2px 一档 */
+        repeating-radial-gradient(circle at 50% 50%,
+            color-mix(in srgb, var(--gen-c, var(--acc)) 78%, #000) 0 1.5px,
+            color-mix(in srgb, var(--gen-c, var(--acc)) 52%, #000) 1.5px 3.4px),
+        /* 底盘：世代色压深 */
+        radial-gradient(circle at 50% 50%,
+            color-mix(in srgb, var(--gen-c, var(--acc)) 88%, #000) 0 100%);
+    box-shadow:
+        inset 0 0 0 1px color-mix(in srgb, var(--gen-c, var(--acc)) 70%, transparent),
+        inset 0 0 24px -10px rgba(0, 0, 0, 0.55),
+        0 18px 36px -18px rgba(0, 0, 0, 0.75);
+    opacity: 1;
+}
+/* 世代 logo：印在盘芯，当"唱片厂牌标签"。
+   logo 图本身是各世代的彩色字标，直接贴会被盘面的主题色吃掉，
+   所以先垫一层浅色圆底（上面 .sd-disc 的 30% 内圈），再压图。
+   pointer-events:none —— 它纯装饰，不该拦住任何点击。 */
+.sd-disc-logo {
+    position: absolute;
+    /* 【主人 2026-10-29】「logo 不放在唱片中间，要放在唱片面上，随唱片一起旋转」。
+       放在盘面上 = 偏离圆心（贴着盘面外圈摆放），这样旋转时能看到它绕圈移动，
+       圆心位置则留给装轴孔。
+       摆位：偏右上方向（相对圆心 +34% / -34%），缩放后随 .sd-disc-spin 一起转。 */
+    left: 50%;
+    top: 50%;
+    width: 54px;
+    height: auto;
+    /* 【摆位要照顾"只露左半"】唱片只露出圆心左侧 100px，
+       所以 logo 必须偏**左**放（-52px），否则转起来大半时间藏在封套后面。
+       偏左后它绕圆心公转：转一圈里有约一半时间落在可见区域，
+       这正是"印在盘面上随唱片转"该有的效果——短暂隐去再转回来。 */
+    transform: translate(-50%, -50%) translate(-52px, 0);
+    object-fit: contain;
+    /* 盘面是主题色，logo 多为彩色字标：加投影保证任何主题下都读得出轮廓 */
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+    /* 跟着父层 .sd-disc-spin 一起转，没有自己的 z-index 冲突 */
+    z-index: 2;
+}
+/* 中心孔：黑胶那点小孔。这里保留它，是为了让"这是张唱片"一眼可读，
+   否则会像一块圆形色块。压在 logo 之上，比 logo 小很多。 */
+.sd-disc-hole {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--base) 92%, #000);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 18%, transparent);
+    pointer-events: none;
+    z-index: 3;
+}
+/* 承载旋转的层：与唱片本体同心，画一点"反光高光"给出旋转的视觉证据——
+   纯同心圆旋转是看不出来的（对称图形转起来静止）。
+   做法：一道斜向的浅色弧，随旋转扫过盘面。
+   注意 z-index 要在 logo/孔之下，否则高光会盖住 logo。 */
+.sd-disc-spin {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* 高光弧：比盘面色亮一档，转起来能看到一道光扫过 */
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg 42deg,
+        color-mix(in srgb, #fff 22%, transparent) 60deg 96deg,
+        transparent 114deg 360deg
+    );
+    animation: none;
+    transform-origin: 50% 50%;
+    /* 必须在 logo 与中心孔之下（它们分别是 2 / 3） */
+    z-index: 1;
+    pointer-events: none;
+}
+/* 播放中：持续旋转。用 linear 匀速，唱片就该匀速转。
+   prefers-reduced-motion 下完全不转（见文件末尾的统一规则）。 */
+html[data-bgm="playing"] .sd-disc-spin {
+    animation: sdDiscSpin 9s linear infinite;
+}
+@keyframes sdDiscSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* 封套压在唱片之上 */
+.sd-j {
+    position: relative;
+    z-index: 1;
+}
+
 /* 曲绘：实物封套感——外圈细边 + 内阴影，不用大圆角（大圆角让它像 App 图标） */
 .sd-j {
     position: relative;
@@ -787,22 +923,87 @@ html[data-g="yymf"] .sc-pick {
    而且日后有人照着它改会白改一轮（这条坑 2026-10-28 记在记忆里）。
    底部条的 .sd-foot dt/dd/.sd-num 已继承同一套视觉口径。 */
 
-/* 右栏：艺人做引子，曲名做主角 */
-.sd-main {
-    min-width: 0;
-    padding-top: 2px;
+
+/* ---------- 曲名上方的 songId 行与两枚徽章（2026-10-29 主人第 2/3/4 条）---------- */
+/* 一行横排：songId 按钮 + 世代徽章 + 分区徽章。左对齐，与曲名同一起点。 */
+.sd-idline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px;
+    min-height: 22px;
 }
-.sd-artist {
-    margin: 0 0 12px;
-    font-size: 14px;
+/* songId：以 #10000036 形式呈现，本身是按钮（点击复制）。
+   去掉按钮默认外观，做成等宽小字标签——它要像"编号"而不是"链接"。 */
+.sd-sid {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--font-data);
+    font-size: 13px;
+    font-weight: 600;
     letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink3);
+    cursor: pointer;
+    transition: color 0.16s ease;
+}
+.sd-sid:hover {
+    color: var(--acc);
+}
+.sd-sid:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 3px;
+    border-radius: var(--r-hair);
+}
+/* 徽章：世代用主题色（主人指定），分区用中性灰——两枚并排时层次分明，
+   不会因为都用主题色而糊成一片。 */
+.sd-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+.sd-badge-gen {
+    /* 【2026-10-29 主人两轮修正后的定稿】
+       ① 底色不用 var(--acc)：那是**当前主题色**，切主题会跟着变；
+          要的是**本曲所属世代**的固定色（看 jubeat 的歌，切到 ripples 主题也还是 jubeat 蓝）。
+          改读 --gen-c，由页面在 <section style="--gen-c: ..."> 下发一次。
+       ② 文字色不能用 --acc-ink：它在深色世代等于 --acc，成了亮底亮字（第一版看不见的原因）。
+          彩色底一律配固定深色字 #0b0f14，几套世代色（最浅的 saucerfulfill #c9d2d6）
+          对它的对比度也有 11:1 以上，全部达标。 */
+    color: #0b0f14;
+    background: var(--gen-c, var(--acc));
+}
+.sd-badge-cat {
     color: var(--ink2);
-    overflow-wrap: anywhere;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    border: 1px solid var(--edge);
+}
+
+/* 曲名：外面是 h1（保语义与标题层级），里面是按钮（点击复制曲名）。
+   按钮要长得和普通标题一模一样——不能出现浏览器默认的灰底与边框。 */
+.sd-title-wrap {
+    margin: 0;
+    line-height: 1;
 }
 .sd-title {
+    display: inline;
     margin: 0;
-    /* 【2026-10-28】42 → 上限 56：曲名是这个页面唯一的主角，旧尺寸在 1180 宽的
-       容器里显得拘谨。下限 30 保证窄屏也不塌。 */
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    font: inherit;
     font-size: clamp(30px, 4.4vw, 56px);
     line-height: 1.1;
     font-weight: 700;
@@ -810,6 +1011,77 @@ html[data-g="yymf"] .sc-pick {
     color: var(--title);
     text-shadow: var(--tshadow);
     overflow-wrap: anywhere;
+    cursor: pointer;
+    transition: color 0.16s ease;
+}
+.sd-title:hover {
+    color: var(--acc);
+}
+.sd-title:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 6px;
+    border-radius: var(--r-hair);
+}
+/* 复制成功的轻提示：1.2s 后消失。不做全屏 Toast——复制是个即时小动作。
+   【2026-10-29 两个 bug，主人反馈"小提示看不见"】
+   ① 定位：原先只在 .is-copied 时才给父元素 position:relative，但伪元素是
+      position:absolute 且**没有 top/left**，默认落在静态位置 → 会跑到父元素
+      内容流之外（被 flex 行高挤走、或叠到别的元素下面）看不见。
+      改成显式 top/right，并让父元素**始终** relative（不靠状态类切换，避免时序抖动）。
+   ② 配色：同样误用 --acc-ink 当彩色底上的字（深色世代 = 与底色同亮青，等于隐形）。
+      改成 --base。 */
+.sd-title-wrap,
+.sd-sid {
+    position: relative;
+}
+.sd-title-wrap.is-copied::after,
+.sd-sid.is-copied::after {
+    content: "已复制";
+    position: absolute;
+    /* 放在元素**上方居中**而不是右侧：曲名可能很长（有的曲名 60+ 字符），
+       右侧浮出会被 .sd-main 的边界或面板 padding 裁掉；上方浮出无论多长都看得见。 */
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    color: var(--base, #0a1016);
+    background: var(--acc);
+    /* z-index 要高过曲名文字与徽章，否则会被压住 */
+    z-index: 5;
+    animation: sdCopied 1.2s ease forwards;
+    pointer-events: none;
+}
+/* 动画里必须带上 translateX(-50%)：transform 是覆盖式属性，
+   只写 translateY 会把定位用的居中偏移抹掉，提示会突然偏到右边去。 */
+@keyframes sdCopied {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(3px); }
+    12%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    74%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+}
+/* 艺术家：从曲名上方挪到下方（主人第 2 条）。
+   与曲名间距 14px，字号比曲名小一档，做"作者署名"而不是"副标题"。 */
+.sd-artist {
+    margin: 14px 0 0;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: var(--ink2);
+    overflow-wrap: anywhere;
+}
+
+/* 右栏：songId 行 → 曲名 → 艺术家（2026-10-29 主人重排）。
+   注意：.sd-artist 与 .sd-title 的完整规则在上面「曲名上方的 songId 行」段里，
+   这里不再重复定义——同一条属性写两处时，后写的更具体规则会把修复盖回去
+   （2026-10-28 记进记忆的第 ⑤ 条坑，本轮又差点重犯）。 */
+.sd-main {
+    min-width: 0;
+    padding-top: 2px;
 }
 
 /* 定数条：三条横条按 0-11 刻度填充。

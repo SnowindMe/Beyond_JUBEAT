@@ -261,6 +261,18 @@ const { songId } = Astro.props;
       return m + ':' + (s < 10 ? '0' + s : s);
     }
 
+    // 【2026-10-29 主人第 1 条】曲绘下方的唱片要在 BGM 播放时旋转。
+    // 播放状态本来只有 SongAudio 内部知道，而唱片壳在 aside（另一个组件层级）。
+    // 用 documentElement 上的 data-bgm 标记做唯一的跨组件通道：
+    //   · 不用 window 事件——那要额外一套 add/removeEventListener，还得管清理；
+    //   · 不用 CSS 兄弟选择器——aside 与 .sda 不是兄弟，隔了两层。
+    // 写 <html data-bgm="playing">，唱片只认这一条。
+    function setBgm(state) {
+      var el = document.documentElement;
+      if (state) el.setAttribute('data-bgm', state);
+      else el.removeAttribute('data-bgm');
+    }
+
     function paint() {
       var d = audio ? audio.duration : 0;
       var c = audio ? audio.currentTime : 0;
@@ -280,21 +292,27 @@ const { songId } = Astro.props;
       audio.preload = 'auto';
       audio.addEventListener('loadedmetadata', function () {
         root.classList.add('is-ready');
-        root.classList.remove('is-loading');
         paint();
       });
       audio.addEventListener('timeupdate', function () {
         if (!dragging) paint();
       });
-      audio.addEventListener('play', function () {
+      // 【2026-10-29 主人第 6 条】点下播放后要**先显示转圈，等资源真的能放再切暂停键**。
+      // 关键在于听 'playing'（已有足够数据、真正开始输出声音）而不是 'play'
+      // （只是"被要求播放"，此时可能还在缓冲）。原实现听 'play' 并顺手去掉 is-loading，
+      // 导致慢网下转圈一闪而过、图标立刻变成暂停，像是在播而实际没声音。
+      audio.addEventListener('playing', function () {
         root.classList.add('is-playing');
         root.classList.remove('is-loading');
+        setBgm('playing');
       });
       audio.addEventListener('pause', function () {
         root.classList.remove('is-playing');
+        setBgm('');
       });
       audio.addEventListener('ended', function () {
         root.classList.remove('is-playing');
+        setBgm('');
         paint();
       });
       audio.addEventListener('error', function () {
@@ -311,12 +329,19 @@ const { songId } = Astro.props;
     btn.addEventListener('click', function () {
       var a = ensure();
       if (a.paused) {
-        // 走 play() 的 promise：被浏览器策略拦下时不会留下「图标变了但没播」的假状态
+        // 先上转圈，再发起播放：顺序反了会出现"资源秒到、转圈来不及显示"的闪烁。
+        // 只有 'playing' 事件（真正能出声）才会清掉它，见 ensure() 里的监听。
+        root.classList.add('is-loading');
+        // 走 play() 的 promise：被浏览器策略拦下时把转圈收回，不留假加载状态
         var p = a.play();
-        if (p && p.catch) p.catch(function () { root.classList.remove('is-playing'); });
-        if (a.readyState < 2) root.classList.add('is-loading');
+        if (p && p.catch) {
+          p.catch(function () {
+            root.classList.remove('is-loading', 'is-playing');
+          });
+        }
       } else {
         a.pause();
+        root.classList.remove('is-loading');
       }
       btn.blur();
     });
