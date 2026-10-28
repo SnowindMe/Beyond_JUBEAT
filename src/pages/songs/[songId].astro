@@ -7,8 +7,12 @@ import '../../styles/songs.css';
 import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
+import SongAudio from '../../components/SongAudio.astro';
 import { getSongById, type Song } from '../../lib/db';
 import { env } from 'cloudflare:workers';
+// BGM 试听映射（本站 songId → 上游相对路径），由 scripts/ub/build-ub-audio.cjs 生成。
+// 打包期内联进 Worker，运行时不读文件；未命中的曲目说明上游没有音源，不渲染播放器。
+import audioMap from '../../data/ub-audio.json';
 
 export const prerender = false;
 
@@ -41,6 +45,10 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 // 但用 .is-thin 提示「几乎为空」，避免短到看不见又被误读成没加载。
 const SCALE_MAX = 11;
 const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
+
+// 有没有音源：映射表命中才渲染试听条。1241 首里 1170 首有（上游是日服谱面站，
+// 国服原创曲与拿不到官方 id 的 BTA- 占位曲本就没有），未命中的不摆空控件。
+const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)]);
 
 // 【2026-10-28 重设计·第三版】主人「这歌曲详情太小了」。
 // 上一版（10-22）是「左栏 = 封面 + 4 项硬数据，右栏 = 曲名 + 定数条，底部条 = 其余」。
@@ -117,6 +125,10 @@ const metaFoot: Meta[] = song
             </div>
           ))}
         </div>
+
+        {/* 试听条：放在定数条下方——版面重心（曲名 → 难度分布）之后才是「听」，
+            放上面会把曲名往下推。没有音源时整块不渲染。 */}
+        {hasAudio ? <SongAudio songId={String(song.id)} /> : null}
       </div>
 
       {/* 底部横向信息条：BPM / 上线 / 解禁 / 备注。

@@ -1,0 +1,369 @@
+---
+// 曲目详情页的 BGM 试听条（2026-10-29）。
+//
+// 音源来自 ub.thregren.world，但**不直连**：统一走本站 /api/audio/<songId>
+// 反代，音频落在 CF 边缘缓存里（见 src/pages/api/audio/[songId].ts 的说明）。
+// 没有映射到音源的曲目不渲染本组件——详情页宁可少一个控件，也不摆一个点了没反应的按钮。
+//
+// 为什么不用原生 <audio controls>：
+//   原生控件三件套（播放键 / 进度条 / 音量）是浏览器各自的皮肤，
+//   在深色世代主题里会突兀成一块灰白色块；而且它的高度、内边距不可控，
+//   塞进唱片内页式的版面里会破坏基线。所以只借它的媒体能力，外观自己做。
+interface Props {
+  /** 本站 songId，用于拼 /api/audio/<id> */
+  songId: string;
+}
+const { songId } = Astro.props;
+---
+
+<div class="sda" data-audio={"/api/audio/" + songId}>
+  <button class="sda-play" type="button" aria-label="试听 BGM" title="试听 BGM">
+    <svg class="sda-ico sda-ico-play" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 5.5v13l11-6.5z" />
+    </svg>
+    <svg class="sda-ico sda-ico-pause" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 5.5v13M15 5.5v13" />
+    </svg>
+    <span class="sda-spin" aria-hidden="true"></span>
+  </button>
+
+  <span class="sda-k">BGM</span>
+
+  <div
+    class="sda-track"
+    role="slider"
+    tabindex="0"
+    aria-label="播放进度"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    aria-valuenow="0"
+    aria-valuetext="未播放"
+  >
+    <span class="sda-fill"></span>
+    <span class="sda-knob"></span>
+  </div>
+
+  <span class="sda-time"><b class="sda-cur">0:00</b><i>/</i><span class="sda-dur">--:--</span></span>
+</div>
+
+<style>
+  /* 一行布局：按钮 / 标签 / 进度 / 时间。整行高度固定，加载态与失败态都不改高度，
+     避免按下播放的瞬间版面抖一下。 */
+  .sda {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: clamp(18px, 2.4vw, 24px);
+    min-height: 40px;
+  }
+
+  /* 播放键：与站内圆形按钮同口径（细边 + 主题色悬停），不用实心色块压过曲名 */
+  .sda-play {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    border: 1px solid var(--edge);
+    cursor: pointer;
+    transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  }
+  .sda-play:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+    background: color-mix(in srgb, var(--acc) 10%, transparent);
+  }
+  .sda-play:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 3px;
+  }
+
+  .sda-ico {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* 播放三角用填充而不是描边，视觉上更「实」 */
+  .sda-ico-play {
+    fill: currentColor;
+    stroke: none;
+    width: 18px;
+    height: 18px;
+    margin-left: 2px;
+  }
+  .sda-ico-pause {
+    display: none;
+  }
+  .sda.is-playing .sda-ico-play {
+    display: none;
+  }
+  .sda.is-playing .sda-ico-pause {
+    display: block;
+  }
+
+  /* 加载转圈：只在首次拉音频时出现，替换掉播放图标 */
+  .sda-spin {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.6px solid color-mix(in srgb, currentColor 25%, transparent);
+    border-top-color: currentColor;
+  }
+  .sda.is-loading .sda-spin {
+    display: block;
+    animation: sdaSpin 0.8s linear infinite;
+  }
+  .sda.is-loading .sda-ico {
+    display: none;
+  }
+  @keyframes sdaSpin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* 标签：与底部背签的 dt 同口径（数据字体、大字距、小号），让试听条读起来像元数据的一部分 */
+  .sda-k {
+    flex: none;
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+  }
+
+  /* 进度轨道：可点可拖。上下留出更多命中区域（伪元素撑高），
+     不然 4px 高的细条在手机上根本按不准。 */
+  .sda-track {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 4px;
+    border-radius: var(--r-hair);
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    cursor: pointer;
+    touch-action: none;
+  }
+  .sda-track::before {
+    content: "";
+    position: absolute;
+    inset: -12px 0;
+  }
+  .sda-track:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 6px;
+  }
+  .sda-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--acc);
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+  .sda-knob {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: var(--acc);
+    /* 未播放时隐藏圆点（轨道上只有一个点会像加载失败） */
+    opacity: 0;
+    transition: opacity 0.16s ease;
+  }
+  .sda.is-ready .sda-knob,
+  .sda.is-playing .sda-knob {
+    opacity: 1;
+  }
+
+  /* 时间：等宽数据字体，当前时间用主色，总时长压暗 */
+  .sda-time {
+    flex: none;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    font-family: var(--font-data);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink3);
+  }
+  .sda-time b {
+    font-weight: 700;
+    color: var(--ink2);
+  }
+  .sda-time i {
+    font-style: normal;
+    opacity: 0.5;
+  }
+
+  /* 失败态：整条降权 + 一句说明，不弹窗、不 Toast */
+  .sda.is-error .sda-track {
+    cursor: default;
+    background: repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ink) 12%, transparent) 0 6px,
+      transparent 6px 12px
+    );
+  }
+  .sda.is-error .sda-time {
+    color: var(--ink3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sda.is-loading .sda-spin {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 700px) {
+    /* 窄屏把 BGM 标签让出去，进度条留在按钮与时间之间，宽度才够 */
+    .sda-k {
+      display: none;
+    }
+    .sda {
+      gap: 10px;
+    }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var root = document.querySelector('.sda');
+    if (!root) return;
+
+    var btn = root.querySelector('.sda-play');
+    var track = root.querySelector('.sda-track');
+    var fill = root.querySelector('.sda-fill');
+    var knob = root.querySelector('.sda-knob');
+    var curEl = root.querySelector('.sda-cur');
+    var durEl = root.querySelector('.sda-dur');
+    var src = root.getAttribute('data-audio');
+
+    var audio = null;
+    var dragging = false;
+
+    function fmt(t) {
+      if (!isFinite(t) || t < 0) return '--:--';
+      var m = Math.floor(t / 60);
+      var s = Math.floor(t % 60);
+      return m + ':' + (s < 10 ? '0' + s : s);
+    }
+
+    function paint() {
+      var d = audio ? audio.duration : 0;
+      var c = audio ? audio.currentTime : 0;
+      var p = d > 0 ? Math.min(1, c / d) : 0;
+      fill.style.transform = 'scaleX(' + p + ')';
+      knob.style.left = p * 100 + '%';
+      curEl.textContent = fmt(c);
+      if (d > 0) durEl.textContent = fmt(d);
+      track.setAttribute('aria-valuenow', String(Math.round(p * 100)));
+      track.setAttribute('aria-valuetext', fmt(c) + ' / ' + (d > 0 ? fmt(d) : '未知'));
+    }
+
+    function ensure() {
+      if (audio) return audio;
+      // 首次点击才创建并拉流：1241 首的详情页若都预载，流量与首屏都不划算
+      audio = new Audio(src);
+      audio.preload = 'auto';
+      audio.addEventListener('loadedmetadata', function () {
+        root.classList.add('is-ready');
+        root.classList.remove('is-loading');
+        paint();
+      });
+      audio.addEventListener('timeupdate', function () {
+        if (!dragging) paint();
+      });
+      audio.addEventListener('play', function () {
+        root.classList.add('is-playing');
+        root.classList.remove('is-loading');
+      });
+      audio.addEventListener('pause', function () {
+        root.classList.remove('is-playing');
+      });
+      audio.addEventListener('ended', function () {
+        root.classList.remove('is-playing');
+        paint();
+      });
+      audio.addEventListener('error', function () {
+        root.classList.add('is-error');
+        root.classList.remove('is-playing', 'is-loading', 'is-ready');
+        durEl.textContent = '不可用';
+        btn.setAttribute('aria-label', '音源不可用');
+        btn.disabled = true;
+        btn.style.cursor = 'default';
+      });
+      return audio;
+    }
+
+    btn.addEventListener('click', function () {
+      var a = ensure();
+      if (a.paused) {
+        // 走 play() 的 promise：被浏览器策略拦下时不会留下「图标变了但没播」的假状态
+        var p = a.play();
+        if (p && p.catch) p.catch(function () { root.classList.remove('is-playing'); });
+        if (a.readyState < 2) root.classList.add('is-loading');
+      } else {
+        a.pause();
+      }
+      btn.blur();
+    });
+
+    function seekFromEvent(e) {
+      var a = ensure();
+      var r = track.getBoundingClientRect();
+      var p = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      var d = a.duration;
+      if (!isFinite(d) || d <= 0) return;
+      a.currentTime = p * d;
+      paint();
+    }
+
+    track.addEventListener('pointerdown', function (e) {
+      dragging = true;
+      if (track.setPointerCapture) track.setPointerCapture(e.pointerId);
+      seekFromEvent(e);
+    });
+    track.addEventListener('pointermove', function (e) {
+      if (dragging) seekFromEvent(e);
+    });
+    track.addEventListener('pointerup', function (e) {
+      dragging = false;
+      if (track.releasePointerCapture) {
+        try { track.releasePointerCapture(e.pointerId); } catch {}
+      }
+    });
+    // 拖出轨道后松手也要结束拖拽状态，否则进度条会一直跟着鼠标
+    track.addEventListener('pointercancel', function () {
+      dragging = false;
+    });
+
+    // 键盘：左右 ±5 秒，Home/End 跳到首尾。空格交给按钮本身（不在这里抢）。
+    track.addEventListener('keydown', function (e) {
+      var a = ensure();
+      if (!isFinite(a.duration) || a.duration <= 0) return;
+      var step = 5;
+      if (e.key === 'ArrowLeft') a.currentTime = Math.max(0, a.currentTime - step);
+      else if (e.key === 'ArrowRight') a.currentTime = Math.min(a.duration, a.currentTime + step);
+      else if (e.key === 'Home') a.currentTime = 0;
+      else if (e.key === 'End') a.currentTime = a.duration;
+      else return;
+      e.preventDefault();
+      paint();
+    });
+
+    paint();
+  })();
+</script>

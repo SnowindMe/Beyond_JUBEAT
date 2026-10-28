@@ -62,6 +62,19 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 > 详情页曾内嵌 ub.thregren.world 的「谱面确认」播放器（v1.12.0–1.12.2，靠 `/ub-proxy` 前缀代理剥掉对方的 X-Frame-Options 才能嵌进同源 iframe）。**该功能已于 v1.13.0 整体下线**：`src/pages/ub-proxy/`、`src/data/ub-index.json`、`scripts/ub/build-ub-index.mjs` 与 `wrangler.jsonc` 的 `/ub-proxy` 运行时路由一并移除。保留的两样东西：①详情页右下角的「在谱面确认中打开」外链去掉后，页面上不再有任何 ub 入口；②`ub-index.json` 映射表（1169 条 songId → ub 曲目 id）与生成脚本留在 `archive/materials/ub/` 备用。以后要重启，把文件搬回原位、恢复 `run_worker_first` 那条路由即可。
 
+**BGM 试听**（v1.33.0 起）：曲目详情页定数条下方多一条试听条——播放键 / 进度条 / 时长，自绘控件（不用原生 `<audio controls>`，那套皮肤在深色世代里是一块灰白、高度也不可控）。音源取自 ub.thregren.world，但**浏览器从不直连**：
+
+| 环节 | 位置 | 说明 |
+| --- | --- | --- |
+| 映射表 | `src/data/ub-audio.json` | `{ "<songId>": "songs/<世代目录>/<分类>/<id>/bgm.ogg" }`，由 `node scripts/ub/build-ub-audio.cjs` 生成（需联网，不进 build 流程；曲库更新后手动重跑并提交产物）。**1241 首里命中 1170 首（94.3%）**，未命中的 71 首是 2 首 BTA 占位 + 69 首国服原创——上游本就没有，详情页对它们不渲染试听条 |
+| 反代 | `src/pages/api/audio/[songId].ts` | 只代理 ub.thregren.world 一个主机，路径由服务端从映射表拼、<songId> 走白名单正则；只放行 GET/HEAD；不透传查询参数 |
+| 缓存 | 同上 | 音频进 `caches.default`，回 `immutable` 长缓存；**只缓存完整 200**，Range 请求由缓存好的字节本地切 206（否则每次拖动进度条都回源）。响应头 `x-audio-source` 标音源、`x-cache: HIT/MISS` 供验收 |
+| 组件 | `src/components/SongAudio.astro` | 首次点击才创建 `Audio` 并拉流（1241 首若都预载，流量与首屏都不划算）；进度条可拖、支持 ←/→ 与 Home/End 键 |
+
+映射口径三层（顺序即优先级）：①数字 id 精确 + 优先取属于本站世代的目录；②数字 id 精确；③规范化标题唯一命中。**同一 id 在 ub 常有「首次收录 / 谱面变化」两条**（如 70000110），取首次收录；**Big Daddy 一类在两处都有，只能靠世代目录消歧**——纯标题匹配会配错音源。BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
+
+> 验收要点：本地 `wrangler dev` 的 `caches.default` 不跨请求持久化，连打三次都是 `x-cache: MISS` 属正常，别拿它当「缓存没生效」的证据；真实命中率上线后看响应头。
+
 **用户系统**（v1.14.0 起）：四层身份——**游客**（不登录，只能看）/ **玩家**（注册即得）/ **维护者**（玩家自荐 + 站长审批）/ **站长**（只有主人，在 D1 里直接改 `role`，站点不提供提权入口）。邮箱 + 密码注册，不发送验证邮件（主人 2026-10-23 定：先不做邮件，邮箱只作登录名）。GitHub 等第三方登录二期再接，`oauth_accounts` 表已建好。
 
 安全实现要点（都不要随手改）：
