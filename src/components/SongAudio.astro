@@ -232,8 +232,14 @@ const { songId } = Astro.props;
     .sda-k {
       display: none;
     }
+    /* 【2026-10-29 主人画黄框：播放器要横跨到左侧图片下方】
+       左栏占位 = 封面 108 + 栏间距 16 = 124。
+       在组件 scoped 样式里写（全局 .sda 规则特异性低于 scoped，外面写会被压掉）。
+       负 margin 抵消左栏，calc 补回宽度，视觉上就是"从图片下方开始、铺到右边缘"。 */
     .sda {
       gap: 10px;
+      margin-left: -124px;
+      width: calc(100% + 124px);
     }
   }
 </style>

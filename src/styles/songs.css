@@ -1236,6 +1236,23 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     .sd-gauge {
         max-width: none;
     }
+    /* 【2026-10-29 主人画黄框：「定数条与播放器要横跨到左边图片下方」】
+       图片只有 108 高，而右侧信息（曲名+艺人）比它更早结束，
+       图片下方那块是空的。把定数条与试听条向左扩展填满它：
+       用负 margin 抵消左栏宽度与栏间距，配合 calc 撑宽。
+       左栏占位 = 封面 108 + 栏间距 16 = 124。
+       为什么用负 margin 而不是改 DOM：桌面端 .sd-main 是 flex 列且居中，
+       把 gauge/audio 提成 .sd-body 的直接子元素会连带改桌面栅格，
+       风险大且主人没要求动桌面。 */
+    .sd-gauge,
+    .sda {
+        margin-left: -124px;
+        width: calc(100% + 124px);
+    }
+    /* 定数条顶部留白略收，避免和艺人挤在一起 */
+    .sd-gauge {
+        margin-top: 18px;
+    }
     /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
        实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px
        （k 列 42 / v 列 52 / gap 14×2），进度条只剩 81px，看起来像根短线。
@@ -1243,7 +1260,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
          · k 列 42 → 32（字号 12 → 10.5，letter-spacing 也收）；
          · v 列 52 → 40（字号 19 → 15，够放 "10.9" 四个字符）；
          · gap 14 → 7，两处共省 14；
-       腾出来后 bar 约 203-32-40-14 = 117px，比原来宽 44%。 */
+       横跨后可用宽度 203+124=327，扣掉 72 列宽与 14 间距，bar 约 241px。 */
     .sd-row {
         grid-template-columns: 32px minmax(0, 1fr) 40px;
         gap: 7px;
