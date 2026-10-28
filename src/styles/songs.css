@@ -596,9 +596,9 @@ html[data-g="yymf"] .sc-pick {
    用 areas 比嵌套容器清爽，窄屏只需把 areas 改成一列。 */
 .sd-body {
     display: grid;
-    /* 【2026-10-28】左栏从 176 加到 260：曲绘 208 需要 208+padding 才不贴边，
-        且左栏的元数据清单（songId/世代/分区/服务器）也要有呼吸空间。 */
-    grid-template-columns: 260px minmax(0, 1fr);
+    /* 【2026-10-28 第三版】左栏 260 → 208：元数据搬去底部条后，左栏只剩封面，
+        按封面宽度定栏宽即可，多出来的宽度全给右栏（曲名 + 定数条才是主角）。 */
+    grid-template-columns: 208px minmax(0, 1fr);
     grid-template-areas:
         "aside main"
         "foot  foot";
@@ -623,19 +623,27 @@ html[data-g="yymf"] .sc-pick {
 }
 .sd-main {
     grid-area: main;
-    /* 左栏（封面 + 4 项硬数据）通常比右栏（艺人 + 曲名 + 定数条）高不少，
-       右下会空出一截。右栏在自身内容有余量时垂直居中，让两栏视觉重心对齐，
-       而不是让内容都堆在上半截、下面空一片。 */
-    align-self: center;
+    /* 【2026-10-28 第三版】不再 align-self:center。
+       旧版左栏有 4 项元数据、比右栏高，只能靠硬居中平衡；现在元数据已搬走，
+       两栏高度天生接近，再居中就变成「曲名被往下推」的怪异空隙。
+       改成 stretch + 内部靠 justify-content 分布，让曲名贴住封面顶边。 */
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 208px;
 }
 /* 底部信息条：横铺满宽，用细线上缘和主内容分开，不再逐个加框 */
 .sd-foot {
     grid-area: foot;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px clamp(28px, 4.4vw, 60px);
+    /* 【2026-10-28 第三版】从 flex-wrap 改成 auto-fit 网格。
+       旧版 flex 里项目宽度由内容决定，「BPM 178」和「解禁 解禁I - CHERRY」宽度差很多，
+       换行位置随机、右侧留白不齐。网格按最小宽度自动分列，8 项也能一次排开且左右对齐。 */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 18px clamp(20px, 2.6vw, 40px);
     margin: 0;
-    padding-top: clamp(18px, 2.4vw, 26px);
+    padding-top: clamp(20px, 2.6vw, 30px);
     border-top: 1px solid var(--edge);
 }
 .sd-foot > div {
@@ -655,6 +663,10 @@ html[data-g="yymf"] .sc-pick {
     line-height: 1.4;
     color: var(--ink);
     overflow-wrap: anywhere;
+}
+/* 「备注」这类长文本不该挤在一格里换成一堆短行——横跨剩余全部列 */
+.sd-foot > div.is-wide {
+    grid-column: 1 / -1;
 }
 .sd-foot dd.sd-num {
     font-family: var(--font-data);
@@ -760,39 +772,11 @@ html[data-g="yymf"] .sc-pick {
     border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
 }
 
-/* 硬数据：不逐项框起来，用「标签 / 值」的竖排清单，靠间距分组 */
-.sd-meta {
-    margin: 22px 0 0;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-.sd-meta > div {
-    min-width: 0;
-}
-.sd-meta dt {
-    font-family: var(--font-data);
-    font-size: 11.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink3);
-    line-height: 1.2;
-}
-.sd-meta dd {
-    /* 【2026-10-28】12.5 → 14：版面放宽后旧字号在大留白里显得飘 */
-    margin: 3px 0 0;
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--ink);
-    overflow-wrap: anywhere;
-}
-/* 数据类值（songId / BPM / 日期）走等宽字体，数字位对齐才好读 */
-.sd-meta dd.sd-num {
-    font-family: var(--font-data);
-    font-size: 13.5px;
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-}
+/* 【2026-10-28 已删除 .sd-meta 整套样式】
+   第三版把左栏的元数据清单（songId/世代/分区/服务器）全部搬进底部 .sd-foot，
+   aside 只剩封面。样式跟着元素一起删——留着就是「有规则没有元素」的死代码，
+   而且日后有人照着它改会白改一轮（这条坑 2026-10-28 记在记忆里）。
+   底部条的 .sd-foot dt/dd/.sd-num 已继承同一套视觉口径。 */
 
 /* 右栏：艺人做引子，曲名做主角 */
 .sd-main {
@@ -912,25 +896,31 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         /* 窄屏收紧内边距：390px 下 30px 的 padding 会把内容压得太瘦 */
         padding: 14px 13px 17px;
     }
-    /* 窄屏：封面与硬数据并排成一条横带，把纵向空间让给曲名与定数 */
+    /* 【2026-10-28 第三版】窄屏：aside 现在只有封面，与主区仍是上下两段。
+       封面 132（桌面 208 的 ~63%，比例上不突兀），居中放置，左右留白对称。 */
     .sd-aside {
-        display: grid;
-        grid-template-columns: 132px minmax(0, 1fr);
-        gap: 16px;
-        align-items: start;
+        display: flex;
+        align-items: center;
+        gap: 14px;
     }
-    /* 【2026-10-28】108 → 132：桌面端封面已到 208，窄屏若停在 108 会显得两套设计。
-       132 是 390px 视口下「封面 + 元数据」并排还不挤的上限。 */
     .sd-j {
         width: 132px;
         height: 132px;
+        flex: none;
     }
-    .sd-meta {
-        margin: 0;
-        gap: 9px;
+    /* 右栏 min-height 是给桌面 208 封面配的，窄屏封面变小后不需要 */
+    .sd-main {
+        min-height: 0;
+        justify-content: flex-start;
     }
+    .sd-foot {
+        grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+        gap: 14px 16px;
+    }
+    /* .sd-meta 已在文案里删掉（元数据搬进底部条），这条媒体查询残留一并去掉 */
     .sd-title {
-        font-size: clamp(24px, 7vw, 32px);
+        /* 【2026-10-28】上限 32 → 38：桌面曲名已到 56，窄屏 32 偏保守 */
+        font-size: clamp(26px, 7.6vw, 38px);
     }
     .sd-gauge {
         max-width: none;

@@ -42,23 +42,24 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 const SCALE_MAX = 11;
 const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
 
-// 版面平衡（2026-10-22 第二版）：上一版把所有硬数据都堆在左栏，
-// 左栏出现 7 行往下压得很长，右栏只有曲名 + 定数条，右半大片空白、整体左重右空。
-// 现在按「识别信息」和「事实信息」拆开：
-//   左栏只留 4 项（songId / 世代 / 分区 / 服务器）—— 标识这首是谁；
-//   其余（BPM / 上线 / 解禁 / 备注）做成底板底部的横向信息条 —— 填满宽度、压住版面下缘。
+// 【2026-10-28 重设计·第三版】主人「这歌曲详情太小了」。
+// 上一版（10-22）是「左栏 = 封面 + 4 项硬数据，右栏 = 曲名 + 定数条，底部条 = 其余」。
+// 实测问题：左栏 4 项把 aside 撑到 ~450px，而右栏只有 ~250px，靠 align-self:center
+// 硬居中 → 定数条下方空出一大块（140px+），面板显得又高又空。
+// 这一版改成**唱片内页**的标准结构：
+//   左栏只有封面（208px，视觉锤）；
+//   右栏艺术主体：艺人 → 曲名 → 定数条（信息重心）；
+//   全部元数据（songId / 世代 / 分区 / 服务器 / BPM / 上线 / 解禁 / 备注）
+//   统一收进底部横条——它本来就该是「唱片背签」式的密集小字区，铺满宽度。
+// 好处：两栏高度接近，版面不用硬居中；元数据集中成一区比散落两处更好扫读。
 // 仍然只渲染有值的项，不摆「—」占位。
 type Meta = { k: string; v: string; mono?: boolean };
-const metaAside: Meta[] = song
+const metaFoot: Meta[] = song
   ? [
       { k: 'songId', v: song.id, mono: true },
       { k: '世代', v: song.gen + (genMeta ? ` ${genMeta.y}` : '') },
       { k: '分区', v: song.cat },
       { k: '服务器', v: servers },
-    ].filter((m) => m.v)
-  : [];
-const metaFoot: Meta[] = song
-  ? [
       ...(song.bpm ? [{ k: 'BPM', v: song.bpm, mono: true }] : []),
       ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
       ...(song.unlock ? [{ k: '解禁', v: song.unlock }] : []),
@@ -94,15 +95,6 @@ const metaFoot: Meta[] = song
           )}
         </div>
         {song.alt ? <span class="sd-alt" title="长押谱（标题带 [2]）">[2] 长押谱</span> : null}
-
-        <dl class="sd-meta">
-          {metaAside.map((m) => (
-            <div>
-              <dt>{m.k}</dt>
-              <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
-            </div>
-          ))}
-        </dl>
       </aside>
 
       <div class="sd-main">
@@ -133,7 +125,7 @@ const metaFoot: Meta[] = song
       {metaFoot.length ? (
         <dl class="sd-foot">
           {metaFoot.map((m) => (
-            <div>
+            <div class={m.k === '备注' ? 'is-wide' : undefined}>
               <dt>{m.k}</dt>
               <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
             </div>
