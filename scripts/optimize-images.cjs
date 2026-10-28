@@ -12,7 +12,8 @@
 //   logo    显示 285 CSS px，DPR 2 上限 570 -> 570 宽 webp q90（且只加载当前世代 1 张）
 //           ripples 于 2026-10-20 换成高清抠图（源在 archive/materials/jubeat_bg/logo_raw/ripples_logo_hi.png）
 //   bg      全屏铺满，按 1440 宽压 webp q62
-//   jackets 显示 84 CSS px，DPR 2 上限 168 -> 取 144 webp q78
+//   jackets 卡片显示 84 CSS px、详情页封面显示 208 CSS px，取两者上限 -> 208 webp q84
+//           （2026-10-28 改：原为 144，只按卡片算，详情页把 144 拉大到 208 会二次放大）
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
@@ -52,9 +53,9 @@ async function convert(dir, filter, handler, outExt) {
   add(await convert('bg', (f) => f.endsWith('.webp') && !f.endsWith('.tmp'),
     (s) => s.resize({ width: 1440, withoutEnlargement: true }).webp({ quality: 62, effort: 6 }).toBuffer(), '.webp'));
 
-  // 曲绘：144 正方裁切 q78
+  // 曲绘：208 正方裁切 q84（详情页封面尺寸为准）
   add(await convert('jackets', (f) => f.endsWith('.webp') && !f.endsWith('.tmp'),
-    (s) => s.resize({ width: 144, height: 144, fit: 'cover' }).webp({ quality: 78, effort: 6 }).toBuffer(), '.webp'));
+    (s) => s.resize({ width: 208, height: 208, fit: 'cover', kernel: 'lanczos3' }).webp({ quality: 84, effort: 6 }).toBuffer(), '.webp'));
 
   console.log('TOTAL ' + kb(total[0]) + ' -> ' + kb(total[1]));
 })().catch((e) => { console.error(e); process.exit(1); });

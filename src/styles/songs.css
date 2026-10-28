@@ -578,8 +578,17 @@ html[data-g="yymf"] .sc-pick {
    文字会直接压在背景曲线图案上，「世代」「分区」这类 ink3 小字完全糊掉。
    所以这里补一块克制的承托底板：横向铺满内容区、圆角收小到 8px、
    用站内 --glass 令牌而不是硬编码色，深浅主题都成立。 */
+/* 【2026-10-28 重设计】主人「这歌曲详情太小了」。
+   实测旧版问题：容器 940px 只占 1536 视口 61%，右侧大片空白；曲绘 144px 却显示在 144px
+   框里（原图也就 144-176）；定数条 6px 细、曲名 42px 却压在窄栏里。
+   新版的思路不是「把字放大」，而是**把版面用满**：
+     · 容器放宽到 1180px，两栏比例 260 / 1fr（曲绘有地方站住）
+     · 曲绘 208px（产物同步重转到 208，从 176 原始源 lanczos 上采样，实测可接受）
+     · 定数条加粗到 10px、数值 17px，成为真正的信息重心
+     · 曲名放大到 clamp(30, 4.4vw, 56)
+   曲绘不能再大了：1312 张里 91.8% 原始只有 144-176px，再放大就糊。 */
 .sd {
-    max-width: 940px;
+    max-width: 1180px;
     margin: 0 auto;
 }
 /* 底板容器：两栏 + 底部横向条用 grid-template-areas 排。
@@ -587,7 +596,9 @@ html[data-g="yymf"] .sc-pick {
    用 areas 比嵌套容器清爽，窄屏只需把 areas 改成一列。 */
 .sd-body {
     display: grid;
-    grid-template-columns: 176px minmax(0, 1fr);
+    /* 【2026-10-28】左栏从 176 加到 260：曲绘 208 需要 208+padding 才不贴边，
+        且左栏的元数据清单（songId/世代/分区/服务器）也要有呼吸空间。 */
+    grid-template-columns: 260px minmax(0, 1fr);
     grid-template-areas:
         "aside main"
         "foot  foot";
@@ -595,9 +606,10 @@ html[data-g="yymf"] .sc-pick {
        大多曲目底部条是空的，若按 1fr 撑开会留下一块空洞）。 */
     grid-auto-rows: auto;
     align-content: start;
-    gap: clamp(20px, 3.6vw, 46px) clamp(20px, 3.6vw, 46px);
+    /* 栏间距比旧版加大：两栏内容性质不同（左=标识，右=作品），中间要留出明确气口 */
+    gap: clamp(24px, 3.4vw, 52px) clamp(26px, 3.8vw, 60px);
     align-items: start;
-    padding: clamp(18px, 2.6vw, 30px);
+    padding: clamp(22px, 2.8vw, 38px);
     /* 承托底板：浅色世代的白底彩图上，ink3 小字（世代/分区）直接压在曲线图案上会糊。
        这里给内容一层玻璃底 + 细边，圆角收到 10px（比旧的 --r:16px 克制），
        颜色全部走站内令牌，15 套主题各自成立，不硬编码。 */
@@ -621,9 +633,9 @@ html[data-g="yymf"] .sc-pick {
     grid-area: foot;
     display: flex;
     flex-wrap: wrap;
-    gap: 14px clamp(22px, 4vw, 48px);
+    gap: 16px clamp(28px, 4.4vw, 60px);
     margin: 0;
-    padding-top: clamp(14px, 2vw, 20px);
+    padding-top: clamp(18px, 2.4vw, 26px);
     border-top: 1px solid var(--edge);
 }
 .sd-foot > div {
@@ -631,22 +643,22 @@ html[data-g="yymf"] .sc-pick {
 }
 .sd-foot dt {
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: 11.5px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
     line-height: 1.2;
 }
 .sd-foot dd {
-    margin: 2px 0 0;
-    font-size: 12.5px;
-    line-height: 1.35;
+    margin: 3px 0 0;
+    font-size: 14px;
+    line-height: 1.4;
     color: var(--ink);
     overflow-wrap: anywhere;
 }
 .sd-foot dd.sd-num {
     font-family: var(--font-data);
-    font-size: 12px;
+    font-size: 13.5px;
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
 }
@@ -703,14 +715,16 @@ html[data-g="yymf"] .sc-pick {
 /* 曲绘：实物封套感——外圈细边 + 内阴影，不用大圆角（大圆角让它像 App 图标） */
 .sd-j {
     position: relative;
-    width: 144px;
-    height: 144px;
-    border-radius: var(--r-hair);
+    /* 【2026-10-28】144 → 208。产物同步从 176 原始源上采样到 208（见
+       optimize-images.cjs 的 jackets 段）；再大会糊，1312 张里 91.8% 源只有 144-176。 */
+    width: 208px;
+    height: 208px;
+    border-radius: var(--r-xs);
     overflow: hidden;
     background: color-mix(in srgb, var(--ink) 8%, transparent);
     box-shadow:
         0 0 0 1px var(--edge2),
-        0 12px 28px -14px rgba(0, 0, 0, 0.7);
+        0 18px 40px -18px rgba(0, 0, 0, 0.75);
 }
 .sd-j img {
     width: 100%;
@@ -721,8 +735,8 @@ html[data-g="yymf"] .sc-pick {
 /* 长押谱：给封套加一道强调色描边，和原谱区分开（不靠小角标） */
 .sd-j.is-alt {
     box-shadow:
-        0 0 0 1px var(--acc),
-        0 12px 28px -14px rgba(0, 0, 0, 0.7);
+        0 0 0 2px var(--acc),
+        0 18px 40px -18px rgba(0, 0, 0, 0.75);
 }
 .sd-no {
     display: grid;
@@ -748,33 +762,34 @@ html[data-g="yymf"] .sc-pick {
 
 /* 硬数据：不逐项框起来，用「标签 / 值」的竖排清单，靠间距分组 */
 .sd-meta {
-    margin: 18px 0 0;
+    margin: 22px 0 0;
     display: flex;
     flex-direction: column;
-    gap: 11px;
+    gap: 14px;
 }
 .sd-meta > div {
     min-width: 0;
 }
 .sd-meta dt {
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: 11.5px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
     line-height: 1.2;
 }
 .sd-meta dd {
-    margin: 2px 0 0;
-    font-size: 12.5px;
-    line-height: 1.35;
+    /* 【2026-10-28】12.5 → 14：版面放宽后旧字号在大留白里显得飘 */
+    margin: 3px 0 0;
+    font-size: 14px;
+    line-height: 1.4;
     color: var(--ink);
     overflow-wrap: anywhere;
 }
 /* 数据类值（songId / BPM / 日期）走等宽字体，数字位对齐才好读 */
 .sd-meta dd.sd-num {
     font-family: var(--font-data);
-    font-size: 12px;
+    font-size: 13.5px;
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
 }
@@ -785,18 +800,20 @@ html[data-g="yymf"] .sc-pick {
     padding-top: 2px;
 }
 .sd-artist {
-    margin: 0 0 10px;
-    font-size: 13px;
-    letter-spacing: 0.01em;
+    margin: 0 0 12px;
+    font-size: 14px;
+    letter-spacing: 0.02em;
     color: var(--ink2);
     overflow-wrap: anywhere;
 }
 .sd-title {
     margin: 0;
-    font-size: clamp(26px, 3.6vw, 42px);
-    line-height: 1.14;
+    /* 【2026-10-28】42 → 上限 56：曲名是这个页面唯一的主角，旧尺寸在 1180 宽的
+       容器里显得拘谨。下限 30 保证窄屏也不塌。 */
+    font-size: clamp(30px, 4.4vw, 56px);
+    line-height: 1.1;
     font-weight: 700;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
     color: var(--title);
     text-shadow: var(--tshadow);
     overflow-wrap: anywhere;
@@ -809,11 +826,10 @@ html[data-g="yymf"] .sc-pick {
     --d-bsc: #3ecf8e;
     --d-adv: #e8b93a;
     --d-ext: #f0564f;
-    margin: clamp(24px, 3.6vw, 38px) 0 0;
+    margin: clamp(28px, 4vw, 46px) 0 0;
     display: flex;
     flex-direction: column;
-    gap: 11px;
-    /* 铺满右栏：定数条是这个页面的信息主体，不该只占左半截留一片空白 */
+    gap: 16px;
     max-width: none;
 }
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
@@ -825,19 +841,21 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 .sd-row {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) 40px;
+    /* 【2026-10-28】标签与数值列各加宽：字号上去后旧列宽会把「9.3」挤到换行 */
+    grid-template-columns: 42px minmax(0, 1fr) 52px;
     align-items: center;
-    gap: 10px;
+    gap: 14px;
 }
 .sd-row-k {
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 700;
     letter-spacing: 0.1em;
     color: var(--ink3);
 }
 .sd-row-v {
     font-family: var(--font-data);
-    font-size: 15px;
+    font-size: 19px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     text-align: right;
@@ -845,7 +863,9 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 .sd-bar {
     position: relative;
-    height: 6px;
+    /* 【2026-10-28】6px → 10px：定数是这个页面信息量最大的字段，
+       旧版 6px 细条在 1180 宽的版面里像一根装饰线，撑不起重心。 */
+    height: 10px;
     border-radius: var(--r-hair);
     background: color-mix(in srgb, var(--ink) 9%, transparent);
     overflow: hidden;
@@ -895,13 +915,15 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     /* 窄屏：封面与硬数据并排成一条横带，把纵向空间让给曲名与定数 */
     .sd-aside {
         display: grid;
-        grid-template-columns: 108px minmax(0, 1fr);
+        grid-template-columns: 132px minmax(0, 1fr);
         gap: 16px;
         align-items: start;
     }
+    /* 【2026-10-28】108 → 132：桌面端封面已到 208，窄屏若停在 108 会显得两套设计。
+       132 是 390px 视口下「封面 + 元数据」并排还不挤的上限。 */
     .sd-j {
-        width: 108px;
-        height: 108px;
+        width: 132px;
+        height: 132px;
     }
     .sd-meta {
         margin: 0;
@@ -919,8 +941,8 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         grid-template-columns: minmax(0, 1fr);
     }
     .sd-j {
-        width: 96px;
-        height: 96px;
+        width: 120px;
+        height: 120px;
     }
 }
 /* 尊重减少动效：定数条不做宽度过渡 */

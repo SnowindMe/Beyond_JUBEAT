@@ -144,7 +144,10 @@ try { sharp = require('sharp'); } catch { /* 没装 sharp 时只能拷现成的�
     const gifSrc = path.join(JP_JACKETS, name.replace(/\.webp$/i, '.gif'));
     if (fs.existsSync(gifSrc)) {
       if (!sharp) { missing.push(name + ' (无 sharp)'); continue; }
-      await sharp(gifSrc).resize(144, 144, { fit: 'cover' }).webp({ quality: 82 }).toFile(dest);
+      // 【2026-10-28】144 → 208：详情页封面要显示 208（主人「详情太小了」）。
+      // 旧值 144 是按「卡片显示 84px × DPR2 = 168 上限」算的，没算详情页，
+      // 结果详情页把 144 的图拉到 208 —— 现在直接从 176 原始源 lanczos 上采样，比二次放大干净。
+      await sharp(gifSrc).resize(208, 208, { kernel: 'lanczos3', fit: 'cover' }).webp({ quality: 84, effort: 6 }).toFile(dest);
       converted++;
       continue;
     }
