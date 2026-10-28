@@ -3,6 +3,8 @@
 > 目标：新机器 clone 仓库后，**不依赖 `scripts/tmp/`、不依赖 `archive/`、不需要手工解压 xlsx**，
 > 跑一条命令就能重建 `data/jubeat.db` → `src/data/songs.json`，并重新生成可灌进 D1 的 `db/seed.sql`。
 > 所有路径都是仓库内相对路径，脚本里没有本机绝对路径。
+>
+> **表结构（逐列说明、分布、空值原因、索引用途）见 [docs/database-schema.md](database-schema.md)**——本文只讲数据怎么流进来。
 
 ## 0. 一条命令
 

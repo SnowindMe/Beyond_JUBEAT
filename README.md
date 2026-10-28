@@ -222,6 +222,7 @@ Beyond_JUBEAT/
 │
 ├─ docs/                      设计与验收文档
 │  ├─ measurement-caliber.md  **统计口径（做任何计数前先读）**：data-cat 三处 / 世代块 12 vs 13 / grep 单行陷阱 / Tab 分视口 / 断言数看运行时
+│  ├─ database-schema.md      **数据库表结构**：6 张表逐列说明 / 服务器分布 / 空值原因 / 索引用途 / 加列改几处
 │  ├─ data-pipeline.md        数据管线（xlsx → db → seed，含 D1 上线顺序）
 │  ├─ site-structure.md       站点层级结构（页面 / 数据来源 / 导航）
 │  └─ audit-status-2026-10-23.md  22 条审计问题的现状与复测记录
@@ -243,6 +244,7 @@ Beyond_JUBEAT/
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
 │  ├─ ci/check-song-edits.mjs 曲目编辑越权/参数校验（node:sqlite 内存库冒充 D1，调真实 handleSongUpdate）
 │  ├─ ci/check-contrast.mjs   对比度自检（16 套主题 × 三条组合取 min；输出公式理论值，不含背景图）
+│  ├─ ci/check-schema-doc.cjs 文档数字自检（docs/database-schema.md 的计数 vs 真实库，不符即 FAIL）
 │  ├─ scrape-beyond-ave.cjs   上游曲目抓取（beyond the Ave. 站点 → data/upstream/*.json）
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
 │  ├─ gen-brand-assets.cjs   生成 og 分享图（图标另由 gen-brand-logo.cjs 产出）
