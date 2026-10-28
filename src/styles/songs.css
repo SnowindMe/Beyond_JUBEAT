@@ -1230,8 +1230,18 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     }
     /* .sd-meta 已在文案里删掉（元数据搬进底部条），这条媒体查询残留一并去掉 */
     .sd-title {
-        /* 【2026-10-28】上限 32 → 38：桌面曲名已到 56，窄屏 32 偏保守 */
-        font-size: clamp(26px, 7.6vw, 38px);
+        /* 【2026-10-29 主人「曲名还是太大了，减小更多」】
+           旧值 clamp(26px, 7.6vw, 38px) 在 390px 屏上约 29.6px，
+           曲子名一长（如 "Dash Dash Groovy Rush!!!"）就占三四行，把下面全挤下去。
+           窄屏曲名只是"确认是哪首"，不需要抢视觉，压到 20px 档：
+             · 下限 18 兜住 320px 小屏；
+             · 7.6vw → 5.1vw（390 时约 19.9px）；
+             · 上限 38 → 24，平板宽度下也不至于太夸张。
+           同时把行高压紧（1.1 → 1.15 反而更松？不，这里要 1.2 给多行留呼吸，
+           但字号小了之后每行本身就矮，整体高度明显下降）。 */
+        font-size: clamp(18px, 5.1vw, 24px);
+        line-height: 1.16;
+        letter-spacing: -0.01em;
     }
     .sd-gauge {
         max-width: none;
