@@ -544,13 +544,19 @@ function buildSeedSql(db) {
     '',
     dataTableDdl(),
     '',
-    // 【必须先清空数据表（2026-10-25 加）】
+    // 【清空 songs（2026-10-25 加）】
     // 原先只有 INSERT OR REPLACE，靠主键覆盖做到「幂等」——但这只对「同主键改内容」有效。
     // 一旦 songId 变了（本次 11 条 id 修正：BTA-xxx → 官方 id），旧主键那行没人覆盖，
     // 于是库里同时留下新旧两行，页面卡片数从 1150 涨到 1159。
-    // 清空后再插，才是真正「seed = 目标状态」。只清数据表，用户系统一律不碰。
+    // 清空后再插，才是真正「seed = 目标状态」。
+    // songs 是纯生成物（每行都由 data/ 下的输入推导），清掉可重建，所以这里清它是安全的。
     'DELETE FROM songs;',
-    'DELETE FROM recent_changes;',
+    // 【2026-10-28 已移除 'DELETE FROM recent_changes;'】
+    // 主人交代「除非必要，不要对线上 D1 全量灌表」。查下来最锋利的一刀就在这句：
+    // recent_changes 是**运行时数据**（/api/admin/song-update 写、/recent/ 读），
+    // 源里恒为 0 行、库里却是真人编辑记录 —— 重灌一次全部清空且无法重建。
+    // songs 能从 data/ 重建，recent_changes 不能，两者性质不同，不能同框清。
+    // 日常改数据请用 scripts/db/diff-seed.cjs（增量补丁）；真要整表重来是人工决策的事。
     '',
   ];
   const stmts = [];          // 每条 INSERT 语句的字节数，末尾统一校验

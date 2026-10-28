@@ -18,7 +18,10 @@ build/
 .next/
 .cache/
 
-.dsh-ops-update-*.lock
+/.dsh-ops-update-*.lock
+
+# 增量灌库补丁：生成物（npm run patch 每次重算），随用随生成，不进版本库
+db/patch.sql
 
 # 本地验证用的临时目录（.tmp1/.tmp8 静态服务器、playwright 截图、生图产物）
 .tmp*/

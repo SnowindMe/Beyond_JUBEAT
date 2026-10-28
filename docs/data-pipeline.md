@@ -232,13 +232,19 @@ songs 1241 行，单个 tuple 合计 174,864 B
 
 D1 官方文档同时写明：`db.batch()` 里的每条语句各自受这条 100 KB 限制（batch 不豁免）。
 
-### 6.2 seed 不含用户系统，重灌曲库不会注销账号
+### 6.2 seed 不含用户系统，也不清空的运行时数据
 
 早期 `seed.sql` 整份内嵌了 `db/schema.sql`（含 `DROP TABLE songs/recent_changes/users/sessions/oauth_accounts/role_requests`）。
 线上 D1 已经有真实用户之后，把这份 seed 重放一遍等于清空账号表。
 
 现在 `build-db.cjs` 只取 `schema.sql` 里**用户系统之前**的那一段（songs / recent_changes 及索引），
 去掉所有 `DROP TABLE`、把建表语句改成 `IF NOT EXISTS`，用户系统的表交给 `db/migrate-users.sql`。
+
+**2026-10-28 再修一处**：原来的 seed 在 DDL 之后还有两行清空语句 —— `DELETE FROM songs;` 与
+`DELETE FROM recent_changes;`。前者必要（`songs` 是纯生成物，清掉才能让「主键变过的旧行」
+不残留），后者是**错的**：`recent_changes` 由 `/api/admin/song-update` 在运行时写入，
+生成器眼里它恒为 0 行，于是「清空以对齐目标状态」变成「删光真人编辑记录且无法重建」。
+现在 seed 只 `DELETE FROM songs`。
 
 实测一（node:sqlite 直放，先建用户表并写入 1 条用户）：
 
@@ -262,16 +268,57 @@ songs 1241 / charts 3723 / users 3（未被清空）/ 索引 17 个
 > Windows 上跑 wrangler 要把 `TMP`/`TEMP` 指到项目内真实目录（默认 `/tmp` 不成立，workerd 会报
 > `CreateDirectory: 拒绝访问`）。这只影响本地 wrangler，不影响 `npm run db`。
 
-### 6.3 灌线上 D1 的顺序
+### 6.3 灌线上 D1：默认走增量补丁，不要全量灌表
+
+**铁律（2026-10-28 定）**：除非必要，不要对线上 D1 做全量灌表。
+
+理由不是「慢」，而是**误伤面收不回来**。线上 D1 里两类数据性质完全不同：
+
+| 数据 | 来源 | 清空后能否重建 |
+| --- | --- | --- |
+| `songs` | `npm run db` 从 `data/` 全量推导 | **能**，重跑就回来 |
+| `recent_changes` | 运行时由 `/api/admin/song-update` 写入 | **不能**，全是真人编辑记录 |
+| `users / sessions / oauth_accounts / role_requests` | 用户系统运行时写入 | **不能**，是账号本身 |
+
+2026-10-28 之前的 `seed.sql` 里带着 `DELETE FROM recent_changes;`（生成器认为「seed = 目标状态」，
+而源里 `recent_changes` 恒为 0 行），也就是说**按旧文档重灌一次曲库，线上所有编辑记录一起消失**。
+该语句已从 `scripts/db/build-db.cjs` 移除，`seed.sql` 现在只 `DELETE FROM songs`。
+
+#### 日常改数据：跑增量补丁
+
+```bash
+npm run db        # 重建本地库 + db/seed.sql + 站点 JSON
+npm run patch     # 对比 git HEAD 的 seed 与当前 seed，只写受影响的行到 db/patch.sql
+npx wrangler d1 execute beyond-jubeat --remote --file=db/patch.sql
+```
+
+`scripts/db/diff-seed.cjs` 的三条设计约束：
+
+1. **只输出受影响的语句**：新增 → `INSERT OR REPLACE`、变更 → 只 `UPDATE` 变了的列、下线 → 逐行 `DELETE ... WHERE 主键 = ?`。
+2. **绝不整表清空**：脚本末尾自检「patch 里出现 `DELETE FROM <表>;`」直接 FAIL。
+3. **基线与行数双红锚**：基线取 `git HEAD:db/seed.sql`（即上次 push 的曲库状态，离线可比）；
+   解析完再拿 `seed.sql` 自己标注的「`-- songs: 1241 行`」对账，解析少行就 FAIL ——
+   解析器静默漏行是最危险的形态，会让 patch 显示「0 差异」而线上停在旧数据。
+
+输出示例（只改了一首曲名）：
+
+```sql
+-- songs 变更 1 行（只改变化了的列）
+UPDATE songs SET title = '...' WHERE song_id = '50000173';
+```
+
+下线是**不可逆**动作，patch 会把它们单独成段并标注，执行前请先读一遍顶部那几行。
+
+#### 真要从零建库（新环境 / 事故恢复）
 
 ```bash
 # 1) 新库先建用户系统表（幂等，老库跑也无害）
 npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql
-# 2) 再灌曲库数据（幂等，只替换 songs 行，不碰用户表）
+# 2) 再灌曲库数据（幂等，只 DELETE+INSERT songs，不碰用户表与 recent_changes）
 npx wrangler d1 execute beyond-jubeat --remote --file=db/seed.sql
 ```
 
-本地从零建库不需要这两步，`npm run db` 已经用 `db/schema.sql` 建好了。
+这是**人工决策**的场合，不是日常流程。本地从零建库不需要这两步，`npm run db` 已经用 `db/schema.sql` 建好了。
 
 ## 7. 目录约定小结
 
@@ -290,7 +337,8 @@ data/
 db/
 ├─ schema.sql            本地全量 DDL（含 DROP，别对线上跑）
 ├─ migrate-users.sql     线上用户系统增量（IF NOT EXISTS）
-└─ seed.sql              生成物：幂等数据 DDL + INSERT + ANALYZE
+├─ seed.sql              生成物：幂等数据 DDL + 清空 songs + INSERT + ANALYZE（含 DELETE，别日常重放）
+└─ patch.sql             生成物：diff-seed.cjs 产出的增量补丁（日常灌线上用这个）
 ```
 
 `scripts/tmp/` 与 `archive/` 都在 `.gitignore` 里，**管线不再读它们**：清空 `scripts/tmp/` 后

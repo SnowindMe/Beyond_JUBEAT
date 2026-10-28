@@ -6,6 +6,7 @@
   "scripts": {
     "data": "node scripts/build-data.cjs",
     "db": "node scripts/db/parse-xlsx.cjs && node scripts/db/build-db.cjs --seed && node scripts/build-data.cjs",
+    "patch": "node scripts/db/diff-seed.cjs",
     "dev": "astro dev",
     "build": "node scripts/gen-seo.cjs && astro build",
     "preview": "npm run build && wrangler dev",

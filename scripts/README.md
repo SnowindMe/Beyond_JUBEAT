@@ -2,7 +2,8 @@
 
 - `build-data.cjs`：从 `data/jubeat.db` 生成 `src/data/data.json` 与 `src/data/songs.json`，并同步曲绘到 `public/assets/images/jackets/`（`npm run data`）
 - `db/parse-xlsx.cjs`：解析 `data/xlsx/source.xlsx`（自带 ZIP 解包）→ `data/xlsx/sheet*.json`
-- `db/build-db.cjs`：`data/upstream/*.json` + `data/xlsx/sheet*.json` → `data/jubeat.db`；加 `--seed` 再导出 `db/seed.sql`（幂等 DDL + 按 D1 单语句 100 KB 上限切分的 INSERT）
+- `db/build-db.cjs`：`data/upstream/*.json` + `data/xlsx/sheet*.json` → `data/jubeat.db`；加 `--seed` 再导出 `db/seed.sql`（幂等 DDL + 按 D1 单语句 100 KB 上限切分的 INSERT）。**全量文件，含 `DELETE FROM songs`，不要日常重放到线上**
+- `db/diff-seed.cjs`：`npm run patch`。对比 `git HEAD:db/seed.sql` 与当前 `db/seed.sql`，只把受影响的行写成 `db/patch.sql`（新增 INSERT / 变更只 UPDATE 变了的列 / 下线逐行 DELETE）。末尾自检「不允许整表 DELETE」，并拿 seed 自己标注的行数对账，解析少行即 FAIL。存在的理由：线上 D1 有运行时数据（`recent_changes`、用户系统），全量重灌等于用清空重建去换改三行
 - 整条管线一条命令：`npm run db`；输入约定、7 张表口径、dualKey 见 [`docs/data-pipeline.md`](../docs/data-pipeline.md)
 - `optimize-images.cjs`：图片压缩（曲绘 168px / 背景 1600 宽 / 站标转 WebP），原地覆盖；跑之前先 `npm i -D sharp`（sharp 未列入 devDependencies，避免 CI 装原生依赖）
 - `ci/check-refs.cjs`：引用完整性检查，扫源码或 `dist/` 里的 src/href/url()，确认全部可解析（`npm run check`）

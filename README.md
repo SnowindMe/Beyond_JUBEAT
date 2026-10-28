@@ -234,7 +234,8 @@ Beyond_JUBEAT/
 ├─ db/
 │  ├─ schema.sql              本地建库全量 DDL（含 DROP，勿对线上跑）
 │  ├─ migrate-users.sql       用户系统增量迁移（IF NOT EXISTS，给线上 D1 用）
-│  └─ seed.sql                生成物：幂等数据 DDL + INSERT + ANALYZE，可整体重放到 D1
+│  ├─ seed.sql                生成物：幂等数据 DDL + 清空 songs + INSERT + ANALYZE（全量，含 DELETE）
+│  └─ patch.sql               生成物：diff-seed.cjs 产出的增量补丁（日常灌线上用这个）
 ├─ scripts/                   工具脚本（不部署）
 │  ├─ build-data.cjs          data/jubeat.db → src/data/data.json + songs.json + 同步曲绘
 │  ├─ db/build-db.cjs         建库导入（上游快照 / xlsx 产物 → data/jubeat.db，末尾 ANALYZE）
@@ -272,7 +273,7 @@ Beyond_JUBEAT/
 | 字段 | 来源 |
 | --- | --- |
 | 曲名 / 谱师 / 三档定数 / 曲绘 | `data/jubeat.db`（SQLite 392 KB，1241 曲 / 3723 谱面；`npm run db` 从 `data/xlsx` + `data/upstream` 重建，细节见 [docs/data-pipeline.md](docs/data-pipeline.md)） |
-| **线上实际读的曲库** | Cloudflare D1 数据库 `beyond-jubeat`（id `91a48a18-62b2-4933-9214-788205926744`），内容与上面那份 SQLite 一致；重灌曲库用 `db/seed.sql`（幂等数据 DDL + INSERT，不含用户系统表），用户表另跑 `db/migrate-users.sql` |
+| **线上实际读的曲库** | Cloudflare D1 数据库 `beyond-jubeat`（id `91a48a18-62b2-4933-9214-788205926744`），内容与上面那份 SQLite 一致。**日常改数据用 `npm run patch` 生成增量补丁 `db/patch.sql` 去灌，不要重放整份 `db/seed.sql`**（后者会 `DELETE FROM songs`；虽然已不再清 `recent_changes`，但全量灌表本身是「除非必要不做」的动作）。用户表另跑 `db/migrate-users.sql` |
 | 世代归属与年份 | `src/lib/gens.ts` 的 `GEN_ORDER`（13 条：日服 12 + 国服 1），`scripts/build-data.cjs` 里有同源的一张表 |
 | 收录日期 | `songs.added_at`（D1 列名），缺失则为 `null` |
 
@@ -284,6 +285,7 @@ Beyond_JUBEAT/
 npm install              # astro + wrangler
 npm run dev              # 本地开发服务器（本机起不来，见「本机 workerd 的两个坑」）
 npm run db               # 一条命令重建曲库：xlsx → sheet JSON → data/jubeat.db + db/seed.sql → 站点 JSON
+npm run patch            # 对比 git HEAD 的 seed 与当前 seed，只把受影响的行写进 db/patch.sql（灌线上用）
 npm run data             # 只重新生成 src/data/data.json 与 songs.json 并同步曲绘
 npm run build            # 构建到 dist/
 npm run check            # 四段：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验 → 对比度自检(16 套主题)
@@ -308,7 +310,7 @@ npm run opt              # 压缩 public/assets/images 下的图片
 
 剩下的固定开销拆不开：`import('astro')` 9s + `import('@astrojs/cloudflare')` 10s 是框架自身的模块加载，vite 三段打包约 26s。`scripts/gen-seo.cjs` 只占 1s，不是瓶颈；`NODE_COMPILE_CACHE` 在这台机器上实测反而更慢（27s vs 19s），不要开。
 
-改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再把生成的 `db/seed.sql` 灌进 D1。
+改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再跑 `npm run patch` 把生成的 `db/patch.sql`（只含改动行）灌进 D1。
 
 资源引用一律写站点绝对路径（`/assets/...`）：Astro 会把 CSS 打到 `/_astro/*.css`，相对路径会失效。
 

@@ -59,7 +59,6 @@ CREATE INDEX IF NOT EXISTS idx_recent_changed_at ON recent_changes(changed_at DE
 
 
 DELETE FROM songs;
-DELETE FROM recent_changes;
 
 -- songs: 1241 行
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,cover,added_at,unlock_note,limited_until) VALUES
