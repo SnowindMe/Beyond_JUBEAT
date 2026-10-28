@@ -722,6 +722,13 @@ html[data-g="yymf"] .sc-pick {
 
 .sd-aside {
     min-width: 0;
+    /* 【2026-10-28 第三版】左栏只有封面了，让它与右栏（曲名 + 定数条）等高：
+       实测右栏 267px、封面 208px，差 59px 会让封面显得「缩在左上角」。
+       封面按 aspect-ratio 跟高度走，宽度由 grid 列宽约束（208），
+       多出的高度用 object-fit:cover 裁切——曲绘本就是方图，裁一点不影响识别。 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* 曲绘：实物封套感——外圈细边 + 内阴影，不用大圆角（大圆角让它像 App 图标） */
@@ -737,6 +744,8 @@ html[data-g="yymf"] .sc-pick {
     box-shadow:
         0 0 0 1px var(--edge2),
         0 18px 40px -18px rgba(0, 0, 0, 0.75);
+    /* 高度对齐右栏内容（267px 左右），宽度仍 208；不拉伸变形靠 object-fit:cover */
+    flex: none;
 }
 .sd-j img {
     width: 100%;
