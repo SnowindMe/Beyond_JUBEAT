@@ -61,6 +61,14 @@ function main() {
   // 只读 H 列 √，不按歌曲名猜；SongId 缺失的行（sheet1 里 107 行）天然不会被收录，安全。
   const cnOldFrameIds = readCnOldFrameIds();
 
+  // 国服已上线人工覆盖（2026-10-29）：源表两次导出之间新上架的曲只能记在这里。
+  // 加载后立刻做「id 必须存在」的自检——映射到不存在的 songId 等于静默失效。
+  const cnOnlineOverrides = readCnOnlineOverrides();
+
+  // 国服独有新增曲（2026-10-29）：日服曲库没有、xlsx 快照也没赶上的曲目，
+  // 只能靠人工表补齐。见 data/cn-extra-songs.json 的文件头说明。
+  const cnExtraSongs = readCnExtraSongs();
+
   // 世代人工覆盖（2026-10-25）：上游 origin 是首发世代，改版曲/替代谱面的
   // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
   const genOverrides = readGenOverrides();
@@ -116,7 +124,9 @@ function main() {
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
   };
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, cnOverride: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
+  // 覆盖表实际命中的 id：跑完后与表里的 key 逐一比对，没命中的要报出来
+  const cnOverrideHit = new Set();
   const problems = [];
 
   db.exec('BEGIN');
@@ -155,13 +165,18 @@ function main() {
       if (s1Unlock.has(srcId)) {
         if (s1Unlock.get(srcId).phase === 2) stat.unlockII++; else stat.unlockI++;
       }
-      // server_cn 两个来源，任一成立即为国服已上线：
+      // server_cn 三个来源，任一成立即为国服已上线：
       //   ① 国服 sheet2 里同曲（dualKey 匹配，含 [2] 长押行）；
-      //   ② sheet1 打 √ 的旧框已有曲（按官方 songId 精确匹配，不猜）。
+      //   ② sheet1 打 √ 的旧框已有曲（按官方 songId 精确匹配，不猜）；
+      //   ③ 人工覆盖表 data/cn-online-overrides.json（2026-10-29 加）。
       // ② 是 2026-10-24 补的：这 432 首在国服音乐魔方里可玩，之前漏标了。
-      const isCnOnline = cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ||
+      // ③ 覆盖的是「源表两次导出之间新上架」的曲，源表里根本没有这一行。
+      const byOverride = cnOnlineOverrides.has(srcId);
+      const isCnOnline = byOverride ||
+        cnDualKeys.has(dualKey(s.title) + '|' + dualKey(s.artist)) ||
         cnOldFrameIds.has(srcId);
-      if (isCnOnline && cnOldFrameIds.has(srcId)) stat.cnOldFrame++;
+      if (isCnOnline && byOverride) { stat.cnOverride++; cnOverrideHit.add(srcId); }
+      else if (isCnOnline && cnOldFrameIds.has(srcId)) stat.cnOldFrame++;
       ins.run(
         finalId, s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
         genName, 1, isCnOnline ? 1 : 0, cat,
@@ -200,6 +215,28 @@ function main() {
       if (r.cover) stat.cnCover++;
       stat.cn++;
     }
+
+    // ---- 国服独有新增曲（人工补充表，2026-10-29 加）----
+    // 这些曲在日服曲库里根本不存在（华立独占 / 机种移植 / 联动 / 国语流行），
+    // 日服循环遍历不到；又因为 xlsx sheet2 是定期导出的快照，新上架的也来不及进。
+    // 所以单独一张表插「国服独有行」：server_jp=0 / server_cn=1 / gen_name=音乐魔方。
+    // 数据来源：曲名与难度取自音游街抓取，分类与移植机种取自主人贴的国服更新表截图。
+    for (const [id, v] of cnExtraSongs) {
+      const cat = CN_CATEGORY[v.category] || (['KONAMI', '原创', '流行', '独占'].includes(v.category) ? v.category : null);
+      if (!cat) problems.push(`国服新增曲分类未映射: ${id} (${v.title}) category=${JSON.stringify(v.category)}`);
+      ins.run(
+        String(id), 'official', String(v.title), v.artist ? String(v.artist) : null,
+        v.bpm ? String(v.bpm) : null, '音乐魔方', 0, 1, cat || '原创',
+        num(v.bsc), num(v.adv), num(v.ext),
+        /\[\s*2\s*\]/.test(String(v.title)) ? 1 : 0,
+        v.cover ? String(v.cover) : null,
+        isoDate(v.date), dashNull(v.pool), null
+      );
+      if (v.cover) stat.cnCover++;
+      stat.cn++;
+      stat.cnExtra = (stat.cnExtra || 0) + 1;
+    }
+
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
@@ -220,12 +257,18 @@ function main() {
     jpOfficial: jp.songs.filter((s) => s.idKind === 'official' || idFixes.has(String(s.songId))).length,
     jpSynthetic: jp.songs.filter((s) => s.idKind !== 'official' && !idFixes.has(String(s.songId))).length,
     // 国服行 = sheet1 打√ 且真在日服库里的（432）+ 被 sheet2 命中的日服行（1）+ sheet2 自身的国服行（91）
-    cnTotal: tickInJp + dualJpNotTick + cnRows.length,
+    //          + 人工覆盖表里那几条（2026-10-29 加：源表两次导出之间上架的曲不在 tickInJp 里）。
+    cnTotal: tickInJp + dualJpNotTick + cnRows.length + cnOnlineOverrides.size + cnExtraSongs.size,
     // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
-    dualTotal: tickInJp + dualJpNotTick + stat.cnDual,
+    //          + 人工覆盖表（2026-10-29 加）
+    dualTotal: tickInJp + dualJpNotTick + stat.cnDual + cnOnlineOverrides.size,
     // 解禁期次：直接数 sheet1 I 列，与库里的 unlock_note 对照（2026-10-25 加）。
     unlockI: [...s1Unlock.values()].filter((v) => v.phase === 1).length,
     unlockII: [...s1Unlock.values()].filter((v) => v.phase === 2).length,
+    // 人工覆盖表条数：期望=表里写了几条，实测=实际命中几个存在的 songId
+    cnOverride: cnOnlineOverrides.size,
+    // 曲目总数的期望值：全部从源输入推算，不写死
+    total: jp.songs.length + cnRows.length + cnExtraSongs.size,
   };
   // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
   // 并且新 id 不能被两条修正挤到同一个（否则 INSERT OR REPLACE 会静默吞掉一条）。
@@ -256,7 +299,7 @@ function main() {
     }
   }
 
-  selfCheck(db, stat, problems, expect);
+  selfCheck(db, stat, problems, expect, cnOverrideHit);
   if (wantSeed) buildSeedSql(db);
   db.close();
   console.log(`\n本地库 -> ${path.relative(ROOT, DB_PATH)} (${(fs.statSync(DB_PATH).size / 1024).toFixed(1)} KB)`);
@@ -334,9 +377,13 @@ function dashNull(v) {
   return s && s !== '——' && s !== '—' ? s : null;
 }
 
+// 源表（sheet2 的「音乐魔方更新时间」）写的是 2026.10.15 这种点分日期；
+// 而人工补充表 data/cn-extra-songs.json 习惯写 2026-10-29。两种都收，
+// 否则后者会静默变成 NULL——added_at 为空的曲目在「最近收录」里直接消失，很难发现。
 function isoDate(raw) {
-  const m = /^(\d{4})\.(\d{2})\.(\d{2})$/.exec(String(raw || '').trim());
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+  const m = /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})$/.exec(String(raw || '').trim());
+  if (!m) return null;
+  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
 }
 
 // resolved.json 的 origin 是带前缀的原生写法（'jubeat knit' / 'jubeat saucer fulfill' / 'beyond the Ave.'）。
@@ -393,6 +440,67 @@ function readGenOverrides() {
 
 // sheet1「国框更新日服歌曲进度」：H 列（索引 7）为 '√' 的行 = 国服已上线。
 // 表头占前 2 行，数据从第 3 行（索引 2）起；每行结构见 docs/cn-update-xlsx.md。
+// 国服已上线的人工覆盖（2026-10-29 建立）。
+//
+// 为什么需要：国服「已上线」的两个来源（sheet2 同曲、sheet1 H 列 √）都依赖
+// data/xlsx/source.xlsx 这份定期导出快照。两次导出之间的新上架曲在表里压根不存在，
+// 改不到；而主人手上就有官方更新表，直接指定更快也更准。
+//
+// 覆盖独立成文件、不进源表：上游换版本重跑 npm run db 依然生效，
+// 也不会污染下一次 xlsx 解析的输入。
+//
+// 自检两条（都来自 2026-10-28 立的原则：覆盖层静默失效比报错难查一个数量级）：
+//   ① 值必须合法（只有 date 与 note 两个字段，date 必须 YYYY-MM-DD）；
+//   ② key 必须真的在曲库里存在——id 打错时直接抛错，而不是静默不生效。
+function readCnOnlineOverrides() {
+  const p = path.join(ROOT, 'data/cn-online-overrides.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const [id, v] of Object.entries(raw.overrides || {})) {
+    const date = String((v && v.date) || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { bad.push(id + ' date=' + JSON.stringify(date)); continue; }
+    map.set(String(id), { date, note: String((v && v.note) || '') });
+  }
+  if (bad.length) {
+    throw new Error('data/cn-online-overrides.json 里有非法 date（必须 YYYY-MM-DD）：\n  ' + bad.join('\n  '));
+  }
+  return map;
+}
+
+// 国服独有新增曲（2026-10-29 建立）。
+//
+// 这类曲目（华立独占 / 机种移植 / 联动 / 国语流行）在日服曲库里根本不存在，
+// 日服循环遍历不到；xlsx sheet2 又是定期导出的快照，新上架的来不及进。
+// 所以单列一张表，build-db 在国服循环之后按「国服独有行」插入。
+//
+// 自检（同覆盖层口径，2026-10-28 立的原则：静默失效比报错难查一个数量级）：
+//   ① 必填字段齐全（title / bsc / adv / ext / cover）；
+//   ② id 形如 99xxxxxxx（音乐魔方段），且不能与日服 / sheet2 已有的 id 撞车——
+//      撞车会被 INSERT OR REPLACE 静默覆盖掉真数据。
+function readCnExtraSongs() {
+  const p = path.join(ROOT, 'data/cn-extra-songs.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const [id, v] of Object.entries(raw.songs || {})) {
+    const sid = String(id);
+    if (!/^99\d{7}$/.test(sid)) { bad.push(sid + ' id 形态不对（应为 99xxxxxxx）'); continue; }
+    if (!v || !v.title) { bad.push(sid + ' 缺 title'); continue; }
+    if (![v.bsc, v.adv, v.ext].every((x) => typeof x === 'number' && x > 0)) {
+      bad.push(sid + ' 难度非法 ' + JSON.stringify([v.bsc, v.adv, v.ext])); continue;
+    }
+    if (!v.cover) { bad.push(sid + ' 缺 cover'); continue; }
+    map.set(sid, v);
+  }
+  if (bad.length) {
+    throw new Error('data/cn-extra-songs.json 校验失败：\n  ' + bad.join('\n  '));
+  }
+  return map;
+}
+
 function readCnOldFrameIds() {
   const p = path.join(XLSX_DIR, 'sheet1.json');
   if (!fs.existsSync(p)) {
@@ -445,7 +553,7 @@ function cnCoverFallback(songId) {
   return null;
 }
 
-function selfCheck(db, stat, problems, expect) {
+function selfCheck(db, stat, problems, expect, cnOverrideHit) {
   const q = (s) => db.prepare(s).get();
   const total = q('SELECT COUNT(*) c FROM songs').c;
   const jpN = q("SELECT COUNT(*) c FROM songs WHERE server_jp=1").c;
@@ -459,7 +567,9 @@ function selfCheck(db, stat, problems, expect) {
   const gens = db.prepare('SELECT server_jp, server_cn, gen_name, COUNT(*) n FROM songs GROUP BY server_jp, server_cn, gen_name ORDER BY server_jp DESC, server_cn DESC, gen_name').all();
 
   const rows = [
-    ['曲目总数', total, 1241],
+    // 曲目总数不再写死 1241：国服独有新增曲（data/cn-extra-songs.json）会把它抬高。
+    // 期望 = 日服行数 + sheet2 国服行数 + 国服独有新增曲数，全部从源输入推算。
+    ['曲目总数', total, expect.total],
     // 双服曲在两边各有一行谱面（Big Daddy：日服行 + 国服行都标双），所以各 +1
     ['  日服（含双服行）', jpN, 1151],
     // 国服行数不再是固定 92：2026-10-24 起 sheet1 打 √ 的旧框已有曲（432 首）也算国服上线。
@@ -481,6 +591,9 @@ function selfCheck(db, stat, problems, expect) {
     ['分类为空的曲目', noCat, 0],
     ['缺 EXT 定数的曲目', noExt, 0],
     ['song_id 重复', dupId, 0],
+    // 覆盖表每条都必须真的命中一个存在的 songId——打错 id 时这里直接 FAIL，
+    // 而不是「改了没生效」那种静默失败（2026-10-28 立的原则）。
+    ['国服覆盖表命中数', cnOverrideHit.size, expect.cnOverride],
     ['国服分类未映射', stat.cnUnmapped, 0],
     // 双服行 = sheet1 打√ 且真在日服库里的曲（432）+ sheet2 里能按曲名匹配到日服的那几行（2）。
     // 注意：sheet1 的 432 首本来就都是日服行，所以它们「server_jp=1 且 server_cn=1」；

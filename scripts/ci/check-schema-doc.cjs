@@ -24,14 +24,17 @@ const one = (q) => d.prepare(q).get().c;
 
 // [说明, SQL, 文档里必须出现的字符串]
 const RULES = [
-  ['songs 总行数', 'SELECT COUNT(*) c FROM songs', '**1241**'],
-  ['日服独占行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=0', '**717**'],
-  ['双服行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=1', '**434**'],
-  ['国服独有行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=0 AND server_cn=1', '**90**'],
-  ['谱面总数', 'SELECT COUNT(bsc)+COUNT(adv)+COUNT(ext) c FROM songs', '**3723**'],
-  ['bpm 空值', 'SELECT COUNT(*) c FROM songs WHERE bpm IS NULL', '**732 / 1241**'],
-  ['added_at 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at IS NULL', '**1084 / 1241**'],
-  ['unlock_note 空值', 'SELECT COUNT(*) c FROM songs WHERE unlock_note IS NULL', '**1014 / 1241**'],
+  // 【2026-10-29】这些数字随「国服独有新增曲」变过一轮（1241→1248）。
+  // 它们是**文档里必须出现的字面串**，所以数据一变就要跟着改——这正是这条断言的意义：
+  // 不改就会 FAIL，而不是让文档静默过期。
+  ['songs 总行数', 'SELECT COUNT(*) c FROM songs', '**1248**'],
+  ['日服独占行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=0', '**714**'],
+  ['双服行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=1 AND server_cn=1', '**437**'],
+  ['国服独有行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=0 AND server_cn=1', '**97**'],
+  ['谱面总数', 'SELECT COUNT(bsc)+COUNT(adv)+COUNT(ext) c FROM songs', '**3744**'],
+  ['bpm 空值', 'SELECT COUNT(*) c FROM songs WHERE bpm IS NULL', '**737 / 1248**'],
+  ['added_at 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at IS NULL', '**1084 / 1248**'],
+  ['unlock_note 空值', 'SELECT COUNT(*) c FROM songs WHERE unlock_note IS NULL', '**1018 / 1248**'],
   ['占位 id', "SELECT COUNT(*) c FROM songs WHERE id_kind='synthetic'", '**2**'],
   ['限时曲', 'SELECT COUNT(*) c FROM songs WHERE limited_until IS NOT NULL', '**2**'],
   ['索引数', "SELECT COUNT(*) c FROM sqlite_master WHERE type='index' AND sql IS NOT NULL", '**11**'],

@@ -1,7 +1,7 @@
 ---
 // 曲目详情页：按 song_id 查 D1 单行。
 // 和 /songs/ 一样是 SSR（prerender = false）：曲库在 D1，构建期不知道有哪些 id，
-// 也不能给 1241 首预渲染 1241 个静态页——新增曲目会漏、改一次数据要全量重建。
+// 也不能给上千首曲目逐个预渲染静态页——新增曲目会漏、改一次数据要全量重建。
 import Layout from '../../layouts/Base.astro';
 import '../../styles/songs.css';
 import { pageTitle } from '../../lib/title';
@@ -46,7 +46,7 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 const SCALE_MAX = 11;
 const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
 
-// 有没有音源：映射表命中才渲染试听条。1241 首里 1170 首有（上游是日服谱面站，
+// 有没有音源：映射表命中才渲染试听条。1248 首里 1170 首有（上游是日服谱面站，
 // 国服原创曲与拿不到官方 id 的 BTA- 占位曲本就没有），未命中的不摆空控件。
 const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)]);
 

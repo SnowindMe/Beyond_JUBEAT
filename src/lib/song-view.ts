@@ -80,7 +80,7 @@ export const inGen = (s: Song, gen: string) => s.gen === gen;
 //   日服的 PICK UP 歌曲：bta 分区
 //   国服的 PICK UP 歌曲：音乐魔方分区 + Ave 分区 + 解禁II 歌曲
 //
-// 实测（src/data/songs.json 1241 行，按本文件的 inView + 国服去重口径）：
+// 实测（src/data/songs.json 1248 行，按本文件的 inView + 国服去重口径）：
 //   日服视图 1150 行 → PICK UP 142（= bta 世代全部）/ COMMON 1008
 //   国服视图  523 行 → PICK UP 158（音乐魔方 91 + Ave. 24 + 解禁II 55，其中 12 首
 //                      同时属 Ave.，去重后新增 43）/ COMMON 365

@@ -207,7 +207,7 @@
 .sc-gen + .sc-gen {
     margin-top: clamp(16px, 1.8vw, 22px);
 }
-/* 1241 张卡片一次性布局代价很高：屏外的世代段跳过渲染与样式计算，
+/* 1248 张卡片一次性布局代价很高：屏外的世代段跳过渲染与样式计算，
    滚到附近时浏览器再补齐（contain-intrinsic-size 用来占位，避免滚动条跳动）。 */
 .sc-gen {
     content-visibility: auto;
@@ -602,7 +602,7 @@ html[data-g="yymf"] .sc-pick {
     grid-template-areas:
         "aside main"
         "foot  foot";
-    /* 行高按内容收缩：foot 行没有内容时不占位（1241 首里只有 150 首有 BPM/日期，
+    /* 行高按内容收缩：foot 行没有内容时不占位（1248 首里只有 150 首有 BPM/日期，
        大多曲目底部条是空的，若按 1fr 撑开会留下一块空洞）。 */
     grid-auto-rows: auto;
     align-content: start;

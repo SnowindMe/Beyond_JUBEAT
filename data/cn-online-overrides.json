@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "国服已上线曲目的人工覆盖表（2026-10-29 建立）。",
+    "",
+    "为什么需要它：国服的「已上线」有两个数据来源（见 scripts/db/build-db.cjs 的",
+    "isCnOnline 注释）：① xlsx sheet2 里同曲；② sheet1 H 列打 √ 的旧框已有曲。",
+    "两者都依赖 data/xlsx/source.xlsx —— 那份源表是国服运营方定期导出的快照，",
+    "两次导出之间的新上架曲在表里根本不存在，改不到。",
+    "",
+    "所以这里做一层独立覆盖：主人直接从官方更新表截图里指定的曲目记在这里，",
+    "不污染源表、不需要等下一次 xlsx 导出；上游换版本重跑 npm run db 也依然生效。",
+    "",
+    "维护方式：key = 官方 songId，value = { note, date }。",
+    "date 用 「YYYY-MM-DD」记录「从哪次国服更新起可玩」，会写进该曲的备注区之外，仅供本表追溯。",
+    "改完跑 npm run db 重建数据 → npm run patch 生成增量 → 上线。",
+    "注意：这些曲目的 server_jp 仍为 1，页面会按既有口径把「两服都有」的行归入 KONAMI 分区。"
+  ],
+  "overrides": {
+    "30000039": {
+      "date": "2026-10-29",
+      "note": "Shining Wizard / 96。主人 2026-10-29 从国服更新表截图指定「国服设为有」"
+    },
+    "50000258": {
+      "date": "2026-10-29",
+      "note": "Squeeze / VENUS feat. Mutsuhiko Izumi。同上，主人 2026-10-29 指定"
+    },
+    "90000047": {
+      "date": "2026-10-29",
+      "note": "pedigree / BEMANI Sound Team \"S-C-U\"。同上，主人 2026-10-29 指定"
+    }
+  }
+}

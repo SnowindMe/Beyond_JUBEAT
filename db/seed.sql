@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_recent_changed_at ON recent_changes(changed_at DE
 
 DELETE FROM songs;
 
--- songs: 1241 行
+-- songs: 1248 行
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,cover,added_at,unlock_note,limited_until) VALUES
   ('30000114','official','R.P.G.～Rockin'' Playing Game','SuG',NULL,'knit',1,0,'授权',4,7,9.5,0,'id18283302.webp',NULL,NULL,NULL),
   ('11000183','official','アイスクリームマジック','雪乃イト',NULL,'beyond the Ave.',1,0,'授权',2,5,8,0,'id17130843.webp',NULL,NULL,NULL),
@@ -635,7 +635,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('80000047','official','シノビシノノメ','東雲心菜',NULL,'clan',1,0,'原创',3,6,9,0,'id59861282.webp',NULL,NULL,NULL),
   ('70000099','official','じもとっこスイーツ♪','ホララ・ホリック with 日向美ビタースイーツ♪',NULL,'Qubell',1,0,'原创',2,6,8,0,'id48356022.webp',NULL,NULL,NULL),
   ('70000109','official','Giant Otter Family','S-C-U',NULL,'Qubell',1,0,'原创',3,8,9.5,0,'id45157594.webp',NULL,NULL,NULL),
-  ('30000039','official','Shining Wizard','96',NULL,'knit',1,0,'原创',5,8,9.8,0,'id62767087.webp',NULL,NULL,NULL),
+  ('30000039','official','Shining Wizard','96',NULL,'knit',1,1,'原创',5,8,9.8,0,'id62767087.webp',NULL,NULL,NULL),
   ('20000044','official','Shining Star','Sota Fujimori feat.Nagisa','140','ripples',1,1,'原创',4,6,7,0,'id15097558.webp',NULL,NULL,NULL),
   ('30000049','official','Shine On Me','kors k','170','knit',1,1,'原创',4,7,8,0,'id66816079.webp',NULL,'解禁I - LIME',NULL),
   ('80000072','official','Shout!!','Qrispy Joybox feat.mao','175','clan',1,1,'原创',2,5,8,0,'id49592885.webp','2026-04-30',NULL,NULL),
@@ -674,7 +674,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('50000236','official','Sky Is The Limit','Sota F. feat.Anna','150','saucer',1,1,'原创',3,6,9.4,0,'id31720718.webp',NULL,NULL,NULL),
   ('70000140','official','スカイダイバー','ヒゲドライバー feat.ヒゲドライVAN',NULL,'Qubell',1,1,'原创',3,6,8,0,'id57012516.webp',NULL,NULL,NULL),
   ('70000173','official','Sky High','Cuvelia',NULL,'Qubell',1,0,'原创',4,10.6,10.6,0,'id13666670.webp',NULL,NULL,NULL),
-  ('50000258','official','Squeeze','VENUS feat. Mutsuhiko Izumi',NULL,'saucer',1,0,'原创',4,7,10.3,0,'id39020806.webp',NULL,NULL,NULL),
+  ('50000258','official','Squeeze','VENUS feat. Mutsuhiko Izumi',NULL,'saucer',1,1,'原创',4,7,10.3,0,'id39020806.webp',NULL,NULL,NULL),
   ('50000021','official','squall','猫叉Master+','190','saucer',1,1,'原创',5,6,9.2,0,'id89241638.webp',NULL,NULL,NULL),
   ('60000078','official','ススススペースハリネズミ','S-C-U',NULL,'prop',1,0,'原创',4,8,10.5,0,'id80014809.webp',NULL,NULL,NULL),
   ('90000119','official','StaRgAZER','BEMANI Sound Team "TAG"',NULL,'festo',1,0,'原创',3,8,10,0,'id78481410.webp',NULL,NULL,NULL),
@@ -1029,7 +1029,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('80000117','official','Pale Garden','Dirty Androids',NULL,'clan',1,0,'原创',4,7,9.8,0,'id63763250.webp',NULL,NULL,NULL),
   ('90000016','official','Pegasus','BEMANI Sound Team "Expander"','165','festo',1,1,'原创',4,7,10.1,0,'id65995720.webp','2026-03-10',NULL,NULL),
   ('11000152','official','Hexer','BEMANI Sound Team "Yvya"',NULL,'beyond the Ave.',1,0,'原创',6,9.6,10.7,0,'id90512825.webp',NULL,NULL,NULL),
-  ('90000047','official','pedigree','BEMANI Sound Team "S-C-U"',NULL,'festo',1,0,'原创',6,9.6,10.7,0,'id86693326.webp',NULL,NULL,NULL),
+  ('90000047','official','pedigree','BEMANI Sound Team "S-C-U"',NULL,'festo',1,1,'原创',6,9.6,10.7,0,'id86693326.webp',NULL,NULL,NULL),
   ('90000072','official','ベビーステップ','ここなつ',NULL,'festo',1,0,'原创',4,6,9,0,'id83210360.webp',NULL,NULL,NULL),
   ('40000060','official','HEAVENLY MOON','Tatsh','185','copious',1,1,'原创',4,8,10.4,0,'id79289857.webp',NULL,'解禁I - LIME',NULL),
   ('80001007','official','HEAVENLY MOON [ 2 ]','Tatsh','185','clan',1,1,'原创',5,8,10.2,1,'id65441471.webp',NULL,'解禁I - RAINBOW / 兑换 U点:8000 兑换票:45',NULL),
@@ -1304,7 +1304,14 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('995000048','official','零距离的思念','TINY7','128','音乐魔方',0,1,'流行',1,4,6,0,'id995000048.webp','2026-10-15',NULL,NULL);
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,cover,added_at,unlock_note,limited_until) VALUES
   ('995000054','official','我爱你就像','李承铉',NULL,'音乐魔方',0,1,'流行',2,4,6,0,'id995000054.webp','2026-10-15',NULL,NULL),
-  ('995000055','official','太极','井胧/井迪','145','音乐魔方',0,1,'流行',2,4,8,0,'42b12e3606.webp','2026-09-29',NULL,NULL);
+  ('995000055','official','太极','井胧/井迪','145','音乐魔方',0,1,'流行',2,4,8,0,'42b12e3606.webp','2026-09-29',NULL,NULL),
+  ('990000038','official','Μοῦσα','ushiee','200','音乐魔方',0,1,'KONAMI',5,9.2,10.2,0,'id990000038.webp','2026-10-29','SOUND VOLTEX EXCEED GEAR',NULL),
+  ('990000041','official','Strange Flow','Sota Fujimori','140','音乐魔方',0,1,'KONAMI',3,7,9.4,0,'id990000041.webp','2026-10-29','REFLEC BEAT 悠久のリフレシア',NULL),
+  ('991000018','official','VIVID NIGHT','Wooden & SumaiLight',NULL,'音乐魔方',0,1,'原创',3,7,9.3,0,'id991000018.webp','2026-10-29','联动/音波狂潮',NULL),
+  ('995000030','official','未来爱','林欣然',NULL,'音乐魔方',0,1,'流行',1,4,6,0,'id995000030.webp','2026-10-29',NULL,NULL),
+  ('995000031','official','XZMHXDXH','方大同',NULL,'音乐魔方',0,1,'流行',2,5,8,0,'id995000031.webp','2026-10-29',NULL,NULL),
+  ('995000034','official','午夜恰恰','邓典 / 刘至佳',NULL,'音乐魔方',0,1,'流行',2,4,7,0,'id995000034.webp','2026-10-29',NULL,NULL),
+  ('995000053','official','末日香槟','扭蛋姬',NULL,'音乐魔方',0,1,'流行',1,5,8,0,'id995000053.webp','2026-10-29',NULL,NULL);
 
 -- recent_changes: 0 行（空表，无 INSERT）
 

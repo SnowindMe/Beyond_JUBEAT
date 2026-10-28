@@ -9,7 +9,7 @@
 //
 // 搜索 / 四维筛选 / 五种排序（2026-10-23，t9）：
 //   匹配字段全部读卡片上的 data-*，不在输入时解析文本；
-//   排序只改 CSS order，不重排 DOM（1241 张卡重排会掉帧、滚动位置也会跳）。
+//   排序只改 CSS order，不重排 DOM（1248 张卡重排会掉帧、滚动位置也会跳）。
 // 【无 JS 时】页面默认就渲染成「日服 → 分区 → 世代分组」的完整列表，
 //   工具条只是叠加能力：脚本不跑，内容照样从头读到尾，不会白屏。
 import Layout from '../layouts/Base.astro';
@@ -565,7 +565,7 @@ const SORTS = [
     // 三条硬原则：
     //  1) 匹配字段一律读 data-*（data-t / data-a / data-id / data-gen / data-bsc / data-adv / data-ext），
     //     不在输入时解析卡片文本——文本里混着「双」徽章、被截断的省略号、破折号占位，解析必然是脏数据。
-    //  2) 排序用 CSS order（grid/flex 都支持），1241 张卡重排 DOM 会掉帧、滚动位置也会跳。
+    //  2) 排序用 CSS order（grid/flex 都支持），1248 张卡重排 DOM 会掉帧、滚动位置也会跳。
     //  3) 定数缺失是空串而不是 0：区间筛选时直接判不命中，绝不把它当 0 塞进「7.0 以下」。
     (function () {
       // .sc-js 已在页首的内联脚本里挂好（见文件开头那条 script），这里不再重复加。
@@ -911,7 +911,7 @@ const SORTS = [
         }
       }
 
-      // 错开入场：只给当前可见的前 12 张（1241 张全做动画没有意义，也撑不住）
+      // 错开入场：只给当前可见的前 12 张（1248 张全做动画没有意义，也撑不住）
       function stagger() {
         var old = root.querySelectorAll('.sc-card.sc-stag');
         for (var i = 0; i < old.length; i++) {
@@ -927,7 +927,7 @@ const SORTS = [
         }
       }
 
-      // ---- 搜索：输入即筛，debounce 120ms（1241 张卡每个按键全量遍历会卡） ----
+      // ---- 搜索：输入即筛，debounce 120ms（1248 张卡每个按键全量遍历会卡） ----
       var timer = null;
       function commitSearch() {
         state.q = (search && search.value || '').trim().toLowerCase();

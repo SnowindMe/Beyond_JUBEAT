@@ -1,7 +1,7 @@
 // D1 数据访问层：运行时从 Cloudflare D1 读取曲目数据。
 // 只由 SSR 页面（prerender = false）调用，构建期静态页不碰它。
 //
-// 为什么要缓存：D1 是远程查询，songs 全量 1241 行每次请求都读会拖慢首屏。
+// 为什么要缓存：D1 是远程查询，songs 全量 1248 行每次请求都读会拖慢首屏。
 // 用模块级变量在 isolate 内缓存，配合 Cache API 的 HTTP 缓存头，
 // 同一 isolate 内后续请求直接命中内存，跨 isolate 走 CF 边缘缓存。
 
@@ -85,7 +85,7 @@ export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
 }
 
 // 单曲查询：走 PRIMARY KEY 索引。与 getAllSongs 分开缓存——详情页只取一行，
-// 拉全量 1241 行太浪费；但热门曲会反复命中，同样在 isolate 内缓存。
+// 拉全量 1248 行太浪费；但热门曲会反复命中，同样在 isolate 内缓存。
 const songCache = new Map<string, { song: Song | null; at: number }>();
 
 const SQL_ONE = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
