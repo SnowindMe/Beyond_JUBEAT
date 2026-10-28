@@ -1038,7 +1038,11 @@ const SORTS = [
       function ddClose(dd) {
         dd.setAttribute('data-open', 'false');
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'false');
-        dd.querySelector('.sc-dd-list').hidden = true;
+        var list = dd.querySelector('.sc-dd-list');
+        list.hidden = true;
+        // 展开时会按"按钮上方剩余空间"写内联 max-height；关闭时清掉，
+        // 否则下次换个位置展开前会先残留上一次的旧上限（闪一下短列表）。
+        list.style.maxHeight = '';
       }
       function ddLabelOf(dd) {
         var sel = dd.querySelector('select');
@@ -1067,34 +1071,39 @@ const SORTS = [
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
         var list = dd.querySelector('.sc-dd-list');
         list.hidden = false;
-        // 【弹层方向：按"显示高度"判，不是按 scrollHeight 判】
-        // 2026-10-29 修：原实现取 list.scrollHeight 作 listH。但弹层有 max-height:268px，
-        // 曲师列表实际内容 1490px、显示只有 268px。用 1490 去比"按钮下方还剩多少"，
-        // 几乎永远判定"下方放不下"，于是只要按钮位于上半屏、上方空间略大于下方，
-        // 就翻成向上——这就是主人看到的「下拉列表在进入上半屏时会往下弹出」的反例：
-        // 期望它往下，它却往上翻。实测 7 个滚位从 0 到 0.9 屏，列表从未真正越出视口，
-        // 方向却在中段就开始乱翻。
+        // 【弹层方向：固定向上，不再做"上/下"二选一】
+        // 历史：10-28 先修了"面板末行时列表跑出视口"（当时翻向上）；
+        // 10-29 又发现方向会随滚动乱翻（判据误用 scrollHeight），改成按实际显示高度判。
+        // 主人 2026-10-29 04:40 拍板：**无论在哪都向上展开**——向下会被下方的
+        // 曲目卡片/世代分区挡住（它们在同一 stacking 上下文里排在后面），
+        // 而向上永远只是盖住筛选面板自己的上几行，不会压在内容上。
         //
-        // 正确判据：量**实际会占的高度**（受 max-height 限制的 rect.height），
-        // 再比较上下剩余空间，只有下方真放不下、且上方更宽裕时才翻。
-        // 先清掉上次的方向标记再量，避免上一次的 up 影响本次判断。
-        list.removeAttribute('data-drop');
+        // 所以这里只做一件事：量按钮上方还剩多少空间，把列表可用高度收缩到那个范围内。
+        // 列表本身 max-height:268px，上方空间更小时改用内联 max-height，
+        // 内容超出的部分由 overflow-y:auto 内部滚动（曲师 715 位本来就要滚）。
         var btnRect = dd.querySelector('.sc-dd-b').getBoundingClientRect();
-        // rect.height 已受 max-height 约束，是"真正会画出来"的高度。
-        // 刚 unhide 那一帧个别浏览器可能先给 0：此时退回 max-height 上限，
-        // 宁可多判一次"放不下"，也不要因为 0 < spaceBelow 而漏判成向下。
+        var GAP = 12; // 4px 间距 + 8px 呼吸位
+        var spaceAbove = btnRect.top - GAP;
+        list.setAttribute('data-drop', 'up');
+        // 可用高度 = 按钮上方到视口顶边（含 GAP 呼吸位），上限 268 与 CSS 的 max-height 一致。
+        //
+        // 【贴顶的边界 case】按钮被滚到紧贴视口顶边时 spaceAbove 可能只有几像素甚至为负，
+        // 直接照抄会让列表顶部被视口裁掉（实测 ratio=0 时 list top = -5px）。
+        // 这里不翻向下（主人要求固定向上），而是**先把页面往上留出空间**：
+        // 需要多少就 window.scrollBy(0, -缺口)，按钮随之下移，列表自然落回视口内。
+        // 少滚动的情况（绝大多数位置缺口为 0）完全不触发，不会造成"点一下页面就跳"。
         var rectH = list.getBoundingClientRect().height || 0;
         if (!rectH) {
           var mh = parseInt(getComputedStyle(list).maxHeight, 10);
-          rectH = Number.isFinite(mh) ? Math.min(mh, list.scrollHeight || mh) : (list.scrollHeight || 0);
+          rectH = Number.isFinite(mh) ? mh : 268;
         }
-        var listH = rectH;
-        var GAP = 4 + 8;
-        var spaceBelow = window.innerHeight - btnRect.bottom - GAP;
-        var spaceAbove = btnRect.top - GAP;
-        if (listH > spaceBelow && spaceAbove > spaceBelow) {
-          list.setAttribute('data-drop', 'up');
-        }
+        var need = Math.min(rectH, 268);
+        var deficit = need - Math.max(0, spaceAbove);
+        if (deficit > 0) window.scrollBy(0, -deficit);
+        // 滚动后重新量一次按钮位置，再决定内联高度（必须基于滚动后的坐标）
+        var after = dd.querySelector('.sc-dd-b').getBoundingClientRect();
+        var avail = Math.max(0, Math.min(after.top - GAP, 268));
+        list.style.maxHeight = Math.max(96, avail) + 'px';
         // 让当前选中项滚进视野（曲师 39 项，不滚的话要自己找）
         var cur = dd.querySelector('.sc-dd-list li[aria-selected="true"]');
         if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
