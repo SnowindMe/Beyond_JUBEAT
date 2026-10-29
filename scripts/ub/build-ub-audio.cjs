@@ -32,6 +32,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const UB = 'https://ub.thregren.world';
 const DEST = path.join(ROOT, 'src', 'data', 'ub-audio.json');
 const SONGS = path.join(ROOT, 'src', 'data', 'songs.json');
+const OVERRIDES = path.join(ROOT, 'data', 'audio-overrides.json');
 const UA = { 'user-agent': 'Mozilla/5.0 (compatible; BeyondJUBEAT/1.0)' };
 
 // 本站世代 → 上游目录名。上游把「追加曲」和「谱面变化」放在独立目录里
@@ -139,6 +140,23 @@ async function main() {
     miss.push(id);
   }
 
+  // 4.5) 应用人工覆盖层：自动匹配解决不了歧义时（同名曲两服各一条、目录白名单互相包含），
+  //      在 data/audio-overrides.json 里按 songId 钉死。覆盖层优先于自动结果。
+  //      自检三条，任一不符直接抛错——静默失效会表现为「改了没生效」，比报错难查一个数量级。
+  const overrides = JSON.parse(fs.readFileSync(OVERRIDES, 'utf8'));
+  const ourIds = new Set(ours.map((s) => String(s.id)));
+  const ubPaths = new Set(ubSongs.map((u) => u.assets.audio));
+  let ovApplied = 0;
+  for (const [id, o] of Object.entries(overrides)) {
+    if (id.startsWith('_')) continue;
+    if (!ourIds.has(id)) throw new Error('覆盖层 songId ' + id + ' 不在本站曲库中');
+    if (!o || typeof o.path !== 'string' || !o.path) throw new Error('覆盖层 ' + id + ' 缺 path');
+    if (!ubPaths.has(o.path)) throw new Error('覆盖层 ' + id + ' 的 path 不在上游曲目中：' + o.path);
+    out[id] = o.path;
+    ovApplied++;
+  }
+  const stillMiss = miss.filter((id) => !out[id]);
+
   // 5) 自检：覆盖率不能莫名掉下去（上游改结构/分片丢失时立刻发现，而不是静默变空表）
   const covered = Object.keys(out).length;
   const rate = covered / ours.length;
@@ -150,9 +168,11 @@ async function main() {
   console.log(
     '上游 ' + ubSongs.length + ' 首带音频｜本站 ' + ours.length + ' 首｜命中 ' + covered +
     ' (' + (rate * 100).toFixed(1) + '%)｜id+世代 ' + stat.numGen + ' / id ' + stat.num +
-    ' / 标题 ' + stat.title + '｜未命中 ' + miss.length
+    ' / 标题 ' + stat.title + '｜覆盖层 ' + ovApplied + '｜未命中 ' + stillMiss.length
   );
-  if (miss.length) console.log('未命中（上游无对应曲目）：' + miss.slice(0, 8).join(', ') + (miss.length > 8 ? ' …' : ''));
+  if (stillMiss.length) {
+    console.log('未命中（上游无对应曲目）：' + stillMiss.slice(0, 8).join(', ') + (stillMiss.length > 8 ? ' …' : ''));
+  }
   console.log('写入', path.relative(ROOT, DEST));
 }
 

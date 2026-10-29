@@ -1134,7 +1134,16 @@ html[data-bgm="playing"] .sd-disc-spin {
     /* 【坑】这里只能写 margin-top，不能写 margin 简写——
        简写会把上面第 1119 行的 margin-left（负值扩张）重置成 0，
        实测表现是"宽度扩了但位置没动"，非常容易误判成选择器没生效。 */
-    margin-top: clamp(28px, 3.4vw, 38px);
+    /* 【2026-10-29 主人「其实可以在红色位置加一道分隔线」】
+       红线位置 = 播放条与 BSC 行之间。用 border-top 画，宽度自动等于定数条
+       左扩后的整段（正好横跨到曲绘下方），与 .sd-foot 的上缘细线同一套语言。
+       原来这段只有 margin-top 28-38px，现在拆成上下两段：
+         margin-top 控制「播放条 → 细线」，padding-top 控制「细线 → BSC 行」，
+       两边都要留气口，否则线会贴着播放条或贴着绿色 BSC 条。
+       注意 padding-top 不能写成 border-top 的简写——margin-left 的坑同源。 */
+    margin-top: clamp(16px, 2vw, 22px);
+    padding-top: clamp(18px, 2.2vw, 24px);
+    border-top: 1px solid var(--edge);
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1155,6 +1164,10 @@ html[data-bgm="playing"] .sd-disc-spin {
    收到 116px 后桌面约 40px、窄屏约 64px，与有音源时的节奏接近。 */
 .sd-gauge.is-solo {
     margin-top: clamp(84px, 10.4vw, 116px);
+    /* 无音源时上方没有播放条，细线会孤零零浮在一大段空白里 → 这一档不画线。
+       分隔线只在「播放条 ↔ 定数条」这个真实分界处出现。 */
+    border-top: 0;
+    padding-top: 0;
 }
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
 html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
@@ -1320,8 +1333,12 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
        播放条现在排在定数条**之前**，所以"图片底边 → 定数条"这段中间多了播放条。
        定数条不再需要 44px 那样的大间距来和图片拉开，
        改成和播放条之间留 20px 即可（20 + 播放条 40 高，整体已远在图片下方）。 */
+    /* 【2026-10-29 分隔线·窄屏】桌面是 16-22 + 18-24 两段气口；
+       窄屏整体收紧成 14 + 16，细线上下各留一个紧凑的呼吸位，
+       加总 30px 仍比原来的 20px 松，但已经能把"播放"和"定数"分开。 */
     .sd-gauge {
-        margin-top: 20px;
+        margin-top: 14px;
+        padding-top: 16px;
     }
     /* 【2026-10-29 主人「判定没有 bgm 而且是移动端就不要这一段黄色区域」】
        截图黄框的位置 = 曲绘底边到 BSC 行之间的空白。
@@ -1336,6 +1353,9 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         margin-left: 0;
         width: auto;
         margin-top: 18px;
+        /* 无音源 → 上方没有播放条，不画这条分隔线（理由同桌面档） */
+        border-top: 0;
+        padding-top: 0;
     }
     /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
        实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px

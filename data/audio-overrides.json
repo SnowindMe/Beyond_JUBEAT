@@ -1,0 +1,7 @@
+{
+  "_comment": "音源人工覆盖层：自动匹配歧义或匹配不到时，在这里手工钉死。key = 本站 songId，value = { path: 上游相对路径, note: 依据 }。build-ub-audio.cjs 在自动匹配之后应用，覆盖层优先于自动结果。自检：key 必须是本站真实 songId、path 必须命中原生上游曲目、不得出现空 path，任一不符直接抛错，不静默跳过。",
+  "991000007": {
+    "path": "songs/音乐魔方/C033 Big Daddy/bgm.ogg",
+    "note": "2026-10-29 主人指定「C033 Big Daddy 接 991000007」。Big Daddy 上游有两条：jubeat-beyond-ave/首次收录/arcade_11000228（对应本站日服行 11000228）与 音乐魔方/C033（对应本站国服行 991000007）。标题匹配时两条都在「音乐魔方」世代的目录白名单里（GEN_DIRS 音乐魔方 含 jubeat-beyond-ave），唯一性判据失效被跳过，故在此钉死。"
+  }
+}

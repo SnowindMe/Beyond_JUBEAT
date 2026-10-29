@@ -66,12 +66,16 @@ jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点�
 
 | 环节 | 位置 | 说明 |
 | --- | --- | --- |
-| 映射表 | `src/data/ub-audio.json` | `{ "<songId>": "songs/<世代目录>/<分类>/<id>/bgm.ogg" }`，由 `node scripts/ub/build-ub-audio.cjs` 生成（需联网，不进 build 流程；曲库更新后手动重跑并提交产物）。**1241 首里命中 1170 首（94.3%）**，未命中的 71 首是 2 首 BTA 占位 + 69 首国服原创——上游本就没有，详情页对它们不渲染试听条 |
+| 映射表 | `src/data/ub-audio.json` | `{ "<songId>": "songs/<世代目录>/<分类>/<id>/bgm.ogg" }`，由 `node scripts/ub/build-ub-audio.cjs` 生成（需联网，不进 build 流程；曲库更新后手动重跑并提交产物）。**1248 首里命中 1185 首（95.0%）**，未命中的 63 首是 2 首 BTA 占位 + 61 首国服原创——上游本就没有，详情页对它们不渲染试听条 |
 | 反代 | `src/pages/api/audio/[songId].ts` | 只代理 ub.thregren.world 一个主机，路径由服务端从映射表拼、<songId> 走白名单正则；只放行 GET/HEAD；不透传查询参数 |
 | 缓存 | 同上 | 音频进 `caches.default`，回 `immutable` 长缓存；**只缓存完整 200**，Range 请求由缓存好的字节本地切 206（否则每次拖动进度条都回源）。响应头 `x-audio-source` 标音源、`x-cache: HIT/MISS` 供验收 |
 | 组件 | `src/components/SongAudio.astro` | 首次点击才创建 `Audio` 并拉流（1241 首若都预载，流量与首屏都不划算）；进度条可拖、支持 ←/→ 与 Home/End 键 |
 
-映射口径三层（顺序即优先级）：①数字 id 精确 + 优先取属于本站世代的目录；②数字 id 精确；③规范化标题唯一命中。**同一 id 在 ub 常有「首次收录 / 谱面变化」两条**（如 70000110），取首次收录；**Big Daddy 一类在两处都有，只能靠世代目录消歧**——纯标题匹配会配错音源。BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
+映射口径四层（顺序即优先级）：①数字 id 精确 + 优先取属于本站世代的目录；②数字 id 精确；③规范化标题唯一命中；④**人工覆盖层** `data/audio-overrides.json`（key = 本站 songId，value = `{ path, note }`），自动匹配解决不了的歧义在这里钉死，优先级最高。**同一 id 在 ub 常有「首次收录 / 谱面变化」两条**（如 70000110），取首次收录。
+
+覆盖层自带三条自检，任一不符直接非零退出（不静默跳过）：key 必须是本站真实 songId、path 必须命中原生上游曲目、path 不得为空。之所以要这层：`GEN_DIRS` 里「音乐魔方」的目录白名单**包含** `jubeat-beyond-ave`（国服少数曲沿用日服目录），于是 Big Daddy 的两条上游记录（`jubeat-beyond-ave/首次收录/arcade_11000228` 与 `音乐魔方/C033 Big Daddy`）都落在白名单内，标题唯一性判据失效被跳过。现在日服 11000228 走 beyond-ave、国服 991000007 走 音乐魔方/C033，各归其位。
+
+BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 
 > 验收要点：本地 `wrangler dev` 的 `caches.default` 不跨请求持久化，连打三次都是 `x-cache: MISS` 属正常，别拿它当「缓存没生效」的证据；真实命中率上线后看响应头。
 

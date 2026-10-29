@@ -118,7 +118,7 @@ const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 const SCALE_MAX = 11;
 const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
 
-// 有没有音源：映射表命中才渲染试听条。1248 首里 1184 首有（上游是日服谱面站，
+// 有没有音源：映射表命中才渲染试听条。1248 首里 1185 首有（上游是日服谱面站，
 // 国服原创曲、拿不到官方 id 的 BTA- 占位曲、以及 2026-10-29 刚上架那 7 首——
 // 上游还没收录——本就没有），未命中的不摆空控件。
 const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)]);
