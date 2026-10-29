@@ -311,10 +311,19 @@ const { songId } = Astro.props;
       }
       audio.addEventListener('canplay', clearLoadingIfReady);
       audio.addEventListener('canplaythrough', clearLoadingIfReady);
-      // 兜底轮询：上面两个事件都可能在个别浏览器里提前/延迟触发，
-      // 每 200ms 复查一次，直到 readyState 达标或用户点了暂停。
+      // 兜底轮询：canplay/canplaythrough 在个别浏览器里可能提前或延迟触发，
+      // 每 200ms 复查 readyState，达标就撤转圈。
       var readyTimer = setInterval(clearLoadingIfReady, 200);
-      audio.addEventListener('error', function () { clearInterval(readyTimer); });
+      // 【防卡死】readyState 一直到不了 3（网络卡住/上游慢）时，转圈不能无限转下去——
+      // 那会让用户以为"还在加载"，实际上什么都没发生。
+      // 15s 后无论 readyState 如何都撤掉转圈；若仍未就绪，按钮保持可点（再点会重新拉流）。
+      var loadGuard = setTimeout(function () {
+        root.classList.remove('is-loading');
+      }, 15000);
+      audio.addEventListener('error', function () {
+        clearInterval(readyTimer);
+        clearTimeout(loadGuard);
+      });
       audio.addEventListener('loadedmetadata', function () {
         root.classList.add('is-ready');
         paint();
