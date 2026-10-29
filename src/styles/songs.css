@@ -1161,13 +1161,13 @@ html[data-bgm="playing"] .sd-disc-spin {
    注意这里**只能写 margin-top**——写 margin 简写会把 .sd-gauge 的
    margin-left（负值左扩）重置成 0，这个坑今天已经踩过一次。
    实测：132px 时桌面净空 56px、窄屏 80px，桌面略空；
-   收到 116px 后桌面约 40px、窄屏约 64px，与有音源时的节奏接近。 */
+   实测（2026-10-29 本机 wrangler dev，量的是细线到曲绘底边的净空）：桌面 margin-top 116px → 净空 40px，窄屏 44px → 净空 52px。 */
 .sd-gauge.is-solo {
     margin-top: clamp(84px, 10.4vw, 116px);
-    /* 无音源时上方没有播放条，细线会孤零零浮在一大段空白里 → 这一档不画线。
-       分隔线只在「播放条 ↔ 定数条」这个真实分界处出现。 */
-    border-top: 0;
-    padding-top: 0;
+    /* 【2026-10-29 主人改口：「有没有 bgm 都要分隔」】
+       上一版只在有音源时画线，主人把那一版直接标成 bug（原话「没有bgm时都不出分隔线」）。
+       现在两档都画线，气口沿用基础规则（上 16-22 / 下 18-24），
+       这里不再覆盖 border-top / padding-top，只保留把定数条推离曲绘的上间距。 */
 }
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
 html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
@@ -1350,12 +1350,11 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
        不横跨的话右侧会显得孤立；桌面本来就有足够的横向空间容纳横跨。
        注意顺序：这条必须写在上面的横跨规则之后，靠后者覆盖前者。 */
     .sd-gauge.is-solo {
-        margin-left: 0;
-        width: auto;
-        margin-top: 18px;
-        /* 无音源 → 上方没有播放条，不画这条分隔线（理由同桌面档） */
-        border-top: 0;
-        padding-top: 0;
+        /* 【2026-10-29 主人「移动端无bgm时，分隔线离曲绘太近」】
+           18px 时实测细线离曲绘底边只有 26.1px（有音源时是 78.1px，那条线的位置本来就该更靠下），
+           线贴着封面底边会读成「封面的一部分」，不像一条分界。
+           18 → 44：细线离曲绘底边约 52px，与桌面档（40px）同量级，线才立得住。 */
+        margin-top: 44px;
     }
     /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
        实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px
