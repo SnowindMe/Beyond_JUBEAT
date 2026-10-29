@@ -296,6 +296,25 @@ const { songId } = Astro.props;
       // 首次点击才创建并拉流：1241 首的详情页若都预载，流量与首屏都不划算
       audio = new Audio(src);
       audio.preload = 'auto';
+      // 【2026-10-29 主人「有些浏览器没加载完 bgm 资源，loading 就提前消失了」】
+      // 根因：'playing' 在某些浏览器里会**早于缓冲完成**触发（尤其 Safari / 弱网），
+      // 此时只是"开始尝试出声"，data 可能还不够，之后还会卡顿重缓冲。
+      // 判据改为看 readyState：HAVE_FUTURE_DATA(3) 以上才算真的能连续播放。
+      // 我们不在 playing 里清 loading，而是统一走 canplay/canplaythrough +
+      // 一个 readyState 复查，两个条件都满足才撤掉转圈。
+      function clearLoadingIfReady() {
+        if (!audio) return;
+        // 3 = HAVE_FUTURE_DATA（有当前帧 + 后续数据），比 2（HAVE_CURRENT_DATA）更稳
+        if (audio.readyState >= 3) {
+          root.classList.remove('is-loading');
+        }
+      }
+      audio.addEventListener('canplay', clearLoadingIfReady);
+      audio.addEventListener('canplaythrough', clearLoadingIfReady);
+      // 兜底轮询：上面两个事件都可能在个别浏览器里提前/延迟触发，
+      // 每 200ms 复查一次，直到 readyState 达标或用户点了暂停。
+      var readyTimer = setInterval(clearLoadingIfReady, 200);
+      audio.addEventListener('error', function () { clearInterval(readyTimer); });
       audio.addEventListener('loadedmetadata', function () {
         root.classList.add('is-ready');
         paint();
@@ -309,7 +328,9 @@ const { songId } = Astro.props;
       // 导致慢网下转圈一闪而过、图标立刻变成暂停，像是在播而实际没声音。
       audio.addEventListener('playing', function () {
         root.classList.add('is-playing');
-        root.classList.remove('is-loading');
+        // 【不再在这里清 is-loading】'playing' 可能早于缓冲完成触发，
+        // 由 canplay / canplaythrough / 轮询按 readyState>=3 来撤转圈，见上面。
+        clearLoadingIfReady();
         setBgm('playing');
       });
       audio.addEventListener('pause', function () {
@@ -393,6 +414,37 @@ const { songId } = Astro.props;
       else return;
       e.preventDefault();
       paint();
+    });
+
+    /* 【2026-10-29 主人「移动端播放 bgm 时用手势从详情页退回曲目页，音乐不会停」】
+       根因：Audio 对象是 JS 持有的，浏览器**不会**因为"页面被导航走"就自动暂停它——
+       尤其在 iOS Safari / 微信里用手势返回时，页面进 bfcache，DOM 还在、Audio 还在播。
+       所以必须自己监听页面生命周期：
+         · pagehide：页面离开（含进 bfcache、被卸载）→ 立即暂停并复位；
+         · visibilitychange：切到后台/切标签 → 也暂停（移动端音频在后台继续放很扰人）；
+         · bfcache 恢复（pageshow 的 persisted=true）→ 保持暂停状态，不自动续播，
+           用户回来看到的是暂停中的播放器，需要再点一次。
+       另外必须清掉 html[data-bgm]，否则唱片在用户返回后仍显示旋转。 */
+    function stopAndReset() {
+      if (audio && !audio.paused) {
+        try { audio.pause(); } catch (e) { /* 已卸载时个别浏览器会抛，忽略 */ }
+      }
+      root.classList.remove('is-playing', 'is-loading');
+      setBgm('');
+    }
+    window.addEventListener('pagehide', stopAndReset);
+    // bfcache 命中（Chromium / Firefox / Safari 都会）——页面没真正销毁时也要复位
+    window.addEventListener('beforeunload', stopAndReset);
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') stopAndReset();
+    });
+    // 从 bfcache 返回：确保 UI 与状态都是"暂停"，而不是停在播放态
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) {
+        root.classList.remove('is-playing', 'is-loading');
+        setBgm('');
+        paint();
+      }
     });
 
     paint();

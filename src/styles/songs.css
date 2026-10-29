@@ -1105,7 +1105,10 @@ html[data-bgm="playing"] .sd-disc-spin {
     --d-bsc: #3ecf8e;
     --d-adv: #e8b93a;
     --d-ext: #f0564f;
-    margin: clamp(28px, 4vw, 46px) 0 0;
+    /* 【2026-10-29 主人「图片和 BSC 靠得太近了，拉开一点距离」】
+       下限 28 → 36：曲名段结束后，定数条第一行 BSC 与上方内容要有明确气口；
+       上限 46 → 56，宽屏下也不会显得贴。 */
+    margin: clamp(36px, 5vw, 56px) 0 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1259,9 +1262,13 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         margin-left: -124px;
         width: calc(100% + 124px);
     }
-    /* 定数条顶部留白略收，避免和艺人挤在一起 */
+    /* 【2026-10-29 主人「图片和 BSC 靠得太近了，拉开一点距离」】
+       上一轮我把这里写成了 margin-top: 18px，比桌面的 clamp(28px,4vw,46px) 还小，
+       等于把图片与 BSC 挤得更近——典型的「只想着省空间、没顾上留白」。
+       实测 30px 时「图片底边 → BSC 行」只有 14px 净空，仍偏近；
+       拉到 44px 后净空约 28px，这个距离才看得出是"两段内容"。 */
     .sd-gauge {
-        margin-top: 18px;
+        margin-top: 44px;
     }
     /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
        实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px
