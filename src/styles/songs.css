@@ -1140,6 +1140,22 @@ html[data-bgm="playing"] .sd-disc-spin {
     gap: 16px;
     max-width: none;
 }
+
+/* 【2026-10-29 主人「没有 bgm 的桌面端/移动端视图」——无音源时的版面修正】
+   有音源时：定数条上方隔着播放条，自然落在曲绘底边之下，不会重叠。
+   无音源时：没有播放条占位，定数条上移，而它又向左扩张到曲绘下方，
+             于是被曲绘压住（主人截图里 BSC 被图片盖掉一截）。
+   修法：无音源时额外加一段上间距，把它整体推到曲绘底边之下。
+   为什么用固定值而不测量：这段结构稳定（曲名行数变化会自然带动高度），
+   margin 只需保证"不压在图上"，不必精确对齐某个像素；
+   桌面曲绘 208、窄屏 108，用 clamp 覆盖两档即可。
+   注意这里**只能写 margin-top**——写 margin 简写会把 .sd-gauge 的
+   margin-left（负值左扩）重置成 0，这个坑今天已经踩过一次。
+   实测：132px 时桌面净空 56px、窄屏 80px，桌面略空；
+   收到 116px 后桌面约 40px、窄屏约 64px，与有音源时的节奏接近。 */
+.sd-gauge.is-solo {
+    margin-top: clamp(84px, 10.4vw, 116px);
+}
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
 html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
 html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="yymf"] .sd-gauge {

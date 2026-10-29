@@ -237,8 +237,11 @@ const metaFoot: Meta[] = song
 
         {/* 定数条：三条横条按 0-11 刻度填充，颜色沿用难度三色。
             定数是这个站最有信息量的字段，横条让「这首的难度分布」一眼可读
-            （比如 BSC 短、EXT 长 = 高难曲）。 */}
-        <div class="sd-gauge">
+            （比如 BSC 短、EXT 长 = 高难曲）。
+            【2026-10-29 主人「没有 bgm 的视图」】无音源时没有播放条占位，
+            定数条会上移到曲绘高度；它又向左扩张到曲绘下方，于是被曲绘压住。
+            给无音源加 .is-solo：把它推离曲绘底边（见 songs.css）。 */}
+        <div class={`sd-gauge${hasAudio ? '' : ' is-solo'}`}>
           {([
             ['bsc', 'BSC', song.lv.bsc],
             ['adv', 'ADV', song.lv.adv],
