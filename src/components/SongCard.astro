@@ -63,16 +63,21 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
       <span class="sc-no">no jacket</span>
     )}
     {s.alt ? <span class="sc-alt">[2]</span> : null}
+    {/* PICK UP 标记。
+        【2026-10-30 主人「pick up徽章可以放在曲绘左上角」】原来是曲绘与曲名之间
+        单独一行（2026-10-25 的版式）。改成曲绘**左上角**的角标后有两个好处：
+        ①不再夹在图文之间打断"看图 → 读名"的视线，曲名紧贴曲绘，一卡的信息更紧凑；
+        ②不再撑高卡片 —— 原版让 bta 块整块卡高 279px、其余 255px，
+        同一页出现两种卡高，「阅读节奏」和 content-visibility 的占位估算都跟着变复杂。
+        左上角与 [2]（右上角）分处两侧，长曲名的 [2] 卡也不会互相压到。
+        仍然只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}
+    {markPick && pick ? (
+      <b class="sc-pick" title="PICK UP 曲目">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.6 6.1.7-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6L3.3 9.9l6.1-.7z"/></svg>
+        <span>PICK UP</span>
+      </b>
+    ) : null}
   </div>
-  {/* PICK UP 标记（2026-10-25 主人要求）。放在曲绘下、曲名上：那里是视线从图上
-      落到文字的必经点，一眼能扫到；也避开了曲绘右上角 [2] 与右下难度徽章这两处已占用位。
-      只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}
-  {markPick && pick ? (
-    <b class="sc-pick" title="PICK UP 曲目">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.6 6.1.7-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6L3.3 9.9l6.1-.7z"/></svg>
-      <span>PICK UP</span>
-    </b>
-  ) : null}
   {/* 整卡可点（2026-10-22 主人指出只点标题进不去太难用）。
       做法是卡内嵌一个绝对定位铺满的 <a>，而不是把整张卡包成 <a>：
       包成 <a> 会把曲绘、双服徽章、三个难度徽章全卷进链接名里，

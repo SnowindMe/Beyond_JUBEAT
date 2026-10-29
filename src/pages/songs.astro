@@ -884,6 +884,7 @@ const SORTS = [
 
         applySort();
         stagger();
+        refreshIntrinsic();
 
         // 耗时写在最后：它要包含上面全部筛选 + 排序 + 错开入场的标记，
         // 但**不含**浏览器重绘。渲染固定两位小数以下取整，避免出现「耗时 0.30000000000000004ms」。
@@ -891,6 +892,91 @@ const SORTS = [
           activeCostTxt.textContent = Math.round(performance.now() - t0) + ' ms';
         }
       }
+
+      // ---- content-visibility 占位高度（2026-10-30 P2）----
+      //
+      // 【问题】.sc-gen 用 content-visibility:auto 跳过屏外块的渲染，
+      // 屏外块的高度只能靠 contain-intrinsic-size 估算。原值写死 460px，
+      // 而实测真实高度 1104px（jubeat 20 张）～ 10266px（festo 226 张）。
+      // 文档总高因此随滚动一路上涨：刚加载 7889px → 滚到底 37274px。
+      // 表现是滚动条变长、拖滚动条跳位、锚点落不准。
+      //
+      // 【为什么在这里算】列数是 auto-fill 决定的，随容器宽度连续变化
+      // （320→360 是 2 列、380 起 3 列、500 起 4 列…… 桌面 780 又回到 4 列），
+      // 没有固定断点可言，只能在运行时实测。改动只发生在：
+      // ①首帧 ②筛选后（可见卡数变了）③视口宽度变化。
+      //
+      // 【只写可见块】隐藏的 body（另一台服务器）里的块不写——它们不可见，
+      // 写了也只是白算；切服时 apply() 会重跑，那时它们变可见再写。
+      // grid 列数从 computedStyle 的 gridTemplateColumns 里数空格+1 得到，
+      // 不用 getComputedStyle 之外的手段，避免触发布局计算太多次。
+      //
+      // 【公式（实测校准到误差 < 0.5px）】
+      //   块高 = 行数 × 卡高 + (行数 − 1) × 行间距 + 块头高
+      // 注意是 (rows−1) 个行间距，不是 rows 个 —— 最后一行下面没有间距。
+      // 我第一版写成了 rows × (卡高 + 间距)，每块都多算一个间距（14px）。
+      // 校对数据（1440px 宽，6 列）：
+      //   festo 38 行 → 38×255.48 + 37×14 + 40.08 = 10266.32 / 实测 10266
+      //   saucer 34 行 → 9188.40 / 实测 9188；jubeat 4 行 → 1104.00 / 实测 1104
+      //
+      // 【卡高为什么只有一档】2026-10-30 主人把 PICK UP 徽章从「曲绘下的独立一行」
+      // 改成「曲绘左上角角标」，徽章脱离文档流，不再撑高卡片 ——
+      // 改版前有徽章的卡 279.08px、没有的 255.48px（同页两种卡高，国服视图里还逐块混排）；
+      // 改版后全站统一一档。这里因此只要量一张卡就够，不必再按 data-scope 分类。
+      // ⚠ 若将来又在卡片里加会撑高的行内元素（新的徽章行、标签行），
+      // 这条「一档卡高」的前提就不成立了，必须回到逐行取最大值那套逻辑。
+      var intrinsicCols = 0;
+      var intrinsicGap = 0;
+      var intrinsicCardH = 0;
+      function measureGrid() {
+        var sec = root.querySelector('.sc-body:not([hidden]) .sc-sec:not([hidden])');
+        var grid = sec && sec.querySelector('.sc-grid');
+        if (!grid) return false;
+        var cs = getComputedStyle(grid);
+        var cols = (cs.gridTemplateColumns || '').split(' ').length;
+        if (!cols) return false;
+        var card = grid.querySelector('.sc-card');
+        if (!card) return false;
+        var h = card.getBoundingClientRect().height;
+        // 未渲染或样式未定时高度为 0：此时不写，保留 CSS 兜底，等 load/resize 再量
+        if (!h) return false;
+        intrinsicCols = cols;
+        intrinsicGap = parseFloat(cs.rowGap) || 0;
+        intrinsicCardH = h;
+        return true;
+      }
+      function refreshIntrinsic() {
+        if (!measureGrid()) return;
+        var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden])');
+        for (var s = 0; s < secs.length; s++) {
+          var gens = secs[s].querySelectorAll('.sc-gen');
+          for (var g = 0; g < gens.length; g++) {
+            var el = gens[g];
+            // 占位高度按**可见**卡数算：筛选后块内卡少了，占位不能还按原始总数虚高。
+            var vis = el.querySelectorAll('.sc-card:not([hidden])').length;
+            if (el.hidden || vis === 0) { el.style.containIntrinsicSize = ''; continue; }
+            var rows = Math.ceil(vis / intrinsicCols);
+            var headEl = el.querySelector('.sc-gen-h');
+            var head = headEl ? headEl.getBoundingClientRect().height : 40;
+            var total = rows * intrinsicCardH + (rows - 1) * intrinsicGap + head;
+            el.style.containIntrinsicSize = 'auto ' + total.toFixed(2) + 'px';
+          }
+        }
+      }
+      // 视口宽度变化要重算（列数与卡高都变）。debounce 120ms：
+      // 拖窗口边缘时 resize 会连发几十次，每次都遍历 12 个块没必要。
+      var intrinsicTimer = 0;
+      window.addEventListener('resize', function () {
+        clearTimeout(intrinsicTimer);
+        intrinsicTimer = setTimeout(refreshIntrinsic, 120);
+      });
+      // 【首帧补测一次】apply() 在解析末尾同步跑，那一刻字体可能还没定下来
+      // （字体不同 → 曲名折行不同 → 卡高不同）。load 之后再量一次，用最终布局校准。
+      // 若首次已量准，这次只是写入同样的值，没有副作用。
+      window.addEventListener('load', function () {
+        clearTimeout(intrinsicTimer);
+        intrinsicTimer = setTimeout(refreshIntrinsic, 60);
+      });
 
       // 把 state → aria-pressed / .is-on 的映射集中在一处
       function syncPressed() {

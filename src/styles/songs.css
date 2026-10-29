@@ -208,9 +208,22 @@
     margin-top: clamp(16px, 1.8vw, 22px);
 }
 /* 1248 张卡片一次性布局代价很高：屏外的世代段跳过渲染与样式计算，
-   滚到附近时浏览器再补齐（contain-intrinsic-size 用来占位，避免滚动条跳动）。 */
+   滚到附近时浏览器再补齐（contain-intrinsic-size 用来占位，避免滚动条跳动）。
+
+   【2026-10-30 P2 修复：占位高度改为按块估算】
+   原来这里写死 `auto 460px`，而实测各世代块真实高度是 1104px（jubeat 20 张）
+   到 10266px（festo 226 张）—— 估算值比实际小 22 倍。后果不是"占位不准"这么轻：
+   文档总高会随滚动一路增长（实测 7889px → 37274px），滚动条长度中途变化、
+   拖动滚动条会跳位、深链接锚点落不准。
+
+   现在由 src/pages/songs.astro 的 refreshIntrinsic() 在运行时算出每块的高度并写在
+   行内样式上（列数是 auto-fill 随容器宽度连续变化的，服务端与媒体查询都猜不准，
+   只能实测）。公式：行数 × 卡高 + (行数 − 1) × 行间距 + 块头高。
+   下面的 460px 只是脚本未运行时的兜底，不影响正常浏览。 */
 .sc-gen {
     content-visibility: auto;
+    /* 兜底值：脚本跑起来之前、或 JS 被禁时用。脚本会用实测值覆盖它。
+       ⚠ 这个数只影响"脚本未运行"的极短瞬间，不再是主要机制 —— 别再靠它调精度。 */
     contain-intrinsic-size: auto 460px;
 }
 /* 世代标题（主人 2026-10-22：原来的全宽玻璃条「好丑」）。
@@ -498,24 +511,29 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     outline: 2px solid var(--acc);
     outline-offset: 2px;
 }
-/* ---------- PICK UP 标记（2026-10-25） ----------
-   位置：曲绘下、曲名上——视线从图落到文字的必经点，一眼能扫到；
-   同时避开曲绘右上角 [2] 与曲名下的难度徽章这两处已被占用的位置。
-   形态：星标 + PICK UP 小字，横向一条（不做角标，角标会盖住曲绘）。
-   配色：强调色字 + 强调色淡底（不是实心强调色块）。理由见下。
+/* ---------- PICK UP 标记 ----------
+   【位置 2026-10-30 主人改】：从「曲绘下、曲名上」的独立一行，改成**曲绘左上角角标**。
+   理由：①不打断看图→读名的视线，曲名紧贴曲绘；②不再撑高卡片
+   （原版让有徽章的卡高 279px、没有的 255px，同页两种卡高）。
+   右上角是 [2] 长押谱徽章，所以角标放左上，两者互不干扰。
+   形态：星标 + PICK UP 小字，贴角的小胶囊 + 半透明暗底（压在曲绘上必须自带底衬，
+   否则浅色曲绘上白字读不出来）。
+   配色：强调色字 + 自带深色底衬（不是实心强调色块）。
    为什么不用「实心强调色底 + 深字」：实测 15 套主题里 saucer(#37474F)/yymf(#3f6fd8)/
    prop(#e0338f)/qubell(#3E8FBF) 的强调色本来就偏深，深字压上去只有 1.94–4.50，
-   低于 4.5 门槛。而「强调色字 + 自身 12% 叠底」在深色主题最差 5.01（clan_blue），
-   浅色主题最差 3.29（prop，11px 粗体按小字要 4.5 不够）——所以浅色世代单独走深色令牌。
-   最终：默认走强调色系；knit/ripples/qubell/saucer/prop/yymf 这 6 套浅底主题
-   改成 var(--ink) 字 + 强调色描边，对比度全部 ≥ 5.2（浅底上的深字天然够）。 */
+   低于 4.5 门槛。现在改成固定的深底衬（与主题底色无关），文字再用强调色与白混合 ——
+   强调色深时文字偏白、浅时也仍够亮，两种情况下都与深底衬拉开 ≥ 4.5。 */
 .sc-pick {
+    /* 角标：绝对定位到曲绘左上角，脱离文档流 → 不再撑高卡片。
+       .sc-j 已经是 position:relative + overflow:hidden，天然是定位参照与裁剪框。 */
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    align-self: flex-start;
-    max-width: calc(100% - 4px);
-    margin: 6px 2px 0;
+    max-width: calc(100% - 10px);
     padding: 2px 7px 2px 5px;
     font-family: var(--font-data);
     font-size: 10px;
@@ -523,10 +541,14 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     letter-spacing: 0.1em;
     line-height: 1.2;
     white-space: nowrap;
-    color: color-mix(in srgb, var(--acc) 88%, var(--ink));
-    background: color-mix(in srgb, var(--acc) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--acc) 42%, transparent);
+    /* 压在曲绘上：底色必须够实，否则浅色曲绘上字会糊。
+       用半透明深底 + 强调色文字，比纯色块更像"贴在图上"的标签。 */
+    color: color-mix(in srgb, var(--acc) 88%, #fff);
+    background: color-mix(in srgb, #04141b 68%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
     border-radius: var(--r-xs);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
 }
 .sc-pick svg {
     width: 9px;
@@ -535,25 +557,24 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     fill: currentColor;
     stroke: none;
 }
-/* 浅色世代（白底彩图）上的强调色太浅，换成深字保对比度 */
-html[data-g="knit"] .sc-pick,
-html[data-g="ripples"] .sc-pick,
-html[data-g="qubell"] .sc-pick,
-html[data-g="saucer"] .sc-pick,
-html[data-g="prop"] .sc-pick,
-html[data-g="yymf"] .sc-pick {
-    color: var(--ink);
-    background: color-mix(in srgb, var(--acc) 14%, transparent);
-    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
-}
-/* 窄屏卡片只有 ~96px 宽：星标 + 「PICK UP」放得下，但字要再收一点 */
+/* 【浅色世代特例已删除（2026-10-30）】
+   原先这里给 knit/ripples/qubell/saucer/prop/yymf 六套浅底主题换 `color: var(--ink)`，
+   因为当时徽章是「透明淡底 + 强调色字」，浅底上强调色字对比度不够。
+   改成角标后徽章自带 `#04141b 68%` 深色底衬 —— 文字所在背景由徽章自己决定，
+   与页面主题底色无关，所以那六条覆盖规则不再需要（留着反而会在深底上压出黑字黑底）。
+   对比度改用自适应：文字取 `--acc` 与白色混合，深色强调色偏亮、浅色强调色偏白，
+   两种情况下与深底衬的对比度都 ≥ 4.5。 */
+
+/* 窄屏卡片只有 ~96px 宽：角标要更小，但不能小到读不出 */
 @media (max-width: 768px) {
     .sc-pick {
+        left: 3px;
+        top: 3px;
         font-size: 9px;
-        letter-spacing: 0.06em;
-        padding: 2px 5px;
+        letter-spacing: 0.04em;
+        padding: 1px 4px 1px 3px;
         gap: 3px;
-        margin-top: 5px;
+        max-width: calc(100% - 6px);
     }
     .sc-pick svg {
         width: 8px;

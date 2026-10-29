@@ -18,6 +18,10 @@ type Props = {
 };
 
 const { gen, list, year, eager, srv = 'jp', markPick = false } = Astro.props;
+
+// 说明：content-visibility 的占位高度（contain-intrinsic-size）不在这里算。
+// 列数由 .sc-grid 的 auto-fill 随容器宽度连续变化，服务端拿不到，只能由页面脚本
+// 实测后写到 .sc-gen 的行内样式上 —— 逻辑与公式见 src/pages/songs.astro 的 refreshIntrinsic()。
 ---
 <div class="sc-gen" data-y={year || '0'}>
   <div class="sc-gen-h">
