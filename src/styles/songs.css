@@ -565,16 +565,21 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
    对比度改用自适应：文字取 `--acc` 与白色混合，深色强调色偏亮、浅色强调色偏白，
    两种情况下与深底衬的对比度都 ≥ 4.5。 */
 
-/* 窄屏卡片只有 ~96px 宽：角标要更小，但不能小到读不出 */
+/* 窄屏卡片只有 ~94px 宽：整条「★ PICK UP」实测占曲绘 59%（55/94px），
+   压在图上几乎盖掉三分之二，曲绘本身的画面就看不见了。
+   所以窄屏**只留星标**，文字隐藏（title 属性仍给读屏和长按提示）；
+   桌面端曲绘 171px 宽、角标 70px 占 41%，文字可以保留。 */
 @media (max-width: 768px) {
     .sc-pick {
         left: 3px;
         top: 3px;
-        font-size: 9px;
-        letter-spacing: 0.04em;
-        padding: 1px 4px 1px 3px;
-        gap: 3px;
-        max-width: calc(100% - 6px);
+        /* 只剩一个 14×14 左右的星标方块，压角几乎不占画面 */
+        padding: 3px;
+        gap: 0;
+        max-width: none;
+    }
+    .sc-pick span {
+        display: none;
     }
     .sc-pick svg {
         width: 8px;

@@ -70,9 +70,11 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
         ②不再撑高卡片 —— 原版让 bta 块整块卡高 279px、其余 255px，
         同一页出现两种卡高，「阅读节奏」和 content-visibility 的占位估算都跟着变复杂。
         左上角与 [2]（右上角）分处两侧，长曲名的 [2] 卡也不会互相压到。
+        窄屏（≤768px）曲绘只有 94px 宽，整条角标会占 59%，所以 CSS 里只留星标、
+        隐藏「PICK UP」文字——aria-label 保证读屏仍能读到含义。
         仍然只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}
     {markPick && pick ? (
-      <b class="sc-pick" title="PICK UP 曲目">
+      <b class="sc-pick" title="PICK UP 曲目" aria-label="PICK UP 曲目">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.6 6.1.7-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6L3.3 9.9l6.1-.7z"/></svg>
         <span>PICK UP</span>
       </b>
