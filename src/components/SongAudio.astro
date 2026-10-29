@@ -53,7 +53,10 @@ const { songId } = Astro.props;
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-top: clamp(18px, 2.4vw, 24px);
+    /* 【2026-10-29 播放条上移到定数条之前】现在紧跟艺人，
+       间距比原来略大（18-24 → 22-30），让"作品信息 → 播放"有明确气口；
+       下方与定数条的距离由 .sd-gauge 的 margin-top 控制。 */
+    margin-top: clamp(22px, 3vw, 30px);
     min-height: 40px;
   }
 
@@ -236,10 +239,12 @@ const { songId } = Astro.props;
        左栏占位 = 封面 108 + 栏间距 16 = 124。
        在组件 scoped 样式里写（全局 .sda 规则特异性低于 scoped，外面写会被压掉）。
        负 margin 抵消左栏，calc 补回宽度，视觉上就是"从图片下方开始、铺到右边缘"。 */
+    /* 【2026-10-29 主人「播放条要在曲绘右边」——窄屏同样不做横跨】
+       窄屏本来就是左图右信息，播放条已经在右侧，不需要负 margin。
+       下面只保留与定数条之间的间距。 */
     .sda {
       gap: 10px;
-      margin-left: -124px;
-      width: calc(100% + 124px);
+      margin-top: 16px;
     }
   }
 </style>
