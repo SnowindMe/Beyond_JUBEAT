@@ -40,31 +40,19 @@ const {
 
 const canonical = canonicalPath ? SITE + canonicalPath : null;
 
-// 页脚「最后一次编辑」：取构建时刻（云端每次 push 自动构建，等价于最后上线时间）。
-// 显式按北京时间算，避免 CI 跑在 UTC 时跨天。
-// 主人 2026-10-22 要求加上【时:分】，格式 2026-10-22 14:25。
-const BUILD_DATE = (() => {
-  const d = new Date();
-  try {
-    // Intl.DateTimeFormat 显式构造，不再靠 toLocaleDateString('en-CA') 的隐式 locale 行为：
-    // en-CA 的「YYYY-MM-DD」依赖运行时 ICU 数据，换环境可能变成 MM/DD/YYYY。
-    const fmt = new Intl.DateTimeFormat('zh-CN', {
-      timeZone: 'Asia/Shanghai',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    const p: Record<string, string> = {};
-    for (const { type, value } of fmt.formatToParts(d)) p[type] = value;
-    const hh = p.hour === '24' ? '00' : p.hour; // zh-CN 的 hourCycle 在 0 点可能给 24
-    return `${p.year}-${p.month}-${p.day} ${hh}:${p.minute}`;
-  } catch {
-    return d.toISOString().slice(0, 16).replace('T', ' ');
-  }
-})();
+// 页脚「最后一次编辑」：读构建期写死的常量，**不再每次 new Date()**。
+//
+// 【2026-10-29 主人「怎么每个页面的最后编辑时间不一样啊」】
+// 根因：原先在这里直接 new Date()。
+//   · 静态页（首页等）在**构建期**就算定死，比如 09:47；
+//   · SSR 页（/songs/、/jubility/、/recent/…prerender=false）每次请求**现算**，比如 12:36。
+//   同一站点两套时间，用户看到的就是"每页都不一样"，而且 SSR 页还会随刷新跳动。
+// 正确语义："最后一次编辑" = 最后一次上线的构建时刻，全站必须一致。
+// 所以改由 scripts/gen-build-stamp.cjs 在 build 前写死时间戳，
+// 静态页与 SSR 页都 import 同一份常量。
+// import 而不是运行时读文件：SSR 产物跑在 Worker 里，没有 fs。
+import buildStamp from '../data/build-stamp.json';
+const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
 ---
 
 <!doctype html>

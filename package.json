@@ -8,7 +8,7 @@
     "db": "node scripts/db/parse-xlsx.cjs && node scripts/db/build-db.cjs --seed && node scripts/build-data.cjs",
     "patch": "node scripts/db/diff-seed.cjs",
     "dev": "astro dev",
-    "build": "node scripts/gen-seo.cjs && astro build",
+    "build": "node scripts/gen-build-stamp.cjs && node scripts/gen-seo.cjs && astro build",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "check": "node scripts/ci/check-refs.cjs && node scripts/ci/check-refs.cjs dist && node scripts/ci/check-song-edits.mjs && node scripts/ci/check-contrast.mjs && node scripts/ci/check-schema-doc.cjs",
