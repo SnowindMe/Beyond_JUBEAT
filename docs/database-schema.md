@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | song_id | TEXT PK | 官方 songId。日服 8 位（10…–90… 段按世代），国服 9 位（99… 段）；拿不到官方 id 的用 BTA-<曲绘id> 占位（12 字符） |
 | id_kind | TEXT | official / synthetic（占位） |
-| title | TEXT NOT NULL | 曲名。[ 2 ] 谱面（长押谱）的行带 [ 2 ] 后缀 |
+| title | TEXT NOT NULL | 曲名。[ 2 ] 谱面的行带 [ 2 ] 后缀（**[ 2 ] ≠ 长押**，见 alt 与 has_hold） |
 | artist | TEXT | 作曲者 |
 | bpm | TEXT | **字符串**（源数据有 "145" 也有空），不是数字 |
 | gen_name | TEXT NOT NULL | 世代名，13 个：jubeat / ripples / knit / copious / saucer / saucer fulfill / prop / Qubell / clan / festo / Ave. / beyond the Ave. / 音乐魔方 |
