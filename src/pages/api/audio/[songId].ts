@@ -242,29 +242,54 @@ async function serve(
     const type = up.headers.get('content-type') || 'audio/ogg';
     const size = Number(up.headers.get('content-length') ?? 0);
 
-    // 【2026-10-30 又一坑：不能拿 ReadableStream / tee 分支去 cache.put】
-    // 实测：改成 `new Response(toCache, ...)` 之后，缓存**一次都没写成功**
-    // （同一首歌连发 3 次 HEAD 全是 MISS，等于永远回源、永远慢）。
-    // CF Cache API 对带 ReadableStream body 的响应不吃，且失败被 .catch 吞成一行 warn，
-    // 表面上「没报错」，实际静默失效 —— 比直接报错更难查。
-    // 所以这里退回「先读完整份成 ArrayBuffer 再 put」，这是唯一稳定能写进缓存的形态。
+    // 【2026-10-30 关键：无 Range 的请求也必须「先回响应、再慢慢补缓存」】
     //
-    // 注意：这条路径只在**无 Range 的整份请求**上走。首播的 Range 请求走上面 B1 透传，
-    // 不受这里影响。整份请求本来就是"从头读到尾"，多一次内存拷贝不值得为它牺牲缓存。
-    const buf = await up.arrayBuffer();
-    try {
-      await cache.put(
-        key,
-        new Response(buf.slice(0), {
-          headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
-        })
-      );
-    } catch (e) {
-      console.warn('[audio] cache put failed', String(e));
-    }
-    return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, false) });
+    // 浏览器 `audio.preload='auto'` 首次加载时，**第一个请求是不带 Range 的整份 GET**
+    // （它用来探测元数据/时长），首播真正要的数据在第二个 Range 请求里。
+    // 原先这里写成「await up.arrayBuffer() 读完整份 → 再 put 缓存」，
+    // 后果是那个探测请求要等 1.2MB 全部读完才返回第一个字节：实测 TTFB 4.0s、
+    // 拿到 128KB 要 5.6s。首播就卡在这儿。
+    //
+    // 现在的分工：
+    //   · 立刻把上游的流原样回给浏览器（首字节由上游决定，实测 52–200ms）；
+    //   · 后台 waitUntil 另起一条 fetch 把整份读进 ArrayBuffer 并 cache.put。
+    //
+    // 为什么后台要「另起一条」而不是 tee 当前这条流：
+    //   CF Cache API 不接受 ReadableStream body（实测 tee 分支 put 后 3 次 HEAD 全 MISS，
+    //   失败还被 .catch 吞成一行 warn，静默失效）。而 if 直接 await 读整份又会拖慢首字节。
+    //   所以只能用「响应先走 + 后台独立拉一份」这一种组合，两条都能成立。
+    //
+    // 带宽争抢问题也验证过了：这次后台补的是**整份请求自己**触发的，
+    // 不像之前 Range 路径那样在关键路径上抢出口；且探针请求本身不参与首播时序。
+    locals.cfContext.waitUntil(cacheFullInBackground(cache, key, target));
+    return new Response(up.body, {
+      status: 200,
+      headers: baseHeaders(type, size, false),
+    });
   } catch (e) {
     return errorResponse(e);
+  }
+}
+
+/**
+ * 后台把完整音频写进缓存。
+ * 必须在响应已经交出去之后跑（waitUntil），不能用当前响应的流，
+ * 也不能是 ReadableStream body —— 两者都会拖慢首字节或直接写不进去。
+ */
+async function cacheFullInBackground(cache: Cache, key: Request, target: string): Promise<void> {
+  try {
+    const up = await fetch(target, { headers: UA, redirect: 'follow' });
+    if (!up.ok) return;
+    const type = up.headers.get('content-type') || 'audio/ogg';
+    const buf = await up.arrayBuffer();
+    await cache.put(
+      key,
+      new Response(buf, {
+        headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
+      })
+    );
+  } catch (e) {
+    console.warn('[audio] background cache write failed', String(e));
   }
 }
 
