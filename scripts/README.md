@@ -1,6 +1,7 @@
 # scripts — 工具脚本与过程产物
 
 - `build-data.cjs`：从 `data/jubeat.db` 生成 `src/data/data.json` 与 `src/data/songs.json`，并同步曲绘到 `public/assets/images/jackets/`（`npm run data`）
+- `build-search-key.cjs`：从 `data/jubeat.db` 生成 `src/data/search-keys.json`（`{song_id: "读音|罗马字"}`），供搜索用假名 / 罗马字命中（`npm run data` 与 `npm run db` 都会串跑）。读音用 kuroshiro + kuromoji 在**生成期**算好，构建期不跑分词；片假名经 0x60 偏移归一成平假名（kuroshiro 自己不转片假名），罗马字去掉 hepburn 的音调符号与撇号（用户键盘敲不出 `ō` / `n'`）。读音由 `src/lib/db.ts` 的 `withKeys()` 按 song_id 合并进 `Song.sk`，随 `data-sk` 落到卡片上
 - `db/parse-xlsx.cjs`：解析 `data/xlsx/source.xlsx`（自带 ZIP 解包）→ `data/xlsx/sheet*.json`
 - `db/build-db.cjs`：`data/upstream/*.json` + `data/xlsx/sheet*.json` → `data/jubeat.db`；加 `--seed` 再导出 `db/seed.sql`（幂等 DDL + 按 D1 单语句 100 KB 上限切分的 INSERT）。**全量文件，含 `DELETE FROM songs`，不要日常重放到线上**
 - `db/diff-seed.cjs`：`npm run patch`。对比 `git HEAD:db/seed.sql` 与当前 `db/seed.sql`，只把受影响的行写成 `db/patch.sql`（新增 INSERT / 变更只 UPDATE 变了的列 / 下线逐行 DELETE）。末尾自检「不允许整表 DELETE」，并拿 seed 自己标注的行数对账，解析少行即 FAIL。存在的理由：线上 D1 有运行时数据（`recent_changes`、用户系统），全量重灌等于用清空重建去换改三行
@@ -10,7 +11,7 @@
 - `ci/check-contrast.mjs`：对比度自检（`npm run check`）。从 theme.css 读出 16 套主题的 `--base/--ink/--ink2/--ink3/--glass`，把 --glass 按 alpha 合到底色上，对「小字 × 背景」组合算 WCAG 对比度并取 **min**。输出公式理论值（不含背景图），验收以真实渲染为准。存在的理由：同一个令牌在深色/浅色主题下能差 3 倍，只看默认主题必漏（t5 实测 .rc-before 深色 7.03、浅色 2.63）
 - `ci/check-schema-doc.cjs`：`docs/database-schema.md` 的数字自检（`npm run check`）。把文档里写明的每一条计数（1241 曲 / 3723 谱面 / 717·434·90 服务器分布 / 各分类行数 / 11 个索引）变成断言，与 `data/jubeat.db` 现算值比对，不符即非零退出。存在的理由：文档里的计数最容易悄悄过期，代码改了、数据变了，文字读起来仍通顺，自己根本发现不了
 - `ci/check-song-edits.mjs`：曲目编辑面板的规则自检（`npm run check`）。用 `node:sqlite` 起内存库冒充 D1，直接调 `src/lib/song-admin-server.ts` 的 `handleSongUpdate`，断言越权 401/403、参数校验、recent_changes 列名与 schema 完全对齐。本机起不了 workerd，这些结论只能靠它跑出来
-- `probe/`：历史探测脚本（Playwright 时代的截图/测量脚本，多已失效，留作参考）
+- `ci/check-search-keys.cjs`：`src/data/search-keys.json` 的自检（`npm run check`）。断言三件事：无孤儿键、**含假名的曲必须有读音条目**（片假名归一 + 假名转罗马字都必然改变原文，缺条目只可能是文件过期）、值全小写且不含任何空白（段之间只用 `|`）。纯汉字曲名不在此列——kuroshiro 对中文汉字（「诀爱」）和个别未收录字转不出来，属已知限制，只作统计输出
 - `screenshots/`：脚本产出的截图（已 gitignore）
 - `logs/`：运行日志（已 gitignore）
 - `tmp/`：临时中间文件，随时可清（已 gitignore）

@@ -5,6 +5,18 @@
 // 用模块级变量在 isolate 内缓存，配合 Cache API 的 HTTP 缓存头，
 // 同一 isolate 内后续请求直接命中内存，跨 isolate 走 CF 边缘缓存。
 
+// 搜索读音索引（song_id → 平假名/罗马字），**生成物，别手改**，见 scripts/build-search-key.cjs。
+// 为什么读静态 JSON 而不是在查询期算：kuroshiro 要带约 17 MB 的 kuromoji 词典，
+// 打进 Worker 不现实；而加一列 D1 要线上 ALTER + 重灌，忘跑就成了「改了没生效」的静默失效。
+import searchKeys from '../data/search-keys.json';
+const SEARCH_KEYS = searchKeys as Record<string, string>;
+
+/** 给一首曲挂上读音索引。D1 与 dev 快照两条路径都过这里，避免只改一边。 */
+const withKeys = (s: Song): Song => {
+  const sk = SEARCH_KEYS[s.id];
+  return sk ? { ...s, sk } : s;
+};
+
 export type Song = {
   id: string;
   t: string;
@@ -22,6 +34,12 @@ export type Song = {
   kind: string | null;
   /** 限时曲结束日 YYYY-MM-DD；null = 非限时。判定按真实今天算，不在数据里焊死。 */
   lu?: string | null;
+  /**
+   * 搜索用的读音索引：【2026-10-30 主人要求「搜索适配假名·罗马字」】
+   * 「平假名读音 + 罗马字」，已去掉空白并小写，只用于前端子串匹配。
+   * 纯派生数据（源就是 title/artist），无值 = 读音与原文相同（纯英文曲名），不需要额外字段。
+   */
+  sk?: string | null;
 };
 
 type D1Row = {
@@ -70,14 +88,14 @@ export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
 
   if (db) {
     const { results } = await db.prepare(SQL_ALL).all<D1Row>();
-    cache = (results ?? []).map(rowToSong);
+    cache = (results ?? []).map(rowToSong).map(withKeys);
   } else {
     // 开发期退路：`astro dev` 没有 D1 绑定（本机 workerd 起不来，platformProxy 关着），
     // 这时读构建期快照 src/data/songs.json（与 D1 同一份数据、同样字段）。
     // import.meta.env.DEV 在构建期是常量 false，这段连同 JSON 一起被摇掉，不进 Worker 包。
     if (!import.meta.env.DEV) throw new Error('D1 binding "beyond_jubeat" is missing');
     const { default: snap } = await import('../data/songs.json');
-    cache = (snap as unknown as Song[]).map((s) => ({ ...s }));
+    cache = (snap as unknown as Song[]).map((s) => withKeys({ ...s }));
   }
 
   cacheAt = now;
@@ -104,11 +122,12 @@ export async function getSongById(
   let song: Song | null = null;
   if (db) {
     const row = await db.prepare(SQL_ONE).bind(id).first<D1Row>();
-    song = row ? rowToSong(row) : null;
+    song = row ? withKeys(rowToSong(row)) : null;
   } else {
     if (!import.meta.env.DEV) throw new Error('D1 binding "beyond_jubeat" is missing');
     const { default: snap } = await import('../data/songs.json');
-    song = (snap as unknown as Song[]).find((s) => s.id === id) ?? null;
+    const base = (snap as unknown as Song[]).find((s) => s.id === id);
+    song = base ? withKeys({ ...base }) : null;
   }
 
   songCache.set(id, { song, at: now });

@@ -358,8 +358,8 @@ const SORTS = [
             inputmode="search"
             autocomplete="off"
             spellcheck="false"
-            placeholder="搜索曲名 / 曲师 / songId / 定数"
-            aria-label="搜索曲目：匹配曲名、曲师、songId 或定数"
+            placeholder="搜索曲名 / 曲师 / songId / 定数（可用假名·罗马字）"
+            aria-label="搜索曲目：匹配曲名、曲师、songId、定数，也支持假名与罗马字读音"
           />
           <button type="button" id="scClear" class="sc-q-x" aria-label="清空搜索" title="清空搜索（Esc）" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
@@ -791,6 +791,35 @@ const SORTS = [
         return isNaN(n) ? null : n;
       }
 
+      // 【2026-10-30 主人要求「搜索适配假名·罗马字」】
+      // 一张卡能被搜到，靠两种串：原文（data-t/data-a，含空格与大小写原样）与
+      // 读音索引 data-sk（平假名+罗马字，已去空白并小写，见 scripts/build-search-key.cjs）。
+      // 查询串因此要试三种形态，任一命中即算匹配：
+      //   q          原样          —— 打「bass 2 bass」「10.5」靠它
+      //   qNoSpace   去空白        —— 「senbon sakura」也能对上 sk 里的 senbonsakura
+      //   qKana      去空白+片假名归一到平假名 —— 打「カメリア」能对上读音里的「かめりあ」
+      //     （只对片假名做归一：读音串统一存平假名，反方向由 data-t 原文兜住）
+      // 只在输入变化时算一次，挂在 qFormsCache 上；别放进 matchCard，那会每张卡都重算一遍。
+      var qFormsCache = { src: null, forms: [] };
+      function queryForms() {
+        if (qFormsCache.src === state.q) return qFormsCache.forms;
+        var q = state.q || '';
+        var noSpace = q.replace(/[\s\u3000]+/g, '');
+        var kana = noSpace.replace(/[\u30A1-\u30F6\u30F7-\u30FA]/g, function (ch) {
+          var code = ch.charCodeAt(0);
+          return String.fromCharCode(code <= 0x30F6 ? code - 0x60 : 0x308F + (code - 0x30F7));
+        });
+        var forms = [q];
+        if (noSpace !== q) forms.push(noSpace);
+        if (kana && wIndexOf(forms, kana) === -1) forms.push(kana);
+        qFormsCache = { src: state.q, forms: forms };
+        return forms;
+      }
+      function wIndexOf(arr, v) {
+        for (var i = 0; i < arr.length; i++) if (arr[i] === v) return i;
+        return -1;
+      }
+
       function matchCard(card, bodySrv) {
         // 【2026-10-28】限时曲默认不显示：勾了「显示限时曲」才放行。
         // 放在最前面短路，省掉后面一串字符串比较。
@@ -802,7 +831,15 @@ const SORTS = [
                     (card.getAttribute('data-a') || '').toLowerCase() + '\n' +
                     (card.getAttribute('data-id') || '').toLowerCase() + '\n' +
                     (card.getAttribute('data-lv') || '').toLowerCase();
-          if (hay.indexOf(state.q) === -1) return false;
+          // 读音索引（假名/罗马字）：多数卡的 data-sk 是空串，取一次就够，别在循环里反复 getAttribute。
+          var sk = (card.getAttribute('data-sk') || '').toLowerCase();
+          var forms = queryForms();
+          var matched = false;
+          for (var fi = 0; fi < forms.length && !matched; fi++) {
+            matched = hay.indexOf(forms[fi]) !== -1 ||
+                      (sk !== '' && sk.indexOf(forms[fi]) !== -1);
+          }
+          if (!matched) return false;
         }
         // 分区过滤（2026-10-24 改）：DOM 只有一套「按世代整合」的节点，
         // 选具体分区时靠这里隐藏不属于该分区的卡片，而不是另渲染一份结构。
