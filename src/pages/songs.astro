@@ -247,8 +247,9 @@ const DIFFS = [
   { v: 'adv', label: 'ADV' },
   { v: 'ext', label: 'EXT' },
 ] as const;
-/** 难度档的「未选」状态。用空串而不是 'all'：'all' 是个真实档位名，会让人以为它是四选一里的一项。 */
-const DIFF_NONE = '';
+// 注意：这里**不要**再定义 DIFF_NONE 之类的常量给前端用 ——
+// 页面底部那个 <script is:inline> 不经过 Astro 编译，读不到服务端变量。
+// 需要共享的常量请在 inline 脚本里自己再声明一份（见 DIFF_NONE_INLINE）。
 // 排序选项（2026-10-25 主人：加 songId 排序，且**默认改为 songId 升序**）。
 // DEFAULT_SORT 单独抽出来，因为「默认值」还散落在三处判据里（state 初值、
 // resetAll、以及「是否在筛选」的提示条判断），必须都引用这一个常量，
@@ -624,6 +625,16 @@ const SORTS = [
       // 改排序默认值时**两处都要改**（这是本项目唯一允许的重复，因为技术上限如此）。
       var DEFAULT_SORT_INLINE = 'id-asc';
 
+      // 【2026-10-30 血的教训：又一个"取不到 Astro 常量"的坑】
+      // 服务端顶部新加的 const DIFF_NONE = '' 在这里**根本不存在** ——
+      // is:inline 脚本原样输出到浏览器，不参与 Astro 的模块作用域。
+      // 结果 matchCard 里一引用就抛 ReferenceError，apply() 在第一张卡就中断，
+      // 表现为「点了 chip 高亮变了、但列表纹丝不动，提示条还是 0」。
+      // 所以在 inline 脚本内必须**重新声明一份本地常量**，与上面 DEFAULT_SORT_INLINE 同理。
+      // 判据：任何在 is:inline  <script> 里出现的标识符，都必须能在这个 IIFE 内找到定义，
+      // 否则它一定来自服务端模板 —— 而那是拿不到的。
+      var DIFF_NONE_INLINE = '';
+
       var root = document.getElementById('songsRoot');
       if (!root) return;
 
@@ -827,7 +838,7 @@ const SORTS = [
         //   ③ 选了定数区间（无论有没有选难度档）→ 在候选档位里找，任一档的定数值落在区间内即命中
         // 情况③是这次真正修好的地方：定数区间可以独立使用，不再被难度档绑架。
         var bandOn = state.band !== 'all';
-        var diffOn = state.diff !== DIFF_NONE && state.diff !== 'all';
+        var diffOn = state.diff !== DIFF_NONE_INLINE && state.diff !== 'all';
 
         if (!bandOn && !diffOn) return true;            // ① 两者都没选
 
