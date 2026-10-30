@@ -51,6 +51,10 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-scope={pick ? 'pick' : 'common'}
   data-lu={s.lu ?? ''}
   data-sk={s.sk ?? ''}
+  {/* 谱面类型筛选用的两个判据（2026-10-31）：data-hh = 长押三态（'1' / '0' / '' 库里未知），
+      data-alt = 是否是 [ 2 ] 谱面变体。二者互不代替（[ 2 ] ≠ 长押，主人 2026-10-30 明确过）。 */}
+  data-hh={s.hasHold == null ? '' : (s.hasHold === 1 ? '1' : '0')}
+  data-alt={s.alt ? '1' : ''}
 >
   <div class="sc-j">
     {s.cover ? (

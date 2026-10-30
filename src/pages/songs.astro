@@ -268,6 +268,17 @@ const SORTS = [
   // 反而丢掉刚设好的排序。既然块本身已按世代自然顺序分组、还支持点标题逐块跳转，
   // 这个选项没有独立价值，删掉更干净。
 ] as const;
+
+// 谱面类型筛选（2026-10-31 主人要求「增加筛选条件【谱面类型】（下拉菜单式）」）：
+// 「全部 / STD谱 / HOLD谱 / [2]谱」。STD 与 HOLD 是「有没有长按」这条轴的两端，
+// [ 2 ] 谱是另一条轴（谱面变体），三项互斥只是因为这个下拉是单选。
+// ⚠ [ 2 ] ≠ 长押谱（主人 2026-10-30 原话），判据分别落在卡片的 data-alt 与 data-hh 上。
+const TYPES = [
+  { v: 'all', label: '全部' },
+  { v: 'std', label: 'STD谱' },
+  { v: 'hold', label: 'HOLD谱' },
+  { v: 'alt2', label: '[2]谱' },
+] as const;
 ---
 
 <Layout
@@ -451,6 +462,32 @@ const SORTS = [
             <input type="checkbox" id="scLimited" />
             <span>显示限时曲</span>
           </label>
+        </div>
+
+        {/* 【谱面类型（2026-10-31 主人要求「增加筛选条件【谱面类型】（下拉菜单式）」）】
+            选项四个：全部 / STD谱 / HOLD谱 / [2]谱，单选（与排序、世代同样的自定义下拉）。
+            判据分两条轴，都落在卡片的 data-* 上：
+              · STD谱 / HOLD谱 = 有没有长按，看 data-hh（'1' 长押 / '0' 非长押 / '' 库里未知）。
+                **未知行算进 STD**（主人 2026-10-31 拍板）：那些曲不在 RemyWiki 榜单里
+                （音乐魔方新曲、国服独有等），若不算 STD，它们既不在 STD 也不在 HOLD，
+                只有「全部」能看到 —— 用户会以为筛选坏了。
+              · [2]谱 = 谱面变体，看 data-alt。
+                ⚠ [ 2 ] ≠ 长押谱（主人 2026-10-30 原话），别把两个判据合并。
+            放在「限时曲」之后、排序之前：它是内容筛选，而排序/世代是呈现方式。 */}
+        <div class="sc-pf">
+          <span class="sc-pf-k" id="scTypeK">谱面类型</span>
+          <div class="sc-dd" data-dd="scType">
+            <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scTypeK">
+              <span class="sc-dd-v">全部</span>
+              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <select id="scType" class="sc-dd-sel" aria-label="按谱面类型筛选" tabindex="-1" aria-hidden="true">
+              {TYPES.map((o) => <option value={o.v} selected={o.v === 'all'}>{o.label}</option>)}
+            </select>
+            <ul class="sc-dd-list" role="listbox" aria-labelledby="scTypeK" hidden>
+              {TYPES.map((o) => <li role="option" data-v={o.v} aria-selected={o.v === 'all' ? 'true' : 'false'}>{o.label}</li>)}
+            </ul>
+          </div>
         </div>
 
         {/* 【下拉改自定义弹层（2026-10-25）】
@@ -664,6 +701,7 @@ const SORTS = [
         band: 'all',   // all | lt7 | 7 | 8 | 9 | 9p | 10 | 10p（2026-10-28 改八档）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
+        type: 'all',   // all | std | hold | alt2（2026-10-31 谱面类型，见卡片 data-hh / data-alt）
         sort: DEFAULT_SORT_INLINE
       };
 
@@ -692,6 +730,7 @@ const SORTS = [
         band: ['all', 'lt7', '7', '8', '9', '9p', '10', '10p'],
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
+        type: ['all', 'std', 'hold', 'alt2'],
         sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc']
       };
 
@@ -725,7 +764,8 @@ const SORTS = [
           localStorage.setItem(SAVE_KEY, JSON.stringify({
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
             diff: state.diff, band: state.band,
-            scope: state.scope, showLimited: state.showLimited, sort: state.sort
+            scope: state.scope, showLimited: state.showLimited,
+            type: state.type, sort: state.sort
           }));
         } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
       }
@@ -739,6 +779,7 @@ const SORTS = [
         if (limBox) limBox.checked = !!state.showLimited;
         var sSel = document.getElementById('scSort'); if (sSel) sSel.value = state.sort;
         var gSel = document.getElementById('scGen'); if (gSel) gSel.value = state.gen;
+        var tySel = document.getElementById('scType'); if (tySel) tySel.value = state.type;
         function pick(sel, attr, val) {
           var nodes = root.querySelectorAll(sel);
           for (var i = 0; i < nodes.length; i++) {
@@ -857,6 +898,22 @@ const SORTS = [
         if (state.scope !== 'all' && bodySrv === state.srv &&
             card.getAttribute('data-scope') !== state.scope) return false;
         if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
+
+        // 谱面类型（2026-10-31 主人要求）：两条独立判据，都在卡片属性上。
+        //   data-hh：'1' 有长按 / '0' 确认没有 / '' 库里未知（不在 RemyWiki 榜单的曲）。
+        //            STD 用 hh !== '1'（把未知算进来）而不是 hh === '0'——主人拍板：
+        //            选 STD / HOLD 要能覆盖全库，未知行不该两边都看不到。
+        //   data-alt：'1' 是 [ 2 ] 谱面变体。[ 2 ] ≠ 长押，两者别混。
+        if (state.type !== 'all') {
+          var hh = card.getAttribute('data-hh') || '';
+          if (state.type === 'std') {
+            if (hh === '1') return false;
+          } else if (state.type === 'hold') {
+            if (hh !== '1') return false;
+          } else if (state.type === 'alt2') {
+            if (card.getAttribute('data-alt') !== '1') return false;
+          }
+        }
 
         // ---- 难度档 + 定数区间 ----
         //
@@ -1058,7 +1115,8 @@ const SORTS = [
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
                           (state.diff !== '' ? 1 : 0) +
-                          (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0);
+                          (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
+          (state.type !== 'all' ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
         // 两个状态共用一个 class 会互相覆盖——展开时把「有筛选」的强调抹掉，收起时又反过来。
@@ -1513,6 +1571,7 @@ const SORTS = [
         if (!t || !t.id) return;
         if (t.id === 'scGen') { state.gen = t.value; ddRefresh(); apply(); }
         else if (t.id === 'scSort') { state.sort = t.value; ddRefresh(); apply(); }
+        else if (t.id === 'scType') { state.type = t.value; ddRefresh(); apply(); }
       });
 
       // ---- chip / 按钮：服务器、分区、难度档、区间、重置 ----
@@ -1528,13 +1587,14 @@ const SORTS = [
       function resetAll() {
         state.q = ''; state.gen = 'all';
         state.diff = ''; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
-        state.cat = 'all'; state.scope = 'all'; state.showLimited = false;
+        state.cat = 'all'; state.scope = 'all'; state.showLimited = false; state.type = 'all';
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
         var limBox = document.getElementById('scLimited');
         if (limBox) limBox.checked = false;
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
+        var ti = document.getElementById('scType'); if (ti) ti.value = 'all';
         ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
         // 难度档没有「全部」chip 了：重置 = 让所有 chip 都取消选中
         var dChips = root.querySelectorAll('[data-diff]');
