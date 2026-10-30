@@ -45,3 +45,5 @@ desktop.ini
 .DS_Store
 .vscode/
 .idea/
+# 一次性探测/调试脚本产物（不该进版本库，2026-10-30 清理）
+scripts/probe/
