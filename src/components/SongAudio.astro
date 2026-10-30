@@ -12,8 +12,18 @@
 interface Props {
   /** 本站 songId，用于拼 /api/audio/<id> */
   songId: string;
+  /** 曲库里的 BPM 字串（可能是区间或带括注的旧脏值），画成播放条左上角的徽章 */
+  bpm?: string | null;
 }
-const { songId } = Astro.props;
+const { songId, bpm } = Astro.props;
+
+// 【2026-10-31 主人第 4 条】BPM 徽章只显示数字或区间：
+// 库里的值仍可能带括注（如「170 (beatmania IIDX …)」），括注留给详情页信息块，
+// 播放条上只留数字主体；取不到值就整块不渲染。
+const bpmText = String(bpm ?? '')
+  .replace(/\([^)]*\)/g, ' ')
+  .trim()
+  .slice(0, 16);
 ---
 
 <div class="sda" data-audio={"/api/audio/" + songId}>
@@ -27,10 +37,25 @@ const { songId } = Astro.props;
     <span class="sda-spin" aria-hidden="true"></span>
   </button>
 
-  <span class="sda-k">BGM</span>
+  <div class="sda-main">
+    <div class="sda-meta">
+      {
+        bpmText ? (
+          <span class="sda-bpm" title={"BPM " + bpmText}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9.9 4.6h4.2l4.7 14.9H5.2z" />
+              <path d="M12 4.7 8.7 15.6" />
+              <path d="M4.5 19.5h15" />
+            </svg>
+            <b>{bpmText}</b>
+          </span>
+        ) : null
+      }
+      <span class="sda-time"><b class="sda-cur">0:00</b><i>/</i><span class="sda-dur">--:--</span></span>
+    </div>
 
-  <div
-    class="sda-track"
+    <div
+      class="sda-track"
     role="slider"
     tabindex="0"
     aria-label="播放进度"
@@ -39,16 +64,19 @@ const { songId } = Astro.props;
     aria-valuenow="0"
     aria-valuetext="未播放"
   >
-    <span class="sda-fill"></span>
-    <span class="sda-knob"></span>
+      <span class="sda-fill"></span>
+      <span class="sda-knob"></span>
+    </div>
   </div>
-
-  <span class="sda-time"><b class="sda-cur">0:00</b><i>/</i><span class="sda-dur">--:--</span></span>
 </div>
 
 <style>
-  /* 一行布局：按钮 / 标签 / 进度 / 时间。整行高度固定，加载态与失败态都不改高度，
-     避免按下播放的瞬间版面抖一下。 */
+  /* 【2026-10-31 主人画框：① 去掉 BGM 标签 ② 进度条下移并延长
+     ③ 时间移到进度条右上 ④ 进度条左上放 BPM 徽章】
+     原来是「按钮 / BGM 标签 / 进度 / 时间」一条横排：标签与时间各占掉一段，
+     进度条被夹在中间、长度有限。现在按钮左侧不动，右侧改成两行——
+     上行是元信息（左 BPM 徽章、右 时间），下行才是进度条本身。
+     整块高度固定（min-height 40），加载态与失败态都不改高度，避免按下播放版面抖一下。 */
   .sda {
     display: flex;
     align-items: center;
@@ -135,13 +163,54 @@ const { songId } = Astro.props;
     }
   }
 
-  /* 标签：与底部背签的 dt 同口径（数据字体、大字距、小号），让试听条读起来像元数据的一部分 */
-  .sda-k {
+  /* 右栏两行：上行元信息、下行进度条 */
+  .sda-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .sda-meta {
+    /* z-index 压在进度条加高的命中区之上：否则条上方的 -10px 命中区会吃掉
+       点向徽章/时间的点击（条本身不需要，但命中区不该盖住别的元素）。 */
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 18px;
+  }
+
+  /* BPM 徽章：节拍器图标 + 数字，贴在进度条左上角 */
+  .sda-bpm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     flex: none;
+    padding: 2px 8px 2px 6px;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
     font-family: var(--font-data);
-    font-size: 11.5px;
-    letter-spacing: 0.14em;
+    font-size: 11px;
+    letter-spacing: 0.06em;
     color: var(--ink3);
+  }
+  .sda-bpm svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .sda-bpm b {
+    font-weight: 700;
+    color: var(--ink2);
+    font-variant-numeric: tabular-nums;
   }
 
   /* 进度轨道：可点可拖。上下留出更多命中区域（伪元素撑高），
@@ -159,7 +228,8 @@ const { songId } = Astro.props;
   .sda-track::before {
     content: "";
     position: absolute;
-    inset: -12px 0;
+    /* 命中区比原来矮一点：条上方 10px 处现在是元信息行，别再往上压 */
+    inset: -10px 0;
   }
   .sda-track:focus-visible {
     outline: 2px solid var(--acc);
@@ -194,6 +264,8 @@ const { songId } = Astro.props;
   /* 时间：等宽数据字体，当前时间用主色，总时长压暗 */
   .sda-time {
     flex: none;
+    /* 只有时间时也要靠右（徽章缺席的曲目不摆占位元素） */
+    margin-left: auto;
     display: inline-flex;
     align-items: baseline;
     gap: 5px;
@@ -231,10 +303,6 @@ const { songId } = Astro.props;
   }
 
   @media (max-width: 700px) {
-    /* 窄屏把 BGM 标签让出去，进度条留在按钮与时间之间，宽度才够 */
-    .sda-k {
-      display: none;
-    }
     /* 【2026-10-29 主人画黄框：移动端播放条要横跨全宽】
        桌面端播放条留在曲绘右侧（见 songs.css 的说明），但**窄屏**不同：
        窄屏是「左图 108 + 右栏」两列，播放条若只在右栏 197px 里，

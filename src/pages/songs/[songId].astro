@@ -250,7 +250,7 @@ const metaFoot: Meta[] = song
             顺序改为：曲名 → 艺人 → 试听条 → 定数条。理由（主人给的版面图）：
             播放是"听到这首"的入口，紧挨作品信息；定数条是数据区，压到下面。
             没有音源时试听条整块不渲染，定数条位置照旧。 */}
-        {hasAudio ? <SongAudio songId={String(song.id)} /> : null}
+        {hasAudio ? <SongAudio songId={String(song.id)} bpm={song.bpm} /> : null}
 
         {/* 定数条：三条横条按 0-11 刻度填充，颜色沿用难度三色。
             定数是这个站最有信息量的字段，横条让「这首的难度分布」一眼可读
