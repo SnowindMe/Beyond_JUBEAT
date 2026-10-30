@@ -1791,9 +1791,39 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     gap: 6px;
     min-width: 0;
 }
-/* 占满整行的组（分区 / 难度档 / 定数区间 / 重置） */
+/* 占满整行的组（分区 / 难度档+定数区间 / 限时曲 / 重置） */
 .sc-pf-wide {
     grid-column: 1 / -1;
+}
+
+/* ---------- 难度档 + 定数区间 合成一组（2026-10-30 主人：「给难度档、定数区间套一个框在一起，
+   边框显示颜色」） ---------- */
+/* 这两项是同一条筛选轴的两级：难度档决定「哪一档谱面」，定数区间决定「那一档里哪个数值段」。
+   拆成两个平铺区块时读者要自己建立联系；套一个框就在视觉上把它们绑成一件事。
+   配色用 --acc（当前世代主题色）的淡边 + 极浅底：既和页面主题呼应，又不抢 chip 本身的强调色。 */
+.sc-pf-box {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    padding: 10px 12px 11px;
+    border: 1px solid color-mix(in srgb, var(--acc) 38%, var(--edge));
+    border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--acc) 5%, transparent);
+}
+/* 框内两半各自竖排（标签在上、chips 在下），与框外 .sc-pf 的排布一致 */
+.sc-pf-half {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    /* 定数区间有 8 个 chip，比难度档宽得多：让它优先占剩余宽度，
+       窄屏放不下时自然折到下一行（flex-wrap 已开）。 */
+    flex: 1 1 auto;
+}
+/* 难度档只有 4 个 chip（含"全部档"），不需要抢宽度 */
+.sc-pf-half:first-child {
+    flex: 0 1 auto;
 }
 /* 组标题：统一成"小节标签"——左侧一条 2px 强调色竖线 + 文字，
    比原来的全大写小字更好认，也和数据卡片上的分区标签同一套语汇。 */
@@ -2154,22 +2184,10 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 
 /* ---------- 排序承载：只用 order，不重排 DOM ---------- */
-/* 卡片的 order 由脚本写进 style；.sc-grid 是 grid，order 天然生效。 */
-/* 「世代 新→旧」要把 .sc-gen 块本身换位：这时 .sc-sec 得成为 flex 容器
-   （块级流的 order 不生效）。只在这个模式下切，平时保持原来的块级布局，
-   避免影响 .sc-gen 的 content-visibility 与吸顶行为。 */
-#songsRoot[data-sort-mode="gen-new"] .sc-sec {
-    display: flex;
-    flex-direction: column;
-}
-#songsRoot[data-sort-mode="gen-new"] .sc-sec-h {
-    order: -1;
-}
-/* 换成 flex 后 .sc-gen 的 content-visibility 会让占位估算失真（它假设子块高度稳定，
-   而 order 打乱后滚动条会跳），这个模式下关掉；退出该排序时就恢复。 */
-#songsRoot[data-sort-mode="gen-new"] .sc-gen {
-    content-visibility: visible;
-}
+/* 卡片的 order 由脚本写进 style；.sc-grid 是 grid，order 天然生效。
+   【2026-10-30 删除「世代 新→旧」相关规则】那套要么给 .sc-sec 切 flex 换块位、
+   要么临时关掉 .sc-gen 的 content-visibility；排序项被主人删掉后这些规则没有触发者，
+   留着只会让后来的人以为页面上还有"换块顺序"的能力。 */
 
 @media (max-width: 768px) {
     /* 【2026-10-25 主人要求：移动端筛选框与搜索框必须同一行】

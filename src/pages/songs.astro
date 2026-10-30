@@ -137,8 +137,8 @@ for (const srv of ['jp', 'cn'] as const) {
 }
 // 该服务器视图下按 **GEN_ORDER 的自然顺序（旧→新：jubeat 2008 → beyond the Ave. 2024）**
 // 排列的世代清单，只保留非空世代。
-// 注意：默认顺序是「旧→新」（与 GEN_ORDER 一致）；「世代 新→旧」是排序选项 gen-new 的活，
-// 由前端按 data-y 给 .sc-gen 写 style.order 实现——两者不冲突，别把这里改成倒序。
+// 顺序固定为「旧→新」（与 GEN_ORDER 一致）。原「世代 新→旧」排序项已按主人要求删除，
+// 所以这里不需要再考虑「块顺序被前端改写」的情况，直接按 GEN_ORDER 排即可。
 //
 // 【2026-10-24 修正】不再按「世代自带服务器」过滤（g.s === srv）——那是「国服只有音乐魔方
 // 一个世代」的旧口径。国服视图现在还要装「旧框已有曲」（sheet1 打√的 432 首，首登于日服
@@ -200,17 +200,10 @@ const EAGER = new Set(
     : [],
 );
 
-// 曲师筛选面板只放「常用曲师」：库里 710 位，全塞进下拉会变成一条没人翻得完的列表。
-// 门槛 5 首（实测 38 位），其余靠搜索框直接打曲师名（搜索同时匹配曲师字段）。
-const ARTIST_MIN = 5;
-const ARTIST_TALLY = new Map<string, number>();
-for (const s of ALL) {
-  if (!s.a) continue;
-  ARTIST_TALLY.set(s.a, (ARTIST_TALLY.get(s.a) ?? 0) + 1);
-}
-const TOP_ARTISTS = [...ARTIST_TALLY.entries()]
-  .filter(([, n]) => n >= ARTIST_MIN)
-  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+// 【2026-10-30 主人要求删掉「曲师」筛选】
+// 这里原本会为 ALL 全表扫一遍统计每位曲师的曲数、再筛出 5 首以上的 38 位塞进下拉。
+// UI 删掉后这段统计没有任何消费者，一并删除——它每次请求都要遍历 1248 行，
+// 留着只是白烧 CPU。曲师仍可用搜索框直接打名字（matchCard 的 hay 里包含 data-a）。
 
 // 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 CONTEXT.md）
 const GEN_OPTS = GEN_ORDER;
@@ -261,7 +254,11 @@ const SORTS = [
   { v: 'ext-asc', label: '定数 低→高' },
   { v: 't-asc', label: '曲名 A→Z' },
   { v: 't-desc', label: '曲名 Z→A' },
-  { v: 'gen-new', label: '世代 新→旧' },
+  // 【2026-10-30 主人要求删掉「世代 新→旧」】
+  // 它和其他六种排序不是一类东西：其余都是「同一个世代块内部怎么排」，
+  // 而它是「把世代块本身换个顺序」——选中它会把块内 order 清空（历史 bug），
+  // 反而丢掉刚设好的排序。既然块本身已按世代自然顺序分组、还支持点标题逐块跳转，
+  // 这个选项没有独立价值，删掉更干净。
 ] as const;
 ---
 
@@ -405,6 +402,34 @@ const SORTS = [
           </div>
         </div>
 
+        {/* 【难度档 + 定数区间 合成一组（2026-10-30 主人要求「给难度档、定数区间套一个框在一起，
+            边框显示颜色」）】
+            为什么把它们俩放一个框：这两个是**同一条筛选轴的两段**——难度档选「哪一档」，
+            定数区间选「那一档里的哪个数值段」，本质是「谱面难度」的两级细化，
+            分成两个平铺区块读者要自己建立联系。套框把「这两项是一件事」这个关系画出来。
+
+            顺序也按主人要求改成 **难度档 → 定数区间 → 限时曲**（原来是限时曲在最前）。
+            理由同样：先定"哪一档"，再定"哪个数值段"，最后才是"要不要把已过期的也算进来"
+            —— 限时曲是全局开关，不是这条轴的一部分，所以留在框外面。 */}
+        <div class="sc-pf sc-pf-wide sc-pf-box">
+          <div class="sc-pf-half">
+            <span class="sc-pf-k">难度档</span>
+            <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
+              {DIFFS.map((d) => (
+                <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
+              ))}
+            </div>
+          </div>
+          <div class="sc-pf-half">
+            <span class="sc-pf-k">定数区间</span>
+            <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
+              {BANDS.map((b) => (
+                <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* 【显示限时曲】（2026-10-28 主人要求）
             默认不显示：限时曲的活动期已过，混在常规列表里会让「总数」和实际可玩对不上。
             ⚠ 用 checkbox 而不是和「范围/分区」一样是单选 chip——它是独立开关、不是互斥选项
@@ -428,23 +453,6 @@ const SORTS = [
 
             原来监听 select 的筛选逻辑一行都不用改。 */}
 
-        <div class="sc-pf sc-pf-wide">
-          <span class="sc-pf-k">定数区间</span>
-          <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
-            {BANDS.map((b) => (
-              <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <div class="sc-pf sc-pf-wide">
-          <span class="sc-pf-k">难度档</span>
-          <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
-            {DIFFS.map((d) => (
-              <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
-            ))}
-          </div>
-        </div>
         <div class="sc-pf">
           <span class="sc-pf-k" id="scSortK">排序</span>
           <div class="sc-dd" data-dd="scSort">
@@ -475,24 +483,6 @@ const SORTS = [
             <ul class="sc-dd-list" role="listbox" aria-labelledby="scGenK" hidden>
               <li role="option" data-v="all" aria-selected="true">全部世代</li>
               {GEN_OPTS.map((g) => <li role="option" data-v={g.k} aria-selected="false">{g.k}{g.s === 'cn' ? '（国服）' : ''}</li>)}
-            </ul>
-          </div>
-        </div>
-
-        <div class="sc-pf">
-          <span class="sc-pf-k" id="scArtistK">曲师</span>
-          <div class="sc-dd" data-dd="scArtist">
-            <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scArtistK" title="仅列出 5 首及以上的常用曲师，其余请用搜索框">
-              <span class="sc-dd-v">全部曲师（{ARTIST_TALLY.size} 位）</span>
-              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
-            </button>
-            <select id="scArtist" class="sc-dd-sel" aria-label="按曲师筛选：仅列出 5 首及以上的常用曲师，其余请用搜索框" tabindex="-1" aria-hidden="true">
-              <option value="all">全部曲师（{ARTIST_TALLY.size} 位）</option>
-              {TOP_ARTISTS.map(([a, n]) => <option value={a}>{a}（{n}）</option>)}
-            </select>
-            <ul class="sc-dd-list" role="listbox" aria-labelledby="scArtistK" hidden>
-              <li role="option" data-v="all" aria-selected="true">全部曲师（{ARTIST_TALLY.size} 位）</li>
-              {TOP_ARTISTS.map(([a, n]) => <li role="option" data-v={a} aria-selected="false">{a}（{n}）</li>)}
             </ul>
           </div>
         </div>
@@ -651,8 +641,7 @@ const SORTS = [
         cat: 'all',
         q: '',
         gen: 'all',
-        artist: 'all',
-        diff: 'all',   // all | bsc | adv | ext
+          diff: 'all',   // all | bsc | adv | ext
         band: 'all',   // all | lt7 | 7 | 8 | 9 | 9p | 10 | 10p（2026-10-28 改八档）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
@@ -680,12 +669,11 @@ const SORTS = [
         cat: null,          // 分区名随服务器不同，只校验是字符串，交给 apply 去判
         q: null,            // 搜索词任意字符串
         gen: null,
-        artist: null,
         diff: ['all', 'bsc', 'adv', 'ext'],
         band: ['all', 'lt7', '7', '8', '9', '9p', '10', '10p'],
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
-        sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc', 'gen-new']
+        sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc']
       };
 
       function loadSaved() {
@@ -717,7 +705,7 @@ const SORTS = [
         try {
           localStorage.setItem(SAVE_KEY, JSON.stringify({
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
-            artist: state.artist, diff: state.diff, band: state.band,
+            diff: state.diff, band: state.band,
             scope: state.scope, showLimited: state.showLimited, sort: state.sort
           }));
         } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
@@ -732,7 +720,6 @@ const SORTS = [
         if (limBox) limBox.checked = !!state.showLimited;
         var sSel = document.getElementById('scSort'); if (sSel) sSel.value = state.sort;
         var gSel = document.getElementById('scGen'); if (gSel) gSel.value = state.gen;
-        var aSel = document.getElementById('scArtist'); if (aSel) aSel.value = state.artist;
         function pick(sel, attr, val) {
           var nodes = root.querySelectorAll(sel);
           for (var i = 0; i < nodes.length; i++) {
@@ -814,7 +801,6 @@ const SORTS = [
         if (state.scope !== 'all' && bodySrv === state.srv &&
             card.getAttribute('data-scope') !== state.scope) return false;
         if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
-        if (state.artist !== 'all' && card.getAttribute('data-a') !== state.artist) return false;
 
         // 难度档 + 定数区间
         if (state.diff === 'all') {
@@ -875,36 +861,17 @@ const SORTS = [
         for (var n = 0; n < arr.length; n++) arr[n].style.order = String(n);
       }
 
+      // 【2026-10-30 简化】原来这里有一段「世代 新→旧」的专门分支：
+      // 给 .sc-sec 切 flex、按 data-y 倒序写 .sc-gen 的 order、并把块内卡片 order 清空。
+      // 主人已要求删掉那个排序项，整段随之删除。
+      // 留下的唯一职责：对每个可见网格内的卡片写 order —— 注意**不碰 .sc-gen 的 order**，
+      // 世代块的先后始终由 DOM 顺序（GEN_ORDER 旧→新）决定。
       function applySort() {
-        // 世代块排序只用「世代 新→旧」，靠给 .sc-sec 切 flex 后写 order；其余排序一律清掉
         var genBlocks = root.querySelectorAll('.sc-gen');
-        var genNew = state.sort === 'gen-new';
-        if (genNew) root.setAttribute('data-sort-mode', 'gen-new');
-        else root.removeAttribute('data-sort-mode');
-
-        if (genNew) {
-          var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec');
-          for (var s = 0; s < secs.length; s++) {
-            var blk = secs[s].querySelectorAll('.sc-gen');
-            var order = [];
-            for (var b = 0; b < blk.length; b++) {
-              order.push({ el: blk[b], y: Number(blk[b].getAttribute('data-y')) || 0, i: b });
-            }
-            order.sort(function (x, y) { return y.y - x.y || x.i - y.i; });
-            for (var o = 0; o < order.length; o++) order[o].el.style.order = String(o);
-            // 世代内部保持 EXT 降序（与默认一致）
-            var grids = secs[s].querySelectorAll('.sc-grid');
-            for (var g = 0; g < grids.length; g++) {
-              var cs = grids[g].querySelectorAll('.sc-card');
-              for (var c = 0; c < cs.length; c++) cs[c].style.order = '';
-            }
-          }
-        } else {
-          for (var k = 0; k < genBlocks.length; k++) genBlocks[k].style.order = '';
-          var grids2 = root.querySelectorAll('.sc-body:not([hidden]) .sc-grid');
-          for (var g2 = 0; g2 < grids2.length; g2++) {
-            sortCards(grids2[g2].querySelectorAll('.sc-card'));
-          }
+        for (var k = 0; k < genBlocks.length; k++) genBlocks[k].style.order = '';
+        var grids = root.querySelectorAll('.sc-body:not([hidden]) .sc-grid');
+        for (var g = 0; g < grids.length; g++) {
+          sortCards(grids[g].querySelectorAll('.sc-card'));
         }
       }
 
@@ -1006,7 +973,7 @@ const SORTS = [
         // 必须让按钮自己说明「有几项条件正在生效」，否则用户不知道列表为什么变少了。
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
-                          (state.artist !== 'all' ? 1 : 0) + (state.diff !== 'all' ? 1 : 0) +
+                          (state.diff !== 'all' ? 1 : 0) +
                           (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
@@ -1317,7 +1284,7 @@ const SORTS = [
         //
         // 所以这里只做一件事：量按钮上方还剩多少空间，把列表可用高度收缩到那个范围内。
         // 列表本身 max-height:268px，上方空间更小时改用内联 max-height，
-        // 内容超出的部分由 overflow-y:auto 内部滚动（曲师 715 位本来就要滚）。
+        // 内容超出的部分由 overflow-y:auto 内部滚动（世代下拉 13 项在窄屏也放不下）。
         var btnRect = dd.querySelector('.sc-dd-b').getBoundingClientRect();
         var GAP = 12; // 4px 间距 + 8px 呼吸位
         var spaceAbove = btnRect.top - GAP;
@@ -1341,7 +1308,7 @@ const SORTS = [
         var after = dd.querySelector('.sc-dd-b').getBoundingClientRect();
         var avail = Math.max(0, Math.min(after.top - GAP, 268));
         list.style.maxHeight = Math.max(96, avail) + 'px';
-        // 让当前选中项滚进视野（曲师 39 项，不滚的话要自己找）
+        // 让当前选中项滚进视野（世代 13 项，不滚的话要自己找）
         var cur = dd.querySelector('.sc-dd-list li[aria-selected="true"]');
         if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
       }
@@ -1401,7 +1368,6 @@ const SORTS = [
         var t = e.target;
         if (!t || !t.id) return;
         if (t.id === 'scGen') { state.gen = t.value; ddRefresh(); apply(); }
-        else if (t.id === 'scArtist') { state.artist = t.value; ddRefresh(); apply(); }
         else if (t.id === 'scSort') { state.sort = t.value; ddRefresh(); apply(); }
       });
 
@@ -1416,7 +1382,7 @@ const SORTS = [
       }
 
       function resetAll() {
-        state.q = ''; state.gen = 'all'; state.artist = 'all';
+        state.q = ''; state.gen = 'all';
         state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
         state.cat = 'all'; state.scope = 'all'; state.showLimited = false;
         if (search) search.value = '';
@@ -1425,7 +1391,6 @@ const SORTS = [
         if (limBox) limBox.checked = false;
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
-        var ai = document.getElementById('scArtist'); if (ai) ai.value = 'all';
         ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
         setChipGroup('[data-diff]', root.querySelector('[data-diff="all"]'));
         setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
@@ -1497,7 +1462,8 @@ const SORTS = [
           // 换服务器必须把「服务器专属」的两个维度一起归零：分区与世代。
           // 只重置分区是不够的——实测踩过：日服筛到 festo 再切国服，世代筛选还挂着
           // festo，而国服只有音乐魔方一个世代，于是整页 0 命中、只剩空态，看着像坏了。
-          // 搜索 / 曲师 / 难度档 / 定数区间 是全局维度，跨服仍然有意义，保留。
+          // 搜索 / 难度档 / 定数区间 是全局维度，跨服仍然有意义，保留。
+          // （曲师下拉已按主人要求删除，曲师仍可用搜索框打名字找到。）
           if (nextSrv !== state.srv) {
             // 范围也要归零：两服的 PICK UP 集合毫无重叠（日服=bta 世代，国服=音乐魔方+Ave.+解禁II），
             // 保留「pick」切过去会得到另一批曲甚至 0 命中，看着像坏了。
