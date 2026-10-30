@@ -66,14 +66,39 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
     ) : (
       <span class="sc-no">no jacket</span>
     )}
-    {s.alt ? <span class="sc-alt">[2]</span> : null}
+    {/* 长押标识（2026-10-31 主人指定素材 archive/materials/长押标识/hold.gif）。
+        判定读 has_hold（1=长押谱 / 0=否 / null=库中未知，未知不画——别把 null 当 0 或当 1）。
+        注意与上面的 alt 无关：alt=1 只是「[ 2 ] 谱面变体」，不代表有长押（主人 2026-10-31 强调）。
+        动图全站共用一个 URL，浏览器只下一次；开了 prefers-reduced-motion 的系统走 <source>
+        换静态首帧（动图内部的帧用 CSS 停不下来，只能用 <picture> 换图）。
+        尺寸由 CSS 按曲绘宽度等比给（24%），卡片/详情/窄屏共用一个百分比。 */}
+    {s.hasHold === 1 ? (
+      <picture class="sc-hold">
+        <source srcset="/assets/images/badge/hold-static.png" media="(prefers-reduced-motion: reduce)" />
+        <img
+          src="/assets/images/badge/hold.webp"
+          alt="长押谱"
+          title="长押谱"
+          width="128"
+          height="128"
+          loading="lazy"
+          decoding="async"
+        />
+      </picture>
+    ) : null}
+    {/* 【2026-10-31 主人「曲目页面的[2]标记可以不要了」】原来这里还有一个
+        <span class="sc-alt">[2]</span>，标「这行是 [ 2 ] 谱面变体」。去掉的理由与
+        主人一贯的判断一致：全站 1248 行里 71 行是 [ 2 ]，标记的信息量撑不起一个常驻角标，
+        而且它和长押标识同抢右上角（长押角标是「有/没有」这种真信息）。
+        谱面变体本身仍可从曲名里的「[ 2 ]」看出来，详情页也还有 is-alt 描边。
+        CSS 里的 .sc-alt 保留给后台列表（src/pages/admin/songs/index.astro）用。 */}
     {/* PICK UP 标记。
         【2026-10-30 主人「pick up徽章可以放在曲绘左上角」】原来是曲绘与曲名之间
         单独一行（2026-10-25 的版式）。改成曲绘**左上角**的角标后有两个好处：
         ①不再夹在图文之间打断"看图 → 读名"的视线，曲名紧贴曲绘，一卡的信息更紧凑；
         ②不再撑高卡片 —— 原版让 bta 块整块卡高 279px、其余 255px，
         同一页出现两种卡高，「阅读节奏」和 content-visibility 的占位估算都跟着变复杂。
-        左上角与 [2]（右上角）分处两侧，长曲名的 [2] 卡也不会互相压到。
+        左上角（PICK UP）与右上角（长押标识）分处两侧，互不遮挡。
         窄屏（≤768px）曲绘只有 94px 宽，整条角标会占 59%，所以 CSS 里只留星标、
         隐藏「PICK UP」文字——aria-label 保证读屏仍能读到含义。
         仍然只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}

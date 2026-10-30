@@ -419,6 +419,8 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     color: var(--ink3);
     background: color-mix(in srgb, var(--ink) 5%, transparent);
 }
+/* [2] 角标：曲目卡上已于 2026-10-31 按主人要求移除，现在只剩后台列表
+   （src/pages/admin/songs/index.astro）在用——它那边没有长押角标，不会撞位。 */
 .sc-alt {
     position: absolute;
     right: 5px;
@@ -431,6 +433,36 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     border-radius: var(--r-xs);
     padding: 1px 4px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+/* 长押标识（2026-10-31 主人 hold.gif）：曲绘右上角。
+   ① 宽度用曲绘的百分比（24%）+ aspect-ratio，卡片 171→41px、窄屏 94→23px、详情 208→50px
+      三处一套值，不用分别写死 px。
+   ② 选择器写成 picture.sc-hold > img，是为了压过上面的 .sc-j img（width/height/object-fit/
+      opacity/transition）与 hover 的 scale——否则角标会跟着封套一起放大、并从角上被裁掉。
+   ③ 与 [2] 角标同处右上角，所以有长押角标时把 [2] 往下推一个角标高度（见下面的 + 规则）。 */
+.sc-hold,
+.sd-hold {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 24%;
+    aspect-ratio: 1;
+    z-index: 2;
+    pointer-events: none;
+}
+picture.sc-hold > img,
+picture.sd-hold > img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    opacity: 1;
+    transform: none;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+.sc-card:hover picture.sc-hold > img {
+    opacity: 1;
+    transform: none;
 }
 .sc-t {
     display: block;
@@ -969,7 +1001,9 @@ html[data-bgm="playing"] .sd-disc-spin {
     object-fit: cover;
     display: block;
 }
-/* 长押谱：给封套加一道强调色描边，和原谱区分开（不靠小角标） */
+/* [ 2 ] 谱面变体：给封套加一道强调色描边。
+   ⚠️ 描边标的是「这行是 [ 2 ] 谱面」，**不代表有长押**（主人 2026-10-31 指出：
+   alt=1 只说明是 2 谱）。长押另有右上角的 hold 角标，判定读 has_hold。 */
 .sd-j.is-alt {
     box-shadow:
         0 0 0 2px var(--acc),
@@ -985,17 +1019,10 @@ html[data-bgm="playing"] .sd-disc-spin {
     letter-spacing: 0.14em;
     color: var(--ink3);
 }
-.sd-alt {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 2px 7px;
-    font-family: var(--font-data);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    border-radius: var(--r-hair);
-    color: var(--acc);
-    border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
-}
+/* 【2026-10-31 删除 .sd-alt】原文案 chip「[2] 长押谱」两处都错：
+   ① 与封套上的 is-alt 描边重复说明同一件事；
+   ② 把 alt=1 说成「长押谱」是错的（alt=1 只是 [ 2 ] 谱面）。
+   主人要求去掉，改由曲绘右上角的 hold 角标表达长押。 */
 
 /* 【2026-10-28 已删除 .sd-meta 整套样式】
    第三版把左栏的元数据清单（songId/世代/分区/服务器）全部搬进底部 .sd-foot，
