@@ -224,7 +224,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('60000049','official','BEAT-NEW-WORLD','ビートまりお（COOL&CREATE）','190','prop',1,0,'授权',5,8,10.5,0,0,'{"bsc":399,"adv":721,"ext":940}','{"bsc":0,"adv":0,"ext":0}','id85205721.webp',NULL,NULL,NULL),
   ('11000238','official','B.B.K.K.B.K.K.','nora2r','170','beyond the Ave.',1,0,'授权',4,8,9.6,0,0,'{"bsc":353,"adv":706,"ext":979}','{"bsc":0,"adv":0,"ext":0}','id61690298.webp',NULL,NULL,NULL),
   ('50000336','official','非公開日誌','みきとP feat.GUMI','190','saucer fulfill',1,0,'授权',4,5,8,0,0,'{"bsc":318,"adv":468,"ext":694}','{"bsc":0,"adv":0,"ext":0}','id41292502.webp',NULL,NULL,NULL),
-  ('11000228','official','Big Daddy','USAO','190','beyond the Ave.',1,1,'授权',4,8,9.8,0,NULL,NULL,NULL,'id91000827.webp',NULL,NULL,NULL),
+  ('11000228','official','Big Daddy','USAO','190','beyond the Ave.',1,1,'授权',4,8,9.8,0,1,'{"bsc":313,"adv":725,"ext":904}','{"bsc":10,"adv":23,"ext":35}','id91000827.webp',NULL,NULL,NULL),
   ('11000023','official','ヒトガタ','HIMEHINA','150','Ave.',1,0,'授权',3,7,9.2,0,0,'{"bsc":248,"adv":429,"ext":715}','{"bsc":0,"adv":0,"ext":0}','id39871176.webp',NULL,NULL,NULL),
   ('11000179','official','悲報！ワイ！ニート！','Shu','165','beyond the Ave.',1,0,'授权',4,8,9.7,0,1,'{"bsc":365,"adv":683,"ext":934}','{"bsc":16,"adv":20,"ext":32}','id90523575.webp',NULL,NULL,NULL),
   ('80000052','official','向日葵サンセット','ARM・まろん (IOSYS) × ランコ・パプリカ (豚乙女)','135','clan',1,0,'授权',3,6,9.1,0,0,'{"bsc":172,"adv":457,"ext":647}','{"bsc":0,"adv":0,"ext":0}','id61487355.webp',NULL,NULL,NULL),

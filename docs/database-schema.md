@@ -95,7 +95,7 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 | bpm | **24 / 1248** | 日服源快照本来没有 BPM（原 **737 / 1248**）；2026-10-31 用 remywiki 的 jubeat BPM 回填 713 行、改写 22 行脏值后只剩这 24 行——全是没进 remywiki Full Song List 的曲（见 §1.4） |
 | added_at | **1084 / 1248** | 只有国服更新表（xlsx）与部分日服旧站快照有日期。国服 91 行里 77 行有；日服几乎全空 |
 | unlock_note | **1018 / 1248** | 只有解禁池曲目有 |
-| has_hold | **117 / 1248** | 没在 remywiki 找到这首（41 首音乐魔方新曲 + 国服独有 + BEMANI SYMPHONY Arr. 等）。**NULL ≠ 0**：0 是「确定三难度都没长押」，未知不能当 0 用 |
+| has_hold | **116 / 1248** | 没在 remywiki 找到这首（41 首音乐魔方新曲 + 国服独有 + BEMANI SYMPHONY Arr. 等）。**NULL ≠ 0**：0 是「确定三难度都没长押」，未知不能当 0 用 |
 | artist / cover / bsc | 0 | 必有 |
 
 > 别看到「1084 行为空」就以为数据缺了——**源里就没有**。用 COALESCE 处理显示，
@@ -109,9 +109,9 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 | --- | --- |
 | 来源 | remywiki 单曲页的 jubeat 难度表，抓取产物 data/remy/jubeat-charts.json（1138 条，含 [ 2 ] 变体） |
 | 入库输入 | data/remy/by-song-id.json（按 song_id 归并好的快照，build-db.cjs 回填） |
-| 有键数的行 | 1131 |
-| 长押谱（has_hold=1） | **286** |
-| 长押未知（has_hold IS NULL） | **117** |
+| 有键数的行 | 1132 |
+| 长押谱（has_hold=1） | **287** |
+| 长押未知（has_hold IS NULL） | **116** |
 | 回填 BPM | 新增 713 行、改写 22 行 |
 
 判定规则（细节与反例见 data/remy/README.md）：
@@ -121,6 +121,10 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 - **必须锚定 jubeat 小节再取表**：GF/DM 的难度表表头同样是 Basic/Advanced/Extreme，不锚定会取到 GF/DM 的音数（曾误 213 条）。
 - **has_hold 与 alt 无关**：alt=1 只表示「这行是 [ 2 ] 谱面」——[ 2 ] 谱绝大多数有长押，但判定必须来自 holds 数值本身（主人 2026-10-31 纠正）。
 - BPM 多机种写法（如 BPM: 175 (DanceDanceRevolution), 170 (jubeat)）取**括号里提到 jubeat 的那个**。
+- **同一 ### jubeat 段下可能挂多张子表**（`#### jubeat音乐魔方 Charts` / `#### jubeat (2026) Charts` …），解析器默认取第一张。
+  目前只有 **Big Daddy** 撞上：音乐魔方那张是 `? ? ?` 占位、jubeat (2026) 那张是 313/10 · 725/23 · 904/35。
+  主人 2026-10-31 判定「抓出来的 bpm 和 hold 是 BTA 的（songId 11000228）」→ 只补给 beyond the Ave. 行，
+  国服行 991000007 的音乐魔方谱**保持未知**，不许拿 BTA 的数冒充（生成器里是一个显式 OVERRIDES 表）。
 
 **为什么用快照 + UPDATE 回填、而不是塞进三条 INSERT**：快照按 song_id 归并，
 与「日服 / 国服 / 国服独有新增曲」三条插入路径无关；塞进 INSERT 要改三处、还会出现「日服加了、国服忘了」的漏参。
