@@ -257,6 +257,32 @@
         transparent 100%
     );
 }
+/* 世代名现在是「跳到下一世代」的按钮（2026-10-30）。
+   做成 button 而不是 <a> 的理由见 GenBlock.astro 的注释：同页跳转不该改 URL、进历史栈。
+   这里必须把 button 的默认外观彻底抹掉（背景/边框/内边距/字体继承），
+   否则会变成一个灰底方框，破坏原来「强调色竖条 + 文字」的视觉锚点。 */
+.sc-gen-b {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    /* 点击热区往上下各扩 6px：12.5px 小字本身太窄，手机上不好点中。
+       用「padding 撑开 + 等量负 margin 抵消」的写法，行高与视觉占位都不变。 */
+    padding: 8px 4px 8px 0;
+    margin: -6px 0;
+}
+/* 键盘聚焦时才给一圈细描边（鼠标点击不出现，避免每次跳转闪一下） */
+.sc-gen-b:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+}
 .sc-gen-h b {
     display: inline-flex;
     align-items: center;
@@ -264,7 +290,7 @@
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0.1em;
-    /* 世代名链接压在底图上，12.5px 小字必须 4.5:1；
+    /* 世代名压在底图上，12.5px 小字必须 4.5:1；
        --acc 在浅色世代只有 1.83:1，改用可读版 --acc-ink（色相不变、压暗到达标）。 */
     color: var(--acc-ink);
     white-space: nowrap;

@@ -608,6 +608,91 @@ const SORTS = [
         sort: DEFAULT_SORT_INLINE
       };
 
+      // ---------------------------------------------------------------------
+      // 【2026-10-30 主人要求「做一下保存筛选条件」】把筛选状态存进 localStorage。
+      //
+      // 设计取舍（重要，改之前先读）：
+      //  · 存「筛选/排序/搜索/服务器」，**不存滚动位置**。滚动位置由浏览器自己恢复，
+      //    我们再插手容易和 SPA 式的历史恢复打架。
+      //  · 只在**用户主动改动**后写盘（apply() 里统一写），页面初始化读盘时不再回写，
+      //    避免"读出来又存回去"的死循环，也不会把默认值覆盖成脏数据。
+      //  · 版本号 KEY_VER 参与 key 名：以后字段增减直接升版本，旧数据自然废弃，
+      //    不用写迁移逻辑，也不会因为读到旧结构而报错。
+      //  · 读盘必须 try/catch 并逐字段校验：localStorage 可能被用户/扩展写脏，
+      //    一个 null 或非法枚举值就能让 matchCard 全判否、整页空白。
+      //  · 「重置全部」会清掉存档——那是用户的明确意图，不是误操作。
+      // ---------------------------------------------------------------------
+      var SAVE_KEY = 'jb-songs-filter-v1';
+      // 白名单：只恢复这些字段，且每个都校验取值合法。多余字段一律丢弃。
+      var SAVE_FIELDS = {
+        srv: ['jp', 'cn'],
+        cat: null,          // 分区名随服务器不同，只校验是字符串，交给 apply 去判
+        q: null,            // 搜索词任意字符串
+        gen: null,
+        artist: null,
+        diff: ['all', 'bsc', 'adv', 'ext'],
+        band: ['all', 'lt7', '7', '8', '9', '9p', '10', '10p'],
+        scope: ['all', 'pick', 'common'],
+        showLimited: ['boolean'],
+        sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc', 'gen-new']
+      };
+
+      function loadSaved() {
+        var raw;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return; }
+        if (!raw) return;
+        var obj;
+        try { obj = JSON.parse(raw); } catch (e) { return; }
+        if (!obj || typeof obj !== 'object') return;
+        for (var k in SAVE_FIELDS) {
+          if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+          var v = obj[k];
+          var rule = SAVE_FIELDS[k];
+          if (rule && rule[0] === 'boolean') {
+            if (typeof v === 'boolean') state[k] = v;
+          } else if (rule) {
+            if (typeof v === 'string' && rule.indexOf(v) !== -1) state[k] = v;
+          } else {
+            if (typeof v === 'string') state[k] = v;
+          }
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(SAVE_KEY, JSON.stringify({
+            srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
+            artist: state.artist, diff: state.diff, band: state.band,
+            scope: state.scope, showLimited: state.showLimited, sort: state.sort
+          }));
+        } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
+      }
+
+      /** 把读回来的 state 同步到所有控件上（chip / 下拉 / 搜索框 / 复选框）。
+       *  顺序必须在第一次 apply() 之前——否则页面会先按默认值渲染一遍再跳变。 */
+      function syncControlsFromState() {
+        if (search) search.value = state.q || '';
+        if (clearBtn) clearBtn.hidden = !state.q;
+        var limBox = document.getElementById('scLimited');
+        if (limBox) limBox.checked = !!state.showLimited;
+        var sSel = document.getElementById('scSort'); if (sSel) sSel.value = state.sort;
+        var gSel = document.getElementById('scGen'); if (gSel) gSel.value = state.gen;
+        var aSel = document.getElementById('scArtist'); if (aSel) aSel.value = state.artist;
+        function pick(sel, attr, val) {
+          var nodes = root.querySelectorAll(sel);
+          for (var i = 0; i < nodes.length; i++) {
+            var hit = nodes[i].getAttribute(attr) === val;
+            nodes[i].classList.toggle('is-on', hit);
+            nodes[i].setAttribute('aria-pressed', hit ? 'true' : 'false');
+          }
+        }
+        pick('[data-diff]', 'data-diff', state.diff);
+        pick('[data-band]', 'data-band', state.band);
+        pick('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
+        pick('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', 'data-scope', state.scope);
+        ddRefresh();
+      }
+
       // 定数区间：与页面上那八档按钮一一对应，改这里必须同步改模板里的 BANDS。
       // 语义见文件上方 BANDS 定义的注释（7 / 8 是整段，9 / 10 各拆 X 与 X+ 半段）。
       var BANDS = {
@@ -885,6 +970,10 @@ const SORTS = [
         applySort();
         stagger();
         refreshIntrinsic();
+        // 每次 apply 后落盘：所有用户操作（搜索、chip、下拉、限时曲、切服、重置）
+        // 最终都会走到这里，一处写入比在每个事件里各写一遍可靠。
+        // 初始化时的 apply() 也会写一次，写的是刚读回来的同一份值，无副作用。
+        saveState();
 
         // 耗时写在最后：它要包含上面全部筛选 + 排序 + 错开入场的标记，
         // 但**不含**浏览器重绘。渲染固定两位小数以下取整，避免出现「耗时 0.30000000000000004ms」。
@@ -1282,6 +1371,10 @@ const SORTS = [
         if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
         var scSet = root.querySelector('.sc-scope-set[data-srv="' + state.srv + '"]');
         if (scSet) setChipGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', scSet.querySelector('.sc-chip[data-scope="all"]'));
+        // 【2026-10-30】重置是用户的明确意图，要把存档一起清掉。
+        // 否则 apply() 里那次 saveState 会把「全默认」写回去——虽然这次结果一样，
+        // 但将来默认值变了，旧存档会一直把用户钉在今天这套默认值上。
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
         apply();
       }
 
@@ -1296,9 +1389,40 @@ const SORTS = [
         });
       })();
 
+      // ---- 点世代名跳到下一世代（2026-10-30 主人要求）----
+      //
+      // 行为：点当前世代的标题 → 滚到「下一个有内容的世代块」；已经在最后一个就回到第一个（循环）。
+      // 为什么不跳「下一个同名 DOM 节点」而要先过滤可见性：
+      //   筛选后很多世代块会被 hidden 掉（块内一张卡都不命中），
+      //   直接取 nextElementSibling 会滚到一个 display:none 的块，页面毫无反应，像坏了。
+      // 为什么用 scrollIntoView 而不是改 scrollTop：
+      //   世代块高度随列数变化（桌面 6 列 / 窄屏 3 列），写死偏移必然错；
+      //   块头是 sticky（top:0），scrollIntoView({block:'start'}) 正好把它顶到吸顶位置。
+      //   再减掉 .sc-gen-h 的高度会让它被吸顶条盖住一半，所以不减。
+      function genJump(fromEl) {
+        var sec = fromEl.closest('.sc-sec');
+        if (!sec) return;
+        var all = [];
+        var list = sec.querySelectorAll('.sc-gen');
+        for (var i = 0; i < list.length; i++) {
+          // 只收「块本身可见 + 不是空块」的世代
+          if (!list[i].hidden && list[i].querySelector('.sc-card:not([hidden])')) all.push(list[i]);
+        }
+        if (all.length < 2) return;                 // 只剩一个世代，没什么可跳的
+        var idx = all.indexOf(fromEl);
+        var next = all[(idx + 1) % all.length];     // 到末尾回到第一个
+        // 跳转前把焦点也移过去，读屏才不会停在原处（按钮本身没有 tabindex 也能 focus）
+        var btn = next.querySelector('[data-gen-jump]');
+        next.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        if (btn) btn.focus({ preventScroll: true });
+      }
+
       root.addEventListener('click', function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
+
+        var genBtn = t.closest('[data-gen-jump]');
+        if (genBtn) { genJump(genBtn.closest('.sc-gen')); return; }
 
         if (t.closest('#scReset') || t.closest('[data-sc-reset]')) { resetAll(); return; }
 
@@ -1364,6 +1488,15 @@ const SORTS = [
         }
       });
 
+      // ---- 启动顺序（2026-10-30 加存档后必须严格按这个顺序）----
+      //  ① 读存档填进 state（此时还不动 DOM）
+      //  ② 把 state 同步到控件（chip 高亮 / 下拉文字 / 搜索框 / 限时曲勾选）
+      //  ③ 最后一次 apply() 真正渲染结果
+      // 为什么必须等这里：syncControlsFromState → ddRefresh → ddSync 依赖 dds 数组，
+      // 而 dds 是在上面那句 ddInit 之后才被 push 满的。早一步调用会拿到空数组，
+      // 结果就是"筛选生效了、但下拉按钮上还写着『全部』"。
+      loadSaved();
+      syncControlsFromState();
       apply();
     })();
   </script>

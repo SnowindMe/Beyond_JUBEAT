@@ -23,13 +23,20 @@ const { gen, list, year, eager, srv = 'jp', markPick = false } = Astro.props;
 // 列数由 .sc-grid 的 auto-fill 随容器宽度连续变化，服务端拿不到，只能由页面脚本
 // 实测后写到 .sc-gen 的行内样式上 —— 逻辑与公式见 src/pages/songs.astro 的 refreshIntrinsic()。
 ---
-<div class="sc-gen" data-y={year || '0'}>
+<div class="sc-gen" data-y={year || '0'} data-gen={gen}>
   <div class="sc-gen-h">
-    {/* 【2026-10-28 主人要求「/songs/gen/jubeat/ 这个页面不要」】原先世代名是链接，
-        点进单独的世代筛选页。该页已删除，所以这里退回纯文字——不留死链、也不做跳转，
-        因为 /songs/ 自己就按世代分好组了，点进去只是同一批卡的另一种排法。
-        世代名仍保留 b + ::before 强调色竖条，视觉锚点不变（只是不再可点）。 */}
-    <b>{gen}</b>
+    {/* 【2026-10-28】原先世代名是链接，点进单独的世代筛选页 /songs/gen/<slug>/。
+        主人要求删掉那页，于是退回纯文字。
+        【2026-10-30 主人新要求「点击世代名可以跳转到下一世代」】改回可点击，
+        但**不再是链接**（不跳页、不改 URL），而是页面内按钮：
+        点一下滚到下一个有内容的世代块，到最后一个则回到第一个，循环。
+        为什么不写成 <a>：目标块是同页锚点，用 a 会改 URL、进历史栈，
+        返回键会莫名其妙回到同一页；用 button + scrollIntoView 更干净。
+        具体跳转逻辑在 src/pages/songs.astro 的 genJump() —— 那里能拿到
+        「当前哪些世代块是可见的」（筛选后会有块被藏起来，只该跳到可见的下一个）。 */}
+    <button type="button" class="sc-gen-b" data-gen-jump aria-label={`跳到下一世代（当前：${gen}）`} title="点击跳到下一世代">
+      <b>{gen}</b>
+    </button>
     {year && <span>{year}</span>}
     <i>{list.length}</i>
   </div>
