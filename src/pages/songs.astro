@@ -994,19 +994,11 @@ const SORTS = [
         // 之前只在各事件分支里各自 setAttribute，只要有一条路径忘记同步，
         // 读屏听到的选中态就会和实际筛选状态不符。改成「由 state 反推 UI」：
         // 每次 apply() 都按当前 state 重写一遍，谁调 apply 都不会漏。
-        // 【临时埋点】定位切服卡顿，验完即删
-        window.__prof = window.__prof || {};
-        window.__prof.afterMatch = Math.round(performance.now() - t0);
-
         syncPressed();
-        window.__prof.afterSyncPressed = Math.round(performance.now() - t0);
 
         applySort();
-        window.__prof.afterSort = Math.round(performance.now() - t0);
         stagger();
-        window.__prof.afterStagger = Math.round(performance.now() - t0);
         refreshIntrinsic();
-        window.__prof.afterIntrinsic = Math.round(performance.now() - t0);
         // 每次 apply 后落盘：所有用户操作（搜索、chip、下拉、限时曲、切服、重置）
         // 最终都会走到这里，一处写入比在每个事件里各写一遍可靠。
         // 初始化时的 apply() 也会写一次，写的是刚读回来的同一份值，无副作用。
@@ -1071,7 +1063,26 @@ const SORTS = [
         intrinsicCardH = h;
         return true;
       }
-      function refreshIntrinsic() {
+      // ---------------------------------------------------------------------
+      // 【2026-10-30 切服卡顿的真凶就是这里，改法见下】
+      //
+      // 埋点实测（线上 v1.40.0，点服务器卡到点击回调返回的同步耗时）：
+      //   总 783ms = 匹配 6ms + syncPressed 2ms + 排序 3ms + 错开入场 47ms + **本函数 725ms**
+      // 也就是说 93% 的卡顿出在一个「只是写几个占位高度」的函数上。
+      //
+      // 为什么这么慢：measureGrid() 里读了 grid 的 computedStyle 与首张卡的
+      // getBoundingClientRect —— 这会**强制浏览器把当前 1150 张卡的布局全部算完**。
+      // 切服时 DOM 刚被大改（1150 张卡的 hidden 全翻过一遍），这一读就把整份重排
+      // 堵在点击回调里，用户看到的就是"点了要等一下才动"。
+      //
+      // 但它算出来的东西**根本不急着用**：contain-intrinsic-size 只影响
+      // "屏外块滚动时的高度估算"，用户此刻正停在顶部看第一屏，晚几帧写完全没感觉。
+      //
+      // 所以：把「测量 + 写入」整段推迟到两帧之后（rAF × 2）。
+      // 写法上用一个小令牌防抖，保证连续切服只算最后一次。
+      // ---------------------------------------------------------------------
+      var intrinsicToken = 0;
+      function refreshIntrinsicNow() {
         if (!measureGrid()) return;
         var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden])');
         for (var s = 0; s < secs.length; s++) {
@@ -1088,6 +1099,16 @@ const SORTS = [
             el.style.containIntrinsicSize = 'auto ' + total.toFixed(2) + 'px';
           }
         }
+      }
+      /** 推迟到两帧后再算：第一帧让 apply 的 DOM 改动先交给浏览器排版，第二帧才量。 */
+      function refreshIntrinsic() {
+        var my = ++intrinsicToken;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (my !== intrinsicToken) return;   // 期间又切了一次，这次作废
+            refreshIntrinsicNow();
+          });
+        });
       }
       // 视口宽度变化要重算（列数与卡高都变）。debounce 120ms：
       // 拖窗口边缘时 resize 会连发几十次，每次都遍历 12 个块没必要。
