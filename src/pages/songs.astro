@@ -519,6 +519,7 @@ const SORTS = [
     {/* 列表锚点：sc-skip 的落点。tabindex="-1" 让焦点真的移进来（否则只滚动不换焦点）。 */}
     <div id="scList" tabindex="-1">
 
+
     {(['jp', 'cn'] as const).map((srv) => (
       <div class="sc-body" data-srv={srv} hidden={srv !== DEFAULT_SRV}>
         {/*
@@ -548,6 +549,56 @@ const SORTS = [
         */}
       </div>
     ))}
+
+    {/*
+      【2026-10-30 主人：选国服后刷新，会先看到日服再跳到国服】
+      根因是服务端永远按 DEFAULT_SRV（日服）渲染 hidden 属性——
+      存档恢复要等页面末尾那段大脚本跑起来，而那时日服列表已经画出来了，
+      于是肉眼先看到日服、再"跳"成国服。
+
+      修法：紧跟列表插一段**不加 defer/async 的内联脚本**，只做一件事——
+      把存档里的 srv 读出来，立刻调整两套 .sc-body 的 hidden 与服务器卡高亮。
+      它不依赖后面的任何函数（不碰 state、不碰 apply），真正的筛选逻辑仍由末尾脚本接管，
+      这里只是把「首帧画错再跳」那段时间抹掉。
+
+      位置很关键，两个坑都踩过：
+        · 放在列表**之前** → querySelectorAll 拿到空集合（节点还没解析出来），等于没修；
+        · 放在末尾脚本里 → 太晚，日服列表已经画出来了，照样会闪。
+      所以只能紧跟列表、且是同步脚本。 */}
+    <script is:inline>
+      (function () {
+        // 只读 srv 一个字段；读不到就什么都不做，保持服务端默认
+        var srv = null;
+        try {
+          var raw = localStorage.getItem('jb-songs-filter-v1');
+          if (raw) {
+            var o = JSON.parse(raw);
+            if (o && (o.srv === 'jp' || o.srv === 'cn')) srv = o.srv;
+          }
+        } catch (e) {}
+        if (!srv) return;
+        var bodies = document.querySelectorAll('.sc-body[data-srv]');
+        for (var i = 0; i < bodies.length; i++) {
+          bodies[i].hidden = bodies[i].getAttribute('data-srv') !== srv;
+        }
+        // 服务器卡的高亮也要同步，否则卡片显示国服、按钮却亮着日服
+        var btns = document.querySelectorAll('.sc-srv-b[data-srv]');
+        for (var j = 0; j < btns.length; j++) {
+          var on = btns[j].getAttribute('data-srv') === srv;
+          btns[j].classList.toggle('is-on', on);
+          btns[j].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        // 把 root 的 data-srv 也改掉：末尾脚本初始化 state.srv 时读的就是它，
+        // 这样两边口径一致，不会出现"显示国服但 state 还是日服"
+        var rootEl = document.getElementById('songsRoot');
+        if (rootEl) rootEl.setAttribute('data-srv', srv);
+        // 分区 / 范围两套 chip 是按 srv 分组的，也要先切对，否则面板里亮着错的那套
+        var sets = document.querySelectorAll('.sc-cat-set[data-srv], .sc-scope-set[data-srv]');
+        for (var k = 0; k < sets.length; k++) {
+          sets[k].hidden = sets[k].getAttribute('data-srv') !== srv;
+        }
+      })();
+    </script>
 
     {/* 空态：整页零命中时给明确文案 + 一键重置，而不是留一片空白 */}
     <div class="sc-empty" id="scEmpty" hidden>
