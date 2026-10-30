@@ -994,11 +994,19 @@ const SORTS = [
         // 之前只在各事件分支里各自 setAttribute，只要有一条路径忘记同步，
         // 读屏听到的选中态就会和实际筛选状态不符。改成「由 state 反推 UI」：
         // 每次 apply() 都按当前 state 重写一遍，谁调 apply 都不会漏。
+        // 【临时埋点】定位切服卡顿，验完即删
+        window.__prof = window.__prof || {};
+        window.__prof.afterMatch = Math.round(performance.now() - t0);
+
         syncPressed();
+        window.__prof.afterSyncPressed = Math.round(performance.now() - t0);
 
         applySort();
+        window.__prof.afterSort = Math.round(performance.now() - t0);
         stagger();
+        window.__prof.afterStagger = Math.round(performance.now() - t0);
         refreshIntrinsic();
+        window.__prof.afterIntrinsic = Math.round(performance.now() - t0);
         // 每次 apply 后落盘：所有用户操作（搜索、chip、下拉、限时曲、切服、重置）
         // 最终都会走到这里，一处写入比在每个事件里各写一遍可靠。
         // 初始化时的 apply() 也会写一次，写的是刚读回来的同一份值，无副作用。
