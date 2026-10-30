@@ -36,7 +36,7 @@ Astro.response.headers.set(
 
 // 世代 → 元信息（年份 + 稳定 slug）。
 const genMetaOf = (gen: string) => GEN_ORDER.find((g) => g.k === gen);
-const yearOf = (gen: string) => genMetaOf(gen)?.y ?? '';
+const dateOf = (gen: string) => genMetaOf(gen)?.date ?? '';
 
 // 每个分区实际会出现的世代（2026-10-24 分区改名后重算）。
 //
@@ -534,7 +534,7 @@ const SORTS = [
             <em>{srvTotal(srv)} 首</em>
           </header>
           {srvGenOrder(srv).map((gen) => (
-            <GenBlock gen={gen} list={byGen[srv][gen]} year={yearOf(gen)} eager={EAGER} srv={srv} markPick />
+            <GenBlock gen={gen} list={byGen[srv][gen]} date={dateOf(gen)} eager={EAGER} srv={srv} markPick />
           ))}
         </section>
 
@@ -944,7 +944,7 @@ const SORTS = [
       }
 
       // 【2026-10-30 简化】原来这里有一段「世代 新→旧」的专门分支：
-      // 给 .sc-sec 切 flex、按 data-y 倒序写 .sc-gen 的 order、并把块内卡片 order 清空。
+      // 给 .sc-sec 切 flex、按 data-date 倒序写 .sc-gen 的 order、并把块内卡片 order 清空。
       // 主人已要求删掉那个排序项，整段随之删除。
       // 留下的唯一职责：对每个可见网格内的卡片写 order —— 注意**不碰 .sc-gen 的 order**，
       // 世代块的先后始终由 DOM 顺序（GEN_ORDER 旧→新）决定。

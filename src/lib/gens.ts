@@ -1,4 +1,4 @@
-// 世代的静态元信息（key / URL slug / 服务器 / 年份）。
+// 世代的静态元信息（key / URL slug / 服务器 / 上线日）。
 // 曲目数据在 D1，但「世代 → 年份」这类口径不是数据库里的列，
 // 与 scripts/db/build-db.cjs 的 GEN_ORDER 保持一致（CONTEXT.md 定的口径）。
 //
@@ -8,22 +8,28 @@
 //   * 与主题 key（ThemeScript 的 k：bta / yymf / saucerfulfill…）是两回事：
 //     主题是视觉皮肤（clan 一个世代拆 4 套），slug 只指世代本身，和曲目数据一一对应。
 //     所以这里用「能读懂的短横线写法」，不套主题文件名。
-export type GenMeta = { k: string; slug: string; s: 'jp' | 'cn'; y: string };
+// 【2026-10-31 主人要求】世代标题里的年份从「2008」改成完整「年-月-日」，
+// 数据源 https://arcade-songs.zetaraku.dev/jubeat/timeline/（他给的时间轴截图逐条抄下来）。
+// 该时间轴上还有 ripples / knit / copious 的 **APPEND 子代**（2010-03-18 / 2011-03-23 / 2012-03-14）——
+// 主人明确「APPEND 代年月日不写」：本站曲库的世代只到基代、没有 APPEND 这一档，
+// 所以这里不给 APPEND 建条目，也别把子代的日期安到基代头上。
+// 音乐魔方不在那个时间轴上，日期由主人直接给出（2025-12-27）。
+export type GenMeta = { k: string; slug: string; s: 'jp' | 'cn'; /** 上线日，写死成 YYYY-MM-DD */ date: string };
 
 export const GEN_ORDER: GenMeta[] = [
-  { k: 'jubeat', slug: 'jubeat', s: 'jp', y: '2008' },
-  { k: 'ripples', slug: 'ripples', s: 'jp', y: '2009' },
-  { k: 'knit', slug: 'knit', s: 'jp', y: '2010' },
-  { k: 'copious', slug: 'copious', s: 'jp', y: '2011' },
-  { k: 'saucer', slug: 'saucer', s: 'jp', y: '2012' },
-  { k: 'saucer fulfill', slug: 'saucer-fulfill', s: 'jp', y: '2014' },
-  { k: 'prop', slug: 'prop', s: 'jp', y: '2015' },
-  { k: 'Qubell', slug: 'qubell', s: 'jp', y: '2016' },
-  { k: 'clan', slug: 'clan', s: 'jp', y: '2017' },
-  { k: 'festo', slug: 'festo', s: 'jp', y: '2018' },
-  { k: 'Ave.', slug: 'ave', s: 'jp', y: '2022' },
-  { k: 'beyond the Ave.', slug: 'beyond-the-ave', s: 'jp', y: '2024' },
-  { k: '音乐魔方', slug: 'yinyue-mofang', s: 'cn', y: '2023' },
+  { k: 'jubeat', slug: 'jubeat', s: 'jp', date: '2008-07-24' },
+  { k: 'ripples', slug: 'ripples', s: 'jp', date: '2009-08-05' },
+  { k: 'knit', slug: 'knit', s: 'jp', date: '2010-07-29' },
+  { k: 'copious', slug: 'copious', s: 'jp', date: '2011-09-15' },
+  { k: 'saucer', slug: 'saucer', s: 'jp', date: '2012-09-25' },
+  { k: 'saucer fulfill', slug: 'saucer-fulfill', s: 'jp', date: '2014-03-03' },
+  { k: 'prop', slug: 'prop', s: 'jp', date: '2015-02-20' },
+  { k: 'Qubell', slug: 'qubell', s: 'jp', date: '2016-03-30' },
+  { k: 'clan', slug: 'clan', s: 'jp', date: '2017-07-26' },
+  { k: 'festo', slug: 'festo', s: 'jp', date: '2018-09-05' },
+  { k: 'Ave.', slug: 'ave', s: 'jp', date: '2022-08-03' },
+  { k: 'beyond the Ave.', slug: 'beyond-the-ave', s: 'jp', date: '2023-09-20' },
+  { k: '音乐魔方', slug: 'yinyue-mofang', s: 'cn', date: '2025-12-27' },
 ];
 
 export const GEN_JP = GEN_ORDER.filter((g) => g.s === 'jp');
