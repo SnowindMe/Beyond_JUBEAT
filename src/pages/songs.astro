@@ -658,7 +658,11 @@ const SORTS = [
         }
       }
 
+      // 重置期间临时禁用落盘：见 resetAll() 里的说明
+      var suppressSave = false;
+
       function saveState() {
+        if (suppressSave) return;
         try {
           localStorage.setItem(SAVE_KEY, JSON.stringify({
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
@@ -1372,10 +1376,13 @@ const SORTS = [
         var scSet = root.querySelector('.sc-scope-set[data-srv="' + state.srv + '"]');
         if (scSet) setChipGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', scSet.querySelector('.sc-chip[data-scope="all"]'));
         // 【2026-10-30】重置是用户的明确意图，要把存档一起清掉。
-        // 否则 apply() 里那次 saveState 会把「全默认」写回去——虽然这次结果一样，
-        // 但将来默认值变了，旧存档会一直把用户钉在今天这套默认值上。
+        // ⚠ 实测踩到：只 removeItem 不够——紧接着的 apply() 里又会 saveState()，
+        // 把「全默认」原样写回去，存档等于没清（测出来的 localStorage 仍有完整 JSON）。
+        // 故用 suppressSave 在这一次 apply 期间禁用写入，跑完再恢复。
+        suppressSave = true;
         try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
         apply();
+        suppressSave = false;   // 只在这一次 apply 期间禁写，之后恢复正常存档
       }
 
       // 【2026-10-28 显示限时曲】独立开关：change 即生效（不用点应用）。
