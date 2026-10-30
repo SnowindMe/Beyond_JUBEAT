@@ -215,7 +215,7 @@ async function serve(
 
   try {
     // B1. 带 Range：把 Range 原样转给上游，它的 206 直接流回浏览器（首播最快路径）。
-    //     同时在后台拉一份完整版写进缓存，供后续请求与拖动进度条使用。
+    //     **不在这次请求里补写缓存** —— 见下面「为什么不 waitUntil 拉整份」。
     if (rangeHeader) {
       const up = await fetch(target, { headers: { ...UA, range: rangeHeader }, redirect: 'follow' });
       if (!up.ok && up.status !== 206) {
@@ -226,9 +226,13 @@ async function serve(
       const cr = up.headers.get('content-range');
       if (cr) headers['content-range'] = cr;
 
-      // 后台补一份完整对象进缓存（不阻塞本次响应）
-      locals.cfContext.waitUntil(cacheFull(cache, key, target));
-
+      // 【2026-10-30 实测修正：这里原先调 cacheFull() 补整份缓存，反而拖慢首播】
+      // 现象：Range 请求 TTFB 从上游的 52–201ms 涨到 4.6s。根因是
+      // waitUntil 里又发了一条「拉 1.2MB 整份」的 fetch，与本次响应抢同一条出口，
+      // 而 CF 到上游是跨墙线路，带宽被占满后本次响应的首字节也跟着排队。
+      // 现在改成：只在「无 Range 的整份请求」时用 tee 顺带写缓存（那条路径本来就是
+      // 从头读到尾，tee 不额外增加出口流量）。Range 路径只透传、不写缓存。
+      // 代价：纯拖动进度条产生的 Range 请求会一直回源；但首播快才是主人要的。
       return new Response(up.body, { status: up.status === 206 ? 206 : 200, headers });
     }
 
@@ -269,32 +273,6 @@ async function serve(
     return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, false) });
   } catch (e) {
     return errorResponse(e);
-  }
-}
-
-/** 后台把完整音频写进缓存（用于「Range 未命中」那条路径） */
-async function cacheFull(cache: Cache, key: Request, target: string): Promise<void> {
-  try {
-    const up = await fetch(target, { headers: UA, redirect: 'follow' });
-    if (!up.ok) return;
-    const type = up.headers.get('content-type') || 'audio/ogg';
-    const size = Number(up.headers.get('content-length') ?? 0);
-    if (up.body) {
-      await cache.put(
-        key,
-        new Response(up.body, {
-          headers: { 'content-type': type, ...(size ? { 'content-length': String(size) } : {}) },
-        })
-      );
-    } else {
-      const buf = await up.arrayBuffer();
-      await cache.put(
-        key,
-        new Response(buf, { headers: { 'content-type': type, 'content-length': String(buf.byteLength) } })
-      );
-    }
-  } catch (e) {
-    console.warn('[audio] background cache full failed', String(e));
   }
 }
 
