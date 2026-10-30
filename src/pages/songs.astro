@@ -1128,6 +1128,9 @@ const SORTS = [
       var intrinsicCols = 0;
       var intrinsicGap = 0;
       var intrinsicCardH = 0;
+      // 块头（世代标题行）高度。12 个块实测全是 44px，量一次共用即可 ——
+      // 千万别在 refreshIntrinsicNow 里逐块去读（见下面「三修」注释）。
+      var intrinsicHead = 40;
       function measureGrid() {
         var sec = root.querySelector('.sc-body:not([hidden]) .sc-sec:not([hidden])');
         var grid = sec && sec.querySelector('.sc-grid');
@@ -1143,6 +1146,12 @@ const SORTS = [
         intrinsicCols = cols;
         intrinsicGap = parseFloat(cs.rowGap) || 0;
         intrinsicCardH = h;
+        // 块头高度就地取当前这一块（它就在视口里、布局已算过，这一读不额外触发重排）
+        var head = sec.querySelector('.sc-gen-h');
+        if (head) {
+          var hh = head.getBoundingClientRect().height;
+          if (hh) intrinsicHead = hh;
+        }
         return true;
       }
       // ---------------------------------------------------------------------
@@ -1163,10 +1172,32 @@ const SORTS = [
       // 所以：把「测量 + 写入」整段推迟到两帧之后（rAF × 2）。
       // 写法上用一个小令牌防抖，保证连续切服只算最后一次。
       // ---------------------------------------------------------------------
+      // ---------------------------------------------------------------------
+      // 【2026-10-30 二修（废）/三修：这个函数一次几何读取都不该做】
+      //
+      // v1.40.1 把整段推迟到两帧后，点击回调的同步耗时确实降到 45~95ms（实测），
+      // 但那 700ms 并没有消失，只是挪到了两帧之后。线上逐帧实测（点服务器卡）：
+      //   · 列表切换发生在 ~154ms 那一帧（hidden 是离散改动，立刻重绘）
+      //   · 紧接着主线程被冻结 736~1367ms（PerformanceObserver 记到一条 1367ms 长任务）
+      //   · 冻结期间服务器卡的高亮过渡（.sc-srv-b 有 0.2s 的 border/background 过渡）
+      //     卡在半途不动 —— 主人看到的就是「下面列表已经切了，上面选项卡停顿一会才切过去」
+      //
+      // 二修先试了「把所有块头高度一次性读完、再统一写」，结果**没用**（本地同源复现实测）：
+      //   13 次 getBoundingClientRect 仍然花了 604ms，逐次耗时
+      //   0.1 / 0 / 0 / 0 / 61.5 / 132.9 / 37.1 / 32.1 / 66.2 / 42.7 / 86.7 / 24.9 / 120.2 ms
+      //   —— 读第一张卡那次是 0.1ms，之后每读一个 .sc-gen-h 就要几十上百毫秒。
+      // 原因不在「写读交替」，而在块本身：.sc-gen 带 content-visibility: auto，
+      // 屏外的块是被 skip 的；读它的后代几何 = 让这个块「变相关」，浏览器就得把
+      // 这个块里的上百张卡重新排一遍。读 12 个块头 = 重排 12 次。
+      //
+      // 所以三修：块头高度只在 measureGrid() 里量**当前视口内那一块**的（同一份布局，实测 0.1ms 级），
+      // 12 个块共用同一个值（实测 12 个块头全是 44px）；refreshIntrinsicNow 里只写不读。
+      // ---------------------------------------------------------------------
       var intrinsicToken = 0;
       function refreshIntrinsicNow() {
         if (!measureGrid()) return;
         var secs = root.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden])');
+        // 只写不读：写 style 不会让布局失效，重排交给浏览器在下一帧自己批处理。
         for (var s = 0; s < secs.length; s++) {
           var gens = secs[s].querySelectorAll('.sc-gen');
           for (var g = 0; g < gens.length; g++) {
@@ -1175,9 +1206,7 @@ const SORTS = [
             var vis = el.querySelectorAll('.sc-card:not([hidden])').length;
             if (el.hidden || vis === 0) { el.style.containIntrinsicSize = ''; continue; }
             var rows = Math.ceil(vis / intrinsicCols);
-            var headEl = el.querySelector('.sc-gen-h');
-            var head = headEl ? headEl.getBoundingClientRect().height : 40;
-            var total = rows * intrinsicCardH + (rows - 1) * intrinsicGap + head;
+            var total = rows * intrinsicCardH + (rows - 1) * intrinsicGap + intrinsicHead;
             el.style.containIntrinsicSize = 'auto ' + total.toFixed(2) + 'px';
           }
         }
