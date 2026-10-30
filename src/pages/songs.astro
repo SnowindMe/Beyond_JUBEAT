@@ -916,6 +916,13 @@ const SORTS = [
         // 不是「页面看起来变快的那一瞬」，别把它当 FPS 指标用。
         var t0 = performance.now();
         root.setAttribute('data-srv', state.srv);
+        // 【2026-10-30】把当前服务器同步到 <html data-srv-pref>。
+        // 那条属性被 songs.css 的规则引用（首帧就隐藏另一套 body，防止刷新年闪日服）。
+        // 如果切服时不更新它，CSS 会一直压着用户刚切过去的那套 body —— 表现为「点了国服没反应」。
+        // 所以这里每次都跟随 state 写一次，CSS 与 JS 两套机制始终指向同一个服务器。
+        if (document.documentElement.getAttribute('data-srv-pref') !== state.srv) {
+          document.documentElement.setAttribute('data-srv-pref', state.srv);
+        }
 
         for (var i = 0; i < srvBtns.length; i++) {
           var on = srvBtns[i].getAttribute('data-srv') === state.srv;

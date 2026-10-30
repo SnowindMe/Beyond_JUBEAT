@@ -104,6 +104,27 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={ogImage} />
+  {/* 【2026-10-30 曲目页服务器首帧预热】主人反馈「选国服后刷新，会先看到日服再跳到国服」。
+      /songs/ 的两套 .sc-body 加起来 1.3MB，服务端永远按日服渲染，
+      而存档里的 srv 要等页面末尾那段脚本才恢复——那时日服已经在 45KB 处被画出来了。
+      实测脚本放在列表之后（1.34MB 处）也来不及：解析到日服 body 时就开始绘制了。
+
+      所以挪到 <head> 来做，并且**不只改 hidden，还写一条 CSS**：
+        html[data-srv-pref="cn"] .sc-body[data-srv="jp"] { display: none }
+      这样样式表一到位就生效，不依赖任何 JS 执行时机，首帧直接是国服，中间没有可闪的窗口。
+      末尾脚本仍会再设一次 hidden（两套机制一致，互相兜底）。 */}
+  <script is:inline>
+    (function () {
+      try {
+        var raw = localStorage.getItem('jb-songs-filter-v1');
+        if (!raw) return;
+        var o = JSON.parse(raw);
+        if (o && (o.srv === 'jp' || o.srv === 'cn')) {
+          document.documentElement.setAttribute('data-srv-pref', o.srv);
+        }
+      } catch (e) {}
+    })();
+  </script>
   {/* 首屏主题预热：在 CSS 应用前就把世代写回 <html>，避免老用户刷新时先闪一下 ave；
       同时提前 preload 该世代背景图（背景由 JS 设 background-image，浏览器发现得晚）。 */}
   <script is:inline>

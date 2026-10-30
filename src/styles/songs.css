@@ -128,6 +128,25 @@
     display: none;
 }
 
+/* 【2026-10-30 首帧就显示正确服务器】<head> 里那段脚本会把存档的 srv 写到
+   <html data-srv-pref="jp|cn">。这里据此直接隐藏另一套 body，
+   于是样式表一到位就生效——不依赖任何 JS 执行时机，也不会出现
+   「先画日服、再跳国服」的中间帧。
+   必要性：两套 .sc-body 合计 1.3MB，日服 body 在 45KB 处就开始绘制，
+   而存档恢复原本要等页面末尾（1.34MB 处）的脚本，根本来不及。 */
+html[data-srv-pref="cn"] .sc-body[data-srv="jp"],
+html[data-srv-pref="jp"] .sc-body[data-srv="cn"] {
+    display: none;
+}
+/* 分区 / 范围两套 chip 同理：它们也按服务器分组渲染，
+   晚一步切会让面板里短暂亮着另一台服务器的那套。 */
+html[data-srv-pref="cn"] .sc-cat-set[data-srv="jp"],
+html[data-srv-pref="cn"] .sc-scope-set[data-srv="jp"],
+html[data-srv-pref="jp"] .sc-cat-set[data-srv="cn"],
+html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
+    display: none;
+}
+
 /* ---------- 切换过渡（主人 2026-10-22：切换有些生硬） ----------
    原来靠 hidden 一换就是硬跳。这里利用「display:none → block 会重播 animation」的特性
    做纯 CSS 过渡，JS 逻辑不用改：
