@@ -130,7 +130,7 @@ const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)
 // 这一版改成**唱片内页**的标准结构：
 //   左栏只有封面（208px，视觉锤）；
 //   右栏艺术主体：艺人 → 曲名 → 定数条（信息重心）；
-//   全部元数据（songId / 世代 / 分区 / 服务器 / BPM / 上线 / 解禁 / 备注）
+//   全部元数据（songId / 世代 / 分区 / 服务器 / 上线 / 解禁 / 备注；BPM 在播放条徽章上）
 //   统一收进底部横条——它本来就该是「唱片背签」式的密集小字区，铺满宽度。
 // 好处：两栏高度接近，版面不用硬居中；元数据集中成一区比散落两处更好扫读。
 // 仍然只渲染有值的项，不摆「—」占位。
@@ -140,7 +140,8 @@ type Meta = { k: string; v: string; mono?: boolean };
 const metaFoot: Meta[] = song
   ? [
       { k: '服务器', v: servers },
-      ...(song.bpm ? [{ k: 'BPM', v: song.bpm, mono: true }] : []),
+      // 【2026-10-31 主人「把如图的 BPM 给去掉」】BPM 已由播放条左上角的徽章承担，
+      // 底部背签不再重复同一个字段（他此前也有「同一份信息别出现两处」的口径）。
       ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
       ...(song.unlock ? [{ k: '解禁', v: song.unlock }] : []),
       ...(song.kind === 'synthetic' ? [{ k: '备注', v: '官方 songId 暂缺，此处为占位 id' }] : []),
