@@ -236,12 +236,19 @@ const BANDS = [
   { v: '10', label: '10' },
   { v: '10p', label: '10+' },
 ] as const;
+// 【2026-10-30 主人：「难度档的『全部档』可以去掉了，默认不选」】
+// 去掉后 state.diff 的合法值只剩 bsc/adv/ext 三档，默认值为 ''（= 不选）。
+// 这一删顺带修好了一个老 bug：原来 'all' 会让 matchCard 直接 return true，
+// 把后面的「定数区间」判断整段短路掉 —— 表现为「只选定数 10+ 完全不生效」。
+// 现在「不做难度筛选」用空串表示，走的是「逐档判断、任一档命中即可」的逻辑，
+// 区间筛选因此能独立生效。详见 matchCard 里 diff 那段的注释。
 const DIFFS = [
-  { v: 'all', label: '全部档' },
   { v: 'bsc', label: 'BSC' },
   { v: 'adv', label: 'ADV' },
   { v: 'ext', label: 'EXT' },
 ] as const;
+/** 难度档的「未选」状态。用空串而不是 'all'：'all' 是个真实档位名，会让人以为它是四选一里的一项。 */
+const DIFF_NONE = '';
 // 排序选项（2026-10-25 主人：加 songId 排序，且**默认改为 songId 升序**）。
 // DEFAULT_SORT 单独抽出来，因为「默认值」还散落在三处判据里（state 初值、
 // resetAll、以及「是否在筛选」的提示条判断），必须都引用这一个常量，
@@ -415,8 +422,9 @@ const SORTS = [
           <div class="sc-pf-half">
             <span class="sc-pf-k">难度档</span>
             <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
+              {/* 默认一个都不选（主人：「默认不选」），所以这里没有初始 is-on */}
               {DIFFS.map((d) => (
-                <button type="button" class={`sc-chip sc-chip-sm${d.v === 'all' ? ' is-on' : ''}`} data-diff={d.v} aria-pressed={d.v === 'all' ? 'true' : 'false'}>{d.label}</button>
+                <button type="button" class="sc-chip sc-chip-sm" data-diff={d.v} aria-pressed="false">{d.label}</button>
               ))}
             </div>
           </div>
@@ -641,7 +649,7 @@ const SORTS = [
         cat: 'all',
         q: '',
         gen: 'all',
-          diff: 'all',   // all | bsc | adv | ext
+          diff: '',     // '' = 不按难度档筛 | bsc | adv | ext
         band: 'all',   // all | lt7 | 7 | 8 | 9 | 9p | 10 | 10p（2026-10-28 改八档）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
@@ -669,7 +677,7 @@ const SORTS = [
         cat: null,          // 分区名随服务器不同，只校验是字符串，交给 apply 去判
         q: null,            // 搜索词任意字符串
         gen: null,
-        diff: ['all', 'bsc', 'adv', 'ext'],
+        diff: ['', 'bsc', 'adv', 'ext'],
         band: ['all', 'lt7', '7', '8', '9', '9p', '10', '10p'],
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
@@ -802,15 +810,41 @@ const SORTS = [
             card.getAttribute('data-scope') !== state.scope) return false;
         if (state.gen !== 'all' && card.getAttribute('data-gen') !== state.gen) return false;
 
-        // 难度档 + 定数区间
-        if (state.diff === 'all') {
-          // 全部档：任务书要求「跳过该卡」，即不按定数筛——缺值的卡也算命中
-          return true;
+        // ---- 难度档 + 定数区间 ----
+        //
+        // 【2026-10-30 重写：删掉「全部档」时顺带修了一个 P0】
+        //
+        // 旧逻辑是：
+        //   if (state.diff === 'all') return true;   ← 致命短路
+        //   var v = lvOf(card, state.diff); ...
+        // 那句 return true 排在「定数区间」判断**之前**，于是「'全部档' + 选了 10+」
+        // 会直接命中所有卡 —— 表现为「只点定数区间完全不生效」（实测命中 1150 首，
+        // 正确值 147），但提示条仍显示「筛选 · 1」，看着像生效了。
+        //
+        // 现在的语义分三种情况，互不短路：
+        //   ① 没选难度档、没选定数区间   → 这一段不过滤（继续往下，最终 return true）
+        //   ② 选了难度档、没选定数区间   → 该档有值即命中
+        //   ③ 选了定数区间（无论有没有选难度档）→ 在候选档位里找，任一档的定数值落在区间内即命中
+        // 情况③是这次真正修好的地方：定数区间可以独立使用，不再被难度档绑架。
+        var bandOn = state.band !== 'all';
+        var diffOn = state.diff !== DIFF_NONE && state.diff !== 'all';
+
+        if (!bandOn && !diffOn) return true;            // ① 两者都没选
+
+        if (diffOn) {
+          var vOne = lvOf(card, state.diff);
+          if (vOne === null) return false;              // ② 缺这一档：不命中
+          return bandOn ? BANDS[state.band](vOne) : true;
         }
-        var v = lvOf(card, state.diff);
-        if (v === null) return false;                 // 缺这一档：不参与区间筛选
-        if (state.band === 'all') return true;        // 只看档位不看区间
-        return BANDS[state.band](v);
+
+        // ③ 只选了定数区间：BSC/ADV/EXT 任一档落在区间内就算命中。
+        // 注意「缺这一档」的卡（定数为 null）不算命中——空串不是 0，不能拿去比区间。
+        var diffs = ['bsc', 'adv', 'ext'];
+        for (var di = 0; di < diffs.length; di++) {
+          var vAny = lvOf(card, diffs[di]);
+          if (vAny !== null && BANDS[state.band](vAny)) return true;
+        }
+        return false;
       }
 
       // ---- 排序：只写 style.order ----
@@ -973,7 +1007,7 @@ const SORTS = [
         // 必须让按钮自己说明「有几项条件正在生效」，否则用户不知道列表为什么变少了。
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
-                          (state.diff !== 'all' ? 1 : 0) +
+                          (state.diff !== '' ? 1 : 0) +
                           (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
@@ -1127,6 +1161,8 @@ const SORTS = [
 
       // 把 state → aria-pressed / .is-on 的映射集中在一处
       function syncPressed() {
+        // state.diff 为 '' （未选）时，syncGroup 里「attr === ''」没有一个 chip 命中，
+        // 于是所有档都取消选中 —— 正是「默认不选」想要的表现，不需要额外分支。
         syncGroup('[data-diff]', 'data-diff', state.diff);
         syncGroup('[data-band]', 'data-band', state.band);
         syncGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
@@ -1412,7 +1448,7 @@ const SORTS = [
 
       function resetAll() {
         state.q = ''; state.gen = 'all';
-        state.diff = 'all'; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
+        state.diff = ''; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
         state.cat = 'all'; state.scope = 'all'; state.showLimited = false;
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
@@ -1421,7 +1457,12 @@ const SORTS = [
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
-        setChipGroup('[data-diff]', root.querySelector('[data-diff="all"]'));
+        // 难度档没有「全部」chip 了：重置 = 让所有 chip 都取消选中
+        var dChips = root.querySelectorAll('[data-diff]');
+        for (var dc = 0; dc < dChips.length; dc++) {
+          dChips[dc].classList.remove('is-on');
+          dChips[dc].setAttribute('aria-pressed', 'false');
+        }
         setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
         var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');
         if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
@@ -1516,8 +1557,22 @@ const SORTS = [
 
         var dChip = t.closest('[data-diff]');
         if (dChip) {
-          state.diff = dChip.getAttribute('data-diff');
-          setChipGroup('[data-diff]', dChip);
+          // 【2026-10-30 删掉「全部档」后必须补这个：点已选中的档 = 取消选择】
+          // 原来「回到不筛」是靠点「全部档」这个 chip 实现的；chip 没了，
+          // 若不补这个开关，用户选了 EXT 就再也回不到"不按难度筛"的状态
+          // （只能点面板底部的重置全部，那会把其他条件一起清掉，太重）。
+          var clicked = dChip.getAttribute('data-diff');
+          if (state.diff === clicked) {
+            state.diff = '';
+            var chips = root.querySelectorAll('[data-diff]');
+            for (var ci = 0; ci < chips.length; ci++) {
+              chips[ci].classList.remove('is-on');
+              chips[ci].setAttribute('aria-pressed', 'false');
+            }
+          } else {
+            state.diff = clicked;
+            setChipGroup('[data-diff]', dChip);
+          }
           apply(); return;
         }
 
