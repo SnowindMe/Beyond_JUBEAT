@@ -131,6 +131,17 @@ async function serve(
   const rel = MAP[id];
   if (!rel) return notFound('no audio for this song');
 
+  // 【2026-10-30 分段计时】同一个接口测出过 4ms 与 17.6s 两个值，无法判断改动是否有效。
+  // 先给每一步打时间戳，用 x-timing 头返回，用于区分耗时属于「我们的代码」还是
+  // 「CF→上游跨墙线路」。拿到归属再决定怎么优化，不在噪声上做 A/B。
+  //   t0 = 进入 handler
+  //   cacheEnd = 缓存查询结束（有没有命中）
+  //   upStart / upFirstByte = 发起上游请求 / 上游响应头到达
+  //   handlerEnd = 准备返回响应
+  const T0 = Date.now();
+  const mark: string[] = [];
+  const lap = (label: string) => mark.push(label + '=' + (Date.now() - T0));
+
   const cache = caches.default;
   const key = cacheKey(id, new URL(request.url).origin);
   const rangeHeader = request.headers.get('range');
@@ -159,6 +170,7 @@ async function serve(
   }
 
   const hit = await cache.match(key);
+  lap(hit ? 'cache=HIT' : 'cache=MISS');
 
   // ===================================================================
   // 情况 A：缓存命中
@@ -181,7 +193,7 @@ async function serve(
       }
       return new Response(body, {
         status: 200,
-        headers: baseHeaders(type, size, true),
+        headers: { ...baseHeaders(type, size, true), 'x-timing': mark.join(' ') },
       });
     }
 
@@ -199,6 +211,7 @@ async function serve(
         headers: {
           ...baseHeaders(type, r.end - r.start + 1, true),
           'content-range': `bytes ${r.start}-${r.end}/${size}`,
+          'x-timing': mark.join(' '),
         },
       });
     }
@@ -217,7 +230,9 @@ async function serve(
     // B1. 带 Range：把 Range 原样转给上游，它的 206 直接流回浏览器（首播最快路径）。
     //     **不在这次请求里补写缓存** —— 见下面「为什么不 waitUntil 拉整份」。
     if (rangeHeader) {
+      lap('upStart');
       const up = await fetch(target, { headers: { ...UA, range: rangeHeader }, redirect: 'follow' });
+      lap('upFirstByte');
       if (!up.ok && up.status !== 206) {
         throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
       }
@@ -233,11 +248,14 @@ async function serve(
       // 现在改成：只在「无 Range 的整份请求」时用 tee 顺带写缓存（那条路径本来就是
       // 从头读到尾，tee 不额外增加出口流量）。Range 路径只透传、不写缓存。
       // 代价：纯拖动进度条产生的 Range 请求会一直回源；但首播快才是主人要的。
+      headers['x-timing'] = mark.join(' ');
       return new Response(up.body, { status: up.status === 206 ? 206 : 200, headers });
     }
 
     // B2. 无 Range：整份流式透传，并把同一条流 tee 一份写进缓存。
+    lap('upStart');
     const up = await fetch(target, { headers: UA, redirect: 'follow' });
+    lap('upFirstByte');
     if (!up.ok) throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
     const type = up.headers.get('content-type') || 'audio/ogg';
     const size = Number(up.headers.get('content-length') ?? 0);
@@ -262,10 +280,9 @@ async function serve(
     // 带宽争抢问题也验证过了：这次后台补的是**整份请求自己**触发的，
     // 不像之前 Range 路径那样在关键路径上抢出口；且探针请求本身不参与首播时序。
     locals.cfContext.waitUntil(cacheFullInBackground(cache, key, target));
-    return new Response(up.body, {
-      status: 200,
-      headers: baseHeaders(type, size, false),
-    });
+    const h2 = baseHeaders(type, size, false);
+    h2['x-timing'] = mark.join(' ');
+    return new Response(up.body, { status: 200, headers: h2 });
   } catch (e) {
     return errorResponse(e);
   }
