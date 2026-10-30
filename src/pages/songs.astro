@@ -1024,7 +1024,9 @@ const SORTS = [
               }
               genEl.hidden = hitGen === 0;
               var cnt = genEl.querySelector('.sc-gen-h i');
-              if (cnt) cnt.textContent = String(hitGen);
+              // 曲数带单位（2026-10-31 主人要求）——这里必须跟 GenBlock.astro 的服务端渲染保持一致：
+              // 服务端写的是「N 首」，脚本若只写数字，页面加载完就被覆盖回「20」，单位会消失。
+              if (cnt) cnt.textContent = hitGen + ' 首';
               hitSec += hitGen;
             }
             sec.hidden = hitSec === 0;
