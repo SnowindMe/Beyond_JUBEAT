@@ -242,34 +242,26 @@ async function serve(
     const type = up.headers.get('content-type') || 'audio/ogg';
     const size = Number(up.headers.get('content-length') ?? 0);
 
-    if (up.body) {
-      // tee：一条给浏览器，一条给缓存。写缓存失败只影响下次是否命中，不影响本次播放。
-      const [toClient, toCache] = up.body.tee();
-      locals.cfContext.waitUntil(
-        cache
-          .put(
-            key,
-            new Response(toCache, {
-              headers: { 'content-type': type, ...(size ? { 'content-length': String(size) } : {}) },
-            })
-          )
-          .catch((e) => console.warn('[audio] cache put failed', String(e)))
-      );
-      const headers = baseHeaders(type, size, false);
-      return new Response(toClient, { status: 200, headers });
-    }
-
+    // 【2026-10-30 又一坑：不能拿 ReadableStream / tee 分支去 cache.put】
+    // 实测：改成 `new Response(toCache, ...)` 之后，缓存**一次都没写成功**
+    // （同一首歌连发 3 次 HEAD 全是 MISS，等于永远回源、永远慢）。
+    // CF Cache API 对带 ReadableStream body 的响应不吃，且失败被 .catch 吞成一行 warn，
+    // 表面上「没报错」，实际静默失效 —— 比直接报错更难查。
+    // 所以这里退回「先读完整份成 ArrayBuffer 再 put」，这是唯一稳定能写进缓存的形态。
+    //
+    // 注意：这条路径只在**无 Range 的整份请求**上走。首播的 Range 请求走上面 B1 透传，
+    // 不受这里影响。整份请求本来就是"从头读到尾"，多一次内存拷贝不值得为它牺牲缓存。
     const buf = await up.arrayBuffer();
-    locals.cfContext.waitUntil(
-      cache
-        .put(
-          key,
-          new Response(buf.slice(0), {
-            headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
-          })
-        )
-        .catch((e) => console.warn('[audio] cache put failed', String(e)))
-    );
+    try {
+      await cache.put(
+        key,
+        new Response(buf.slice(0), {
+          headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
+        })
+      );
+    } catch (e) {
+      console.warn('[audio] cache put failed', String(e));
+    }
     return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, false) });
   } catch (e) {
     return errorResponse(e);
