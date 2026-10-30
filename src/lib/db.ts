@@ -11,6 +11,17 @@
 import searchKeys from '../data/search-keys.json';
 const SEARCH_KEYS = searchKeys as Record<string, string>;
 
+/** 库里的 JSON 列（notecounts / holds）→ 对象；脏数据返回 null，页面见到 null 就当未知。 */
+const parseJsonCol = (v: string | null): Record<string, number> | null => {
+  if (!v) return null;
+  try {
+    const o = JSON.parse(String(v));
+    return o && typeof o === 'object' ? o : null;
+  } catch {
+    return null;
+  }
+};
+
 /** 给一首曲挂上读音索引。D1 与 dev 快照两条路径都过这里，避免只改一边。 */
 const withKeys = (s: Song): Song => {
   const sk = SEARCH_KEYS[s.id];
@@ -40,6 +51,17 @@ export type Song = {
    * 纯派生数据（源就是 title/artist），无值 = 读音与原文相同（纯英文曲名），不需要额外字段。
    */
   sk?: string | null;
+  /**
+   * 是否长押谱：【2026-10-31 主人要求，数据来自 remywiki 的 jubeat 谱面表】
+   * 1 = 至少一个难度有长押；0 = 三难度都没有；null = 没抓到（未知）。
+   * **与 alt 无关**：alt=1 只表示「这行是 [ 2 ] 谱面」（主人 2026-10-31 纠正）。
+   * 判空一律用 === null / == null，别用 falsy —— 0 是「确定没有长押」，和未知不是一回事。
+   */
+  hasHold?: 0 | 1 | null;
+  /** 各难度总键数，如 { bsc: 414, adv: 491, ext: 805 }；null = 未知。 */
+  notecounts?: Record<string, number> | null;
+  /** 各难度长押数，形状同 notecounts。 */
+  holds?: Record<string, number> | null;
 };
 
 type D1Row = {
@@ -48,6 +70,7 @@ type D1Row = {
   bsc: number | null; adv: number | null; ext: number | null; alt: number;
   cover: string | null; added_at: string | null; unlock_note: string | null;
   limited_until: string | null;
+  has_hold: number | null; notecounts: string | null; holds: string | null;
 };
 
 // isolate 级缓存：D1 数据只在部署后变，进程存活期内缓存是安全的。
@@ -74,11 +97,16 @@ const rowToSong = (r: D1Row): Song => ({
   kind: r.id_kind,
   // 限时曲的结束日（YYYY-MM-DD）；null = 非限时。前端按真实今天判断是否已结束。
   lu: r.limited_until || null,
+  // 【2026-10-31 RemyWiki】长押谱判定与键数/长押数；库里是 NULL 就一路保持 null（未知）。
+  hasHold: r.has_hold == null ? null : (r.has_hold ? 1 : 0),
+  notecounts: parseJsonCol(r.notecounts),
+  holds: parseJsonCol(r.holds),
 });
 
 /** 全量曲目（按 gen_name, ext DESC 排好序，直接喂给页面分组） */
 const SQL_ALL = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
+              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until,
+              has_hold, notecounts, holds
          FROM songs
         ORDER BY gen_name, ext DESC`;
 
@@ -107,7 +135,8 @@ export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
 const songCache = new Map<string, { song: Song | null; at: number }>();
 
 const SQL_ONE = `SELECT song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
+              bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until,
+              has_hold, notecounts, holds
          FROM songs
         WHERE song_id = ?`;
 

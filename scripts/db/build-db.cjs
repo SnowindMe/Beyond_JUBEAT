@@ -15,6 +15,9 @@ const SCHEMA_PATH = path.join(ROOT, 'db/schema.sql');
 //   data/xlsx/sheet*.json           国服 xlsx 的解析产物（由 parse-xlsx.cjs 从 source.xlsx 生成）
 const JP_PATH = path.join(ROOT, 'data/upstream/jp-resolved.json');
 const ARCHIVE = path.join(ROOT, 'data/upstream/wiki-v3-songs.json');
+// RemyWiki 谱面数据（2026-10-31 主人要求）：BPM + 是否长押谱 + 各难度总键数 / 长押数。
+// 快照已按 song_id 归并好（抓取产物 → 曲名归一化匹配 → song_id），规则见 data/remy/README.md。
+const REMY_PATH = path.join(ROOT, 'data/remy/by-song-id.json');
 const XLSX_DIR = path.join(ROOT, 'data/xlsx');
 
 const argv = process.argv.slice(2);
@@ -50,6 +53,7 @@ function main() {
   const jp = JSON.parse(fs.readFileSync(JP_PATH, 'utf8'));
   const archive = JSON.parse(fs.readFileSync(ARCHIVE, 'utf8'));
   const archiveById = new Map(archive.songs.map((s) => [String(s.songId), s]));
+  const remy = JSON.parse(fs.readFileSync(REMY_PATH, 'utf8'));
 
   // 国服曲目的分类与日期来自 xlsx 两张表；build-db 只做搬运，不改源数据。
   const cnRows = readCnRows(archiveById);
@@ -127,6 +131,9 @@ function main() {
   const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, cnOverride: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
   // 覆盖表实际命中的 id：跑完后与表里的 key 逐一比对，没命中的要报出来
   const cnOverrideHit = new Set();
+  // 【2026-10-31 RemyWiki】回填前 bpm 为空的行。**必须在事务外声明**：
+  // expect 那一段（事务之后）还要用它算「回填后应剩几行为空」，声明在 try 里就取不到了。
+  const bpmNullBefore = new Set();
   const problems = [];
 
   db.exec('BEGIN');
@@ -237,6 +244,33 @@ function main() {
       stat.cnExtra = (stat.cnExtra || 0) + 1;
     }
 
+    // ---- RemyWiki 谱面数据回填（2026-10-31）----
+    // 为什么是 UPDATE 一趟、而不是给上面三条 INSERT 各加三个参数：
+    // 这份输入是按 song_id 归并好的快照，与「日服 / 国服 / 国服独有新增曲」三条插入路径无关；
+    // 塞进 INSERT 就得改三处，还会出现「日服加了、国服忘了」这种漏参。
+    // bpm 的优先级：RemyWiki 只标 jubeat 的值（多机种页面按「括号里提到 jubeat 优先」挑），
+    // 比旧快照里 '170 (beatmania IIDX …, jubeat, …)' 这种混着多机种的字串干净；
+    // 快照里没有该曲时 COALESCE 保留原值（那 115 首不在 remywiki 的 Full Song List 里）。
+    for (const r2 of db.prepare('SELECT song_id FROM songs WHERE bpm IS NULL').all()) bpmNullBefore.add(r2.song_id);
+    const allIds = new Set(db.prepare('SELECT song_id FROM songs').all().map((r2) => r2.song_id));
+    const updRemy = db.prepare(
+      'UPDATE songs SET bpm = COALESCE(?, bpm), has_hold = ?, notecounts = ?, holds = ? WHERE song_id = ?'
+    );
+    for (const [id, v] of Object.entries(remy)) {
+      // 快照里的 id 不在库里 = 抓取口径与建库口径对不上了，必须报出来（静默无效最难查）。
+      if (!allIds.has(id)) { problems.push('RemyWiki 快照里的 song_id 不在库中: ' + id); continue; }
+      updRemy.run(
+        v.bpm ? String(v.bpm) : null,
+        v.has_hold == null ? null : (v.has_hold ? 1 : 0),
+        v.notecounts ? JSON.stringify(v.notecounts) : null,
+        v.holds ? JSON.stringify(v.holds) : null,
+        id
+      );
+      stat.remy = (stat.remy || 0) + 1;
+      if (v.has_hold === 1) stat.remyHold = (stat.remyHold || 0) + 1;
+      if (v.bpm && bpmNullBefore.has(id)) stat.remyBpm = (stat.remyBpm || 0) + 1;
+    }
+
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
@@ -269,7 +303,14 @@ function main() {
     cnOverride: cnOnlineOverrides.size,
     // 曲目总数的期望值：全部从源输入推算，不写死
     total: jp.songs.length + cnRows.length + cnExtraSongs.size,
+    // 【2026-10-31 RemyWiki】期望值全从 data/remy/by-song-id.json 现算，不写死 —— 重抓一轮就变。
+    // remyUnknown 用「总行数 − 有键数的行数」推：哪天回填逻辑把「没抓到」静默写成 0，这条会 FAIL。
+    remyRows: Object.values(remy).filter((v) => v.notecounts).length,
+    remyHold: Object.values(remy).filter((v) => v.has_hold === 1).length,
+    // bpm 空值的期望 = 「回填前为 NULL 且快照里也没有 bpm」的条数（快照有值的一定会被填上）。
+    bpmEmpty: [...bpmNullBefore].filter((id) => !(remy[id] && remy[id].bpm)).length,
   };
+  expect.remyUnknown = expect.total - expect.remyRows;
   // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
   // 并且新 id 不能被两条修正挤到同一个（否则 INSERT OR REPLACE 会静默吞掉一条）。
   const usedNewIds = new Map();
@@ -303,6 +344,7 @@ function main() {
   if (wantSeed) buildSeedSql(db);
   db.close();
   console.log(`\n本地库 -> ${path.relative(ROOT, DB_PATH)} (${(fs.statSync(DB_PATH).size / 1024).toFixed(1)} KB)`);
+  console.log(`  RemyWiki 回填: ${stat.remy || 0} 行（长押 ${stat.remyHold || 0}，补 bpm ${stat.remyBpm || 0}）`);
   if (problems.length) {
     console.log('\n待人工确认:');
     for (const p of problems.slice(0, 20)) console.log('  - ' + p);
@@ -604,6 +646,12 @@ function selfCheck(db, stat, problems, expect, cnOverrideHit) {
     // 这两条守的是「源表里写了解禁的曲子必须真的带上解禁标记」——上一轮正是这里少了 6 首解禁II。
     ['  解禁I 曲数', db.prepare("SELECT COUNT(*) c FROM songs WHERE unlock_note LIKE '解禁I %'").get().c, expect.unlockI],
     ['  解禁II 曲数', db.prepare("SELECT COUNT(*) c FROM songs WHERE unlock_note LIKE '解禁II %'").get().c, expect.unlockII],
+    // 【2026-10-31 RemyWiki 谱面数据】前三条守「快照里有数据的行必须真进库」，
+    // 第四条守 bpm 回填（往年 737 行为空，回填后应只剩没抓到的那几十首）。
+    ['RemyWiki 有键数行', db.prepare('SELECT COUNT(*) c FROM songs WHERE notecounts IS NOT NULL').get().c, expect.remyRows],
+    ['  其中长押谱', db.prepare('SELECT COUNT(*) c FROM songs WHERE has_hold = 1').get().c, expect.remyHold],
+    ['  长押未知行', db.prepare('SELECT COUNT(*) c FROM songs WHERE has_hold IS NULL').get().c, expect.remyUnknown],
+    ['bpm 为空的行', db.prepare('SELECT COUNT(*) c FROM songs WHERE bpm IS NULL').get().c, expect.bpmEmpty],
   ];
   console.log('=== 一致性自检 ===');
   let bad = 0;

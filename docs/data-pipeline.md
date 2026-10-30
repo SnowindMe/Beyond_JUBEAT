@@ -148,17 +148,23 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 |---|---|---|
 | song_id | `jp-resolved.json` 的 `songId`（拿不到官方 id 的 10 首用 `BTA-<曲绘id>` 占位，`id_kind=synthetic`） | xlsx sheet2 的 A 列（9 位） |
 | title / artist | resolved.json | sheet2 B / C |
-| bpm | **NULL**（源数据没有），从 wiki-v3 快照按 songId 回查，回查不到就留 NULL | sheet2 D（`——` / `—` 归一成 NULL） |
+| bpm | **NULL**（源数据没有），从 wiki-v3 快照按 songId 回查；**2026-10-31 起**再用 remywiki 的 jubeat BPM 覆盖（多机种页面取标 jubeat 的那个），回查不到就留 NULL | sheet2 D（`——` / `—` 归一成 NULL） |
 | bsc / adv / ext | resolved.json `levels` | sheet2 E / F / G |
 | gen_name | `origin` 剥掉 `jubeat ` 前缀后对齐 12 个日服世代 | 固定 `音乐魔方` |
 | server_jp / server_cn | jp=1；命中跨服同曲判定时再置 cn=1；或该 songId 在 sheet1 的 H 列为 √（旧框已有曲）时置 cn=1 | cn=1；命中判定时 jp=1 |
 | category | `license`→**授权**、`original`→**原创**（2026-10-24 改名，原名「版权」） | sheet2 H 的 5 种写法归成 4 个分区：`华立独占`→**独占**、`KONAMI/机种移植`→**KONAMI**、`音乐魔方/原创`→**原创**、`音乐魔方/流行`(+限时)→**流行**。**只存源生分类**，不再按「两服都有」改写成 KONAMI——分区归属是视图相关的，由页面层 `catOf()` 现算 |
 | alt | resolved.json `alt` | 标题匹配 `[ 2 ]` |
+| has_hold / notecounts / holds | **旁路快照**：data/remy/by-song-id.json（remywiki 抓取 → 曲名归一化匹配 → song_id）。**不走 INSERT**，在 build-db.cjs 的 COMMIT 前用 UPDATE 回填 | 同左（双服行共享同一份曲库数据） |
 | cover | `jacketFile` 的 `.gif` → `.webp` | wiki-v3 快照的 md5 名 → `.webp`；7 首新曲按 `id<songId>.webp` 回退（素材库 png 或已转档 webp 任一存在） |
 | added_at | 从快照回查 | sheet2 J 的 `YYYY.MM.DD` → `YYYY-MM-DD` |
 | unlock_note | **解禁池/期次以 sheet1 的 I 列为准**；快照 `unlockPool`/`poolPhase` 只在源表没有该曲时才兜底。`exchangeCost`/`limitedPeriod` 源表没有，仍只取快照 → 合成一句 | sheet2 I（移植机种 / 联动） |
 
 **缺失值一律 NULL，不猜。** 日服 1150 首里 721 首没有占位 id、快照里也不存在，BPM / 上线日期就保持 NULL。
+
+**第四份输入（2026-10-31 加）**：`data/remy/*.json` 是 remywiki 的抓取产物，不是上游快照——
+它按 song_id 归并后作为**旁路**喂给 build-db 的回填 pass，不参与「日服 / 国服」两条逐行插入。
+它提供 `has_hold`（是否长押谱）、`notecounts` / `holds`（各难度总键数 / 长押数）、以及 BPM 覆盖值。
+判定规则与反例见 data/remy/README.md，列语义见 docs/database-schema.md §1.4。
 
 ## 4. 历史版本：sheet3 藏起来的旧理论值
 

@@ -22,7 +22,14 @@ CREATE TABLE songs (
   bsc         REAL,
   adv         REAL,
   ext         REAL,
-  alt         INTEGER NOT NULL DEFAULT 0, -- 1 = 长押谱（标题带 [ 2 ]）
+  alt         INTEGER NOT NULL DEFAULT 0, -- 1 = 该行是 [ 2 ] 谱面（标题带 [ 2 ]）。**不代表有长押**，见 has_hold
+  -- 【2026-10-31 主人要求：接入 RemyWiki 的谱面数据（BPM / 是否长押谱 / 总键数 / 长押数）】
+  -- 来源 remywiki 的 jubeat 单曲页，判定规则与抓取说明见 data/remy/README.md；
+  -- 按 song_id 归并好的入库快照是 data/remy/by-song-id.json（build-db.cjs 回填，不手改库）。
+  -- 三列都用 NULL 表示「没抓到（未知）」，**不要用 0 冒充**——未知当 0 = 凭空宣称这曲没有长押。
+  has_hold    INTEGER CHECK (has_hold IN (0,1)), -- 1 = 至少一个难度有长押；0 = 三难度都没有；NULL = 未知
+  notecounts  TEXT,                      -- 各难度总键数 JSON，如 {"bsc":414,"adv":491,"ext":805}
+  holds       TEXT,                      -- 各难度长押数 JSON，形状同 notecounts
   cover       TEXT,                      -- 曲绘文件名（日服 jkt/id 图，国服 webp）
   added_at    TEXT,                      -- 上线/解禁日期 YYYY-MM-DD
   unlock_note TEXT,                      -- 解禁池或联动来源，人类可读

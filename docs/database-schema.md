@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | song_id | TEXT PK | 官方 songId。日服 8 位（10…–90… 段按世代），国服 9 位（99… 段）；拿不到官方 id 的用 BTA-<曲绘id> 占位（12 字符） |
 | id_kind | TEXT | official / synthetic（占位） |
-| title | TEXT NOT NULL | 曲名。长押谱带 [ 2 ] 后缀 |
+| title | TEXT NOT NULL | 曲名。[ 2 ] 谱面（长押谱）的行带 [ 2 ] 后缀 |
 | artist | TEXT | 作曲者 |
 | bpm | TEXT | **字符串**（源数据有 "145" 也有空），不是数字 |
 | gen_name | TEXT NOT NULL | 世代名，13 个：jubeat / ripples / knit / copious / saucer / saucer fulfill / prop / Qubell / clan / festo / Ave. / beyond the Ave. / 音乐魔方 |
@@ -37,7 +37,10 @@
 | server_cn | INTEGER NOT NULL | 1 = 国服有谱 |
 | category | TEXT NOT NULL | **源生分类**，不是页面分区（见 §1.2） |
 | bsc / adv / ext | REAL | 三难度定数；空 = 该难度不存在 |
-| alt | INTEGER NOT NULL | 1 = 长押谱 |
+| alt | INTEGER NOT NULL | 1 = **该行是 [ 2 ] 谱面**（标题带 [ 2 ]）。**不代表有长押**，长押看 has_hold（主人 2026-10-31 纠正） |
+| has_hold | INTEGER | 长押谱判定：1 = 至少一个难度有长押；0 = 三难度都没有；**NULL = 没抓到（未知）**。来自 remywiki（见 §1.4） |
+| notecounts | TEXT | 各难度总键数 JSON，如 {"bsc":414,"adv":491,"ext":805}；NULL = 未知 |
+| holds | TEXT | 各难度长押数 JSON，形状同 notecounts |
 | cover | TEXT | 曲绘文件名。日服源是 id<N>.gif、库里统一存 .webp |
 | added_at | TEXT | 上线/解禁日 YYYY-MM-DD，**多数为空**（见 §1.3） |
 | unlock_note | TEXT | 解禁池/联动来源，人类可读，如 解禁II - BLUEBERRY |
@@ -89,13 +92,39 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 
 | 列 | 空值行数 | 原因 |
 | --- | --- | --- |
-| bpm | **737 / 1248** | 日服源快照就没有 BPM |
+| bpm | **24 / 1248** | 日服源快照本来没有 BPM（原 **737 / 1248**）；2026-10-31 用 remywiki 的 jubeat BPM 回填 713 行、改写 22 行脏值后只剩这 24 行——全是没进 remywiki Full Song List 的曲（见 §1.4） |
 | added_at | **1084 / 1248** | 只有国服更新表（xlsx）与部分日服旧站快照有日期。国服 91 行里 77 行有；日服几乎全空 |
 | unlock_note | **1018 / 1248** | 只有解禁池曲目有 |
+| has_hold | **117 / 1248** | 没在 remywiki 找到这首（41 首音乐魔方新曲 + 国服独有 + BEMANI SYMPHONY Arr. 等）。**NULL ≠ 0**：0 是「确定三难度都没长押」，未知不能当 0 用 |
 | artist / cover / bsc | 0 | 必有 |
 
 > 别看到「1084 行为空」就以为数据缺了——**源里就没有**。用 COALESCE 处理显示，
 > 不要自己猜值填进去（schema 约定：「缺失值一律 NULL，不猜测填充」）。
+
+### 1.4 RemyWiki 谱面数据（2026-10-31）
+
+主人要求接入 remywiki 的 jubeat 谱面信息：**是否长押谱 / 各难度总键数 / 各难度长押数**，外加回填 BPM。
+
+| 项 | 值 |
+| --- | --- |
+| 来源 | remywiki 单曲页的 jubeat 难度表，抓取产物 data/remy/jubeat-charts.json（1138 条，含 [ 2 ] 变体） |
+| 入库输入 | data/remy/by-song-id.json（按 song_id 归并好的快照，build-db.cjs 回填） |
+| 有键数的行 | 1131 |
+| 长押谱（has_hold=1） | **286** |
+| 长押未知（has_hold IS NULL） | **117** |
+| 回填 BPM | 新增 713 行、改写 22 行 |
+
+判定规则（细节与反例见 data/remy/README.md）：
+
+- **长押看 Notecounts 行的「值」，不看标签**：值形如 379 / 19 = 总键数 / 长押数，单值 = 该难度无长押。
+  反例：1116 的通常谱标签写 Notecounts 但值是两数。
+- **必须锚定 jubeat 小节再取表**：GF/DM 的难度表表头同样是 Basic/Advanced/Extreme，不锚定会取到 GF/DM 的音数（曾误 213 条）。
+- **has_hold 与 alt 无关**：alt=1 只表示「这行是 [ 2 ] 谱面」——[ 2 ] 谱绝大多数有长押，但判定必须来自 holds 数值本身（主人 2026-10-31 纠正）。
+- BPM 多机种写法（如 BPM: 175 (DanceDanceRevolution), 170 (jubeat)）取**括号里提到 jubeat 的那个**。
+
+**为什么用快照 + UPDATE 回填、而不是塞进三条 INSERT**：快照按 song_id 归并，
+与「日服 / 国服 / 国服独有新增曲」三条插入路径无关；塞进 INSERT 要改三处、还会出现「日服加了、国服忘了」的漏参。
+回填与三条自检断言都在 build-db.cjs 里，期望值从快照现算。
 
 ### 1.4 songId 段位（改 id 前必看）
 
@@ -231,10 +260,16 @@ state = pending / approved / rejected。
 加一个新列涉及 **五处**，少一处就出现「数据在库里、页面是空的」：
 
 1. db/schema.sql（本地 DDL）
-2. scripts/db/build-db.cjs 的 INSERT 列名 + 参数（**国服/日服两处 ins.run 都要补**，参数个数不匹配会直接抛）
+2. scripts/db/build-db.cjs：**按列的性质二选一**——
+   - 来自「日服 / 国服 逐行输入」的列 → 改 INSERT 列名 + 参数（**两条 ins.run 都要补**，参数个数不匹配会直接抛）；
+   - 来自「按 song_id 归并的旁路快照」的列 → 在 COMMIT 前加一段 UPDATE 回填（2026-10-31 的 has_hold / notecounts / holds / bpm 就是这类）。
+     注意：凡在事务里算、事务外还要用的变量，不许用 const 声明在 try 块内 —— expect 那一段在事务外取不到它
+     （本次实撞：ReferenceError: bpmNullBefore is not defined）。
 3. scripts/build-data.cjs 的导出字段映射（SONGS 的短键）
 4. src/lib/db.ts 的 SQL_ALL / SQL_ONE / rowToSong（**这处最容易漏**——漏了数据在库里但页面读不到）
 5. 线上：先 ALTER TABLE ADD COLUMN 再灌数据（分两步，别一把梭）
+6. docs/database-schema.md 的列表 + 计数：scripts/ci/check-schema-doc.cjs 会把数字变成断言，
+   且模板里的 {n} 由**实测值**填 —— 文档写旧数字就 FAIL（2026-10-31 改前它只查「那句老话在不在」，数据变了还假绿）
 
 实撞记录：2026-10-28 加 limited_until 时，前三处都改了，漏了第 4 处，
 表现为「库里有值、页面是空的」。

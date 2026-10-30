@@ -28,12 +28,25 @@ const GEN_ORDER = [
 const db = new DatabaseSync(DB, { readOnly: true });
 const rows = db.prepare(`
   SELECT song_id, title, artist, bpm, gen_name, server_jp, server_cn, category,
-         bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind, limited_until
+         bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind, limited_until,
+         has_hold, notecounts, holds
   FROM songs ORDER BY gen_name, ext DESC
 `).all();
 db.close();
 
 const num = (v) => (typeof v === 'number' ? v : null);
+// 库里的 notecounts / holds 是 TEXT 存的 JSON，导出时解成对象给页面用。
+// 解不开就是脏数据：报出来并置 null（当「未知」），不要静默吞掉当 0。
+const jsonCol = (v, col, id) => {
+  if (!v) return null;
+  try {
+    const o = JSON.parse(String(v));
+    return o && typeof o === 'object' ? o : null;
+  } catch {
+    console.error(`坏 JSON 列 ${col} @ ${id}`);
+    return null;
+  }
+};
 // 行归属：server_jp / server_cn 双标志（0/1）。'both' = 两服都有（国服 KONAMI原创 移植曲）。
 const srvOf = (s) => (s.server_jp && s.server_cn ? 'both' : s.server_jp ? 'jp' : 'cn');
 const ext = (s) => num(s.ext);
@@ -61,6 +74,11 @@ const SONGS = rows.map((s) => ({
   // 传日期而不是布尔：判定要按「真实今天」算（主人定的口径：区间结束才算限时），
   // 布尔会在数据生成那天焊死。前端拿它和当天日期比。
   lu: s.limited_until || null,
+  // 【2026-10-31 RemyWiki】hasHold: 1=至少一个难度有长押 / 0=三难度都没有 / null=没抓到（未知）。
+  // 注意与上面的 alt 区分：alt=1 只说明「这行是 [ 2 ] 谱面」，不代表有长押（主人 2026-10-31 纠正）。
+  hasHold: s.has_hold == null ? null : (s.has_hold ? 1 : 0),
+  notecounts: jsonCol(s.notecounts, 'notecounts', s.song_id),
+  holds: jsonCol(s.holds, 'holds', s.song_id),
 }));
 
 const byExtDesc = (a, b) => (ext(b) || 0) - (ext(a) || 0);
