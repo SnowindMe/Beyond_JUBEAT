@@ -13,12 +13,27 @@
 //   * 只放行 GET / HEAD；
 //   * 不透传查询参数——上游 bgm.ogg 是静态文件，没有参数语义。
 //
-// 缓存与分段（Range）：
-//   * 缓存键用固定规范域名 + 路径，不用 request.url——同一份音频从
-//     wiki.byd-ub.top / workers.dev 进来时不会各存一份；
-//   * 只缓存「完整 200 响应」；拖动进度条产生的 Range 请求一律由缓存的完整体
-//     本地切片回 206，不会每次 seek 都回源；
-//   * 音频约 1MB，整份读进内存再切片实现最简单也不易错（Worker 内存上限 128MB）。
+// 【2026-10-30 重写：流式读取，不再"整份读进内存再切片"】
+//
+// 旧实现无论浏览器要多少字节，都先把整份 1MB 的音频 `await hit.arrayBuffer()`
+// 读进内存、再 `bytes.slice()` 切出要的那段。而浏览器首播只需要开头 128–256KB，
+// 等于每次白搬 4 倍数据。实测后果：全新曲目第一次点播放，要 **12.2 秒**才出声
+// （第 1 次请求是 audio preload 探测元数据、只要几十字节，却也耗了 8.1 秒）。
+//
+// 现在的分工：
+//   * 缓存 HIT + Range  → 从缓存响应体里**流式跳读**出需要的字节段，不再整份加载；
+//   * 缓存 MISS + Range → 把浏览器的 Range **原样转给上游**（上游支持 206），
+//     直接把它的响应流回浏览器，后台再拉一份完整版写进缓存；
+//   * 缓存 MISS + 无 Range → 流式透传，同时把响应流 tee 一份进缓存；
+//   * HEAD → 只回头，不碰数据体（优先读缓存里的 content-length，没有就探一次上游）。
+//
+// 关键约束（主人 2026-10-30 拍板「优先cdn」）：**边缘缓存这条不许动**。
+// caches.default 的读写逻辑全都保留，只改读取方式。
+// 后续谁想再优化性能，也不得以「直接透传更快」为由取消缓存。
+//
+// 缓存键用**实际请求的 origin**：同一份音频从 wiki.byd-ub.top 与 workers.dev
+// 进来时各存一份（Cache API 只对当前 zone 生效），但绝不能用写死的第三方域名
+// 当 key——那样 put 会「成功」而 match 永远 MISS。
 import type { APIRoute } from 'astro';
 import audioMap from '../../../data/ub-audio.json';
 
@@ -35,8 +50,75 @@ const ID_OK = /^[A-Za-z0-9-]{1,24}$/;
 // 浏览器与边缘共用一份长缓存：一曲一文件、内容永不改，songId 变了 URL 才变。
 const CACHE_CONTROL = 'public, max-age=604800, s-maxage=2592000, immutable';
 
+const UA = { 'user-agent': 'Mozilla/5.0 (compatible; BeyondJUBEAT/1.0; +https://wiki.byd-ub.top)' };
+
 export const GET: APIRoute = ({ params, request, locals }) => serve(params, request, locals);
 export const HEAD: APIRoute = ({ params, request, locals }) => serve(params, request, locals);
+
+/** 缓存键：固定用请求 origin + 规范路径，不带查询串 */
+function cacheKey(id: string, origin: string) {
+  return new Request(origin + '/api/audio/' + encodeURIComponent(id), { method: 'GET' });
+}
+
+/** 把上游相对路径拼成绝对 URL；路径里有中文与空格，只在这里编码一次，不二次转义 */
+function upstreamUrl(rel: string) {
+  return UPSTREAM + '/' + rel.split('/').map(encodeURIComponent).join('/');
+}
+
+/** 解析 Range 头。返回闭区间 [start, end]，或 null（语法不认识）。 */
+function parseRange(header: string, size: number): { start: number; end: number } | null | 'invalid' {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m) return null;
+  const start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
+  const end = m[1] === '' || m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start > end || start >= size) {
+    return 'invalid';
+  }
+  return { start, end };
+}
+
+/**
+ * 从一个字节流的 [start, end]（闭区间）里取出数据，其余部分直接丢弃、不驻留内存。
+ * 用于「缓存命中 + Range 请求」：只读需要的那一段。
+ */
+function sliceStream(
+  body: ReadableStream<Uint8Array>,
+  start: number,
+  end: number
+): ReadableStream<Uint8Array> {
+  const reader = body.getReader();
+  let pos = 0;
+  let finished = false;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      while (!finished) {
+        const { value, done } = await reader.read();
+        if (done) {
+          finished = true;
+          controller.close();
+          return;
+        }
+        const chunkStart = pos;
+        const chunkEnd = pos + value.byteLength - 1;
+        pos += value.byteLength;
+        if (chunkEnd < start) continue; // 这一段完全在目标区间之前，丢掉
+        const from = Math.max(0, start - chunkStart);
+        const to = Math.min(value.byteLength - 1, end - chunkStart);
+        if (to >= from) controller.enqueue(value.subarray(from, to + 1));
+        if (chunkEnd >= end) {
+          finished = true;
+          reader.cancel().catch(() => {});
+          controller.close();
+          return;
+        }
+        return;
+      }
+    },
+    cancel() {
+      reader.cancel().catch(() => {});
+    },
+  });
+}
 
 async function serve(
   params: Record<string, string | undefined>,
@@ -49,105 +131,192 @@ async function serve(
   const rel = MAP[id];
   if (!rel) return notFound('no audio for this song');
 
-  let full: Cached;
-  try {
-    full = await getFull(id, rel, new URL(request.url).origin, locals);
-  } catch (e) {
-    const status = e instanceof HttpError ? e.status : 502;
-    return new Response(status === 404 ? 'audio not found upstream' : 'audio upstream error', {
-      status,
-      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
-    });
+  const cache = caches.default;
+  const key = cacheKey(id, new URL(request.url).origin);
+  const rangeHeader = request.headers.get('range');
+
+  // ---- HEAD：只回头。优先从缓存读 content-length，未命中就探一次上游 ----
+  if (request.method === 'HEAD') {
+    const hit = await cache.match(key);
+    if (hit) {
+      const size = Number(hit.headers.get('content-length') ?? 0);
+      return new Response(null, {
+        status: 200,
+        headers: baseHeaders(hit.headers.get('content-type') || 'audio/ogg', size, true),
+      });
+    }
+    try {
+      const up = await fetch(upstreamUrl(rel), { method: 'HEAD', headers: UA, redirect: 'follow' });
+      if (!up.ok) throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
+      const size = Number(up.headers.get('content-length') ?? 0);
+      return new Response(null, {
+        status: 200,
+        headers: baseHeaders(up.headers.get('content-type') || 'audio/ogg', size, false),
+      });
+    } catch (e) {
+      return errorResponse(e);
+    }
   }
 
-  const common: Record<string, string> = {
-    'content-type': full.type,
+  const hit = await cache.match(key);
+
+  // ===================================================================
+  // 情况 A：缓存命中
+  // ===================================================================
+  if (hit) {
+    const type = hit.headers.get('content-type') || 'audio/ogg';
+    const size = Number(hit.headers.get('content-length') ?? 0) || 0;
+    const body = hit.body;
+    if (!body) return notFound('cached body empty');
+
+    // 无 Range：整份流式回给浏览器（仍然不读进内存）
+    if (!rangeHeader) {
+      if (!size) {
+        // 老缓存条目可能没有 content-length：退化为整份读（极少见）
+        const buf = await hit.arrayBuffer();
+        return new Response(buf, {
+          status: 200,
+          headers: baseHeaders(type, buf.byteLength, true),
+        });
+      }
+      return new Response(body, {
+        status: 200,
+        headers: baseHeaders(type, size, true),
+      });
+    }
+
+    // 有 Range：判断区间后再决定是切片还是整份
+    const r = size ? parseRange(rangeHeader, size) : null;
+    if (r === 'invalid' && size) {
+      return new Response(null, {
+        status: 416,
+        headers: { 'content-range': 'bytes */' + size, 'cache-control': 'no-store' },
+      });
+    }
+    if (r && size) {
+      return new Response(sliceStream(body, r.start, r.end), {
+        status: 206,
+        headers: {
+          ...baseHeaders(type, r.end - r.start + 1, true),
+          'content-range': `bytes ${r.start}-${r.end}/${size}`,
+        },
+      });
+    }
+
+    // 没有 size 或 Range 语法不认识：整份回，交给浏览器自己处理
+    const buf = await hit.arrayBuffer();
+    return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, true) });
+  }
+
+  // ===================================================================
+  // 情况 B：缓存未命中
+  // ===================================================================
+  const target = upstreamUrl(rel);
+
+  try {
+    // B1. 带 Range：把 Range 原样转给上游，它的 206 直接流回浏览器（首播最快路径）。
+    //     同时在后台拉一份完整版写进缓存，供后续请求与拖动进度条使用。
+    if (rangeHeader) {
+      const up = await fetch(target, { headers: { ...UA, range: rangeHeader }, redirect: 'follow' });
+      if (!up.ok && up.status !== 206) {
+        throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
+      }
+      const type = up.headers.get('content-type') || 'audio/ogg';
+      const headers: Record<string, string> = baseHeaders(type, Number(up.headers.get('content-length') ?? 0), false);
+      const cr = up.headers.get('content-range');
+      if (cr) headers['content-range'] = cr;
+
+      // 后台补一份完整对象进缓存（不阻塞本次响应）
+      locals.cfContext.waitUntil(cacheFull(cache, key, target));
+
+      return new Response(up.body, { status: up.status === 206 ? 206 : 200, headers });
+    }
+
+    // B2. 无 Range：整份流式透传，并把同一条流 tee 一份写进缓存。
+    const up = await fetch(target, { headers: UA, redirect: 'follow' });
+    if (!up.ok) throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
+    const type = up.headers.get('content-type') || 'audio/ogg';
+    const size = Number(up.headers.get('content-length') ?? 0);
+
+    if (up.body) {
+      // tee：一条给浏览器，一条给缓存。写缓存失败只影响下次是否命中，不影响本次播放。
+      const [toClient, toCache] = up.body.tee();
+      locals.cfContext.waitUntil(
+        cache
+          .put(
+            key,
+            new Response(toCache, {
+              headers: { 'content-type': type, ...(size ? { 'content-length': String(size) } : {}) },
+            })
+          )
+          .catch((e) => console.warn('[audio] cache put failed', String(e)))
+      );
+      const headers = baseHeaders(type, size, false);
+      return new Response(toClient, { status: 200, headers });
+    }
+
+    const buf = await up.arrayBuffer();
+    locals.cfContext.waitUntil(
+      cache
+        .put(
+          key,
+          new Response(buf.slice(0), {
+            headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
+          })
+        )
+        .catch((e) => console.warn('[audio] cache put failed', String(e)))
+    );
+    return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, false) });
+  } catch (e) {
+    return errorResponse(e);
+  }
+}
+
+/** 后台把完整音频写进缓存（用于「Range 未命中」那条路径） */
+async function cacheFull(cache: Cache, key: Request, target: string): Promise<void> {
+  try {
+    const up = await fetch(target, { headers: UA, redirect: 'follow' });
+    if (!up.ok) return;
+    const type = up.headers.get('content-type') || 'audio/ogg';
+    const size = Number(up.headers.get('content-length') ?? 0);
+    if (up.body) {
+      await cache.put(
+        key,
+        new Response(up.body, {
+          headers: { 'content-type': type, ...(size ? { 'content-length': String(size) } : {}) },
+        })
+      );
+    } else {
+      const buf = await up.arrayBuffer();
+      await cache.put(
+        key,
+        new Response(buf, { headers: { 'content-type': type, 'content-length': String(buf.byteLength) } })
+      );
+    }
+  } catch (e) {
+    console.warn('[audio] background cache full failed', String(e));
+  }
+}
+
+function baseHeaders(type: string, size: number, hit: boolean): Record<string, string> {
+  const h: Record<string, string> = {
+    'content-type': type,
     'cache-control': CACHE_CONTROL,
     'accept-ranges': 'bytes',
     'x-audio-source': 'ub.thregren.world',
     // 验收用：HIT = 这次吃的是本站边缘缓存，MISS = 回了一次上游
-    'x-cache': full.hit ? 'HIT' : 'MISS',
+    'x-cache': hit ? 'HIT' : 'MISS',
   };
-
-  // HEAD：只回头，不带体（播放器预探测用不到，但语义要对）
-  if (request.method === 'HEAD') {
-    return new Response(null, { status: 200, headers: { ...common, 'content-length': String(full.size) } });
-  }
-
-  const range = request.headers.get('range');
-  if (range) {
-    const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
-    if (m) {
-      const size = full.size;
-      const start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
-      const end = m[1] === '' || m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start > end || start >= size) {
-        return new Response(null, {
-          status: 416,
-          headers: { 'content-range': 'bytes */' + size, 'cache-control': 'no-store' },
-        });
-      }
-      return new Response(full.bytes.slice(start, end + 1), {
-        status: 206,
-        headers: {
-          ...common,
-          'content-range': 'bytes ' + start + '-' + end + '/' + size,
-          'content-length': String(end - start + 1),
-        },
-      });
-    }
-  }
-
-  return new Response(full.bytes, {
-    status: 200,
-    headers: { ...common, 'content-length': String(full.size) },
-  });
+  if (size > 0) h['content-length'] = String(size);
+  return h;
 }
 
-// hit 只用于观测：线上看 x-cache 头就知道这次是真打上游还是吃了边缘缓存。
-// 注意本地 wrangler dev 的 caches.default 是内存级、每个请求可能落在不同 isolate，
-// 实测连打三次都 MISS 属正常，别把它当「缓存没生效」的证据——以线上响应头为准。
-type Cached = { bytes: ArrayBuffer; size: number; type: string; hit: boolean };
-
-/** 取完整音频：先查边缘缓存，未命中回源并写回缓存 */
-async function getFull(id: string, rel: string, origin: string, locals: App.Locals): Promise<Cached> {
-  const cache = caches.default;
-  // 缓存键用**实际请求的 origin**：同一份音频从 wiki.byd-ub.top 与 workers.dev 进来时
-  // 各存一份（Cache API 只对当前 zone 生效），但绝不能用写死的第三方域名当 key——
-  // 那样 put 会「成功」而 match 永远 MISS。
-  const key = new Request(origin + '/api/audio/' + encodeURIComponent(id), { method: 'GET' });
-
-  const hit = await cache.match(key);
-  if (hit) {
-    const bytes = await hit.arrayBuffer();
-    return { bytes, size: bytes.byteLength, type: hit.headers.get('content-type') || 'audio/ogg', hit: true };
-  }
-
-  // 上游路径里有中文目录与空格（音乐魔方/C018 Crystal Awakening）：
-  // 映射表存原始相对路径，编码只在这里做一次，不会二次转义。
-  const target = UPSTREAM + '/' + rel.split('/').map(encodeURIComponent).join('/');
-  const upstream = await fetch(target, {
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; BeyondJUBEAT/1.0; +https://wiki.byd-ub.top)' },
-    // 冷缓存一律要完整体（切片在本地做），所以回源这层不带 Range
-    redirect: 'follow',
+function errorResponse(e: unknown): Response {
+  const status = e instanceof HttpError ? e.status : 502;
+  return new Response(status === 404 ? 'audio not found upstream' : 'audio upstream error', {
+    status,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
   });
-
-  if (!upstream.ok) throw new HttpError(upstream.status === 404 ? 404 : 502, 'upstream ' + upstream.status);
-
-  const bytes = await upstream.arrayBuffer();
-  const type = upstream.headers.get('content-type') || 'audio/ogg';
-
-  // 写缓存用 waitUntil：响应先回浏览器、落盘在后台完成，不拖慢首次播放。
-  // 写失败（超出单对象限制等）只影响下一次是否命中，不影响本次播放。
-  locals.cfContext.waitUntil(
-    cache
-      .put(key, new Response(bytes.slice(0), {
-        headers: { 'content-type': type, 'content-length': String(bytes.byteLength) },
-      }))
-      .catch((e) => console.warn('[audio] cache put failed', String(e)))
-  );
-
-  return { bytes, size: bytes.byteLength, type, hit: false };
 }
 
 class HttpError extends Error {
