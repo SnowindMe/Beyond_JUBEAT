@@ -147,7 +147,7 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 | 字段 | 日服 1150 首 | 国服 524 行（91 国服独有 + 432 旧框已有曲 + 1 Big Daddy 日服行） |
 |---|---|---|
 | song_id | `jp-resolved.json` 的 `songId`（拿不到官方 id 的 10 首用 `BTA-<曲绘id>` 占位，`id_kind=synthetic`） | xlsx sheet2 的 A 列（9 位） |
-| title / artist | resolved.json | sheet2 B / C |
+| title / artist | resolved.json，**再过一层人工修正表 data/title-overrides.json**（2026-10-31 加；目前只有 1 条：50000276 的 `Milchstrae` → `Milchstraße`，源里缺 ß） | sheet2 B / C |
 | bpm | **NULL**（源数据没有），从 wiki-v3 快照按 songId 回查；**2026-10-31 起**再用 remywiki 的 jubeat BPM 覆盖（多机种页面取标 jubeat 的那个），回查不到就留 NULL | sheet2 D（`——` / `—` 归一成 NULL） |
 | bsc / adv / ext | resolved.json `levels` | sheet2 E / F / G |
 | gen_name | `origin` 剥掉 `jubeat ` 前缀后对齐 12 个日服世代 | 固定 `音乐魔方` |
@@ -165,6 +165,12 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 它按 song_id 归并后作为**旁路**喂给 build-db 的回填 pass，不参与「日服 / 国服」两条逐行插入。
 它提供 `has_hold`（是否长押谱）、`notecounts` / `holds`（各难度总键数 / 长押数）、以及 BPM 覆盖值。
 判定规则与反例见 data/remy/README.md，列语义见 docs/database-schema.md §1.4。
+
+**第五份输入（2026-10-31 加）**：`data/title-overrides.json` 是**曲名 / 艺人的人工修正层**，
+与 id-fixes / gen-overrides 同一套做法（源文件不动，消费端先查覆盖）。两条自检都在 build-db 里：
+① key 必须真在库中；② 覆盖值必须与源值不同（写成一样等于「以为修了其实没修」）。
+注意它与 remywiki 匹配的耦合：库里的曲名被改过之后，`remy-db-map.cjs` 会再用**上游源名**查第三趟，
+否则「修好曲名」反而会让这首曲子在 remywiki 那边匹配不上。
 
 ## 4. 历史版本：sheet3 藏起来的旧理论值
 

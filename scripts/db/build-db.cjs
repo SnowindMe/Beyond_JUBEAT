@@ -77,6 +77,9 @@ function main() {
   // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
   const genOverrides = readGenOverrides();
 
+  // 曲名 / 艺人人工修正（2026-10-31）：上游快照自带错字，见 readTitleOverrides 注释。
+  const titleOverrides = readTitleOverrides();
+
   // 解禁标记（2026-10-25 修）：以 sheet1 I 列（国服官方更新表）为准，archive 只当补充。
   // 起因：主人指出「解禁II 不是有 61 首吗」，而库里只有 55 首 —— 差的 6 首全是 [2] 长押曲
   // （70001001 / 80001002 / 80001003 / 80001004 / 80001014 / 80001015）+ 1 首 concon。
@@ -184,8 +187,14 @@ function main() {
         cnOldFrameIds.has(srcId);
       if (isCnOnline && byOverride) { stat.cnOverride++; cnOverrideHit.add(srcId); }
       else if (isCnOnline && cnOldFrameIds.has(srcId)) stat.cnOldFrame++;
+      // 曲名 / 艺人人工修正（2026-10-31）：上游错字在这层替换，源文件不动。
+      // 用 srcId 查（与 gen-overrides 一致，表里写的是现有库里的 id）。
+      const tOv = titleOverrides.get(srcId);
+      const finalTitle = tOv && tOv.title != null ? tOv.title : s.title;
+      const finalArtist = tOv && tOv.artist != null ? tOv.artist : (s.artist || null);
+      if (tOv) stat.titleOverride = (stat.titleOverride || 0) + 1;
       ins.run(
-        finalId, s.idKind || 'official', s.title, s.artist || null, arc.bpm ? String(arc.bpm) : null,
+        finalId, s.idKind || 'official', finalTitle, finalArtist, arc.bpm ? String(arc.bpm) : null,
         genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(s.jacketFile),
@@ -340,11 +349,30 @@ function main() {
     }
   }
 
+  // 曲名 / 艺人覆盖表自检（2026-10-31）：两条都要，缺一条就会留下「改了没生效」的坑。
+  //   ① key 必须真在库里（id 手滑少一位 → 静默无效）；
+  //   ② 覆盖值必须与源值不同（写成与源一致 → 这条覆盖是废的，等于以为修了其实没修）。
+  for (const [id, ov] of titleOverrides) {
+    const row = db.prepare('SELECT title, artist FROM songs WHERE song_id = ?').get(id);
+    if (!row) { problems.push(`曲名覆盖表里的 songId 不在库中: ${id}`); continue; }
+    const src = jpById.get(id);
+    if (ov.title != null && src && String(src.title) === ov.title) {
+      problems.push(`曲名覆盖未改变任何值（与源相同）: ${id} -> ${ov.title}`);
+    }
+    if (ov.title != null && row.title !== ov.title) {
+      problems.push(`曲名覆盖未生效: ${id} 期望 ${ov.title}，实际 ${row.title}`);
+    }
+    if (ov.artist != null && row.artist !== ov.artist) {
+      problems.push(`艺人覆盖未生效: ${id} 期望 ${ov.artist}，实际 ${row.artist}`);
+    }
+  }
+
   selfCheck(db, stat, problems, expect, cnOverrideHit);
   if (wantSeed) buildSeedSql(db);
   db.close();
   console.log(`\n本地库 -> ${path.relative(ROOT, DB_PATH)} (${(fs.statSync(DB_PATH).size / 1024).toFixed(1)} KB)`);
   console.log(`  RemyWiki 回填: ${stat.remy || 0} 行（长押 ${stat.remyHold || 0}，补 bpm ${stat.remyBpm || 0}）`);
+  console.log(`  曲名/艺人覆盖: ${stat.titleOverride || 0} 条`);
   if (problems.length) {
     console.log('\n待人工确认:');
     for (const p of problems.slice(0, 20)) console.log('  - ' + p);
@@ -476,6 +504,33 @@ function readGenOverrides() {
   }
   if (bad.length) {
     throw new Error('data/gen-overrides.json 里有非法世代名（必须是 JP_GENS 之一）：\n  ' + bad.join('\n  '));
+  }
+  return map;
+}
+
+// ---- 曲名 / 艺人人工修正表（2026-10-31 建立）----
+// 上游快照自身有错字（目前 1 条：50000276 的 Milchstrae 缺 ß），改源文件会被下次
+// 重抓覆盖掉，所以单开一层覆盖。与 id-fixes / gen-overrides 同一套做法。
+//
+// 自检（都在应用后做，见文件末尾的覆盖表自检）：
+//   ① key 必须真在库里；
+//   ② 覆盖值必须与源值不同 —— 相同说明这条覆盖是废的，也要报出来。
+// 值写成空串直接抛错：那等于「把标题清空」，不是「不覆盖」。
+function readTitleOverrides() {
+  const p = path.join(ROOT, 'data/title-overrides.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const [id, v] of Object.entries(raw.overrides || {})) {
+    const title = v && v.title != null ? String(v.title) : null;
+    const artist = v && v.artist != null ? String(v.artist) : null;
+    if (title == null && artist == null) { bad.push(id + ' 既没写 title 也没写 artist'); continue; }
+    if (title === '' || artist === '') { bad.push(id + ' 把字段写成了空串'); continue; }
+    map.set(String(id), { title, artist, note: String((v && v.note) || '') });
+  }
+  if (bad.length) {
+    throw new Error('data/title-overrides.json 有不合法条目：\n  ' + bad.join('\n  '));
   }
   return map;
 }

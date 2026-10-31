@@ -1,0 +1,28 @@
+{
+  "_comment": [
+    "曲名 / 艺人的人工修正表（2026-10-31 建立）。",
+    "",
+    "为什么需要它：上游快照（data/beyond-the-ave/songs.csv → jp-resolved.json）",
+    "本身就有错字，直接改源文件会在下一次重抓时被覆盖掉。所以按本项目既有做法",
+    "（见 id-fixes.json / gen-overrides.json）单开一张覆盖层：消费端先查这里，",
+    "查不到再用源值。",
+    "",
+    "维护方式：key = songId，value = { title?, artist?, note }。",
+    "title / artist 二者至少写一个；写成空串会被自检拒绝（那等于「改成空」，不是「不覆盖」）。",
+    "",
+    "自检两条（覆盖层静默失效比报错难查一个数量级）：",
+    "  ① key 必须真的在曲库里存在 —— id 打错时直接抛错，而不是静默不生效；",
+    "  ② 覆盖后的值必须与源值不同 —— 相同说明这条覆盖是废的，也要报出来。",
+    "",
+    "已知对不上的姊妹源（改这条时要留意）：",
+    "  data/beyond-the-ave/songs.csv 第 1033 行、remy-origin.json 的 'milchstrae' 键、",
+    "  data/beyond-the-ave/mcz-ids.json 的 file 字段——这些是上游产物，不跟着改。",
+    "  因此 remywiki 匹配（.devhome/remy-db-map.cjs）仍按源写法匹配，不受本表影响。"
+  ],
+  "overrides": {
+    "50000276": {
+      "title": "Milchstraße",
+      "note": "源里写成 Milchstrae，缺 ß。官方曲名与 remywiki 均为 Milchstraße（2026-10-31 发现）"
+    }
+  }
+}

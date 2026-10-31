@@ -47,3 +47,10 @@ desktop.ini
 .idea/
 # 一次性探测/调试脚本产物（不该进版本库，2026-10-30 清理）
 scripts/probe/
+
+# 开发期临时目录（2026-10-31）：remywiki 抓取缓存（15 MB 逐页 Markdown）、探测脚本、截图、日志、
+# miniflare 状态都在这里。管线脚本本身已迁到 scripts/db/remy/（受版本控制），
+# 这个目录里只剩可重新生成的中间产物与一次性杂物，整体不入库。
+.devhome/
+# save_paste 工具落盘的原文（一次性参考用，不是站点产物）
+pastes/
