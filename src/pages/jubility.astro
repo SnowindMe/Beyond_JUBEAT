@@ -18,7 +18,6 @@ import {
   tierBands,
   primeThreshold,
   peachThreshold,
-  fillableSlots,
   SLOT_COUNT,
   TIERS,
   type ChartEntry,
@@ -59,7 +58,6 @@ const VIEW = Object.fromEntries(
 const toMax = (to: number) => (Math.round(to * 10) - 1) / 10;
 
 /** 该档最多能填多少槽（COMMON 30 + PICK UP 30 上限），< 60 即理论值本身达不到该档。 */
-const slotsOf = (charts: ChartEntry[], per: number) => fillableSlots(charts, per).total;
 
 /** 理论值里各定数的谱面分布（上位 60 谱面），按定数降序排好给页面直接渲染。 */
 const levelRows = (t: Theory) =>
@@ -111,7 +109,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
     </div>
 
     {SRVS.map((s) => {
-      const { theory, bands, charts } = VIEW[s.id];
+      const { theory, bands } = VIEW[s.id];
       const prime = primeThreshold(theory.total);
       const peach = peachThreshold(theory.totalN);
       const pool = poolInfo(s.id);
@@ -173,9 +171,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
               </button>
             </div>
             <p class="jb-legend">
-              <span>「均分」= 分数线 ÷ <b>{SLOT_COUNT}</b>，即 {SLOT_COUNT} 张谱面每张平均要打出多少 jubility；
-                「可填」= 本服曲库里单曲理论值够得着该均分的谱面能凑出几个槽（COMMON 30 + PICK UP 30），
-                <b>{SLOT_COUNT}/{SLOT_COUNT}</b> 才算这一档真正可达。</span>
+              <span>「均分」= 分数线 ÷ <b>{SLOT_COUNT}</b>，即 {SLOT_COUNT} 张谱面每张平均要打出多少 jubility。</span>
             </p>
             <div class="jb-head" aria-hidden="true">
               <span>#</span>
@@ -183,7 +179,6 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
               <span>层级 / 区间</span>
               <span>0 → 理论值</span>
               <span>均分</span>
-              <span>可填</span>
             </div>
             <ol class="jb-ladder">
               {bands
@@ -192,8 +187,6 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                 .map((b) => {
                   const off = !b.active;
                   const per = off ? 0 : b.perChart;
-                  const slots = off ? 0 : slotsOf(charts, per);
-                  const reach = slots >= SLOT_COUNT;
                   const f = Math.min(100, (b.from / theory.total) * 100);
                   const t = b.to === null ? 100 : Math.min(100, (b.to / theory.total) * 100);
                   // 区段宽度 < 2% 的档（GOLD / PRIME GOLD）改成右端对齐，避免最小宽度溢出轨道
@@ -228,11 +221,6 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                       <span class="jb-per">
                         <b>{off ? '—' : per}</b>
                         <span class="jb-per-k">每谱面</span>
-                      </span>
-                      <span class="jb-fit" data-reach={!off && reach ? '1' : undefined}>
-                        <span class="jb-fit-k">可填</span>
-                        {off ? '—' : slots}
-                        {!off && <em>/{SLOT_COUNT}</em>}
                       </span>
                     </li>
                   );
