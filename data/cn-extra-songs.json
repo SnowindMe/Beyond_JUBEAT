@@ -1,75 +1,18 @@
 {
   "_comment": [
-    "国服新增曲目的人工补充表（2026-10-29 建立）。",
+    "国服新增曲目的人工补充表（2026-10-29 建立，2026-10-31 已清空）。",
     "",
-    "为什么需要它：音乐魔方的新曲有两个来源——① 日服已有、在国服上线的（走 sheet1 打√或覆盖层，",
-    "归到原世代）；② 国服**独有**、日服曲库压根没有的（华立独占 / 机种移植 / 联动曲 / 国语流行）。",
-    "② 的曲目在 data/upstream/jp-resolved.json 里不存在，build-db 的日服循环根本不会遍历到，",
-    "而 xlsx sheet2 是定期导出的快照（当前停在 2026.10.15 那批），新上架的也来不及进。",
+    "【为什么现在清空】这份表当初是为「日服曲库没有、xlsx 快照也来不及收」的国服独有曲建的。",
+    "2026-10-31 主人提供了新版 source.xlsx（sheet2 从 95 行增到 102 行），当初手工录的 7 首",
+    "（990000038 Μοῦσα / 990000041 Strange Flow / 991000018 VIVID NIGHT / 995000030 未来爱 /",
+    " 995000031 XZMHXDXH / 995000034 午夜恰恰 / 995000053 末日香槟）已全部进官方表，",
+    "且官方表还多出 BPM 与「移植机种」两列。继续留着就是同一份数据的第二个来源，",
+    "两边一旦分叉就会出现「改了没生效」。故清空。",
     "",
-    "所以这里给 ② 建一张表：build-db 在日服/国服两个循环之后，把这里每一条当作",
-    "「国服独有行」插入（server_jp=0 / server_cn=1 / gen_name=音乐魔方）。",
+    "保留本文件而不是删掉：build-db 仍在读它（空表 = 不插入任何额外行），",
+    "机制保留，将来再有「两次导出之间上架」的曲，填这里依然管用。",
     "",
-    "数据来源优先级（主人口径 2026-10-29）：",
-    "  曲名/艺术家/难度/曲绘 ← 音游街小程序抓取（archive/legacy/yyj-extractor/out/*.json）",
-    "  分类/移植机种/更新时间   ← 主人贴的国服更新表截图（音游街不返回分类）",
-    "两者缺一不可：音游街有难度与曲绘但没有分类，截图有分类但不一定有难度。",
-    "",
-    "维护方式：key = 官方 songId，value 见下。cover 用站点名 id<songId>.webp；",
-    "源图放在 archive/materials/songjackets/id<songId>.png，由 build-data 转 208px webp。",
-    "改完跑 npm run db（含 build-data）→ npm run patch → wrangler d1 execute --remote。",
-    "",
-    "自检：每条都必须能被 build-db 成功插入（id 不重复、分类已映射、难度合法），否则抛错。"
+    "维护方式：key = 官方 songId，value 见 build-db.cjs 的读取处。"
   ],
-  "songs": {
-    "990000038": {
-      "title": "Μοῦσα", "artist": "ushiee", "bpm": "200",
-      "bsc": 5, "adv": 9.2, "ext": 10.2,
-      "category": "KONAMI", "pool": "SOUND VOLTEX EXCEED GEAR", "date": "2026-10-29",
-      "cover": "id990000038.webp",
-      "note": "机种移植（SDVX）。分类见主人 2026-10-29 国服更新表截图"
-    },
-    "990000041": {
-      "title": "Strange Flow", "artist": "Sota Fujimori", "bpm": "140",
-      "bsc": 3, "adv": 7, "ext": 9.4,
-      "category": "KONAMI", "pool": "REFLEC BEAT 悠久のリフレシア", "date": "2026-10-29",
-      "cover": "id990000041.webp",
-      "note": "机种移植（RB）。同上"
-    },
-    "991000018": {
-      "title": "VIVID NIGHT", "artist": "Wooden & SumaiLight", "bpm": null,
-      "bsc": 3, "adv": 7, "ext": 9.3,
-      "category": "原创", "pool": "联动/音波狂潮", "date": "2026-10-29",
-      "cover": "id991000018.webp",
-      "note": "音乐魔方原创，联动活动「音波狂潮」。同上"
-    },
-    "995000030": {
-      "title": "未来爱", "artist": "林欣然", "bpm": null,
-      "bsc": 1, "adv": 4, "ext": 6,
-      "category": "流行", "pool": "——", "date": "2026-10-29",
-      "cover": "id995000030.webp",
-      "note": "国语流行。同上"
-    },
-    "995000034": {
-      "title": "午夜恰恰", "artist": "邓典 / 刘至佳", "bpm": null,
-      "bsc": 2, "adv": 4, "ext": 7,
-      "category": "流行", "pool": "——", "date": "2026-10-29",
-      "cover": "id995000034.webp",
-      "note": "国语流行。同上"
-    },
-    "995000053": {
-      "title": "末日香槟", "artist": "扭蛋姬", "bpm": null,
-      "bsc": 1, "adv": 5, "ext": 8,
-      "category": "流行", "pool": "——", "date": "2026-10-29",
-      "cover": "id995000053.webp",
-      "note": "国语流行。同上。主人截图写作「末日香甜」，音游街与曲库均为「末日香槟」（香槟=champagne，与曲风相符）"
-    },
-    "995000031": {
-      "title": "XZMHXDXH", "artist": "方大同", "bpm": null,
-      "bsc": 2, "adv": 5, "ext": 8,
-      "category": "流行", "pool": "——", "date": "2026-10-29",
-      "cover": "id995000031.webp",
-      "note": "国语流行。同上"
-    }
-  }
+  "songs": {}
 }

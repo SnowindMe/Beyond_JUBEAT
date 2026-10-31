@@ -333,12 +333,22 @@ function main() {
     // 这两个数都会变，硬编码等于每次都要改断言）。
     jpOfficial: jp.songs.filter((s) => s.idKind === 'official' || idFixes.has(String(s.songId))).length,
     jpSynthetic: jp.songs.filter((s) => s.idKind !== 'official' && !idFixes.has(String(s.songId))).length,
-    // 国服行 = sheet1 打√ 且真在日服库里的（432）+ 被 sheet2 命中的日服行（1）+ sheet2 自身的国服行（91）
-    //          + 人工覆盖表里那几条（2026-10-29 加：源表两次导出之间上架的曲不在 tickInJp 里）。
-    cnTotal: tickInJp + dualJpNotTick + cnRows.length + cnOnlineOverrides.size + cnExtraSongs.size,
+    // 国服行 = sheet1 打√ 且真在日服库里的 + 被 sheet2 命中的日服行 + sheet2 自身的国服行
+    //          + 人工覆盖表里那几条（2026-10-29 加：源表两次导出之间上架的曲不在 tickInJp 里）
+    //          + 人工补充表（cn-extra-songs）。
+    // 【2026-10-31 坑】cnExtraSongs 与 sheet2 会**重复**：2026-10-29 手工录的 7 首在
+    // 2026-10-31 那版 xlsx 里已经正式收录，两边都算就会把国服期望值多加 7（534→541）。
+    // 所以这里要减掉「既在补充表又在 sheet2 里」的那部分，而不是无脑相加。
+    // 【2026-10-31 二次修】cnOnlineOverrides 也会与 sheet1 打√ 重复：那 3 条当初补的就是
+    // 「sheet1 还没打√」的曲，2026-10-31 那版 xlsx 已经把√补上了。无脑相加会多加 3。
+    // 两条规则统一成一句话：**人工表只算「官方表里还没有的」那部分**。
+    cnTotal: tickInJp + dualJpNotTick + cnRows.length
+      + [...cnOnlineOverrides.keys()].filter((id) => !cnOldFrameIds.has(id)).length
+      + [...cnExtraSongs.keys()].filter((id) => !cnRows.some((r) => String(r.songId) === String(id))).length,
     // 双服行 = 上面前两项（都是日服行被标 cn）+ sheet2 里能匹配日服的那几行（Big Daddy 国服行）
     //          + 人工覆盖表（2026-10-29 加）
-    dualTotal: tickInJp + dualJpNotTick + stat.cnDual + cnOnlineOverrides.size,
+    dualTotal: tickInJp + dualJpNotTick + stat.cnDual
+      + [...cnOnlineOverrides.keys()].filter((id) => !cnOldFrameIds.has(id)).length,
     // 解禁期次：直接数 sheet1 I 列，与库里的 unlock_note 对照（2026-10-25 加）。
     unlockI: [...s1Unlock.values()].filter((v) => v.phase === 1).length,
     unlockII: [...s1Unlock.values()].filter((v) => v.phase === 2).length,

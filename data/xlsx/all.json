@@ -1,7 +1,7 @@
 {
   "sourceXlsx": "data/xlsx/source.xlsx",
-  "sourceSha256": "4f0382b1202b43ff61d7f83369a5a874540cb6cd5300ae075e003a8a7ba28f07",
-  "sharedStringCount": 1450,
+  "sourceSha256": "0f0af5b4509f35b3a96c383fd53aa1c633dd8d53e2c880550f2c40d65dc28ea6",
+  "sharedStringCount": 1462,
   "sheets": [
     {
       "sheetIndex": 1,
@@ -20,11 +20,11 @@
       "sheetName": "国框更新音乐魔方进度",
       "state": "visible",
       "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet2.xml",
-      "maxRow": 95,
+      "maxRow": 102,
       "maxCol": 10,
-      "declaredRange": "国框更新音乐魔方进度!$A$1:$J$95",
+      "declaredRange": "国框更新音乐魔方进度!$A$1:$J$102",
       "mergeCount": 10,
-      "nonEmptyRowCount": 95,
+      "nonEmptyRowCount": 102,
       "json": "data/xlsx/sheet2.json"
     },
     {
@@ -41,12 +41,12 @@
     },
     {
       "sheetIndex": 4,
-      "sheetName": "国框Jubiility理论值 【20261015】",
+      "sheetName": "国框Jubiility理论值 【20261029】",
       "state": "visible",
       "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet4.xml",
       "maxRow": 65,
       "maxCol": 15,
-      "declaredRange": "'国框Jubiility理论值 【20261015】'!$A$3:$F$65",
+      "declaredRange": "'国框Jubiility理论值 【20261029】'!$A$3:$F$65",
       "mergeCount": 4,
       "nonEmptyRowCount": 65,
       "json": "data/xlsx/sheet4.json"
@@ -54,7 +54,7 @@
     {
       "sheetIndex": 5,
       "sheetName": "国框跑图II歌曲详情",
-      "state": "hidden",
+      "state": "visible",
       "sourceFile": "data/xlsx/source.xlsx#xl/worksheets/sheet5.xml",
       "maxRow": 29,
       "maxCol": 12,

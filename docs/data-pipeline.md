@@ -17,14 +17,15 @@ npm run db      # = parse-xlsx → build-db --seed → build-data
 | 步骤 | 脚本 | 输入 | 输出 |
 |---|---|---|---|
 | ① 解析 xlsx | `scripts/db/parse-xlsx.cjs` | `data/xlsx/source.xlsx` | `data/xlsx/sheet1..7.json` + `all.json` |
-| ② 建库 + 导种子 | `scripts/db/build-db.cjs --seed` | 上面 7 份 JSON + `data/upstream/*.json` + `data/gen-overrides.json` + `db/schema.sql` | `data/jubeat.db` + `db/seed.sql` |
+| ② 建库 + 导种子 | `scripts/db/build-db.cjs --seed` | 上面 7 份 JSON + `data/upstream/*.json` + `db/schema.sql` + 四个覆盖层（gen/title/chart/cn-online-overrides） | `data/jubeat.db` + `db/seed.sql` |
 | ③ 生成站点数据 | `scripts/build-data.cjs` | `data/jubeat.db` | `src/data/data.json`、`src/data/songs.json`、曲绘同步 |
 
 自检（每次跑都会打印并判失败）：
 
 ```
-曲目总数 1241   日服（含双服行）1151   国服（含双服行）524   双服行 434
-谱面 3723（bsc/adv/ext 非空计数之和）   song_id 重复 0   世代/分类/EXT 空 0
+曲目总数 1248   日服（含双服行）1151   国服（含双服行）534   双服行 437
+谱面 3744（bsc/adv/ext 非空计数之和）   song_id 重复 0   世代/分类/EXT 空 0
+RemyWiki 有键数行 1150（长押 298）  长押未知行 98（= 音乐魔方整个世代）  bpm 为空 0
 ```
 
 只想跑其中一段时：
