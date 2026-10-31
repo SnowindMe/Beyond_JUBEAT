@@ -254,7 +254,14 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 .sc-gen-h {
     position: sticky;
     top: 0;
-    z-index: 2;
+    /* 【2026-10-31 修】原先与卡片角标同为 z-index:2，同一层叠上下文里打平手——
+       DOM 上卡片在标题之后，于是后画的赢：卡片滚到吸顶标题下方时，
+       .sc-hold（曲绘右上角的长押标识，z-index:2）会盖住标题文字。
+       提到 3 让它压过所有卡片内容（.sc-pick 是 1、.sc-hold 是 2）。
+       为什么不是「给 .sc-hold 降级」：角标要压在曲绘与整卡点击层（.sc-link，1）之上，
+       降级会让它在卡片内部被别的元素盖住；矛盾点在「跨卡片内容 vs 吸顶条」，抬高后者更干净。
+       也不能只给标题加不透明底：底能盖住文字周围的空白，盖不住已经画在标题文字上的角标。 */
+    z-index: 3;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -439,7 +446,8 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
       三处一套值，不用分别写死 px。
    ② 选择器写成 picture.sc-hold > img，是为了压过上面的 .sc-j img（width/height/object-fit/
       opacity/transition）与 hover 的 scale——否则角标会跟着封套一起放大、并从角上被裁掉。
-   ③ 与 [2] 角标同处右上角，所以有长押角标时把 [2] 往下推一个角标高度（见下面的 + 规则）。 */
+   ③ 位置与 PICK UP 不冲突：长押在曲绘**右上角**，PICK UP 在**左上角**，分处两侧
+      （实测两者 rect 不相交）。真正要防的是 ④ 讲的吸顶标题遮挡。 */
 .sc-hold,
 .sd-hold {
     position: absolute;
