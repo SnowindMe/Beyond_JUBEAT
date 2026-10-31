@@ -178,7 +178,15 @@ EO-LOG-UUID: 10337981676968411963      ← EdgeOne 层也在场
 EO-Cache-Status: HIT
 ```
 
-链路：**用户 → Cloudflare → EdgeOne → Workers**
+链路方向（**2026-11-01 更正**）：这两家的头同时在场只说明「两跳都在」，**不能推出谁在前**。
+按域名级证据，`wiki-cn.byd-ub.top` 是入口那一跳是 **EdgeOne**：
+```
+DNS（CF API 记录 + 1.1.1.1 DoH 双向核对）：
+  wiki-cn.byd-ub.top  CNAME  wiki-cn.byd-ub.top.eo.dnse4.com   proxied = false
+  DoH A 记录：43.174.247.66 / 43.174.246.66   ← 腾讯 IP 段
+  （对照）wiki.byd-ub.top  AAAA 100::  proxied = true  → 104.21.30.139 / 172.67.172.248
+```
+即 **wiki-cn：用户 → EdgeOne → Cloudflare → Workers**；`wiki.byd-ub.top` 才是用户 → Cloudflare → Workers。
 
 | 层 | 特征响应头 | 非 200 表现 | 判据 |
 | --- | --- | --- | --- |
@@ -231,6 +239,30 @@ EO-Cache-Status: HIT
 | `必须带 UA 否则 403` | 实测缓存命中时无 UA 也是 200 —— 会被下次缓存 HIT 打脸 |
 | `缓存未命中导致 403` | 实测过一条 cache MISS 也是 200，归因不成立 |
 | `CF 策略十分钟变了一次` | 真相是代理 vs 直连走了不同路径；**写成因会被打脸，写判据不会** |
+
+### 6.4 谁改了 `Cache-Control`：图片 `max-age=3600` 的归属（2026-11-01）
+
+起因：排查「曲绘有没有击中 CDN」。**CF 侧早就命中了**（`CF-Cache-Status: HIT`），
+但同一张图在两个域名下回来的 `Cache-Control` 不一样，据此可以把改写方钉死：
+
+| 对象 | `wiki.byd-ub.top`（直连 CF） | `wiki-cn.byd-ub.top`（经 EdgeOne） |
+| --- | --- | --- |
+| 曲绘 `/assets/images/jackets/*.webp` | `public, max-age=31536000, immutable` | **`max-age=3600`** |
+| `/icon-192.png` | `public, max-age=604800` | **`max-age=3600`** |
+| `/favicon-32.png` | `public, max-age=86400` | **`max-age=3600`** |
+| `/_astro/*.css` | `public, max-age=31536000, immutable` | 原样透传 |
+| `/sw.js` | `public, max-age=0, must-revalidate` | 原样透传 |
+| `/api/audio/*.ogg` | —（Worker 生成） | 原样透传（`max-age=604800, s-maxage=2592000, immutable`） |
+
+三条可复算判据：
+
+1. **按 URL 后缀挑**：被改写的全是图片扩展名（`.webp`/`.png`/`.ico`），非图片一律原样 —— 所以「音频那条路不被改写」不是因为我们做了什么，只是 `.ogg` 不在名单里。
+2. **只在 wiki-cn 这一跳**：同一文件走直连 CF 的域名回原值 → **改写方是 EdgeOne，不是 CF**。
+3. **不是 CF 的 Browser Cache TTL**：zone 设置 `browser_cache_ttl = 14400`，且它只在响应本身没带 `Cache-Control` 时才补（404 实测回 `max-age=14400`，不是 3600）。
+
+> 结论写法定为判据：**看到图片 `max-age=3600`，先查 `wiki-cn` 的 EdgeOne 那一跳，别先动 CF。**
+> 附带事实：曲绘在 CF 侧本来就是命中态（冷门文件首次 `MISS`、第二次起 `HIT`，两域皆然），
+> 静态资源不走 Worker，也不需要 `caches.default`。
 
 **总纲：判据永远是看响应头属于哪一层 —— `Location`=跳转、`Cf-Mitigated`=挑战、`EO-*`=EdgeOne。**
 

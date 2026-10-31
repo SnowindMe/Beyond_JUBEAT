@@ -17,7 +17,12 @@
   Cache-Control: public, max-age=0, must-revalidate
 
 # 站点图标（2026-10-27 换品牌标识后从 svg 改为多尺寸 png）
-# 注：CF 的 Browser Cache TTL 会覆盖下面这些图片扩展名的 max-age（实测回 3600），
+# 注：**图片扩展名**的 max-age 到不了浏览器——wiki-cn 那一跳（腾讯 EdgeOne，DNS
+#     CNAME 到 eo.dnse4.com）会把所有图片统一压成 Cache-Control: max-age=3600。
+#     实测 2026-11-01：同一文件直连 CF 的 wiki.byd-ub.top 回本文件写的值
+#     （曲绘 31536000 immutable、icon 604800、favicon 86400），经 wiki-cn 全回 3600。
+#     这笔账不是 CF 的：CF 的 Browser Cache TTL（zone=14400）只在响应本身没有
+#     Cache-Control 时才补（404 实测 14400）。
 #     所以换图标时真正生效的是 URL 上的 ?v=N（见 README「品牌资源版本」）。
 /favicon.ico
   Cache-Control: public, max-age=86400
