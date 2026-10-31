@@ -82,7 +82,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
   canonicalPath="/jubility/"
   description={`jubeat 音乐魔方 Jubility 层级表：NORMAL 到 GOLD 十档 + 自创 PEACH / PRIME GOLD，含区间、达成所需均分。日服理论值 ${VIEW.jp.theory.total}，国服理论值 ${VIEW.cn.theory.total}。`}
 >
-  <section class="band" id="jbRoot" data-srv={DEFAULT_SRV}>
+  <section class="band" id="jbRoot" data-srv={DEFAULT_SRV} data-custom="off">
     {/* 标题行已去掉（主人 2026-10-26：「【Jubility层级】行可以不要」）。
         但 h1 不能删：下面分区名是 h2/h3，没了 h1 页面标题层级就断了。
         改用与 /songs/ 同一个视觉隐藏法，屏幕阅读器仍读得到。 */}
@@ -141,7 +141,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                   两者语义不同（左两条相加 100%，这两条只是分别标在 96.5% 与 99.5% 处），所以不用同一种填充条，
                   否则读者会以为三者加起来是 200%。 */}
               {peach !== null && (
-                <div class="jb-pool jb-pool-mark">
+                <div class="jb-pool jb-pool-mark" data-custom="1">
                   <span class="jb-pool-k">PEACH</span>
                   <span class="jb-pool-rail">
                     <i class="jb-tick" style={`left:${(peach / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'peach')?.c}`}></i>
@@ -150,7 +150,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
                 </div>
               )}
               {prime !== null && (
-                <div class="jb-pool jb-pool-mark">
+                <div class="jb-pool jb-pool-mark" data-custom="1">
                   <span class="jb-pool-k">PRIME GOLD</span>
                   <span class="jb-pool-rail">
                     <i class="jb-tick" style={`left:${(prime / theory.total) * 100}%;--c:${TIERS.find((t) => t.k === 'prime')?.c}`}></i>
@@ -163,6 +163,15 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
 
           {/* ---------- 阶梯 ---------- */}
           <div class="panel">
+            {/* 【2026-11-01 主人】「要做个『显示Custom区间』，默认不显示」。
+                PEACH / PRIME GOLD 是本站自创档（游戏内只有十档），默认收起来：
+                阶梯里少两行、概览里少两条阈值刻线，页面回到「官方十档」的干净状态。
+                状态存 localStorage；SSR 输出的是 off，所以开启过的人刷新也不会先闪后收。 */}
+            <div class="jb-tools">
+              <button type="button" class="jb-custom-tg" id="jbCustomTg" aria-pressed="false">
+                显示 Custom 区间
+              </button>
+            </div>
             <p class="jb-legend">
               <span>「均分」= 分数线 ÷ <b>{SLOT_COUNT}</b>，即 {SLOT_COUNT} 张谱面每张平均要打出多少 jubility；
                 「可填」= 本服曲库里单曲理论值够得着该均分的谱面能凑出几个槽（COMMON 30 + PICK UP 30），
@@ -297,6 +306,31 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
       for (var i = 0; i < btns.length; i++) {
         btns[i].addEventListener('click', function () {
           apply(this.getAttribute('data-srv'));
+        });
+      }
+
+      /* 「显示 Custom 区间」（2026-11-01 主人要求，默认不显示）。
+         只切 root 上的一个属性，隐藏交给 CSS —— 不加内联样式、不重排 DOM，
+         两个服务器面板共用同一个偏好。和 /songs/ 的筛选存档同一套做法：
+         localStorage + try/catch（隐私模式下读写都会抛）。 */
+      var tg = document.getElementById('jbCustomTg');
+      var KEY = 'jb-custom';
+      function applyCustom(on) {
+        root.setAttribute('data-custom', on ? 'on' : 'off');
+        if (tg) tg.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      var savedCustom = false;
+      try {
+        savedCustom = localStorage.getItem(KEY) === 'on';
+      } catch (e) {}
+      applyCustom(savedCustom);
+      if (tg) {
+        tg.addEventListener('click', function () {
+          var on = tg.getAttribute('aria-pressed') !== 'true';
+          applyCustom(on);
+          try {
+            localStorage.setItem(KEY, on ? 'on' : 'off');
+          } catch (e) {}
         });
       }
     })();

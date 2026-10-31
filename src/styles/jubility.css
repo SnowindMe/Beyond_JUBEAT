@@ -494,3 +494,52 @@ html[data-g="yymf"] .jb-row[data-custom] .jb-seg {
 html:not(.jb-js) .jb-pane[hidden] {
     display: block;
 }
+
+/* ---------- 「显示 Custom 区间」开关（2026-11-01 主人要求，默认不显示） ---------- */
+/* 为什么不用 .sc-chip：它定义在 songs.css，而本页只加载 server-card.css + jubility.css
+   （见文件头：不为一页引入 1600+ 行）。所以按同一套控件语汇做一份本页版本，
+   色票一律走主题变量，不抄死色值。 */
+.jb-tools {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 0 10px;
+}
+.jb-custom-tg {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px; /* 与 /songs/ 的筛选片同高：44px 是触控下限 */
+    padding: 0 14px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink2);
+    background: color-mix(in srgb, var(--glass2) 62%, transparent);
+    border: 1px solid var(--edge);
+    border-radius: var(--pill);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.jb-custom-tg:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+}
+.jb-custom-tg[aria-pressed="true"] {
+    color: var(--ink);
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 16%, transparent);
+}
+.jb-custom-tg:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+/* 关闭态：阶梯里的两行与概览里的两条 Custom 阈值刻线一起收起（都带 data-custom="1"）。
+   加 html.jb-js 前缀是刻意的渐进增强——脚本被禁用时宁可多亮两档，
+   也不要让人以为自创档不存在（与文件末尾 .jb-pane[hidden] 同一条原则）。 */
+html.jb-js #jbRoot[data-custom="off"] [data-custom="1"] {
+    display: none;
+}
+/* 没有 JS 时这个开关点了也没反应，索性不显示 */
+html:not(.jb-js) .jb-tools {
+    display: none;
+}
+
