@@ -264,6 +264,32 @@ DNS（CF API 记录 + 1.1.1.1 DoH 双向核对）：
 > 附带事实：曲绘在 CF 侧本来就是命中态（冷门文件首次 `MISS`、第二次起 `HIT`，两域皆然），
 > 静态资源不走 Worker，也不需要 `caches.default`。
 
+### 6.5 修复记录：把图片的浏览器 TTL 交还给源站（2026-11-01 当日完成）
+
+改了哪里（**控制台操作，不在仓库里**）：EdgeOne → 站点 `byd-ub.top`（`zone-3we3ellu1uc3`）
+→ Site Acceleration → Rule Engine → 唯一的一条规则「网站加速-wiki-cn.byd-ub.top」：
+
+```
+IF  File extension (ignore case) is in  jpg png gif bmp svg webp
+    Browser Cache TTL: Custom TTL = 1 hour        ← 改前（覆盖源站）
+    Browser Cache TTL: Follow origin server Cache-Control   ← 改后（Deploy 生效）
+```
+
+注意这条规则是 EdgeOne 建站时的「网站加速」模板带的，**不在我们的仓库里**，
+所以「换了源站响应头却没生效」这类问题，光看仓库永远找不到答案。
+
+改后实测（同一批 URL，改前/改后各打一次）：
+
+| 对象 | 改前（wiki-cn） | 改后（wiki-cn） | 对照：直连 CF |
+| --- | --- | --- | --- |
+| 曲绘 `.webp` | `max-age=3600` | `public, immutable, max-age=31536000` | 同左 |
+| `/icon-192.png` | `max-age=3600` | `public, max-age=604800` | 同左 |
+| `/favicon-32.png` | `max-age=3600` | `public, max-age=86400` | 同左 |
+
+两个补充事实：①**不需要清缓存**——命中的旧副本（`EO-Cache-Status: HIT`、`Age` 十几万秒）
+也是按新规则重新出头的，改完立刻生效；②`Browser Cache TTL` 与 `EdgeOne Node Cache TTL`
+是两件事，前者只影响浏览器，后者才是节点侧。
+
 **总纲：判据永远是看响应头属于哪一层 —— `Location`=跳转、`Cf-Mitigated`=挑战、`EO-*`=EdgeOne。**
 
 ---

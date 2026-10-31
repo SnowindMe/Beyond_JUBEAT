@@ -143,7 +143,7 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 > 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
 > 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
 
-**品牌资源版本（`?v=N`，v1.27.2 踩坑定稿）**：**图片扩展名**的 `max-age` 到不了浏览器——`wiki-cn` 那一跳（腾讯 EdgeOne，DNS 是 CNAME → `eo.dnse4.com`、解析到 43.174.x）会把所有图片统一压成 `Cache-Control: max-age=3600`（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon、曲绘 `.webp` 同样回 3600）。**2026-11-01 归因更正：这不是 CF 的锅**——同一文件走直连 CF 的 `wiki.byd-ub.top` 回的就是本文件原值（曲绘 `31536000, immutable`、icon `86400`）；CF 的 Browser Cache TTL（zone=14400）只在响应本身没有 Cache-Control 时才补（404 实测 14400）。而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
+**品牌资源版本（`?v=N`，v1.27.2 踩坑定稿）**：**图片扩展名**的 `max-age` 曾被 `wiki-cn` 那一跳（腾讯 EdgeOne）统一压成 `Cache-Control: max-age=3600`（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon、曲绘 `.webp` 同样回 3600）。**2026-11-01 已修复**：根因是 EdgeOne 站点里那条「网站加速」模板规则的 `IF 文件后缀 ∈ {jpg,png,gif,bmp,svg,webp} → Browser Cache TTL：自定义 1 小时`，已改成「Follow origin server Cache-Control」并 Deploy；实测曲绘回 `31536000, immutable`、icon 回 `604800`、favicon 回 `86400`，与直连 CF 一致（详见 [docs/measurement-caliber.md](docs/measurement-caliber.md) §6.4）。顺带更正归因：**这不是 CF 的锅**——CF 的 Browser Cache TTL（zone=14400）只在响应本身没有 Cache-Control 时才补（404 实测 14400）。而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
 
 1. `src/layouts/Base.astro` 头部四个图标链接（favicon.ico / favicon-32 / favicon-16 / apple-touch-icon）；
 2. `src/components/Header.astro`（顶栏）与 `src/pages/index.astro`（首页标识区）的 `brand.webp`；
@@ -408,7 +408,7 @@ Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
 | `/index.html`、`/404.html`、`/manifest.webmanifest`、服务器 `/sw.js` | `max-age=0, must-revalidate`（每次都回源确认；manifest 里列着 icons 的 `?v=N`，缓存住会让换图标不生效） |
 | `/favicon.ico`、`/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
 
-> ⚠️ **上面的 max-age 只在「直连 CF 的 wiki.byd-ub.top」成立。** 用户实际访问的 `wiki-cn.byd-ub.top` 前面还有一跳腾讯 EdgeOne，它把**所有图片扩展名**的 `Cache-Control` 统一改写成 `max-age=3600`（2026-11-01 实测：曲绘/png 图标/favicon 全中；`/_astro/*.css`、`/sw.js`、`/api/audio/*.ogg` 不受影响、原样透传）。排查响应头改动时先看这一跳，别急着改 CF（详见 [docs/measurement-caliber.md](docs/measurement-caliber.md) §6.4）。
+> ⚠️ **用户实际访问的 `wiki-cn.byd-ub.top` 前面还有一跳腾讯 EdgeOne**：它在 2026-11-01 之前把**所有图片扩展名**的 `Cache-Control` 统一改写成 `max-age=3600`（曲绘/png 图标/favicon 全中；`/_astro/*.css`、`/sw.js`、`/api/audio/*.ogg` 不受影响、原样透传）。该行为来自 EdgeOne 的「网站加速」模板规则，**已于 2026-11-01 改为遵循源站**，现在两个域名回的值一致。排查响应头被改写时先看这一跳，别急着改 CF（详见 [docs/measurement-caliber.md](docs/measurement-caliber.md) §6.4）。
 
 ### SEO 与站点图标
 
