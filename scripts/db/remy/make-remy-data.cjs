@@ -9,6 +9,19 @@ const list = JSON.parse(fs.readFileSync('.devhome/remy-list.json', 'utf8'));
 const pages = JSON.parse(fs.readFileSync('.devhome/remy-pages-final.json', 'utf8'));
 const bySong = JSON.parse(fs.readFileSync('.devhome/remy-by-song.json', 'utf8'));
 
+// 榜单外补充页（2026-10-31）：这 13 首不在 Full Song List 里，主快照永远匹配不到，
+// 由 make-extra-pages.cjs 从各自页面单独解析后并进来。没有这个文件就跳过（不改变原有行为）。
+const extraPath = '.devhome/remy-extra-snapshot.json';
+const extra = fs.existsSync(extraPath) ? JSON.parse(fs.readFileSync(extraPath, 'utf8')) : {};
+// 合并规则：**只补主快照没有的键**。主快照已有的一律以主快照为准——
+// 主快照是 1137 行两路交叉验证过的，补充页只用来填它的空洞。
+let extraAdded = 0;
+for (const [id, rec] of Object.entries(extra)) {
+  if (bySong[id]) continue;
+  bySong[id] = rec;
+  extraAdded++;
+}
+
 const out = [];
 let withData = 0, withHold = 0, holdCharts = 0, holdSum = 0, noData = [];
 for (const e of list) {
@@ -30,4 +43,5 @@ fs.writeFileSync('data/remy/jubeat-charts.json', JSON.stringify(out, null, 1));
 fs.writeFileSync('data/remy/by-song-id.json', JSON.stringify(bySong, null, 0));
 console.log('列表条目', out.length, '| 有数据', withData, '| 含 hold', withHold, '| 有 hold 的难度谱', holdCharts, '| hold 总数', holdSum, '| 无数据', noData.length);
 console.log('无数据条目:', noData.join(' / '));
+console.log('榜单外补充页并入:', extraAdded, '条（源 ' + Object.keys(extra).length + ' 条，其余主快照已有）');
 console.log('files:', fs.readdirSync('data/remy').map((f) => f + '=' + fs.statSync('data/remy/' + f).size).join(' '));

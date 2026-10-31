@@ -92,10 +92,10 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 
 | 列 | 空值行数 | 原因 |
 | --- | --- | --- |
-| bpm | **20 / 1248** | 日服源快照本来没有 BPM（原 **737 / 1248**）；2026-10-31 用 remywiki 的 jubeat BPM 回填后只剩这 20 行——全是没进 remywiki Full Song List 的曲（见 §1.4） |
+| bpm | **15 / 1248** | 日服源快照本来没有 BPM（原 **737 / 1248**）；2026-10-31 用 remywiki 的 jubeat BPM 回填后只剩这 20 行——全是没进 remywiki Full Song List 的曲（见 §1.4） |
 | added_at | **1084 / 1248** | 只有国服更新表（xlsx）与部分日服旧站快照有日期。国服 91 行里 77 行有；日服几乎全空 |
 | unlock_note | **1018 / 1248** | 只有解禁池曲目有 |
-| has_hold | **111 / 1248** | 没在 remywiki 找到这首（音乐魔方 98 + festo 8 + Ave. 5，见 §1.4 的构成拆分）。**NULL ≠ 0**：0 是「确定三难度都没长押」，未知不能当 0 用 |
+| has_hold | **103 / 1248** | 没在 remywiki 找到这首（音乐魔方 98 首整世代未收录 + 5 首只有 stub 页的 festo 曲，见 §1.4）。**NULL ≠ 0**：0 是「确定三难度都没长押」，未知不能当 0 用 |
 | artist / cover / bsc | 0 | 必有 |
 
 > 别看到「1084 行为空」就以为数据缺了——**源里就没有**。用 COALESCE 处理显示，
@@ -107,12 +107,12 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 
 | 项 | 值 |
 | --- | --- |
-| 来源 | remywiki 单曲页的 jubeat 难度表，抓取产物 data/remy/jubeat-charts.json（1138 条，含 [ 2 ] 变体） |
+| 来源 | remywiki 单曲页的 jubeat 难度表，抓取产物 data/remy/jubeat-charts.json（1138 条，含 [ 2 ] 变体）+ 榜单外补充页 8 条（见 data/remy/README.md） |
 | 入库输入 | data/remy/by-song-id.json（按 song_id 归并好的快照，build-db.cjs 回填） |
-| 有键数的行 | 1137 |
-| 长押谱（has_hold=1） | **290** |
-| 长押未知（has_hold IS NULL） | **111** |
-| 回填 BPM | 新增 717 行、改写 22 行 |
+| 有键数的行 | 1145 |
+| 长押谱（has_hold=1） | **294** |
+| 长押未知（has_hold IS NULL） | **103** |
+| 回填 BPM | 新增 722 行、改写 22 行 |
 
 判定规则（细节与反例见 data/remy/README.md）：
 
