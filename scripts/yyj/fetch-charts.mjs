@@ -91,33 +91,52 @@ async function fetchLibrary(session) {
 }
 
 // ---- 详情：逐首查 music_detail ----
-// 参数形态未知，这里是「先试最常见的几种，哪种返回有用数据就用哪种」。
-// 音频要快速判定：拿第一首试，命中就锁定参数名，后面全用同一个。
-const CANDIDATES = [
-  (id) => ({ songId: id }),
-  (id) => ({ songid: id }),
-  (id) => ({ musicId: id }),
-  (id) => ({ id }),
-  (id) => ({ songId: id, diff: 3 }),
-  (id) => ({ songId: id, song_id: id }),
-];
+// 【2026-10-31 确认】参数形态是反推来的，不是猜的：
+// 从 Fiddler 历史抓包（CustomRules.js 的 YYJ_Save 落盘）里翻到一条真实请求——
+//   {"action":"music_detail","roleid":"1006559","songId":995000032,"diff":3,"isHard":0,"project":"jubeat_release"}
+// 三个关键点，之前全踩错：
+//   ① songId 必须是**数字**（我传字符串，服务端当没这个字段）；
+//   ② 必须带 diff（1/2/3 = bsc/adv/ext），不带就拿不到谱面；
+//   ③ isHard 也要带（0 即可）。
+// 返回里正好有需要的两个字段：
+//   noteCount = 该难度音符总数；radarData.hold = 长押值（0 = 无长押）。
+// 主人 2026-10-31 明确「六维只能看出有没有 hold，看不出 hold 有多少」——
+// radarData 是个 0~100 的雷达分值，不是长按个数，所以**只能判有无**。
 
-async function probeDetail(session, sampleId) {
-  for (const build of CANDIDATES) {
-    const extra = build(sampleId);
-    try {
-      const j = await call(session, 'music_detail', extra);
-      const d = j && j.data;
-      if (!d) { log('  [' + JSON.stringify(extra) + '] 无 data'); continue; }
-      const keys = Object.keys(d).join(',');
-      log('  [' + JSON.stringify(extra) + '] data keys: ' + keys);
-      if (Object.keys(d).length >= 2) return { build, sample: d };
-    } catch (e) {
-      log('  [' + JSON.stringify(extra) + '] 失败: ' + (e.code || e.message));
+const DIFF = { 1: 'bsc', 2: 'adv', 3: 'ext' };
+const DIFFS = [1, 2, 3];
+
+// 拉一首曲的指定难度。失败重试 3 次（并发过高时服务端会丢请求而不是报错）。
+async function fetchDiff(session, songIdNum, diff, attempt = 0) {
+  try {
+    const j = await call(session, 'music_detail', {
+      roleid: '1006559',
+      songId: Number(songIdNum),
+      diff,
+      isHard: 0,
+    });
+    const d = j && j.data;
+    if (d && d.noteCount != null) {
+      return { noteCount: d.noteCount, radar: d.radarData, lv: d.lv, songLength: d.songLength };
     }
-    await sleep(200);
+    // 没 data 也当失败重试（限流时就是这么表现的）
+    if (attempt < 2) { await sleep(300 + attempt * 500); return fetchDiff(session, songIdNum, diff, attempt + 1); }
+    return { error: 'no-data' };
+  } catch (e) {
+    if (e.code === 'TOKEN_EXPIRED') throw e;  // token 过期不重试，直接往上抛
+    if (attempt < 2) { await sleep(300 + attempt * 500); return fetchDiff(session, songIdNum, diff, attempt + 1); }
+    return { error: e.code || e.message };
   }
-  return null;
+}
+
+// 一首曲三档全抓。**三档都要**（主人 2026-10-31 明确「BSC 和 ADV 也要抓」）
+async function fetchOne(session, songIdNum) {
+  const out = {};
+  for (const diff of DIFFS) {
+    out[DIFF[diff]] = await fetchDiff(session, songIdNum, diff);
+    await sleep(120);   // 每档之间留间隔，别把服务端打急
+  }
+  return out;
 }
 
 async function main() {
@@ -131,29 +150,41 @@ async function main() {
   if (ONLY_CUBE) ids = ids.filter((id) => genOf(Number(id)) === '音乐魔方');
   log('    曲库 ' + lib.size + ' 首，本次要抓 ' + ids.length + ' 首');
 
-  log('[2/2] 探测 music_detail 参数形态…');
-  const probe = await probeDetail(session, ids[0] || '990000001');
-  if (!probe) {
-    log('没探到可用参数。已保存曲库，详情留空。');
-    fs.writeFileSync(path.join(ROOT, '.devhome/yyj-charts.json'), JSON.stringify({ songs: [...lib.values()], details: {} }, null, 1));
-    return;
+  log('[2/2] 逐首抓三档谱面（BSC/ADV/EXT，串行 + 重试）…');
+  // 断点续抓：上一次的结果若存在就复用，只补缺的档
+  const prevPath = path.join(ROOT, '.devhome/yyj-charts.json');
+  let details = {};
+  if (fs.existsSync(prevPath)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(prevPath, 'utf8'));
+      if (prev.details) details = prev.details;
+      log('    读到上次结果 ' + Object.keys(details).length + ' 首，将复用已有的档');
+    } catch {}
   }
-  log('    锁定参数：' + JSON.stringify(probe.build('<id>')));
-  log('    样例返回：' + JSON.stringify(probe.sample).slice(0, 500));
+  const needDiff = (rec) => DIFFS.filter((d) => !rec || !rec[DIFF[d]] || rec[DIFF[d]].error || rec[DIFF[d]].noteCount == null);
 
-  const details = {};
-  let done = 0, failed = 0;
-  for (let i = 0; i < ids.length; i += CONC) {
-    const batch = ids.slice(i, i + CONC);
-    const got = await Promise.all(batch.map(async (id) => {
-      try {
-        const j = await call(session, 'music_detail', probe.build(id));
-        return [id, (j && j.data) || null];
-      } catch (e) { return [id, { error: e.code || e.message }]; }
-    }));
-    for (const [id, d] of got) { if (d && !d.error) { details[id] = d; done++; } else failed++; }
-    if (i % (CONC * 5) === 0) log('    进度 ' + Math.min(i + CONC, ids.length) + '/' + ids.length + '（成功 ' + done + ' 失败 ' + failed + '）');
-    await sleep(60);
+  let done = 0;
+  const t0 = Date.now();
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    const rec = details[id] || {};
+    const need = needDiff(rec);
+    if (!need.length) { done++; continue; }
+    for (const diff of need) {
+      rec[DIFF[diff]] = await fetchDiff(session, id, diff);
+      await sleep(100);
+    }
+    details[id] = rec;
+    done++;
+    if (i % 5 === 0 || i === ids.length - 1) {
+      const secs = ((Date.now() - t0) / 1000).toFixed(0);
+      const full = Object.values(details).filter((r) => !needDiff(r).length).length;
+      log('    ' + (i + 1) + '/' + ids.length + ' 齐全 ' + full + ' 首 | 已用 ' + secs + 's');
+    }
+    // 中途落盘，token 半路过期也不丢已抓的
+    if (i % 10 === 0) {
+      fs.writeFileSync(prevPath, JSON.stringify({ generatedAt: new Date().toISOString(), songs: [...lib.values()], details }, null, 1));
+    }
   }
   const out = path.join(ROOT, '.devhome/yyj-charts.json');
   fs.writeFileSync(out, JSON.stringify({ generatedAt: new Date().toISOString(), songs: [...lib.values()], details }, null, 1));

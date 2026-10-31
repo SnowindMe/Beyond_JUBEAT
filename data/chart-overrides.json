@@ -24,37 +24,1407 @@
     "90000120": {
       "bpm": "156",
       "has_hold": 1,
-      "notecounts": { "bsc": 223, "adv": 417, "ext": 715 },
-      "holds": { "bsc": 20, "adv": 24, "ext": 25 },
+      "notecounts": {
+        "bsc": 223,
+        "adv": 417,
+        "ext": 715
+      },
+      "holds": {
+        "bsc": 20,
+        "adv": 24,
+        "ext": 25
+      },
       "note": "splash!｜主人截图图一：223/20 · 417/24 · 715/25，定数 4/7/10.5 与库一致"
     },
     "90000154": {
       "bpm": "142",
       "has_hold": 1,
-      "notecounts": { "bsc": 218, "adv": 356, "ext": 709 },
-      "holds": { "bsc": 6, "adv": 6, "ext": 4 },
+      "notecounts": {
+        "bsc": 218,
+        "adv": 356,
+        "ext": 709
+      },
+      "holds": {
+        "bsc": 6,
+        "adv": 6,
+        "ext": 4
+      },
       "note": "激闘保安官！DEMPA撲滅大作戦｜主人截图图二：218/6 · 356/6 · 709/4，定数 3/6/9.5 与库一致"
     },
     "90000156": {
       "bpm": "155",
       "has_hold": 0,
-      "notecounts": { "bsc": 207, "adv": 420, "ext": 815 },
-      "holds": { "bsc": 0, "adv": 0, "ext": 0 },
+      "notecounts": {
+        "bsc": 207,
+        "adv": 420,
+        "ext": 815
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
       "note": "Underground Astronomy｜主人截图图三：Notecounts 单值 207 · 420 · 815（无 / Holds）= 确定无长押，定数 3/6/9.8 与库一致"
     },
     "90000204": {
       "bpm": "111",
       "has_hold": 1,
-      "notecounts": { "bsc": 129, "adv": 408, "ext": 739 },
-      "holds": { "bsc": 22, "adv": 27, "ext": 154 },
+      "notecounts": {
+        "bsc": 129,
+        "adv": 408,
+        "ext": 739
+      },
+      "holds": {
+        "bsc": 22,
+        "adv": 27,
+        "ext": 154
+      },
       "note": "サヨナラ・ヘヴン (BEMANI SYMPHONY Arr.)｜主人截图图四：129/22 · 408/27 · 739/154，定数 3/7/9.3 与库一致"
     },
     "90000206": {
       "bpm": "140-176",
       "has_hold": 1,
-      "notecounts": { "bsc": 253, "adv": 509, "ext": 782 },
-      "holds": { "bsc": 14, "adv": 50, "ext": 60 },
+      "notecounts": {
+        "bsc": 253,
+        "adv": 509,
+        "ext": 782
+      },
+      "holds": {
+        "bsc": 14,
+        "adv": 50,
+        "ext": 60
+      },
       "note": "Idola (BEMANI SYMPHONY Arr.)｜主人截图图五：253/14 · 509/50 · 782/60，定数 3/8/9.7 与库一致；BPM 是区间，原样保留"
+    },
+    "990000001": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 169,
+        "adv": 371,
+        "ext": 710
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000002": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 277,
+        "adv": 489,
+        "ext": 748
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000003": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 326,
+        "adv": 556,
+        "ext": 826
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000004": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 182,
+        "adv": 353,
+        "ext": 615
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000005": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 314,
+        "adv": 659,
+        "ext": 939
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000006": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 229,
+        "adv": 497,
+        "ext": 845
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000007": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 231,
+        "adv": 520,
+        "ext": 748
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000008": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 240,
+        "adv": 602,
+        "ext": 773
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000009": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 230,
+        "adv": 386,
+        "ext": 777
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000010": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 191,
+        "adv": 403,
+        "ext": 565
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000011": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 238,
+        "adv": 587,
+        "ext": 861
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000012": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 366,
+        "adv": 703,
+        "ext": 834
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000013": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 272,
+        "adv": 636,
+        "ext": 907
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000014": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 452,
+        "adv": 804,
+        "ext": 1001
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000015": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 226,
+        "adv": 641,
+        "ext": 866
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000016": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 452,
+        "adv": 786,
+        "ext": 954
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000017": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 250,
+        "adv": 525,
+        "ext": 767
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000018": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 240,
+        "adv": 730,
+        "ext": 1069
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000020": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 345,
+        "adv": 676,
+        "ext": 840
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000023": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 260,
+        "adv": 480,
+        "ext": 699
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000024": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 374,
+        "adv": 651,
+        "ext": 842
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000025": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 274,
+        "adv": 427,
+        "ext": 619
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000027": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 306,
+        "adv": 705,
+        "ext": 879
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000028": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 314,
+        "adv": 636,
+        "ext": 772
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000032": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 601,
+        "adv": 977,
+        "ext": 1099
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000033": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 427,
+        "adv": 704,
+        "ext": 820
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000034": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 354,
+        "adv": 565,
+        "ext": 771
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000035": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 418,
+        "adv": 797,
+        "ext": 928
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000038": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 427,
+        "adv": 775,
+        "ext": 938
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000041": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 226,
+        "adv": 474,
+        "ext": 793
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000042": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 293,
+        "adv": 494,
+        "ext": 711
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000001": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 208,
+        "adv": 652,
+        "ext": 849
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000002": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 192,
+        "adv": 464,
+        "ext": 741
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000003": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 268,
+        "adv": 635,
+        "ext": 790
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000004": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 401,
+        "adv": 719,
+        "ext": 947
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000005": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 293,
+        "adv": 647,
+        "ext": 921
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000006": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 312,
+        "adv": 709,
+        "ext": 898
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000007": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 337,
+        "adv": 610,
+        "ext": 818
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000008": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 176,
+        "adv": 484,
+        "ext": 815
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000009": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 291,
+        "adv": 595,
+        "ext": 873
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000010": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 353,
+        "adv": 667,
+        "ext": 834
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000011": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 313,
+        "adv": 597,
+        "ext": 880
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000012": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 200,
+        "adv": 437,
+        "ext": 613
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000013": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 416,
+        "adv": 657,
+        "ext": 815
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000014": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 401,
+        "adv": 558,
+        "ext": 758
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000015": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 302,
+        "adv": 597,
+        "ext": 867
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000016": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 337,
+        "adv": 535,
+        "ext": 847
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000017": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 340,
+        "adv": 676,
+        "ext": 898
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000018": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 238,
+        "adv": 471,
+        "ext": 692
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000020": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 240,
+        "adv": 407,
+        "ext": 891
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000021": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 378,
+        "adv": 544,
+        "ext": 805
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000022": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 182,
+        "adv": 322,
+        "ext": 655
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000023": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 222,
+        "adv": 368,
+        "ext": 736
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000024": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 261,
+        "adv": 296,
+        "ext": 616
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000025": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 389,
+        "adv": 533,
+        "ext": 750
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000026": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 152,
+        "adv": 276,
+        "ext": 562
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000027": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 270,
+        "adv": 394,
+        "ext": 780
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "991000028": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 516,
+        "adv": 885,
+        "ext": 976
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000001": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 249,
+        "adv": 388,
+        "ext": 543
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000002": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 178,
+        "adv": 337,
+        "ext": 513
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000003": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 118,
+        "adv": 234,
+        "ext": 495
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000006": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 193,
+        "adv": 348,
+        "ext": 425
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000007": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 243,
+        "adv": 506,
+        "ext": 848
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000008": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 202,
+        "adv": 348,
+        "ext": 550
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000009": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 165,
+        "adv": 320,
+        "ext": 517
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000010": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 207,
+        "adv": 342,
+        "ext": 566
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000011": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 117,
+        "adv": 257,
+        "ext": 565
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000012": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 174,
+        "adv": 377,
+        "ext": 673
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000013": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 103,
+        "adv": 236,
+        "ext": 437
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000014": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 126,
+        "adv": 280,
+        "ext": 537
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000015": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 198,
+        "adv": 341,
+        "ext": 542
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000016": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 235,
+        "adv": 300,
+        "ext": 558
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000017": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 228,
+        "adv": 375,
+        "ext": 504
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000018": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 149,
+        "adv": 245,
+        "ext": 494
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000019": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 85,
+        "adv": 239,
+        "ext": 404
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000020": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 138,
+        "adv": 308,
+        "ext": 619
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000022": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 192,
+        "adv": 332,
+        "ext": 591
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000023": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 107,
+        "adv": 294,
+        "ext": 444
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000024": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 164,
+        "adv": 251,
+        "ext": 442
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000025": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 105,
+        "adv": 238,
+        "ext": 409
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000026": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 179,
+        "adv": 268,
+        "ext": 545
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000027": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 165,
+        "adv": 291,
+        "ext": 440
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000028": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 231,
+        "adv": 360,
+        "ext": 523
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000030": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 175,
+        "adv": 311,
+        "ext": 489
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000031": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 188,
+        "adv": 345,
+        "ext": 682
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000032": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 204,
+        "adv": 371,
+        "ext": 626
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000033": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 180,
+        "adv": 299,
+        "ext": 627
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000034": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 211,
+        "adv": 288,
+        "ext": 546
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000043": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 160,
+        "adv": 278,
+        "ext": 517
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000046": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 233,
+        "adv": 425,
+        "ext": 726
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000047": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 160,
+        "adv": 365,
+        "ext": 455
+      },
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000048": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 118,
+        "adv": 280,
+        "ext": 500
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000053": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 129,
+        "adv": 336,
+        "ext": 538
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000054": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 160,
+        "adv": 291,
+        "ext": 508
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000055": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 198,
+        "adv": 376,
+        "ext": 764
+      },
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
     }
   }
 }

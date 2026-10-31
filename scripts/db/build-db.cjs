@@ -287,16 +287,19 @@ function main() {
     // 跑在 remy 回填**之后**：主人给的截图是一手数据，优先级最高。
     // 这几首曲在 remywiki 只有 stub 页，快照里本来就没有，所以这是纯增量；
     // 但仍用 UPDATE 覆盖而不是跳过，万一同 id 将来进了快照，以人工数据为准。
+    // holds 用 COALESCE：值未知（NULL）时保留库里原有的，不让 NULL 覆盖掉已知数量。
     const updChart = db.prepare(
-      'UPDATE songs SET bpm = COALESCE(?, bpm), has_hold = ?, notecounts = ?, holds = ? WHERE song_id = ?'
+      'UPDATE songs SET bpm = COALESCE(?, bpm), has_hold = ?, notecounts = ?, holds = COALESCE(?, holds) WHERE song_id = ?'
     );
     for (const [id, v] of chartOverrides) {
       if (!allIds.has(id)) { problems.push('人工补录表里的 songId 不在库中: ' + id); continue; }
+      // holds 为 null = 只知道有无、不知道数量（音游街六维）：用 COALESCE 保留库里原有的 holds，
+      // 不要把 NULL 写进去覆盖掉已有数据；notecounts 与 has_hold 照写。
       updChart.run(
         v.bpm,
         v.has_hold,
         JSON.stringify(v.notecounts),
-        JSON.stringify(v.holds),
+        v.holds === null ? null : JSON.stringify(v.holds),
         id
       );
       stat.chartOverride = (stat.chartOverride || 0) + 1;
@@ -583,20 +586,27 @@ function readChartOverrides() {
   for (const [id, v] of Object.entries(raw.overrides || {})) {
     if (!v) { bad.push(id + ' 空值'); continue; }
     const no = v.notecounts || {};
-    const ho = v.holds || {};
-    const missing = LV.filter((d) => no[d] == null || ho[d] == null);
+    // 【2026-10-31 两种数据形态】
+    //   A. holds 三档**具体数量**（主人截图那种）→ holds 直接入库。
+    //   B. hold_flags 三档 **0/1 有无**（音游街六维，主人明确「看不出 hold 有多少」）
+    //      → has_hold 能定，但 holds 数量未知：既不编 0 也不编 1，保持 NULL。
+    const ho = v.holds || null;
+    const hf = v.hold_flags || null;
+    const src = ho || hf;
+    if (!src) { bad.push(id + ' 既没有 holds 也没有 hold_flags'); continue; }
+    const missing = LV.filter((d) => no[d] == null || src[d] == null);
     if (missing.length) { bad.push(id + ' 缺 ' + missing.join('/') + ' 档'); continue; }
-    const anyHold = LV.some((d) => Number(ho[d]) > 0);
+    const anyHold = LV.some((d) => Number(src[d]) > 0);
     const want = anyHold ? 1 : 0;
     if (Number(v.has_hold) !== want) {
-      bad.push(id + ' has_hold=' + v.has_hold + ' 与 holds 数值不符（应为 ' + want + '）');
+      bad.push(id + ' has_hold=' + v.has_hold + ' 与 ' + (ho ? 'holds 数值' : 'hold_flags') + ' 不符（应为 ' + want + '）');
       continue;
     }
     map.set(String(id), {
       bpm: v.bpm == null ? null : String(v.bpm),
       has_hold: want,
       notecounts: { bsc: Number(no.bsc), adv: Number(no.adv), ext: Number(no.ext) },
-      holds: { bsc: Number(ho.bsc), adv: Number(ho.adv), ext: Number(ho.ext) },
+      holds: ho ? { bsc: Number(ho.bsc), adv: Number(ho.adv), ext: Number(ho.ext) } : null,
       note: String(v.note || ''),
     });
   }
