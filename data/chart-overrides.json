@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "人工补录的谱面数据（2026-10-31 建立）。",
+    "",
+    "用途：这些曲目在 remywiki 有独立页面，但页面是 stub（只有曲目信息、没有 jubeat 难度表），",
+    "解析器取不到键数/长押。主人 2026-10-31 直接贴了 BEMANIWiki 2nd 的难度表截图，",
+    "按图录入这里，作为最优先的数据源。",
+    "",
+    "维护方式：key = songId，value = { bpm?, has_hold, notecounts{bsc,adv,ext}, holds{bsc,adv,ext}, note }。",
+    "  · notecounts / holds 三档必须齐全（缺一档说明没录完，自检会报）；",
+    "  · holds 全 0 表示该曲确定不是长押谱，has_hold 必须是 0；只要有一个 >0，has_hold 必须是 1；",
+    "  · 单值 Notecounts（无 / Holds 列）= 三难度都无长押。",
+    "",
+    "自检三条（覆盖层静默失效比报错难查一个数量级）：",
+    "  ① key 必须真在曲库里存在；",
+    "  ② has_hold 必须与 holds 数值自洽；",
+    "  ③ 定数三元组必须与库里一致——用来自证「截图确实是这首曲」，防止贴错图。",
+    "",
+    "优先级：本表 > 主快照 by-song-id.json。理由：主人给的是一手截图，且这几首主快照本来就没有数据。",
+    "",
+    "数据来源：主人 2026-10-31 提供的 BEMANIWiki 2nd 难度表截图（5 张，逐张核过定数与库一致）。"
+  ],
+  "overrides": {
+    "90000120": {
+      "bpm": "156",
+      "has_hold": 1,
+      "notecounts": { "bsc": 223, "adv": 417, "ext": 715 },
+      "holds": { "bsc": 20, "adv": 24, "ext": 25 },
+      "note": "splash!｜主人截图图一：223/20 · 417/24 · 715/25，定数 4/7/10.5 与库一致"
+    },
+    "90000154": {
+      "bpm": "142",
+      "has_hold": 1,
+      "notecounts": { "bsc": 218, "adv": 356, "ext": 709 },
+      "holds": { "bsc": 6, "adv": 6, "ext": 4 },
+      "note": "激闘保安官！DEMPA撲滅大作戦｜主人截图图二：218/6 · 356/6 · 709/4，定数 3/6/9.5 与库一致"
+    },
+    "90000156": {
+      "bpm": "155",
+      "has_hold": 0,
+      "notecounts": { "bsc": 207, "adv": 420, "ext": 815 },
+      "holds": { "bsc": 0, "adv": 0, "ext": 0 },
+      "note": "Underground Astronomy｜主人截图图三：Notecounts 单值 207 · 420 · 815（无 / Holds）= 确定无长押，定数 3/6/9.8 与库一致"
+    },
+    "90000204": {
+      "bpm": "111",
+      "has_hold": 1,
+      "notecounts": { "bsc": 129, "adv": 408, "ext": 739 },
+      "holds": { "bsc": 22, "adv": 27, "ext": 154 },
+      "note": "サヨナラ・ヘヴン (BEMANI SYMPHONY Arr.)｜主人截图图四：129/22 · 408/27 · 739/154，定数 3/7/9.3 与库一致"
+    },
+    "90000206": {
+      "bpm": "140-176",
+      "has_hold": 1,
+      "notecounts": { "bsc": 253, "adv": 509, "ext": 782 },
+      "holds": { "bsc": 14, "adv": 50, "ext": 60 },
+      "note": "Idola (BEMANI SYMPHONY Arr.)｜主人截图图五：253/14 · 509/50 · 782/60，定数 3/8/9.7 与库一致；BPM 是区间，原样保留"
+    }
+  }
+}

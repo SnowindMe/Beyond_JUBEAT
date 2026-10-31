@@ -84,7 +84,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('90001026','official','いーあるふぁんくらぶ [ 2 ]','みきとP','145','festo',1,0,'授权',2,6,8,1,1,'{"bsc":159,"adv":361,"ext":501}','{"bsc":18,"adv":36,"ext":29}','id83135244.webp',NULL,NULL,NULL),
   ('11000222','official','イガク','原口沙輔','170','beyond the Ave.',1,0,'授权',4,7,9.6,0,0,'{"bsc":306,"adv":627,"ext":877}','{"bsc":0,"adv":0,"ext":0}','id48892112.webp',NULL,NULL,NULL),
   ('50000373','official','Ignis Danse','Yuji Masubuchi「太鼓の達人」より','246','saucer fulfill',1,0,'授权',5,9.5,10.3,0,0,'{"bsc":376,"adv":719,"ext":876}','{"bsc":0,"adv":0,"ext":0}','id21912238.webp',NULL,NULL,NULL),
-  ('90000206','official','Idola (BEMANI SYMPHONY Arr.)','iconoclasm × 原口 大 + gaQdan',NULL,'festo',1,0,'授权',3,8,9.7,0,NULL,NULL,NULL,'id23163274.webp',NULL,NULL,NULL),
+  ('90000206','official','Idola (BEMANI SYMPHONY Arr.)','iconoclasm × 原口 大 + gaQdan','140-176','festo',1,0,'授权',3,8,9.7,0,1,'{"bsc":253,"adv":509,"ext":782}','{"bsc":14,"adv":50,"ext":60}','id23163274.webp',NULL,NULL,NULL),
   ('80000092','official','Initial song','40mP','90','clan',1,0,'授权',1,3,6,0,0,'{"bsc":73,"adv":158,"ext":295}','{"bsc":0,"adv":0,"ext":0}','id95162924.webp',NULL,NULL,NULL),
   ('11000223','official','ウ”ィ”エ”','バーバパパ','155','beyond the Ave.',1,0,'授权',4,8,9.8,0,0,'{"bsc":432,"adv":630,"ext":761}','{"bsc":0,"adv":0,"ext":0}','id49702414.webp',NULL,NULL,NULL),
   ('50000374','official','VERTeX','Hiro「maimai」より','237','saucer fulfill',1,0,'授权',5,8,10.2,0,0,'{"bsc":419,"adv":663,"ext":802}','{"bsc":0,"adv":0,"ext":0}','id73154085.webp',NULL,NULL,NULL),
@@ -142,7 +142,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('60000104','official','最終鬼畜妹フランドール・S','ビートまりお（COOL&CREATE）','200','prop',1,0,'授权',4,7,9.1,0,0,'{"bsc":429,"adv":621,"ext":818}','{"bsc":0,"adv":0,"ext":0}','id59370343.webp',NULL,NULL,NULL),
   ('70000055','official','Silent Story','発熱巫女～ず','126','Qubell',1,0,'授权',2,6,7,0,0,'{"bsc":175,"adv":377,"ext":563}','{"bsc":0,"adv":0,"ext":0}','id54805034.webp',NULL,NULL,NULL),
   ('90000214','official','さよなら世界 (BEMANI SYMPHONY Arr.)','猫叉Master Arranged by ござ','104-120','festo',1,0,'授权',2,6,9.2,0,0,'{"bsc":198,"adv":401,"ext":633}','{"bsc":0,"adv":0,"ext":0}','id25506943.webp',NULL,NULL,NULL),
-  ('90000204','official','サヨナラ・ヘヴン (BEMANI SYMPHONY Arr.)','猫叉Master × Morrigan feat.Lily + gaQdan',NULL,'festo',1,0,'授权',3,7,9.3,0,NULL,NULL,NULL,'id26866892.webp',NULL,NULL,NULL),
+  ('90000204','official','サヨナラ・ヘヴン (BEMANI SYMPHONY Arr.)','猫叉Master × Morrigan feat.Lily + gaQdan','111','festo',1,0,'授权',3,7,9.3,0,1,'{"bsc":129,"adv":408,"ext":739}','{"bsc":22,"adv":27,"ext":154}','id26866892.webp',NULL,NULL,NULL),
   ('11000171','official','残像ニ繋ガレタ追憶ノHIDEAWAY','SOUND HOLIC Vs. BEMANI Sound Team "KE!JU" feat. Nana Takahashi','160','beyond the Ave.',1,0,'授权',3,7,9.3,0,0,'{"bsc":240,"adv":492,"ext":847}','{"bsc":0,"adv":0,"ext":0}','id70976158.webp',NULL,NULL,NULL),
   ('70000092','official','JACK THE RIPPER feat. Iceon','猫大樹','145','Qubell',1,0,'授权',2,6,10.3,0,0,'{"bsc":130,"adv":408,"ext":810}','{"bsc":0,"adv":0,"ext":0}','id11075477.webp',NULL,NULL,NULL),
   ('80000031','official','シャルル','バルーン','145','clan',1,0,'授权',2,5,8,0,0,'{"bsc":156,"adv":339,"ext":635}','{"bsc":0,"adv":0,"ext":0}','id55663424.webp',NULL,NULL,NULL),
@@ -354,7 +354,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('90001025','official','Our Faith [ 2 ]','kors k','175','festo',1,0,'原创',4,9.2,10.6,1,1,'{"bsc":278,"adv":540,"ext":739}','{"bsc":37,"adv":61,"ext":59}','id31864666.webp',NULL,NULL,NULL),
   ('90000101','official','Our Love','lapix','190','festo',1,1,'原创',3,6,10.2,0,0,'{"bsc":236,"adv":430,"ext":906}','{"bsc":0,"adv":0,"ext":0}','id63880350.webp',NULL,NULL,NULL),
   ('11000072','official','Angritte','Lafale','155','beyond the Ave.',1,0,'原创',3,8,10.1,0,0,'{"bsc":302,"adv":605,"ext":862}','{"bsc":0,"adv":0,"ext":0}','id72167119.webp',NULL,NULL,NULL),
-  ('90000156','official','Underground Astronomy','D.watt (IOSYS)','155','festo',1,1,'原创',3,6,9.8,0,NULL,NULL,NULL,'id40537881.webp',NULL,'解禁I - LIME / 兑换 U点:4500 兑换票:25',NULL),
+  ('90000156','official','Underground Astronomy','D.watt (IOSYS)','155','festo',1,1,'原创',3,6,9.8,0,0,'{"bsc":207,"adv":420,"ext":815}','{"bsc":0,"adv":0,"ext":0}','id40537881.webp',NULL,'解禁I - LIME / 兑换 U点:4500 兑换票:25',NULL),
   ('11000145','official','EX-MASSIVE FIGHTER','BEMANI Sound Team "L.E.D.-G"','165','beyond the Ave.',1,0,'原创',4,8,10.4,0,0,'{"bsc":296,"adv":561,"ext":973}','{"bsc":0,"adv":0,"ext":0}','id79040872.webp',NULL,NULL,NULL),
   ('11000154','official','Yelling','Blacklolita','150','beyond the Ave.',1,0,'原创',3,7,10.3,0,1,'{"bsc":256,"adv":445,"ext":798}','{"bsc":7,"adv":35,"ext":44}','id92382121.webp',NULL,NULL,NULL),
   ('40000049','official','yellow head joe','S-C-U','187','copious',1,1,'原创',7,10.4,10.4,0,0,'{"bsc":513,"adv":754,"ext":765}','{"bsc":0,"adv":0,"ext":0}','id20087317.webp',NULL,'解禁I - KUMQUAT / 兑换 U点:8000 兑换票:45',NULL),
@@ -501,9 +501,9 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('50000110','official','君の元へ','久保田祥平','180','saucer',1,1,'原创',2,5,7,0,0,'{"bsc":166,"adv":368,"ext":484}','{"bsc":0,"adv":0,"ext":0}','id91793867.webp',NULL,'解禁I - BLUEBERRY',NULL),
   ('60000027','official','キモチコネクト','東雲心菜 meets 日向美ビタースイーツ♪','150','prop',1,0,'原创',2,6,9.3,0,1,'{"bsc":189,"adv":387,"ext":667}','{"bsc":20,"adv":47,"ext":69}','id61558172.webp',NULL,NULL,NULL),
   ('40000155','official','逆ナンされたのにドタキャン!!','good-cool ft. すわひでお','194','copious',1,0,'原创',4,8,9.7,0,0,'{"bsc":232,"adv":589,"ext":757}','{"bsc":0,"adv":0,"ext":0}','id93361888.webp',NULL,NULL,NULL),
-  ('90000052','official','Catch Our Fire!','中島由貴','190','festo',1,1,'原创',4,7,10.4,0,1,'{"bsc":280,"adv":701,"ext":1026}','{"bsc":8,"adv":18,"ext":30}','id10429194.webp',NULL,NULL,NULL),
-  ('90000192','official','Catch Me','DJ Yoshitaka feat. ERi','115','festo',1,0,'原创',2,6,9,0,0,'{"bsc":138,"adv":418,"ext":561}','{"bsc":0,"adv":0,"ext":0}','id16308284.webp',NULL,NULL,NULL);
+  ('90000052','official','Catch Our Fire!','中島由貴','190','festo',1,1,'原创',4,7,10.4,0,1,'{"bsc":280,"adv":701,"ext":1026}','{"bsc":8,"adv":18,"ext":30}','id10429194.webp',NULL,NULL,NULL);
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,has_hold,notecounts,holds,cover,added_at,unlock_note,limited_until) VALUES
+  ('90000192','official','Catch Me','DJ Yoshitaka feat. ERi','115','festo',1,0,'原创',2,6,9,0,0,'{"bsc":138,"adv":418,"ext":561}','{"bsc":0,"adv":0,"ext":0}','id16308284.webp',NULL,NULL,NULL),
   ('11000073','official','Capitalism Cannon','O2i3','190','beyond the Ave.',1,0,'原创',6,9.4,10.6,0,1,'{"bsc":476,"adv":733,"ext":898}','{"bsc":44,"adv":56,"ext":76}','id31350243.webp',NULL,NULL,NULL),
   ('50000185','official','caramel ribbon','P*Light','175','saucer',1,0,'原创',3,8,10.1,0,0,'{"bsc":298,"adv":655,"ext":777}','{"bsc":0,"adv":0,"ext":0}','id60078991.webp',NULL,NULL,NULL),
   ('90000130','official','キヤロラ衛星の軌跡','工藤吉三（ベイシスケイプ）','150','festo',1,0,'原创',4,7,10.4,0,1,'{"bsc":256,"adv":493,"ext":875}','{"bsc":37,"adv":55,"ext":44}','id16885730.webp',NULL,NULL,NULL),
@@ -559,7 +559,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('11000077','official','Croissant','BEMANI Sound Team "Expander"','156','beyond the Ave.',1,0,'原创',4,8,10.4,0,0,'{"bsc":252,"adv":552,"ext":863}','{"bsc":0,"adv":0,"ext":0}','id83854454.webp',NULL,NULL,NULL),
   ('70000107','official','檄','Ryu☆ feat.青龍','191','Qubell',1,0,'原创',3,8,10.5,0,0,'{"bsc":212,"adv":476,"ext":659}','{"bsc":0,"adv":0,"ext":0}','id44910700.webp',NULL,NULL,NULL),
   ('60000090','official','激アツ☆マジヤバ☆チアガール','日向美ビタースイーツ♪','170','prop',1,0,'原创',3,6,8,0,0,'{"bsc":287,"adv":496,"ext":643}','{"bsc":0,"adv":0,"ext":0}','id75968603.webp',NULL,NULL,NULL),
-  ('90000154','official','激闘保安官！DEMPA撲滅大作戦','ARM × かたほとり ft. ななひら','142','festo',1,1,'原创',3,6,9.5,0,NULL,NULL,NULL,'id41125010.webp',NULL,NULL,NULL),
+  ('90000154','official','激闘保安官！DEMPA撲滅大作戦','ARM × かたほとり ft. ななひら','142','festo',1,1,'原创',3,6,9.5,0,1,'{"bsc":218,"adv":356,"ext":709}','{"bsc":6,"adv":6,"ext":4}','id41125010.webp',NULL,NULL,NULL),
   ('90000143','official','Get On The Floor','RoughSketch','150','festo',1,1,'原创',3,7,10,0,0,'{"bsc":229,"adv":464,"ext":747}','{"bsc":0,"adv":0,"ext":0}','id87207439.webp',NULL,'解禁II - LIME',NULL),
   ('70000151','official','月風魔伝　～ ビーストメドレー ～','Akhuta','170','Qubell',1,0,'原创',4,7,9.4,0,1,'{"bsc":326,"adv":533,"ext":823}','{"bsc":11,"adv":4,"ext":45}','id38233349.webp',NULL,NULL,NULL),
   ('80000044','official','けもののおうじゃ★めうめう','日向美ビタースイーツ♪','162','clan',1,0,'原创',3,6,8,0,0,'{"bsc":206,"adv":450,"ext":697}','{"bsc":0,"adv":0,"ext":0}','id95571216.webp',NULL,NULL,NULL),
@@ -713,7 +713,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('50000385','official','Spanish Snowy Dance','Mutsuhiko Izumi','180','saucer fulfill',1,0,'原创',3,7,8,0,0,'{"bsc":291,"adv":496,"ext":611}','{"bsc":0,"adv":0,"ext":0}','id93872142.webp',NULL,NULL,NULL),
   ('90000135','official','Spica','BEMANI Sound Team "TATSUYA"','176','festo',1,1,'原创',3,7,10.2,0,0,'{"bsc":195,"adv":388,"ext":787}','{"bsc":0,"adv":0,"ext":0}','id96942210.webp',NULL,'解禁II - LIME',NULL),
   ('80000130','official','Spirit of the Beast','ikaruga_nex fw.tcheb','195','clan',1,0,'原创',5,8,10.6,0,1,'{"bsc":353,"adv":779,"ext":996}','{"bsc":4,"adv":13,"ext":12}','id82021120.webp',NULL,NULL,NULL),
-  ('90000120','official','splash!','BEMANI Sound Team "Trance Liquid"',NULL,'festo',1,0,'原创',4,7,10.5,0,NULL,NULL,NULL,'id13711302.webp',NULL,NULL,NULL),
+  ('90000120','official','splash!','BEMANI Sound Team "Trance Liquid"','156','festo',1,0,'原创',4,7,10.5,0,1,'{"bsc":223,"adv":417,"ext":715}','{"bsc":20,"adv":24,"ext":25}','id13711302.webp',NULL,NULL,NULL),
   ('50000073','official','spring pony','S-C-U','150','saucer',1,1,'原创',4,7,9.7,0,0,'{"bsc":262,"adv":464,"ext":749}','{"bsc":0,"adv":0,"ext":0}','id56296380.webp',NULL,NULL,NULL),
   ('90000133','official','SPACE INASAKU','BEMANI Sound Team "サイバー劇レコ"','178','festo',1,0,'原创',3,7,10.4,0,1,'{"bsc":233,"adv":342,"ext":621}','{"bsc":15,"adv":35,"ext":69}','id94912329.webp',NULL,NULL,NULL),
   ('20000121','official','スペースカーニバル','shooting star','160','ripples',1,0,'原创',4,6,8,0,0,'{"bsc":264,"adv":471,"ext":733}','{"bsc":0,"adv":0,"ext":0}','id64604535.webp',NULL,NULL,NULL),
@@ -934,9 +934,9 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('50000183','official','PULSE LASER','ヒゲドライバー','165','saucer',1,0,'原创',3,7,9.5,0,0,'{"bsc":276,"adv":463,"ext":694}','{"bsc":0,"adv":0,"ext":0}','id11710721.webp',NULL,NULL,NULL),
   ('50000386','official','Ha・lle・lu・jah','SOUND HOLIC feat. Nana Takahashi','150','saucer fulfill',1,0,'原创',3,6,9.2,0,0,'{"bsc":216,"adv":402,"ext":711}','{"bsc":0,"adv":0,"ext":0}','id77857711.webp',NULL,NULL,NULL),
   ('50000187','official','Hello world!','Music by 源屋, Vocal by SOPHY','175','saucer',1,0,'原创',2,5,8,0,0,'{"bsc":158,"adv":393,"ext":591}','{"bsc":0,"adv":0,"ext":0}','id12493693.webp',NULL,NULL,NULL),
-  ('50000351','official','ハンガリー舞曲 第5番 (jubeat version)','H.D.5 Orchestra','80-200','saucer fulfill',1,0,'原创',3,6,9.7,0,0,'{"bsc":216,"adv":383,"ext":593}','{"bsc":0,"adv":0,"ext":0}','id14027221.webp',NULL,NULL,NULL),
-  ('70000174','official','ぱんだしんけん１、２、３ ～ちえ！おっしょさんにはかなわないや！～','おひさまくらぶ','158','Qubell',1,1,'原创',2,5,8,0,1,'{"bsc":236,"adv":417,"ext":618}','{"bsc":8,"adv":8,"ext":10}','id51831679.webp',NULL,'解禁II - CHERRY',NULL);
+  ('50000351','official','ハンガリー舞曲 第5番 (jubeat version)','H.D.5 Orchestra','80-200','saucer fulfill',1,0,'原创',3,6,9.7,0,0,'{"bsc":216,"adv":383,"ext":593}','{"bsc":0,"adv":0,"ext":0}','id14027221.webp',NULL,NULL,NULL);
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,has_hold,notecounts,holds,cover,added_at,unlock_note,limited_until) VALUES
+  ('70000174','official','ぱんだしんけん１、２、３ ～ちえ！おっしょさんにはかなわないや！～','おひさまくらぶ','158','Qubell',1,1,'原创',2,5,8,0,1,'{"bsc":236,"adv":417,"ext":618}','{"bsc":8,"adv":8,"ext":10}','id51831679.webp',NULL,'解禁II - CHERRY',NULL),
   ('11000044','official','Pierce The Sky','JAKAZiD feat. K.N.','170','Ave.',1,0,'原创',4,6,9.7,0,0,'{"bsc":217,"adv":347,"ext":688}','{"bsc":0,"adv":0,"ext":0}','id44099530.webp',NULL,NULL,NULL),
   ('90000254','official','ピアノ独奏無言歌 "灰燼"','BEMANI Sound Team "Virkato Wakhmaninov"','116-180','festo',1,1,'原创',5,8,10.7,0,0,'{"bsc":408,"adv":659,"ext":1109}','{"bsc":0,"adv":0,"ext":0}','id51581262.webp',NULL,'解禁II - RAINBOW',NULL),
   ('80000076','official','Be a Hero!','中島由貴','190','clan',1,1,'原创',4,8,10.3,0,0,'{"bsc":314,"adv":793,"ext":1043}','{"bsc":0,"adv":0,"ext":0}','id72765009.webp','2026-04-16',NULL,NULL),

@@ -166,7 +166,13 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 它提供 `has_hold`（是否长押谱）、`notecounts` / `holds`（各难度总键数 / 长押数）、以及 BPM 覆盖值。
 判定规则与反例见 data/remy/README.md，列语义见 docs/database-schema.md §1.4。
 
-**第五份输入（2026-10-31 加）**：`data/title-overrides.json` 是**曲名 / 艺人的人工修正层**，
+**第五份输入（2026-10-31 加）**：`data/chart-overrides.json` 是**人工补录的谱面数据**——
+给 remywiki 只有 stub 页（无难度表）的曲目用。主人直接贴 BEMANIWiki 2nd 的截图，按图录入。
+优先级**高于** by-song-id 快照（跑在回填之后）。三条自检：① key 必须真在库里；
+② `has_hold` 必须与 `holds` 数值自洽（全 0→0，任一 >0→1）；③ 记录里写的定数三元组必须与库里一致
+——这条是**用来自证「截图确实是这首曲」的，防贴错图**，不是防写错数。
+
+**第六份输入（2026-10-31 加）**：`data/title-overrides.json` 是**曲名 / 艺人的人工修正层**，
 与 id-fixes / gen-overrides 同一套做法（源文件不动，消费端先查覆盖）。两条自检都在 build-db 里：
 ① key 必须真在库中；② 覆盖值必须与源值不同（写成一样等于「以为修了其实没修」）。
 注意它与 remywiki 匹配的耦合：库里的曲名被改过之后，`remy-db-map.cjs` 会再用**上游源名**查第三趟，

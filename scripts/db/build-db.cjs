@@ -80,6 +80,9 @@ function main() {
   // 曲名 / 艺人人工修正（2026-10-31）：上游快照自带错字，见 readTitleOverrides 注释。
   const titleOverrides = readTitleOverrides();
 
+  // 人工补录的谱面数据（2026-10-31）：主人截图给的，优先级高于 remywiki 快照。
+  const chartOverrides = readChartOverrides();
+
   // 解禁标记（2026-10-25 修）：以 sheet1 I 列（国服官方更新表）为准，archive 只当补充。
   // 起因：主人指出「解禁II 不是有 61 首吗」，而库里只有 55 首 —— 差的 6 首全是 [2] 长押曲
   // （70001001 / 80001002 / 80001003 / 80001004 / 80001014 / 80001015）+ 1 首 concon。
@@ -280,6 +283,37 @@ function main() {
       if (v.bpm && bpmNullBefore.has(id)) stat.remyBpm = (stat.remyBpm || 0) + 1;
     }
 
+    // ---- 人工补录的谱面数据（2026-10-31）----
+    // 跑在 remy 回填**之后**：主人给的截图是一手数据，优先级最高。
+    // 这几首曲在 remywiki 只有 stub 页，快照里本来就没有，所以这是纯增量；
+    // 但仍用 UPDATE 覆盖而不是跳过，万一同 id 将来进了快照，以人工数据为准。
+    const updChart = db.prepare(
+      'UPDATE songs SET bpm = COALESCE(?, bpm), has_hold = ?, notecounts = ?, holds = ? WHERE song_id = ?'
+    );
+    for (const [id, v] of chartOverrides) {
+      if (!allIds.has(id)) { problems.push('人工补录表里的 songId 不在库中: ' + id); continue; }
+      updChart.run(
+        v.bpm,
+        v.has_hold,
+        JSON.stringify(v.notecounts),
+        JSON.stringify(v.holds),
+        id
+      );
+      stat.chartOverride = (stat.chartOverride || 0) + 1;
+      if (v.has_hold === 1) stat.chartOverrideHold = (stat.chartOverrideHold || 0) + 1;
+      // ③ 定数自证：截图里的定数三元组必须与库里一致，否则说明贴错图。
+      const row = db.prepare('SELECT bsc, adv, ext FROM songs WHERE song_id = ?').get(id);
+      const dbLv = [row && row.bsc, row && row.adv, row && row.ext].map((x) => String(x));
+      const noteLv = /定数\s*([0-9.]+)\/([0-9.]+)\/([0-9.]+)/.exec(v.note);
+      if (noteLv) {
+        const wantLv = [noteLv[1], noteLv[2], noteLv[3]].map((x) => String(Number(x)));
+        const haveLv = dbLv.map((x) => String(Number(x)));
+        if (wantLv.join('/') !== haveLv.join('/')) {
+          problems.push(`人工补录定数与库不符（疑似贴错图）: ${id} 记录 ${wantLv.join('/')} / 库 ${haveLv.join('/')}`);
+        }
+      }
+    }
+
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
@@ -314,10 +348,21 @@ function main() {
     total: jp.songs.length + cnRows.length + cnExtraSongs.size,
     // 【2026-10-31 RemyWiki】期望值全从 data/remy/by-song-id.json 现算，不写死 —— 重抓一轮就变。
     // remyUnknown 用「总行数 − 有键数的行数」推：哪天回填逻辑把「没抓到」静默写成 0，这条会 FAIL。
-    remyRows: Object.values(remy).filter((v) => v.notecounts).length,
-    remyHold: Object.values(remy).filter((v) => v.has_hold === 1).length,
-    // bpm 空值的期望 = 「回填前为 NULL 且快照里也没有 bpm」的条数（快照有值的一定会被填上）。
-    bpmEmpty: [...bpmNullBefore].filter((id) => !(remy[id] && remy[id].bpm)).length,
+    //
+    // 【同日追加】人工补录表（chart-overrides）的数据**也是有效数据**，必须算进期望值，
+    // 否则一加补录这四条就会假红。用并集推：快照有键数 ∪ 补录表里有键数。
+    remyRows: Object.keys({
+      ...Object.fromEntries(Object.entries(remy).filter(([, v]) => v.notecounts)),
+      ...Object.fromEntries([...chartOverrides.keys()].map((id) => [id, true])),
+    }).length,
+    remyHold: Object.entries({
+      ...Object.fromEntries(Object.entries(remy).filter(([, v]) => v.has_hold === 1)),
+      ...Object.fromEntries([...chartOverrides].filter(([, v]) => v.has_hold === 1).map(([id]) => [id, true])),
+    }).length,
+    // bpm 空值的期望 = 「回填前为 NULL，且快照和补录表里都没有 bpm」的条数。
+    bpmEmpty: [...bpmNullBefore].filter(
+      (id) => !(remy[id] && remy[id].bpm) && !(chartOverrides.has(id) && chartOverrides.get(id).bpm)
+    ).length,
   };
   expect.remyUnknown = expect.total - expect.remyRows;
   // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
@@ -373,6 +418,7 @@ function main() {
   console.log(`\n本地库 -> ${path.relative(ROOT, DB_PATH)} (${(fs.statSync(DB_PATH).size / 1024).toFixed(1)} KB)`);
   console.log(`  RemyWiki 回填: ${stat.remy || 0} 行（长押 ${stat.remyHold || 0}，补 bpm ${stat.remyBpm || 0}）`);
   console.log(`  曲名/艺人覆盖: ${stat.titleOverride || 0} 条`);
+  console.log(`  人工补录谱面: ${stat.chartOverride || 0} 条（其中长押 ${stat.chartOverrideHold || 0}）`);
   if (problems.length) {
     console.log('\n待人工确认:');
     for (const p of problems.slice(0, 20)) console.log('  - ' + p);
@@ -505,6 +551,46 @@ function readGenOverrides() {
   if (bad.length) {
     throw new Error('data/gen-overrides.json 里有非法世代名（必须是 JP_GENS 之一）：\n  ' + bad.join('\n  '));
   }
+  return map;
+}
+
+// ---- 人工补录的谱面数据（2026-10-31 建立）----
+// 有些曲在 remywiki 只有 stub 页（无 jubeat 难度表），解析器取不到键数/长押。
+// 主人直接贴了 BEMANIWiki 2nd 的难度表截图，按图录入 data/chart-overrides.json。
+// 优先级：本表 > by-song-id 快照（主人在截图里给的是一手数据）。
+//
+// 自检三条（缺一条就可能静默写坏数据）：
+//   ① key 必须真在曲库里；
+//   ② has_hold 必须与 holds 数值自洽（全 0 → 0；任一 >0 → 1）；
+//   ③ 定数三元组必须与库里一致 —— 用来自证「截图确实是这首曲」，防止贴错图。
+function readChartOverrides() {
+  const p = path.join(ROOT, 'data/chart-overrides.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  const LV = ['bsc', 'adv', 'ext'];
+  for (const [id, v] of Object.entries(raw.overrides || {})) {
+    if (!v) { bad.push(id + ' 空值'); continue; }
+    const no = v.notecounts || {};
+    const ho = v.holds || {};
+    const missing = LV.filter((d) => no[d] == null || ho[d] == null);
+    if (missing.length) { bad.push(id + ' 缺 ' + missing.join('/') + ' 档'); continue; }
+    const anyHold = LV.some((d) => Number(ho[d]) > 0);
+    const want = anyHold ? 1 : 0;
+    if (Number(v.has_hold) !== want) {
+      bad.push(id + ' has_hold=' + v.has_hold + ' 与 holds 数值不符（应为 ' + want + '）');
+      continue;
+    }
+    map.set(String(id), {
+      bpm: v.bpm == null ? null : String(v.bpm),
+      has_hold: want,
+      notecounts: { bsc: Number(no.bsc), adv: Number(no.adv), ext: Number(no.ext) },
+      holds: { bsc: Number(ho.bsc), adv: Number(ho.adv), ext: Number(ho.ext) },
+      note: String(v.note || ''),
+    });
+  }
+  if (bad.length) throw new Error('data/chart-overrides.json 有不合法条目：\n  ' + bad.join('\n  '));
   return map;
 }
 
