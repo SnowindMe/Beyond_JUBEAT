@@ -1,0 +1,34 @@
+---
+// 世代骨架块（2026-11-02 分段加载）：首屏之外的世代先用它占位。
+//
+// 为什么骨架卡只画 8 张、而不是 count 张：
+//   骨架的意义是「占位 + 提示这里在加载」，不是把 DOM 节点再灌一遍。
+//   真实高度由页面脚本按 data-count 算进 contain-intrinsic-size（见 songs.astro 的
+//   refreshIntrinsicNow），所以滚到它时不会突然长高（CLS = 0）。
+//
+// 结构与 GenBlock.astro 必须一一对应（.sc-gen > .sc-gen-h + .sc-grid），
+// 否则替换时块头高度与吸顶行为会对不上。
+type Props = { gen: string; date: string; count: number; srv: 'jp' | 'cn' };
+const { gen, date, count, srv } = Astro.props;
+const PH_CARDS = Math.min(Math.max(count, 1), 8);
+---
+<div class="sc-gen sc-gen-ph" data-gen={gen} data-date={date || '0'} data-count={count} data-srv={srv}>
+  <div class="sc-gen-h">
+    <button type="button" class="sc-gen-b" data-gen-jump aria-label={`跳到下一世代（当前：${gen}）`} title="点击跳到下一世代">
+      <b>{gen}</b>
+    </button>
+    {date && <span>{date}</span>}
+    <i>{count} 首</i>
+  </div>
+  <div class="sc-grid sc-grid-ph" aria-hidden="true">
+    {Array.from({ length: PH_CARDS }).map(() => (
+      <div class="sc-ph-card">
+        <div class="sc-ph-img"></div>
+        <div class="sc-ph-line"></div>
+        <div class="sc-ph-line sc-ph-line-2"></div>
+        <div class="sc-ph-badges"><i></i><i></i><i></i></div>
+      </div>
+    ))}
+  </div>
+  <span class="sc-ph-status" role="status">加载中…</span>
+</div>

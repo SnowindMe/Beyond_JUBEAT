@@ -130,8 +130,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   try {
     const cache = (caches as unknown as { default: Cache }).default;
-    const freshKey = new Request(url.origin + CACHE_PREFIX + url.pathname, { method: 'GET' });
-    const staleKey = new Request(url.origin + CACHE_PREFIX + '/stale' + url.pathname, { method: 'GET' });
+    /* 【2026-11-02 分段加载】key 的取舍按路径分两档：
+       · 页面级（/songs/、/recent/）：只用 pathname。页面内容与查询串无关
+         （日服/国服两套 body 都是服务端一起渲染），带上查询串等于给缓存留个后门。
+       · 片段端点（/songs/frag?srv=&gen=）：**必须带上查询串**，否则所有世代的片段
+         会共用同一个 key —— jubeat 的片段被当成 festo 的命中，页面直接错乱。 */
+    const cachePath = url.pathname === '/songs/frag' ? url.pathname + url.search : url.pathname;
+    const freshKey = new Request(url.origin + CACHE_PREFIX + cachePath, { method: 'GET' });
+    const staleKey = new Request(url.origin + CACHE_PREFIX + '/stale' + cachePath, { method: 'GET' });
 
     // ① 新鲜条目：直接返回，完全不进 SSR
     const fresh = await cache.match(freshKey);
@@ -139,7 +145,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // 渲染一次并写两层缓存；并发调用共用同一个 Promise
     const refresh = (): Promise<CachedResponse | null> => {
-      const running = inflight.get(url.pathname);
+      const running = inflight.get(cachePath);
       if (running) return running;
       const task = (async (): Promise<CachedResponse | null> => {
         const res = await next();
@@ -150,8 +156,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
         return snapshot;
       })()
         .catch(() => null)
-        .finally(() => inflight.delete(url.pathname));
-      inflight.set(url.pathname, task);
+        .finally(() => inflight.delete(cachePath));
+      inflight.set(cachePath, task);
       return task;
     };
 

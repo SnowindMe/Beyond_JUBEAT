@@ -160,3 +160,33 @@ export function viewRows(songs: Song[], srv: Srv): Song[] {
 export function countedIn(songs: Song[], srv: Srv, today: string = todayISO()): Song[] {
   return viewRows(songs, srv).filter((s) => !isLimitedEnded(s, today));
 }
+
+/**
+ * 曲目卡默认排序：songId 升序（与前端 sortCards('id-asc') 同构）。
+ *
+ * 为什么放在库里：2026-11-02 拆出「按世代分段加载」后，服务端有两处要按同一顺序输出
+ * DOM —— 首屏那段在 /songs/ 页面里，后续世代在 /songs/frag 端点里。两处各写一份比较器
+ * 迟早会漂，而顺序一漂首帧与最终排序就会不一致（历史上就为这个改过一次）。
+ *
+ * 规则：songId 有 8 位（日服）与 9 位（国服）两种长度，必须按数值比；
+ * 非纯数字 id（日服占位 BTA-xxxxxx）排在数字之后；同 id 再按曲名比。
+ */
+export const bySongIdAsc = (a: Song, b: Song): number => {
+  const na = /^\d+$/.test(a.id) ? Number(a.id) : null;
+  const nb = /^\d+$/.test(b.id) ? Number(b.id) : null;
+  if (na === null && nb !== null) return 1;
+  if (nb === null && na !== null) return -1;
+  const c = na === null || nb === null ? a.id.localeCompare(b.id) : na - nb;
+  return c !== 0 ? c : a.t.localeCompare(b.t);
+};
+
+/** 把视图行按世代分桶并排序（「一个世代一个块」的唯一来源） */
+export function groupByGen(rows: Song[]): Record<string, Song[]> {
+  const out: Record<string, Song[]> = {};
+  for (const s of rows) {
+    (out[s.gen] ||= []).push(s);
+  }
+  for (const gen of Object.keys(out)) out[gen].sort(bySongIdAsc);
+  return out;
+}
+

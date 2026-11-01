@@ -1,0 +1,44 @@
+---
+// 曲目库「按世代分段加载」的片段端点（2026-11-02 主人选 B 方案后新增）。
+//
+// 背景：/songs/ 每请求要渲染 1683 张卡（1.7MB HTML / 2.5 万 DOM 节点），
+// 缓存只能兜住并发，兜不住单次渲染成本。改成：首屏只渲染前几个世代，
+// 其余世代先放等高骨架，滚到附近再由前端请求**这一段**的 SSR 片段插进 DOM。
+//
+// 为什么是「SSR 片段」而不是「客户端用 JSON 现画」：
+//   · 主人明确要保留 SSR，卡片结构（徽章/难度条/PICK UP 标记）全在 SongCard.astro 里，
+//     客户端重画等于把这份结构再写一遍，两份必定漂；
+//   · 片段由同一个 GenBlock/SongCard 渲染，产出与首屏完全一致。
+//
+// 路由：/songs/frag?srv=jp|cn&gen=<世代 key>，返回一个 <div class="sc-gen">…</div>
+// 缓存：走 src/middleware.ts 的边缘缓存（key 含查询串，见那里的说明）。
+// 注意 prrerender=false：这里要读 D1，不能构建期生成。
+import GenBlock from '../../components/GenBlock.astro';
+import { getAllSongs } from '../../lib/db';
+import { viewRows, groupByGen, type Srv } from '../../lib/song-view';
+import { GEN_ORDER } from '../../lib/gens';
+import { env } from 'cloudflare:workers';
+
+export const prerender = false;
+
+const url = new URL(Astro.request.url);
+const srv: Srv = url.searchParams.get('srv') === 'cn' ? 'cn' : 'jp';
+const gen = url.searchParams.get('gen') ?? '';
+
+const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+const list = groupByGen(viewRows(ALL, srv))[gen] ?? [];
+
+// 世代 key 必须存在（防任意查询串把缓存撑爆 / 让 Worker 白跑一遍渲染）
+if (!GEN_ORDER.some((g) => g.k === gen)) {
+  Astro.response.status = 404;
+}
+
+// 片段本身也允许边缘缓存较久；页面级缓存由中间件统一写，这里的头只对直连生效
+Astro.response.headers.set('cache-control', 'public, max-age=300, s-maxage=3600');
+
+// 片段里的前 6 张图立即加载（它们一进 DOM 就在视口附近），其余仍 lazy
+const eager = new Set(list.slice(0, 6).map((s) => s.id));
+---
+{list.length > 0 && (
+  <GenBlock gen={gen} list={list} date={GEN_ORDER.find((g) => g.k === gen)?.date ?? ''} eager={eager} srv={srv} markPick />
+)}

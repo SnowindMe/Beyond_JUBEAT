@@ -17,6 +17,7 @@ import '../styles/server-card.css';
 import '../styles/songs.css';
 import SongCard from '../components/SongCard.astro';
 import GenBlock from '../components/GenBlock.astro';
+import GenSkeleton from '../components/GenSkeleton.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/db';
@@ -199,6 +200,28 @@ const EAGER = new Set(
         .map((s) => s.id)
     : [],
 );
+
+// 【2026-11-02 分段加载】首屏只 SSR 渲染前若干世代，其余世代先出骨架。
+//
+// 为什么：每请求渲染 1683 张卡要 1.7MB HTML、2.5 万 DOM 节点，缓存只能兜住并发，
+// 兜不住单次渲染成本（详见 docs/audit-2026-11-02.md）。主人选了 B 方案：
+// 首屏 SSR + 其余世代骨架 + 滚到附近再拉该段 SSR 片段（/songs/frag）。
+//
+// 分界按「累计卡数」而不是「固定几个世代」：世代大小差很多（jubeat 20 首、
+// festo 226 首），按个数切会在某些世代切出 1000 张、另一些只切出 30 张。
+// 120 首 ≈ 390px 屏两屏多，足够覆盖首屏与第一次滚动。
+const FIRST_LOAD_CARDS = 120;
+const firstLoadGens = (srv: Srv): Set<string> => {
+  const out = new Set<string>();
+  let n = 0;
+  for (const g of srvGenOrder(srv)) {
+    out.add(g);
+    n += (byGen[srv][g] || []).length;
+    if (n >= FIRST_LOAD_CARDS) break;
+  }
+  return out;
+};
+const FIRST_LOAD: Record<Srv, Set<string>> = { jp: firstLoadGens('jp'), cn: firstLoadGens('cn') };
 
 // 【2026-10-30 主人要求删掉「曲师」筛选】
 // 这里原本会为 ALL 全表扫一遍统计每位曲师的曲数、再筛出 5 首以上的 38 位塞进下拉。
@@ -570,9 +593,15 @@ const TYPES = [
             <h2>全部曲目</h2>
             <em>{srvTotal(srv)} 首</em>
           </header>
-          {srvGenOrder(srv).map((gen) => (
-            <GenBlock gen={gen} list={byGen[srv][gen]} date={dateOf(gen)} eager={EAGER} srv={srv} markPick />
-          ))}
+          {srvGenOrder(srv).map((gen) =>
+            FIRST_LOAD[srv].has(gen) ? (
+              <GenBlock gen={gen} list={byGen[srv][gen]} date={dateOf(gen)} eager={EAGER} srv={srv} markPick />
+            ) : (
+              /* 首屏之外的世代：只出骨架。真实卡片由 /songs/frag 在滚到时补上（见页面末尾脚本）。
+                 data-count 让脚本算得出精确占位高度 —— 骨架块长得和真块一样高，滚动后不会跳。 */
+              <GenSkeleton gen={gen} date={dateOf(gen)} count={(byGen[srv][gen] || []).length} srv={srv} />
+            )
+          )}
         </section>
 
         {/*
@@ -1016,6 +1045,25 @@ const TYPES = [
 
       // ---- 主流程 ----
       function apply() {
+        /* 【2026-11-02 分段加载的前置条件】
+           搜索 / 筛选 / 排序都是对 **DOM 卡片** 读 data-* 做的，而骨架块里没有卡片：
+           不先补拉，命中数会凭空少一截，空态还会误报「没有找到符合条件的曲目」。
+           所以只要「有筛选条件 + 还有骨架块」，就先补拉再算。
+
+           三条边界：
+             · lazyState === 1（正在补拉）：直接返回，补拉结束会自己再调一次 apply，
+               否则这里会被连续触发、把补拉请求也放大好几倍；
+             · 首屏那次 apply（无筛选）**不触发**补拉，否则懒加载等于不存在；
+             · 只补拉一次（成功后 lazyState = 2），失败也不再重试，避免死循环。 */
+        if (lazyState === 1) return;
+        if (lazyState === 0 && hasFilters() && hasSkeletons()) {
+          lazyState = 1;
+          ensureAll().then(function () {
+            lazyState = 2;
+            apply();
+          });
+          return;
+        }
         // 耗时从「用户操作」到「列表已更新」为准，取 performance.now() 的差值。
         // 注意只能量到 JS 这一层（改 hidden / 写 CSS order），不含浏览器重绘与图片解码 ——
         // 那部分浏览器不给我们回调，所以条上写「耗时 Xms」指的是**筛选计算**的耗时，
@@ -1072,6 +1120,17 @@ const TYPES = [
             var hitSec = 0;
             for (var g = 0; g < gens.length; g++) {
               var genEl = gens[g];
+              /* 骨架块：没有卡片可匹配，但它代表 data-count 首真实曲目。
+                 不走下面那套「匹配卡片」逻辑，直接按 data-count 计。
+                 能走到这里说明当前没有筛选（有筛选时 apply 开头已先 ensureAll 换成真卡片）。 */
+              if (genEl.className.indexOf('sc-gen-ph') !== -1) {
+                var phCount = Number(genEl.getAttribute('data-count') || 0);
+                genEl.hidden = false;
+                var phCnt = genEl.querySelector('.sc-gen-h i');
+                if (phCnt) phCnt.textContent = phCount + ' 首';
+                hitSec += phCount;
+                continue;
+              }
               var cards = genEl.querySelectorAll('.sc-card');
               var hitGen = 0;
               for (var c = 0; c < cards.length; c++) {
@@ -1262,6 +1321,21 @@ const TYPES = [
           var gens = secs[s].querySelectorAll('.sc-gen');
           for (var g = 0; g < gens.length; g++) {
             var el = gens[g];
+            /* 骨架块（2026-11-02）：按 data-count 算高度，高度 = 真块高度。
+               这是「骨架不跳」的关键：否则滚到它时页面会长高一截（CLS）。
+               骨架网格本身也撑到同样高度，让 8 张占位卡靠上排、下方留白由网格撑住。 */
+            if (el.className.indexOf('sc-gen-ph') !== -1) {
+              var phN = Number(el.getAttribute('data-count') || 0);
+              var phRows = Math.ceil(phN / intrinsicCols);
+              el.style.containIntrinsicSize =
+                'auto ' + (phRows * intrinsicCardH + (phRows - 1) * intrinsicGap + intrinsicHead).toFixed(2) + 'px';
+              var phGrid = el.querySelector('.sc-grid-ph');
+              if (phGrid) {
+                phGrid.style.height =
+                  (phRows * intrinsicCardH + (phRows - 1) * intrinsicGap).toFixed(2) + 'px';
+              }
+              continue;
+            }
             // 占位高度按**可见**卡数算：筛选后块内卡少了，占位不能还按原始总数虚高。
             var vis = el.querySelectorAll('.sc-card:not([hidden])').length;
             if (el.hidden || vis === 0) { el.style.containIntrinsicSize = ''; continue; }
@@ -1742,6 +1816,83 @@ const TYPES = [
         }
       });
 
+      // ---- 分段加载（2026-11-02，B 方案）----
+      // 骨架块 → 滚到附近 → 取该世代的 SSR 片段（/songs/frag）→ 替换骨架。
+      // 为什么是「SSR 片段」而不是客户端用 JSON 现画：卡片结构（徽章/难度条/PICK UP）
+      // 全在 SongCard.astro 里，客户端重画等于再写一份，两份必然漂。
+      var lazyState = 0; // 0=正常 / 1=正在全部补拉 / 2=已补拉完（不再尝试）
+      function hasSkeletons() { return !!root.querySelector('.sc-gen-ph'); }
+      function hasFilters() {
+        return !!(state.q || state.cat !== 'all' || state.gen !== 'all' || state.diff ||
+          state.band !== 'all' || state.scope !== 'all' || state.type !== 'all');
+      }
+      /** 把一个骨架块换成真实世代块。失败时保留骨架（比留一片空白好）。 */
+      function loadFrag(ph) {
+        var srv = ph.getAttribute('data-srv') || 'jp';
+        var gen = ph.getAttribute('data-gen') || '';
+        var url = '/songs/frag?srv=' + encodeURIComponent(srv) + '&gen=' + encodeURIComponent(gen);
+        return fetch(url, { credentials: 'same-origin' })
+          .then(function (r) {
+            if (!r.ok) throw new Error('frag ' + r.status);
+            return r.text();
+          })
+          .then(function (html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html.trim();
+            var node = tmp.firstElementChild;
+            if (!node) throw new Error('frag empty');
+            ph.parentNode.replaceChild(node, ph);
+            // 新块里的卡片立刻套上当前排序，否则滚下去看到的是服务端默认序
+            sortCards(node.querySelectorAll('.sc-card'));
+            // 高度从「按 data-count 估」换成「按真实卡数算」，一并把块头量准
+            refreshIntrinsic();
+            return node;
+          });
+      }
+      /** 拉齐所有骨架（筛选用）。并发 3：每一段都是一次 SSR，太多会把 Worker 打回原形。 */
+      function ensureAll() {
+        var list = root.querySelectorAll('.sc-gen-ph');
+        var todo = [];
+        for (var i = 0; i < list.length; i++) todo.push(list[i]);
+        var idx = 0;
+        function worker() {
+          if (idx >= todo.length) return Promise.resolve();
+          var el = todo[idx++];
+          // 已被 IntersectionObserver 换掉的就跳过（它已经不在文档里）
+          if (!el.parentNode) return worker();
+          return loadFrag(el).catch(function () {}).then(worker);
+        }
+        var runs = [];
+        for (var w = 0; w < 3; w++) runs.push(worker());
+        return Promise.all(runs);
+      }
+      function observeSkeletons() {
+        if (!hasSkeletons()) return;
+        // 没有 IntersectionObserver（极老浏览器）就退化成「全部补拉」，功能优先
+        if (!('IntersectionObserver' in window)) {
+          lazyState = 1;
+          ensureAll().then(function () { lazyState = 2; apply(); });
+          return;
+        }
+        // rootMargin 1200px：提前一屏多开始拉，滚到那里时通常已经就位
+        var io = new IntersectionObserver(function (entries) {
+          for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (!e.isIntersecting) continue;
+            io.unobserve(e.target);
+            loadFrag(e.target)
+              .then(function () {
+                // 若此刻有筛选条件，新到的卡片要重新参与匹配：
+                // 把状态打回 0，让 apply 的守卫去走「先补拉再一次算完」
+                if (hasFilters()) { lazyState = 0; apply(); }
+              })
+              .catch(function () {});
+          }
+        }, { rootMargin: '1200px 0px' });
+        var nodes = root.querySelectorAll('.sc-gen-ph');
+        for (var n = 0; n < nodes.length; n++) io.observe(nodes[n]);
+      }
+
       // ---- 启动顺序（2026-10-30 加存档后必须严格按这个顺序）----
       //  ① 读存档填进 state（此时还不动 DOM）
       //  ② 把 state 同步到控件（chip 高亮 / 下拉文字 / 搜索框 / 限时曲勾选）
@@ -1752,6 +1903,9 @@ const TYPES = [
       loadSaved();
       syncControlsFromState();
       apply();
+      // 首屏那几块渲染完、视口稳定之后再挂观察器：早挂会在首次 apply 前触发，
+      // 拿到的是还没算好高度的骨架块，rootMargin 会把它们一次性全判成"进入了"。
+      observeSkeletons();
     })();
   </script>
 </Layout>

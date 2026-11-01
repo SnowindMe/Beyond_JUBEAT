@@ -2715,3 +2715,88 @@ html.sc-js .sc-panel[hidden] {
     }
 }
 
+/* ============================================================
+   世代骨架块 · 分段加载（2026-11-02，v1.59.0）
+   /songs/ 首屏只 SSR 渲染前若干世代（累计 ~120 首），其余世代先出骨架，
+   滚到附近再由前端请求 /songs/frag 的 SSR 片段替换掉（见 src/pages/songs.astro 的 observeSkeletons）。
+
+   两条硬要求：
+     ① **高度必须精确**：脚本按 data-count 算出 contain-intrinsic-size，
+        骨架与真块等高，滚到它时页面不跳（这是骨架方案最容易翻车的地方）；
+     ② **骨架卡最多 8 张**：骨架的意义是占位，不是把 DOM 再灌一遍
+        （1683 张真实卡片已经是 2.5 万节点，骨架再画满就白做了）。
+   ============================================================ */
+.sc-gen-ph {
+    /* .sc-ph-status 是绝对定位的读屏文案，需要一个定位参照 */
+    position: relative;
+}
+.sc-grid-ph {
+    /* 高度由脚本写入（refreshIntrinsicNow），这里只保证「排不下的部分裁掉」，
+       否则 8 张骨架卡会把网格撑得比真块矮/高，占位就不准了 */
+    align-content: start;
+    overflow: hidden;
+}
+.sc-ph-card {
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    user-select: none;
+}
+.sc-ph-img {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background:
+        linear-gradient(
+            100deg,
+            color-mix(in srgb, var(--ink) 7%, transparent) 30%,
+            color-mix(in srgb, var(--ink) 13%, transparent) 50%,
+            color-mix(in srgb, var(--ink) 7%, transparent) 70%
+        );
+    background-size: 260% 100%;
+    animation: scPhShimmer 1.4s linear infinite;
+}
+.sc-ph-line {
+    width: 76%;
+    height: 10px;
+    margin-top: 9px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+.sc-ph-line-2 {
+    width: 52%;
+    height: 8px;
+    margin-top: 6px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.sc-ph-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+.sc-ph-badges i {
+    flex: 1;
+    height: 16px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+@keyframes scPhShimmer {
+    from { background-position: 130% 0; }
+    to { background-position: -130% 0; }
+}
+/* role=status 的「加载中…」只给读屏：占位高度必须精确，多一行文字就会让骨架比真块高 */
+.sc-ph-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-ph-img {
+        animation: none;
+    }
+}
+
+
