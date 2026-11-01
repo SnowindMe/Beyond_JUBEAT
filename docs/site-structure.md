@@ -21,7 +21,14 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   ├─ ✅ 分区筛选（2026-10-24 改名：日服 授权/原创；国服 独占/KONAMI/原创/流行）+ 世代分组
 │   ├─ ✅ 范围筛选 PICK UP / COMMON（2026-10-25 加，v1.20.0）：与「分区」**正交**的第二维，同一首歌可以既是原创又是 PICK UP，所以单独一组 chip、单独判定（`src/lib/song-view.ts` 的 `isPickUp()`），不并进 CATS、不参与 catOf。口径（主人原话）：「日服的 PICK UP 歌曲：bta 分区；国服的 PICK UP 歌曲：音乐魔方分区+Ave分区+解禁II歌曲」。**注意这两个「分区」指世代而不是 category 值**（国服 category 只有 独占/KONAMI/原创/流行）。实测：日服 1150 → PICK UP 142 / COMMON 1008；国服 523 → PICK UP 164 / COMMON 359。卡片写 `data-scope`，选 PICK UP 时卡上画「★ PICK UP」标记（世代页不画，但 data-scope 照写）
 │   ├─ ✅ 搜索 + 筛选（2026-10-25 整合，v1.17.0）：搜索框留在工具条（按曲名/曲师/songId/定数即输即筛，debounce 120ms，匹配读卡片 data-*）；**范围 + 分区 + 排序 + 世代 + 曲师 + 难度档 + 定数区间全部收进「筛选」按钮展开的面板**（工具条只留服务器卡 / 搜索 / 筛选按钮），按钮显示「筛选 · N」角标提示有几项生效；排序七种（songId 升序（默认）/ songId 降序 / 定数高→低 / 低→高 / 曲名 A→Z / Z→A / 世代新→旧）只改 CSS order 不重排 DOM
-│   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
+│   ├─ ✅ 分段渲染（2026-11-02，v1.59.0，B 方案）：首屏只 SSR 渲染**前几个世代**（累计下限 100 / 上限 220 张，实测 311 张含两服），
+│   │   其余世代先出**等高骨架**（GenSkeleton.astro，高度由 data-count 精确算出，CLS=0），
+│   │   滚到附近（rootMargin 1200px）再请求 GET /songs/frag?srv=&gen= 拿**该段的 SSR 片段**替换骨架；
+│   │   片段由同一个 GenBlock/SongCard 渲染，与首屏完全同构。筛选/搜索/排序命中时先 ensureAll() 把骨架全部换成真卡片再算
+│   │   （否则命中数会漏），期间命中条显示「正在加载剩余 N 个世代」。
+│   │   实测：HTML 1.74MB → 417KB、DOM 节点 24944 → 5586、CLS 0。
+│   ├─ ✅ 无 JS 时只有首屏几个世代可见（其余是骨架块，不会自己展开）：这是分段渲染的代价，
+│   │   旧版「无 JS 也完整可读」在 2026-11-02 之后不再成立——判据是渲染成本，取舍由主人拍板
 │   ├─ ✅ 卡片区跳过链接 .sc-skip（Tab 第 9 位 → 直达列表锚点 #scList）
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
 │   │   页面 `prerender = false` 是本站两个 SSR 页之一（另一个是 /recent/）；isolate 内 60s 内存缓存 + 中间件两层边缘缓存（2026-11-02 起，见下）
