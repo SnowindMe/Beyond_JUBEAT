@@ -1412,77 +1412,91 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     background: color-mix(in srgb, var(--ink) 42%, transparent);
 }
 
+/* 共用刻度尺：三行读的是同一把 0–11 的尺，横向比得出「EXT 离上限还差多少」。
+   【2026-11-01 主人截图指出：「这个 510 不要」】
+   那个 510 其实是刻度上 5 与 10 两个标签叠在一起——上一版**根本没写 .sd-scale 的样式**，
+   <b> 与两个 <span> 都是普通行内元素，于是「5」和「10」直接连排成了 "510"。
+   补上三段：① 尺子本体占满填充条那一栏（与 .sd-lrow 同一套列宽）；
+             ② 标签绝对定位、按百分比落在刻度位上；
+             ③ 不上色不描边，刻度只是参考，不该抢视觉。 */
+.sd-scale {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 74px;
+    gap: 4px 12px;
+    grid-column: 1 / 4;
+    height: 13px;
+}
+.sd-scale b {
+    grid-column: 2;
+    position: relative;
+    display: block;
+    height: 100%;
+}
+.sd-scale b span {
+    position: absolute;
+    bottom: 0;
+    transform: translateX(-50%);
+    font-family: var(--font-data);
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--ink3);
+    opacity: 0.75;
+    white-space: nowrap;
+}
+
 /* 谱面密度条（jubeat 官方口径，2026-11-01）：
    · 固定 115 列，柱高封顶 8 层，画绝对颗数、不按本曲峰值归一化
-   · 格子是**正方形**（4px 亮面 + 1px 暗缝）
+   · 格子是**正方形**（4px 亮面 + 1px 暗缝），整张图等比缩放后居中
    · 整张图按「屏宽 ÷ 768」等比缩放后水平居中
-   缩放用 --cell 一个变量控制：格子边长 = 4 × --cell，缝隙 = 1 × --cell。
-   容器高度 = 8 层格子 + 7 条缝，也由同一个变量算出，所以缩放时比例恒定，
-   不会出现「格子变方了但行高没跟上」的错位。 */
+
+   【2026-11-01 线上两次翻车后的定稿，别再改回用 vw / 容器查询算尺寸】
+   第一次：按 @media (min-width:1100px) 设 --cell:1.5 → 整条 862px，
+           而它所在的右栏只有 357px，横向溢出页外。根因是「视口宽 ≠ 容器宽」，
+           详情页两栏布局，右栏只有视口三分之一。
+   第二次：改 @container 按 .sd-gauge 宽度分档 → 仍然溢出，实测 gaugeW 1090px
+           而 .sd-main 只有 828px。根因是**循环依赖**：密度条的固有宽度撑大了
+           .sd-gauge，容器又按这个被撑大的宽度来分档，越算越大。
+   定稿做法：宽度完全交给容器（width:100%），高度不再固定、
+           改用 aspect-ratio 让整块保持「115 列 × 8 层」的固有比例，
+           格子边长由浏览器按实际宽度自动摊分 —— 不猜宽度、就不存在循环依赖。
+   固有比例 = 宽 115×5 / 高 8×5-1 = 575 / 39（格子 4px + 缝 1px 的基准比例）。
+   取 115/8.8 而不是 575/39，是因为柱子只堆到 8 层、块高按 8 层整算，
+   留一点余量给最高柱，避免 subpixel 下顶到边被裁。 */
 .sd-chart {
-    /* 默认 0.56：一列 2.8px、整条 322px，能塞进最窄的桌面右栏。
-       支持容器查询的浏览器会按下面 @container 分档放大。 */
-    --cell: 0.56;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: calc(1px * var(--cell));
+    gap: 1px;
     margin-top: 7px;
-    /* 【坑·2026-11-01 实测，两个都踩了】
-       ① 必须显式 grid-column，否则它被自动摆进第 1 列（等级列 46px 宽），
-          整条图只剩 38px —— 症状是「格数对、高度对，但宽度塌成一条」。
-       ② height 不能写成 calc(8 * 4px * var(--cell) + ...)：
-          --cell 曾用 clamp() 赋值时，参与 calc 后在部分引擎上求值为 0，
-          症状是「宽度对、显示器里什么都没有」——因为高度真的是 0。
-          改用 --row 直接表达「一格的边长+缝」，height 只做乘法，不再嵌套 calc。 */
+    /* 必须显式 grid-column，否则被自动摆进第 1 列（等级列 46px 宽），
+       整条图只剩 38px —— 症状是「格数对、高度对，但宽度塌成一条」。 */
     grid-column: 2 / 4;
-    /* 尺寸全部由 --cell 直接乘出来（不用嵌套 calc 包 calc）。
-       --cell 只允许是**纯数字**，在媒体查询里改它；不要再套 clamp()——
-       实测 clamp 在这里参与 calc 会求得 0，整条图高度变 0、屏幕上什么都没有。 */
-    height: calc(8 * (4px * var(--cell)) + 7 * (1px * var(--cell)));
-    /* 宽度 = 115 列 × (格边长 + 缝)。列全部占位（含空列），所以这个值是精确的，
-       不会因为某几列没音符就变窄 —— 那会让时间轴失真、柱子挤在一起。 */
-    width: calc(115 * (4px * var(--cell)) + 114 * (1px * var(--cell)));
+    width: 100%;
+    /* 115 列 : 8 层，格子自然接近正方形；窄屏会略扁，但整条永远不溢出 */
+    aspect-ratio: 115 / 8.8;
+    max-height: 72px;
 }
-/* 列宽锁死成「一格边长」而不是 flex:1 —— 官方要求格子是正方形，
-   而 flex:1 会把列撑满整条宽度，格子被拉成 6.64×6 的长方形。
-   缩放靠 --cell，不靠拉伸。 */
 .sd-chart .sd-col {
-    flex: 0 0 auto;
-    width: calc(4px * var(--cell));
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column-reverse;
-    gap: calc(1px * var(--cell));
+    justify-content: flex-start;
+    /* 每列之间的竖缝 */
+    row-gap: 1px;
     height: 100%;
 }
-/* 空列：占住宽度但不画方块。它代表「这一小段没有音符」，
-   是节奏信息的一部分（曲中间的静音段、前奏、尾奏都靠它体现）。 */
-.sd-chart .sd-col.is-rest {
-    height: 100%;
-}
+/* 方块高度按「这一列有几颗」算：单块 = 整高 / 8。
+   【2026-11-01 主人「bar 条全部撑满很难看的，而且也不直观」】
+   上一版方块写 flex:1，于是有没有音符都撑满整列，每根柱顶到天花板、齐成一块方板，
+   密度差异完全消失（看起来像一张实心网格）。
+   现在单块高度固定为 1/8 列高，颗数少柱子就矮 —— 高度才是要读的那个变量。 */
 .sd-chart .sd-col b {
-    flex: 0 0 calc(4px * var(--cell));
-    border-radius: calc(0.5px * var(--cell));
+    flex: 0 0 calc((100% - 7px) / 8);
+    border-radius: 0.5px;
     background: var(--d-c);
     opacity: 0.92;
-}
-/* 【2026-11-01 线上事故：按视口分档会溢出】
-   最初按 @media (min-width:1100px) 把 --cell 设成 1.5，结果整条 862px，
-   而它实际所在的右栏只有 357px —— 横着溢出到页外。
-   根因：**视口宽 ≠ 容器宽**。详情页是两栏布局，右栏宽度只有视口的 1/3 左右，
-   拿 vw 分档去定「图该多大」必然错。
-   修法：用容器查询按**容器自身宽度**算倍数。
-   容器不支持 @container（老浏览器）时就停在默认 0.56（322px）——
-   宁可画小，也不能画到溢出页外。 */
-.sd-gauge { container-type: inline-size; }
-@container (min-width: 580px) {
-    .sd-chart { --cell: 1; }
-}
-@container (min-width: 720px) {
-    .sd-chart { --cell: 1.25; }
-}
-@container (min-width: 880px) {
-    .sd-chart { --cell: 1.5; }
 }
 
 @media (max-width: 700px) {
@@ -1607,6 +1621,15 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     /* 【2026-11-01 难度行·窄屏】390px 下右栏可用约 327px（横跨曲绘后）。
        三栏网格收窄：等级 46→38、定数 74→54、间距 12→8，
        留给填充条约 227px。实测此宽度下副行不折行、密度条 104 柱仍可分辨。 */
+    /* 刻度尺要与 .sd-lrow 用同一套列宽，否则 5/10 标签落不到刻度位上 */
+    .sd-scale {
+        grid-template-columns: 38px minmax(0, 1fr) 54px;
+        gap: 3px 8px;
+        height: 12px;
+    }
+    .sd-scale b span {
+        font-size: 9px;
+    }
     .sd-lrow {
         grid-template-columns: 38px minmax(0, 1fr) 54px;
         gap: 3px 8px;
@@ -1632,12 +1655,11 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     .sd-holdbar {
         width: 38px;
     }
-    /* 密度条·窄屏：115 列要塞进 327px，每列只有约 2.8px。
-       等比缩到 --cell:0.55 → 格子 2.2px、缝 0.55px，整条宽约 316px，居中还有余量。
-       再小就糊成一片了，所以窄屏固定这个值、不跟随 vw。 */
+    /* 密度条·窄屏：宽度已经由容器决定（width:100% + aspect-ratio），
+       这里只把上间距收一点、并把块高压矮，避免窄屏占掉太多纵向空间。 */
     .sd-chart {
-        --cell: 0.55;
         margin-top: 6px;
+        max-height: 52px;
     }
     /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
        在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */

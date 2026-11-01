@@ -422,14 +422,18 @@ const metaFoot: Meta[] = song
                     // 也要占住自己的宽度，否则柱子挤在一起、时间轴就失真了——
                     // 实测症状是「柱子之间没有间隔、节奏形态读不出来」。
                     // is-rest 只负责保持列宽，不画任何方块。
+                    // 【柱高要按颗数】给每列传一个 --n（这一列有几颗，封顶 8）。
+                    // 不传的话方块各自 flex:1 会撑满整列，结果每根柱都顶到天花板、
+                    // 全都一样高 —— 主人原话「全部撑满很难看的，而且也不直观」。
                     <span class="sd-chart" aria-hidden="true">
-                      {c.cols.map((v) => (
-                        <span class={v === 0 ? 'sd-col is-rest' : 'sd-col'}>
-                          {v === 0
-                            ? null
-                            : Array.from({ length: Math.min(MAX_LAYERS, v) }, () => <b></b>)}
-                        </span>
-                      ))}
+                      {c.cols.map((v) => {
+                        const n = Math.min(MAX_LAYERS, v);
+                        return (
+                          <span class="sd-col" style={`--n:${n}`}>
+                            {Array.from({ length: n }, () => <b></b>)}
+                          </span>
+                        );
+                      })}
                     </span>
                   );
                 })()}
