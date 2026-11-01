@@ -1420,7 +1420,9 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    容器高度 = 8 层格子 + 7 条缝，也由同一个变量算出，所以缩放时比例恒定，
    不会出现「格子变方了但行高没跟上」的错位。 */
 .sd-chart {
-    --cell: 1;
+    /* 默认 0.56：一列 2.8px、整条 322px，能塞进最窄的桌面右栏。
+       支持容器查询的浏览器会按下面 @container 分档放大。 */
+    --cell: 0.56;
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -1430,7 +1432,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
        ① 必须显式 grid-column，否则它被自动摆进第 1 列（等级列 46px 宽），
           整条图只剩 38px —— 症状是「格数对、高度对，但宽度塌成一条」。
        ② height 不能写成 calc(8 * 4px * var(--cell) + ...)：
-          --cell 在 @media 里是 clamp()，参与 calc 后在部分引擎上求值为 0，
+          --cell 曾用 clamp() 赋值时，参与 calc 后在部分引擎上求值为 0，
           症状是「宽度对、显示器里什么都没有」——因为高度真的是 0。
           改用 --row 直接表达「一格的边长+缝」，height 只做乘法，不再嵌套 calc。 */
     grid-column: 2 / 4;
@@ -1464,15 +1466,23 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     background: var(--d-c);
     opacity: 0.92;
 }
-/* 等比缩放：官方按「屏宽 ÷ 768」放大后水平居中。
-   不用 clamp/vw 表达式——见上面那条坑：--cell 必须是纯数字。
-   分档写，每档一个确定的倍数，行为可预测、也方便实测校验。
-   基准：--cell:1 时一格 4px、整条 115×5=575px（768 屏放得下且居中）。 */
-@media (min-width: 768px) {
+/* 【2026-11-01 线上事故：按视口分档会溢出】
+   最初按 @media (min-width:1100px) 把 --cell 设成 1.5，结果整条 862px，
+   而它实际所在的右栏只有 357px —— 横着溢出到页外。
+   根因：**视口宽 ≠ 容器宽**。详情页是两栏布局，右栏宽度只有视口的 1/3 左右，
+   拿 vw 分档去定「图该多大」必然错。
+   修法：用容器查询按**容器自身宽度**算倍数。
+   容器不支持 @container（老浏览器）时就停在默认 0.56（322px）——
+   宁可画小，也不能画到溢出页外。 */
+.sd-gauge { container-type: inline-size; }
+@container (min-width: 580px) {
     .sd-chart { --cell: 1; }
 }
-@media (min-width: 1100px) {
-    .sd-chart { --cell: 1.5; } /* 一列 7.5px，整条 862px */
+@container (min-width: 720px) {
+    .sd-chart { --cell: 1.25; }
+}
+@container (min-width: 880px) {
+    .sd-chart { --cell: 1.5; }
 }
 
 @media (max-width: 700px) {
