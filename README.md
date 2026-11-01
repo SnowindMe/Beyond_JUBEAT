@@ -175,11 +175,9 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 > **字标宽度必须由 CSS 写死，不能跟着当前图走（2026-10-27，v1.28.1）**：原来 `#wordLogo` 是 `height:calc(--wl-em / --bh) + width:auto`，宽度由**当前那张图**的固有比例决定。切世代时 `data-g` 先换 → 高度立刻按新世代变，可宽度还在用旧图的旧比例算，旧图被整体缩放一档；等新图解码完固有比例一换，宽度又重排一次 —— 肉眼就是「先变大小、然后才换 logo」。现在每个世代的 `aspect-ratio` 都按 logo 原图尺寸写死在 `theme.css`（14 张图的实测值：jubeat 486/136、ripples 570/171、knit 360/104、copious 360/128、saucer 360/145、saucerfulfill 360/164、prop 360/140、qubell 360/162、clan 360/163、festo 287/210、ave 284/210、bta 285/210、yymf 1180/593），**换字标图要同步这张表**。
 > 顺带去掉字标淡入动画：淡入必须靠 opacity 动画（from 0），而动画在后台标签页会冻结在起始帧，冻结在 `opacity 0` 就等于整张 logo 消失。字标是首屏识别物，宁可硬切也不能有「可能隐身」的状态。
 
-> **字体走第三方 CDN（2026-10-25，2026-10-27 扩到 14 款）**：仓库不再存字体二进制（`public/assets/fonts/` 已清空）。世代字体现按主人给的「主题字体.csv」**逐世代指定**（不再按 A–G 分组），共 14 款，全部由 [@fontsource](https://fontsource.org/) 的官方字体包经 `cdn.jsdmirror.com` 分发：
-> `https://cdn.jsdmirror.com/npm/@fontsource/<pkg>/files/<pkg>-latin-<weight>-normal.woff2`
-> 选 jsdmirror 而非 jsdelivr 原站是实测结论：同一文件 avg ttfb **1.86s → 0.31s**（对照：本站 CF 1.16s、fontelio 2.19s 且首次 4.7s）。
-> 代价：fontsource 是通用拉丁集，比原来自裁剪的子集大 48%（105.6 → 156.6 KB）；首屏只加载当前世代 1 款，实际约 +20 KB。
-> 两个易错点：①路径必须带 `-normal.woff2`；②Playfair 的包名是 `@fontsource/playfair-display`（不是 `@fontsource/playfair`）。改字体时 `theme.css` 的 `@font-face` 与 `Base.astro` 的 preload **必须同改**（地址不一致会被下载两次）。
+> **字体已改站内自托管（2026-11-02，v1.58.1）**：文件在 `public/assets/fonts/`，命名 `<pkg>-<weight>.woff2`（保留 fontsource 原名便于溯源），缓存头在 `public/_headers`（一年 immutable）。
+> 原来是 2026-10-25 改成「走 fontsource CDN（cdn.jsdmirror）」，理由是不往仓库塞二进制；11-02 的全站审计（`docs/audit-2026-11-02.md` P1）推翻了这笔账：字体参与首屏文本绘制，跨域那次往返直接压在 FCP 上，实测 montserrat/raleway 单次要 **1.0–1.4s**；更要命的是 preload 映射还停在 10-27 换字体之前，预载的 jost/rye/shrikhand 当时已经没有任何 `@font-face` 在用——等于白预载、真正要用的那款反倒没被预载。改回自托管后首屏只请求 1 个同源字体（5–22KB），实测 FCP 见下方性能一节。
+> 现存 10 款（其余 6 条已删的死 `@font-face`：Dancing Script / Roboto Slab / Bangers / Anton / Great Vibes / Poppins Light）。两个易错点：①改字体时 `theme.css` 的 `@font-face` 与 `Base.astro` 的 `FONTFILE` **必须同改**（地址不一致会被下载两次）；②`Base.astro` 的预载映射按**世代 key**（`jubeat/ave/ripples/…`）而不是旧的 A–G 字母，加世代时记得补一行。
 >
 > **世代 → 字体**（`theme.css` 的 `html[data-g="…"][data-g] { --font-label: … }`）：jubeat Montserrat Bold / ripples Quicksand Medium / knit Playfair Display / copious Raleway Light / saucer Raleway Light / saucerfulfill Raleway Light / prop Caveat / qubell Lora / clan 四色统一 Oswald Bold / festo Pacifico / ave Montserrat Medium / bta Quicksand Medium / yymf ZCOOL KuaiLe。CSV 里的 `clan_resd` = `clan_red`、`音乐魔方` = `yymf`；prop 原指定 Great Vibes，按要求换成 Caveat。
 >
@@ -277,7 +275,7 @@ Beyond_JUBEAT/
 │  │  ├─ images/jackets/      1305 张曲绘 webp（11 MB，144px）
 │  │  ├─ images/logo/         12 张世代站标 webp（244 KB，570 宽 DPR2）
 │  │  ├─ images/og/           og:image 分享图（1200x630 png）
-│  │  ├─ fonts/               （已清空）主题字体改由 fontsource CDN 提供，见下方「字体」
+│  │  ├─ fonts/               世代字标字体（2026-11-02 起自托管，10 款 woff2，见下方「字体」）
 │  │  └─ data/ docs/ media/   预留空目录
 │  ├─ _headers                Cloudflare 静态资源响应头
 │  ├─ apple-touch-icon.png    iOS 主屏图标（180x180）
@@ -366,7 +364,7 @@ npm run check            # 四段：引用完整性(源码) → 引用完整性(
                          # → body::after(顶部 148px 的 --scrim，注意该层 opacity 也是 --bgop)。
                          # 只读 getComputedStyle 的 backgroundColor 会漏掉底图，必须按上图取像素或用 canvas 合成。
 npm run opt              # 压缩 public/assets/images 下的图片
-# 字体已改为 CDN 分发（fontsource + jsdmirror），不需要本地子集化
+# 字体已改为站内自托管（public/assets/fonts/），不需要本地子集化
 ```
 
 构建耗时（2026-10-27 实测，本机 Windows）：**约 1m24s**，从 2m10s 压下来的两处开关：
