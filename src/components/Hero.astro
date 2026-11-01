@@ -52,6 +52,19 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
     </script>
     {/* 原 .welcome（WELCOME TO jubeat ~ 独立一行）已并入上面的 h1 标题行，此处不再重复。 */}
     <div class="sub"><i></i>音乐魔方</div>
+    {/* 「这是什么」引导块（2026-11-01 主人：「welcome to jubeat 上移，然后在它的下面做一个
+        『这是什么』之类的块」）。
+        这块要解决两个问题：①标题行以前用 flex:1 吃掉整列高度、被垂直居中，首屏左栏
+        上下都空一大片（主人圈出的黄色区域）；现在标题改贴顶，这块就跟在它下面。
+        ②首屏除了站名没有任何「这站是干什么的」的说明，第一次来的人只能靠猜。
+        文案刻意不写曲目数——右栏曲绘墙底部已经有「1248 曲」，同一份信息不在页面上出现两处。 */}
+    <div class="intro">
+      <p class="intro-p">一个把 <b>jubeat（音乐魔方）</b> 的曲目、谱面与定数整理成中文资料的站点，可以按世代、难度、定数筛选，也能切回当年那个世代的主题配色。</p>
+      <div class="intro-act">
+        <a class="intro-btn intro-btn-p" href="/songs/">浏览曲目</a>
+        <a class="intro-btn" href="/jubility/">Jubility</a>
+      </div>
+    </div>
     {/* 统计卡四连（曲目/谱面/世代/EXT≥10）已于 2026-10-27 按主人要求删除：
         这一排和右侧曲绘墙的信息重复（曲目数在 .cube-sum 里也有一份），
         首屏留白反而更干净。theme.css 里 .stats/.st 的规则一并清掉。 */}
