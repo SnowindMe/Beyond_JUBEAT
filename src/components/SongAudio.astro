@@ -122,6 +122,20 @@ const bpmText = String(bpm ?? '')
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+
+  /* 【2026-11-02 移动端触控修复】40×40 → 44×44。
+     审计移动端清单里详情页剩的那 1 个 <40px 目标就是这颗播放键
+     （docs/audit-2026-11-02.md 第三节 P2）。图标同步放大 1px 保持视觉比例。 */
+  @media (max-width: 768px) {
+    .sda-play {
+      width: 44px;
+      height: 44px;
+    }
+    .sda-play .sda-ico {
+      width: 18px;
+      height: 18px;
+    }
+  }
   /* 播放三角用填充而不是描边，视觉上更「实」 */
   .sda-ico-play {
     fill: currentColor;
