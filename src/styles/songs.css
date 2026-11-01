@@ -2661,15 +2661,17 @@ html.sc-js .sc-panel[hidden] {
         min-height: 44px;
     }
     /* songId 按钮（点击复制）实测热区只有 61×14：
-       padding 撑开、负 margin 抵消，视觉位置与行高完全不变。 */
+       padding 撑开、负 margin 抵消，视觉位置与行高完全不变。
+       15px 上下（14 + 文字高 ≈ 44）：第一次写 14px 时实测只有 42 高。 */
     .sd-sid {
-        padding: 14px 4px;
-        margin: -14px -4px;
+        padding: 15px 4px;
+        margin: -15px -4px;
     }
-    /* 曲名按钮同理：inline 元素的 padding 只扩热区、不撑行高 */
+    /* 曲名按钮同理：inline 元素的 padding 只扩热区、不撑行高。
+       10.5px 上下让热区到 44（9px 时实测 41）。 */
     .sd-title {
-        padding: 9px 0;
-        margin: -9px 0;
+        padding: 10.5px 0;
+        margin: -10.5px 0;
     }
     /* 世代/分区徽章：20 高 / 11px → 22 高 / 12px，与小字下限对齐 */
     .sd-badge {
@@ -2682,11 +2684,19 @@ html.sc-js .sc-panel[hidden] {
         font-size: 12px;
     }
     .sd-pctl-v {
-        font-size: 11px;
+        font-size: 12px;
     }
-    /* 等级标签 10.5 → 11.5：38px 列宽里 BSC/ADV/EXT 仍放得下 */
+    /* 等级标签 10.5 → 12：38px 列宽里 BSC/ADV/EXT 仍放得下（实测不折行） */
     .sd-lrow-k {
-        font-size: 11.5px;
+        font-size: 12px;
+    }
+    /* 返回链接与面包屑 11.5 → 12；BPM 数字 11 → 12 */
+    .sd-back,
+    .sd-crumb {
+        font-size: 12px;
+    }
+    .sda-bpm b {
+        font-size: 12px;
     }
     /* 刻度尺数字 9 → 11px，尺子本身加高 2px 托住（仍属图形标注，没有再往上拉） */
     .sd-scale {

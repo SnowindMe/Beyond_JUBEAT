@@ -2995,5 +2995,10 @@ html[data-g="yymf"] {
     .foot-slogan {
         font-size: 12px;
     }
+    /* 分区小标题与「开发中」标记（/recent/ 实测剩下这两处 11px） */
+    .band-h em,
+    .wip-s {
+        font-size: 12px;
+    }
 }
 

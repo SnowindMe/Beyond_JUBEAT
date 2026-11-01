@@ -527,6 +527,11 @@ html:not(.jb-js) .jb-tools {
     .jb-legend span {
         font-size: 12px;
     }
+    /* 窄屏「均分」角标是 font-size:0 + ::before 生成的（见文件上方 0,2,1 那条规则），
+       所以上面按元素字号写的覆盖对它无效，必须单独点名 ::before。 */
+    .jb-per span.jb-per-k::before {
+        font-size: 12px;
+    }
 }
 
 
