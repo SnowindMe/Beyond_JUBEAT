@@ -771,7 +771,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 }
 .sd-foot dt {
     font-family: var(--font-data);
-    font-size: 11.5px;
+    font-size: 11px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink3);
@@ -779,7 +779,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 }
 .sd-foot dd {
     margin: 3px 0 0;
-    font-size: 14px;
+    font-size: 13.5px;
     line-height: 1.4;
     color: var(--ink);
     overflow-wrap: anywhere;
@@ -812,7 +812,11 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
     gap: 6px;
     color: var(--ink2);
     text-decoration: none;
-    padding: 4px 0;
+    /* 【2026-11-02 审计】原来只有 52×26，鼠标还行、手指按不准。
+       用「加大内边距 + 等量负 margin」把命中区撑到约 52×46，
+       不改变这一行的排版位置（负 margin 抵消掉多出来的盒子）。 */
+    padding: 11px 6px;
+    margin: -11px -6px;
     transition: color 0.18s ease;
 }
 /* 返回箭头用伪元素画，避免在模板里堆无意义的内联 SVG */
@@ -1049,12 +1053,29 @@ html[data-bgm="playing"] .sd-disc-spin {
     margin: 0 0 10px;
     min-height: 22px;
 }
+/* 只给读屏的说明文字（2026-11-02）：像「P13」「45.2%」这种两个字符的读数，
+   视觉上不能加标签（主人不喜欢解释性前缀），但读屏需要知道它是什么。
+   与 .sc-hide 同一套视觉隐藏法，按 sd 前缀留一份，避免两页互相牵连。 */
+.sd-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
 /* songId：以 #10000036 形式呈现，本身是按钮（点击复制）。
    去掉按钮默认外观，做成等宽小字标签——它要像"编号"而不是"链接"。 */
 .sd-sid {
     display: inline-flex;
     align-items: center;
-    padding: 0;
+    /* 【2026-11-02 审计】命中区从 66×15 撑到约 66×29，同样用负 margin 抵消，
+       让它看起来仍是行内编号。 */
+    padding: 7px 5px;
+    margin: -7px -5px;
     border: 0;
     background: none;
     font-family: var(--font-data);
@@ -1346,7 +1367,9 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    不需要和定数抢注意力；难度色在这里只做辨识，不做强调。 */
 .sd-lrow-k {
     font-family: var(--font-data);
-    font-size: 10.5px;
+    /* 【2026-11-02 设计审计·字号阶统一】10.5 → 11：读数区定下 11/13/16/24 四级，
+       原先 9.5/10/10.5/11.5/19/24 六种混杂，同一屏里每块字都在「略小一点点」。 */
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.14em;
     color: var(--d-c);
@@ -1434,7 +1457,8 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     background: color-mix(in srgb, var(--ink) 6%, transparent);
     border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
     font-family: var(--font-data);
-    font-size: 9.5px;
+    /* 9.5 → 10.5：徽章标签是「说明数字是什么」，太小就只剩灰点 */
+    font-size: 10.5px;
     font-weight: 600;
     line-height: 1;
     letter-spacing: 0.08em;
@@ -1443,14 +1467,14 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 .sd-tag i { font-style: normal; }
 .sd-tag b {
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
 }
-/* 长押 0：数字压成灰，让「有长押」的那一行在竖扫时自己跳出来 */
-.sd-tag.is-zero b { color: var(--ink3); font-weight: 600; }
+/* 【2026-11-02 审计】.sd-tag.is-zero 已删除：长押为 0 时模板不再渲染这枚徽章，
+   那套「把 0 压灰」的样式没有触发者，留着只会让人以为页面上还有这个状态。 */
 /* 分位小格：10 格，亮到第 N 格 = 超过同档约 N 成谱面 */
 .sd-pctl { display: inline-flex; gap: 1.5px; }
 .sd-pctl b {
@@ -1462,7 +1486,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sd-pctl b.is-on { background: color-mix(in srgb, var(--d-c) 80%, #fff 20%); }
 .sd-pctl-v {
     font-family: var(--font-data);
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--ink3);
@@ -1645,6 +1669,36 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         gap: 14px 16px;
     }
     /* .sd-meta 已在文案里删掉（元数据搬进底部条），这条媒体查询残留一并去掉 */
+    /* 【2026-11-02 主人「移动端视图的歌曲缩到两行」】
+       390px 下最长曲名（"ALL MY HEART -この恋に、わたしの全てを賭ける-"）
+       实测折 4 行、占 88px，把艺人、播放条、定数卡整块往下推。
+       这里把曲名限成两行 + 省略号：
+         · clamp 必须落在内部 span 上（button 的 display 由 UA 固定成 flow-root，
+           写在按钮上实测只收到 2.9 行）；
+         · 字数被截断是已知代价 —— 完整曲名仍在 DOM 里（读屏读得到）、
+           按钮的 title 也给了全名，点一下还能复制整串。
+       桌面端不受影响：那条规则只在 ≤700px 生效，桌面仍是单行 + 自动降字号。 */
+    .sd-title {
+        display: block;
+    }
+    /* 【2026-11-02 主人「使用字体缩小啊」】主手段是缩小字号（见页面末尾的 fitTitle），
+       这里只留一条兜底：极个别超长曲名缩到 13px 仍是 3 行时，才截断第二行之后。
+       由脚本按实测行数给 .is-clamp，正常曲名永远不会挂上这个类。 */
+    .sd-title-t.is-clamp {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        white-space: normal;
+    }
+    /* 【2026-11-02 主人「曲师在移动端字体缩小至一行」】
+       艺名同样靠 JS 降字号到能塞进一行；这里给「缩到 12px 仍放不下」的超长艺名
+       留省略号出口（库里最长一条 80+ 字符，12px 也要 500px 才排得开）。 */
+    .sd-artist {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .sd-title {
         /* 【2026-10-29 主人「曲名还是太大了，减小更多」】
            旧值 clamp(26px, 7.6vw, 38px) 在 390px 屏上约 29.6px，
@@ -1711,7 +1765,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         padding: 8px 0;
     }
     .sd-lrow-k {
-        font-size: 10.5px;
+        font-size: 11px;
         letter-spacing: 0.06em;
     }
     .sd-lrow-track {
@@ -1724,28 +1778,29 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     .sd-facts {
         gap: 4px 6px;
     }
+    /* 【2026-11-02 审计】窄屏徽章原来压到 8.5/10.5px，是为了「不折行」——
+       但 8.5px 已经到了「看不清但还占位」的程度，属于拿可读性换整齐。
+       现在抬到 9.5/11.5，并靠 gap 再收 1px 补回宽度。
+       【顺带】这里原本有两条 .sd-pctl b（1.5px 与 2px），后者覆盖前者，
+       注释写的还是 1.5 —— 合并成一条 2px。 */
     .sd-tag {
-        height: 16px;
+        height: 17px;
         padding: 0 5px;
-        font-size: 8.5px;
+        font-size: 9.5px;
         gap: 3px;
     }
     .sd-tag b {
-        font-size: 10.5px;
+        font-size: 11.5px;
     }
     .sd-pctl {
         gap: 1px;
     }
     .sd-pctl b {
-        width: 1.5px;
-        height: 6px;
+        width: 2px;
+        height: 7px;
     }
     .sd-lrow-v {
         font-size: 19px;
-    }
-    .sd-pctl b {
-        width: 2px;
-        height: 6px;
     }
     /* 【2026-11-02】窄屏把长押率那条小条藏掉：390px 下副行只有约 256px 宽，
        徽章 + 分位格 + 长押条 + 百分比必然折行，实测行高从 88 涨到 112。
@@ -1781,13 +1836,34 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         font-size: 12px;
     }
 }
+/* 【2026-11-02 设计审计·响应式倒挂，已修正】
+   旧规则在 ≤380px 时把曲绘从 108 放大到 120 —— 屏幕越小图越大，
+   右栏因此被压到 166px（375 实测），长曲名折 4 行、艺人再折 2 行。
+   现在方向倒过来：更窄的屏幕给曲绘更小的尺寸，把宽度让给文字。
+   注意 --sd-aside-w 必须跟着改：它决定 .sd-gauge 左扩的负 margin，
+   不跟着改的话定数条左缘会比曲绘多出 12px。
+   顺带删掉旧规则里的 grid-template-columns —— .sd-aside 在窄屏是 flex 容器，
+   那条列模板从来没有生效过（注释与实现不符）。 */
 @media (max-width: 380px) {
-    .sd-aside {
-        grid-template-columns: minmax(0, 1fr);
+    .sd-body {
+        --sd-aside-w: 96px;
+    }
+    .sd-cover {
+        width: 96px;
     }
     .sd-j {
-        width: 120px;
-        height: 120px;
+        width: 96px;
+        height: 96px;
+    }
+}
+/* 【2026-11-02 设计审计·密度条在手机上不成立】
+   115 列挤进 480px 以下的右栏只有 1.6-2.6px/列，柱子读不出形态、
+   只剩一片锯齿噪点，却仍占 3 行 × 14px 的纵向空间。
+   480px 以上（≈3px/列）仍然画——那是能读出节奏的下限。
+   桌面不受影响（560×43，每列 4.8px）。 */
+@media (max-width: 480px) {
+    .sd-chart {
+        display: none;
     }
 }
 /* 尊重减少动效：定数条不做宽度过渡 */

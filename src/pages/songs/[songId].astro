@@ -363,8 +363,13 @@ const metaFoot: Meta[] = song
         {/* 曲名：点一下复制歌名（主人 2026-10-29 要求）。用 button 而不是 h1 是为了
             可聚焦、可键盘触发；语义上仍用 h1 包住，标题层级不断。 */}
         <h1 class="sd-title-wrap">
+          {/* 【2026-11-02 主人「移动端视图的歌曲缩到两行」】
+              曲名文字包一层 span：行数限制（-webkit-line-clamp）只能作用在
+              block / -webkit-box 上，直接写在 <button> 上不生效（实测按钮的
+              display 被 UA 固定成 flow-root，clamp 只把高度收到 2.9 行）。
+              包裹层只做「最多两行 + 省略号」，桌面端不设限，行为不变。 */}
           <button type="button" class="sd-title" data-copy={song.t} title="点击复制曲名">
-            {song.t}
+            <span class="sd-title-t">{song.t}</span>
           </button>
         </h1>
 
@@ -440,14 +445,25 @@ const metaFoot: Meta[] = song
                             <b class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></b>
                           ))}
                         </span>
-                        <span class="sd-pctl-v">P{st.notesPctl}</span>
+                        {/* 【2026-11-02 审计】裸「P13」没人能解：给 title 讲清口径，
+                            并补一段只给读屏的「键数分位」——视觉上仍是两个字符，
+                            不新增标签、不占版面。 */}
+                        <span class="sd-pctl-v" title={`键数分位：键数超过同档 ${st.notesPctl}% 的谱面`}>
+                          <span class="sd-sr">键数分位</span>P{st.notesPctl}
+                        </span>
                       </>
                     ) : null}
-                    {holds == null ? null : (
-                      <span class={`sd-tag${holds === 0 ? ' is-zero' : ''}`} title="长押数">
+                    {/* 【2026-11-02 审计】长押为 0 不再印徽章。
+                        ①「Holds 0」在全库 852 首里是同一个值，三档 × 每首重复三次，
+                          正是主人早前判过的「多行重复同一值就别占版面」；
+                        ②「这一档没有长押」这件事，用「没有那枚徽章」表达最省，
+                          与长押率百分比（holds > 0 才画）的规则也一致。
+                        未抓到（holds 为 null）同样不显示。 */}
+                    {holds != null && holds > 0 ? (
+                      <span class="sd-tag" title="长押数">
                         <i>Holds</i><b>{fmtInt(holds)}</b>
                       </span>
-                    )}
+                    ) : null}
                     {holds != null && holds > 0 && st?.holdPct != null ? (
                       /* 条与百分比包成一组：窄屏放不下时两者一起换行，
                          不会出现「条留在上行、百分比被挤到下一行」的断体。 */
@@ -458,7 +474,9 @@ const metaFoot: Meta[] = song
                               }%`}>
                           {st.holdBaseline ? <u></u> : null}<i></i>
                         </span>
-                        <span class="sd-pctl-v">{st.holdPct.toFixed(1)}%</span>
+                        <span class="sd-pctl-v" title={`长押率：长押音符占全谱 ${st.holdPct.toFixed(1)}%`}>
+                          <span class="sd-sr">长押率</span>{st.holdPct.toFixed(1)}%
+                        </span>
                       </span>
                     ) : null}
                   </span>
@@ -573,22 +591,49 @@ const metaFoot: Meta[] = song
       }
       return Promise.resolve(fallbackCopy(text));
     }
-    /* 【2026-11-02 主人「详情页桌面端的歌名要保持在一行」】
-       CSS 只能禁止折行，曲名够长时会溢出右栏。这里按实际可用宽度逐级降字号，
-       保证「一行 + 不溢出」同时成立：
-         · 先清掉内联字号回到 CSS 的 clamp 值重新量（缩放窗口时不会越缩越小）；
-         · 每次减 1px，下限 20px（再小就失去标题的视觉重量，宁可略微拥挤）；
-         · 窄屏（≤700px）直接跳过——那里保留折行，字号已压到 24px 档。
-       依赖：h1.sd-title-wrap 是块级容器，clientWidth 即右栏可用宽度。 */
+    /* 实测这个元素现在占了几行（用 Range 的客户端矩形，比拿高度除以行高准——
+       行内元素的高度是按字体上下伸出来的，不等于「行数 × 行高」，早先按高度算
+       得出了「12px 还占 3.5 行」这种假结论）。 */
+    function countLines(el) {
+      var rg = document.createRange();
+      rg.selectNodeContents(el);
+      var rects = rg.getClientRects();
+      var tops = {};
+      var n = 0;
+      for (var i = 0; i < rects.length; i++) {
+        if (rects[i].height < 1) continue;
+        var t = Math.round(rects[i].top);
+        if (!tops[t]) { tops[t] = 1; n++; }
+      }
+      return n;
+    }
+
+    /* 【2026-11-02 歌名排版：桌面一行 / 窄屏两行，都用降字号达成】
+       桌面（>700px）：一行 + 不溢出右栏，下限 20px。
+       窄屏（≤700px）：最多两行，下限 13px（站内移动端字号下限）。
+       超长曲名缩到下限仍超行数时，才给 .sd-title-t 挂 .is-clamp 截断兜底
+       （库里最长的一条 60 字符，缩到 13px 一般是 3 行）。
+       先清掉内联字号回到 CSS 值再量，缩放窗口时才不会越缩越小。 */
     function fitTitle() {
       var wrap = document.querySelector('.sd-title-wrap');
       if (!wrap) return;
       var btn = wrap.querySelector('.sd-title');
       if (!btn) return;
+      var inner = btn.querySelector('.sd-title-t');
       btn.style.fontSize = '';
-      if (window.innerWidth <= 700) return;
-      var avail = wrap.clientWidth;
+      if (inner) inner.classList.remove('is-clamp');
       var fs = parseFloat(getComputedStyle(btn).fontSize);
+      if (window.innerWidth <= 700) {
+        var guardM = 0;
+        while (countLines(btn) > 2 && fs > 13 && guardM < 60) {
+          fs -= 1;
+          btn.style.fontSize = fs + 'px';
+          guardM++;
+        }
+        if (inner && countLines(btn) > 2) inner.classList.add('is-clamp');
+        return;
+      }
+      var avail = wrap.clientWidth;
       var guard = 0;
       while (wrap.scrollWidth > avail + 1 && fs > 20 && guard < 80) {
         fs -= 1;
@@ -596,12 +641,33 @@ const metaFoot: Meta[] = song
         guard++;
       }
     }
-    fitTitle();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
+
+    /* 【2026-11-02 主人「曲师在移动端字体缩小至一行」】
+       艺名在窄屏只排一行：先清掉内联字号，再逐级降字号直到不溢出，
+       下限 12px（站内移动端辅助文字下限）。缩到下限仍放不下时保持
+       一行 + 省略号（CSS 给的 text-overflow），绝不折成两行。
+       桌面不动——桌面本来就允许换行。 */
+    function fitArtist() {
+      var a = document.querySelector('.sd-artist');
+      if (!a) return;
+      a.style.fontSize = '';
+      if (window.innerWidth > 700) return;
+      var fs = parseFloat(getComputedStyle(a).fontSize);
+      var guard = 0;
+      while (a.scrollWidth > a.clientWidth + 1 && fs > 12 && guard < 40) {
+        fs -= 1;
+        a.style.fontSize = fs + 'px';
+        guard++;
+      }
+    }
+
+    function fitText() { fitTitle(); fitArtist(); }
+    fitText();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitText);
     var fitTimer = null;
     window.addEventListener('resize', function () {
       if (fitTimer) clearTimeout(fitTimer);
-      fitTimer = setTimeout(fitTitle, 120);
+      fitTimer = setTimeout(fitText, 120);
     });
 
     var targets = document.querySelectorAll('[data-copy]');
