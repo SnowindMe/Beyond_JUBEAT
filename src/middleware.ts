@@ -14,6 +14,53 @@ import { getUserByToken, readSessionToken, type AuthUser } from './lib/auth';
 // 而 Node 的 ESM loader 不认识 cloudflare: 协议——顶层静态导入会让
 // 「预渲染 /404」这一步直接崩：ERR_UNSUPPORTED_ESM_URL_SCHEME。
 // 改成只在真正跑 SSR 请求时动态导入，预渲染分支根本不执行它。
+
+/* ---------------- 边缘缓存的两层存储（2026-11-02 v2） ----------------
+   CACHE_PREFIX 带版本号：改缓存策略时 +1，旧条目自然失效，不用等 TTL。 */
+const CACHE_PREFIX = '/_jb-cache/v2';
+/** 新鲜期：这段时间内命中直接返回，连缓存校验都省了 */
+const FRESH_TTL = 300;
+/** 陈旧期：新鲜期过后仍可「先吐旧的、后台再刷新」，留 24h 兜住冷 PoP 与流量尖峰 */
+const STALE_TTL = 60 * 60 * 24;
+
+type CachedResponse = { status: number; headers: Headers; body: ArrayBuffer };
+
+/** 同一 isolate 内同路径的渲染只跑一次，其余请求等同一个 Promise */
+const inflight = new Map<string, Promise<CachedResponse | null>>();
+
+/** 把 Response 读成内存快照：body 是流，只能读一次，而我们要分给多个调用方 + 写缓存 */
+async function snapshotOf(res: Response): Promise<CachedResponse> {
+  const body = await res.arrayBuffer();
+  return { status: res.status, headers: new Headers(res.headers), body };
+}
+
+/** 用快照给某个请求单独造一份 Response（body 必须复制，ArrayBuffer 不能共用） */
+function respondWith(snapshot: CachedResponse, tag: string): Response {
+  const headers = new Headers(snapshot.headers);
+  headers.set('x-jb-cache', tag);
+  return new Response(snapshot.body.slice(0), { status: snapshot.status, headers });
+}
+
+/** 缓存命中时补一个标记头，便于线上区分「缓存命中」「陈旧吐出」「真渲染」 */
+function relabel(res: Response, tag: string): Response {
+  const copy = new Response(res.body, res);
+  copy.headers.set('x-jb-cache', tag);
+  return copy;
+}
+
+/** 同一份快照写两份：新鲜层（短 TTL）+ 陈旧层（长 TTL）。
+    注意每份的 Cache-Control 不同——Worker 缓存就是按这个头算过期时间的。 */
+async function putBoth(cache: Cache, freshKey: Request, staleKey: Request, snapshot: CachedResponse) {
+  for (const [key, ttl] of [
+    [freshKey, FRESH_TTL],
+    [staleKey, STALE_TTL],
+  ] as const) {
+    const headers = new Headers(snapshot.headers);
+    headers.set('cache-control', `public, max-age=${ttl}, s-maxage=${ttl}`);
+    await cache.put(key, new Response(snapshot.body.slice(0), { status: snapshot.status, headers }));
+  }
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   // 预渲染阶段（构建期生成静态 HTML）没有 D1 绑定、也没有真实请求：
   // 直接放行，locals.user 保持 null。静态页因此永远是「游客视角」，
@@ -44,20 +91,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   context.locals.user = user;
 
-  /* ---- Worker 侧边缘缓存（2026-10-25）----
-     为什么需要：CF 的**共享 CDN 不缓存 Worker 生成的响应**（静态资源会，Worker 响应不会）。
-     实测 /songs/ 连打 3 次都没有 CF-Cache-Status，页面里写的 s-maxage=300 实际上没生效，
-     每次访问都真打 D1。这里用 caches.default 自己存一份。
+  /* ---- Worker 侧边缘缓存 v2（2026-11-02 改造：stale-while-revalidate + 单飞）----
+     背景：CF 的共享 CDN 不缓存 Worker 响应，所以 2026-10-25 用 caches.default 自己存一份。
+     审计压测（docs/audit-2026-11-02.md 第一节）暴露两个缺口：
 
-     三条红线（都踩过或会踩）：
-       ① **只在游客态缓存**：页面里虽然登录态靠客户端补，但 SSR 期 locals.user 仍可能让
-          某些区块变化。带会话 cookie 的请求一律绕过缓存与写入，绝不让 A 的页面被 B 命中。
-       ② **只缓存读、只缓存 200**：POST/表单提交（/api/*）不进缓存逻辑。
-       ③ **私有路径完全不碰**：/account /admin /login /register /api 是会话相关，
-          缓存它们等于把登录态页面发给别人。白名单式判断，只放明确公开的路径。
+       ① **并发穿透**：缓存过期（s-maxage=300）或冷 PoP 上，N 个请求同时 MISS，
+          就会同时跑 N 次「1683 张卡」的 SSR。实测并发 5 起约 20% 撞
+          Cloudflare error 1102（Worker 资源超限），并发 20 → 4/20。
+          修法：**手写两层 stale-while-revalidate**——旧条目在陈旧层留 24h，
+          新鲜条目过期时先吐旧 HTML、后台只重渲一次。用户最多看到几十秒前的页面，
+          但不会看到 Error 页。
+       ② **key 带查询串**：`?x=123` 这类参数会让每个 URL 各存一份，等于可被轻易穿透
+          （压测脚本正是这么打的）。修法：key 只用 pathname——页面内容与查询串无关，
+          日服/国服两套 body 本来就是服务端一起渲染、前端做显隐。
 
-     命中时跳过 next()，省掉整次 SSR 渲染 + D1 查询；未命中则渲染后 put 一份。
-     失败一律降级为「正常放行」——缓存是优化，绝不能因为它把页面搞挂。 */
+     另加**单飞**：同一 isolate 内同路径的并发渲染共用一个 Promise，只跑一次。
+
+     三条红线不变：
+       ① 带会话 cookie 的请求不读也不写缓存（绝不让 A 的页面被 B 命中）；
+       ② 只缓存 GET/HEAD 的 200，且响应不带 Set-Cookie；
+       ③ 白名单路径（只放 /songs/ 与 /recent/）。缓存是优化，任何异常都退回正常渲染。 */
   const url = new URL(context.request.url);
   const PUBLIC_CACHE = /^\/(songs(\/|$)|recent(\/|$))/.test(url.pathname);
   const hasSession = !!token;
@@ -69,26 +122,44 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   try {
     const cache = (caches as unknown as { default: Cache }).default;
-    const key = new Request(url.toString(), { method: 'GET' });
-    const hit = await cache.match(key);
-    if (hit) {
-      // 命中直接返回，但补一个标记头便于线上区分「缓存命中」与「真渲染」
-      const res = new Response(hit.body, hit);
-      res.headers.set('x-jb-cache', 'HIT');
-      return res;
+    const freshKey = new Request(url.origin + CACHE_PREFIX + url.pathname, { method: 'GET' });
+    const staleKey = new Request(url.origin + CACHE_PREFIX + '/stale' + url.pathname, { method: 'GET' });
+
+    // ① 新鲜条目：直接返回，完全不进 SSR
+    const fresh = await cache.match(freshKey);
+    if (fresh) return relabel(fresh, 'HIT');
+
+    // 渲染一次并写两层缓存；并发调用共用同一个 Promise
+    const refresh = (): Promise<CachedResponse | null> => {
+      const running = inflight.get(url.pathname);
+      if (running) return running;
+      const task = (async (): Promise<CachedResponse | null> => {
+        const res = await next();
+        // 只缓存干净的 200；带 Set-Cookie 的响应绝不入库（否则会把会话发给所有人）
+        if (res.status !== 200 || res.headers.has('set-cookie')) return null;
+        const snapshot = await snapshotOf(res);
+        await putBoth(cache, freshKey, staleKey, snapshot);
+        return snapshot;
+      })()
+        .catch(() => null)
+        .finally(() => inflight.delete(url.pathname));
+      inflight.set(url.pathname, task);
+      return task;
+    };
+
+    // ② 过期了但旧条目还在：先吐旧的，后台刷新（尖峰时不再有 N 个请求同时渲染）
+    const stale = await cache.match(staleKey);
+    if (stale) {
+      const snapshot = await snapshotOf(stale);
+      const task = refresh();
+      context.locals.cfContext?.waitUntil?.(task);
+      return respondWith(snapshot, 'STALE');
     }
-    const res = await next();
-    // 只缓存干净的 200；带 Set-Cookie 的响应绝不入库（否则会把会话发给所有人）
-    if (res.status === 200 && !res.headers.has('set-cookie')) {
-      const toCache = new Response(res.body, res);
-      toCache.headers.set('x-jb-cache', 'MISS');
-      // 页面的 Cache-Control 是 max-age=30/s-maxage=300，照用；Worker 缓存按这个 TTL 过期
-      // 注意：put 必须用 clone()——body 是流，put 会消费它，不 clone 的话回给浏览器的
-      // 那个 Response 就是空的了（页面变白屏）。这个坑很隐蔽，只在第一次未命中时出现。
-      await cache.put(key, toCache.clone());
-      return toCache;
-    }
-    return res;
+
+    // ③ 冷 PoP（从没渲染过）：只能同步渲染一次
+    const snapshot = await refresh();
+    if (!snapshot) return next();
+    return respondWith(snapshot, 'MISS');
   } catch {
     // 缓存层任何异常都退回正常渲染路径，绝不把错误抛给用户
     return next();
