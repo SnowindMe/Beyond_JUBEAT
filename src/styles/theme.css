@@ -2957,3 +2957,43 @@ html[data-g="yymf"] {
         gap: 6px 10px;
     }
 }
+
+/* ============================================================
+   移动端可读性 · 触控热区（2026-11-02 审计 P2 修复）
+   依据：docs/audit-2026-11-02.md 第三节。390px 实测首页有
+   6 处 <12px 文本、16 个 <40px 触控目标（其中 13 个是「相关站点」链接行）。
+   ============================================================ */
+@media (max-width: 768px) {
+    /* 「相关站点」分区标签 11 → 12；三列小标题 11.5 → 12.5 */
+    .links-title {
+        font-size: 12px;
+    }
+    .links-col-t {
+        font-size: 12.5px;
+    }
+    /* 站点链接行 30 高 → 44 高。整行本来就是热区（.links-list a 是 flex 行），
+       加 min-height 即可，文字仍垂直居中；顺带把条目间距拉开，不再挤成一条细带。 */
+    .links-list a,
+    .links-part {
+        min-height: 44px;
+    }
+    /* 首屏两个按钮 38 高 → 44 */
+    .intro-btn {
+        min-height: 44px;
+    }
+    /* 页脚徽章：10.5 → 12px；高度 22 → 26，文字不贴边 */
+    .foot-badge {
+        height: 26px;
+        font-size: 12px;
+    }
+    /* powered by dsh 官方徽章图只有 20 高：外侧补 padding 到 44 高，
+       负 margin 抵消，页脚整体高度不变。 */
+    .foot-dsh {
+        padding: 12px 0;
+        margin-top: -10px;
+    }
+    .foot-slogan {
+        font-size: 12px;
+    }
+}
+

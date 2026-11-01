@@ -2598,3 +2598,105 @@ html.sc-js .sc-panel[hidden] {
 #scList:focus {
     outline: none;
 }
+
+/* ============================================================
+   移动端可读性 · 触控热区（2026-11-02 审计 P2 修复）
+   依据：docs/audit-2026-11-02.md 第三节。线上 390px 实测本页有
+   42 处 <12px 文本、5 个 <40px 触控目标；详情页 22 处 / 4 个。
+   这里只做移动端覆盖，桌面排版不动。两条下限：
+     · 辅助信息字号 ≥ 12px（曲名为 13px）
+     · 可点目标 ≥ 44×44（iOS HIG / WCAG 2.5.5 Target Size）
+   ============================================================ */
+@media (max-width: 768px) {
+    /* 卡片：曲名 12 → 13px，曲师 11 → 12px。
+       三列网格下 390px 屏单卡约 112px，13px 仍留两个字余量，超长走 ellipsis。 */
+    .sc-t {
+        font-size: 13px;
+    }
+    .sc-a {
+        font-size: 12px;
+    }
+    /* 难度徽章：主字 11 → 12；徽章内的 BSC/ADV/EXT 前缀 10 → 11（再大会撑破徽章） */
+    .sc-lv .lv {
+        font-size: 12px;
+    }
+    .sc-lv .lv u {
+        font-size: 11px;
+    }
+    /* 世代块头：世代名保持 12.5，年份与曲数 11 → 12 */
+    .sc-gen-h span,
+    .sc-gen-h i {
+        font-size: 12px;
+    }
+    .sc-sec-h em {
+        font-size: 12px;
+    }
+    .sc-active-cost {
+        font-size: 12px;
+    }
+
+    /* 搜索框清空按钮 30×30 → 44×44。
+       它是 absolute 的圆形按钮，不放 padding（会让图标偏心），
+       直接放大盒子并把 right 从 9 收到 2，图标仍在输入框右缘同一位置。 */
+    .sc-q-x {
+        width: 44px;
+        height: 44px;
+        right: 2px;
+    }
+    .sc-q-x svg {
+        width: 15px;
+        height: 15px;
+    }
+    /* 世代跳转按钮 36 高 → 44：padding 撑开 + 等量负 margin 抵消，
+       块头行的视觉高度基本不变（与文件里 .sc-gen-b 原有手法一致）。 */
+    .sc-gen-b {
+        min-height: 44px;
+        padding: 10px 4px 10px 0;
+        margin: -10px 0;
+    }
+
+    /* ---------------- 详情页 ---------------- */
+    /* 返回链接 52×26 → 44 高 */
+    .sd-back {
+        min-height: 44px;
+    }
+    /* songId 按钮（点击复制）实测热区只有 61×14：
+       padding 撑开、负 margin 抵消，视觉位置与行高完全不变。 */
+    .sd-sid {
+        padding: 14px 4px;
+        margin: -14px -4px;
+    }
+    /* 曲名按钮同理：inline 元素的 padding 只扩热区、不撑行高 */
+    .sd-title {
+        padding: 9px 0;
+        margin: -9px 0;
+    }
+    /* 世代/分区徽章：20 高 / 11px → 22 高 / 12px，与小字下限对齐 */
+    .sd-badge {
+        height: 22px;
+        padding: 0 9px;
+        font-size: 12px;
+    }
+    /* 难度行副行（键数 / 分位 / 长押率）10.5 → 12px；分位数字 10 → 11px */
+    .sd-fact {
+        font-size: 12px;
+    }
+    .sd-pctl-v {
+        font-size: 11px;
+    }
+    /* 等级标签 10.5 → 11.5：38px 列宽里 BSC/ADV/EXT 仍放得下 */
+    .sd-lrow-k {
+        font-size: 11.5px;
+    }
+    /* 刻度尺数字 9 → 11px，尺子本身加高 2px 托住（仍属图形标注，没有再往上拉） */
+    .sd-scale {
+        height: 14px;
+    }
+    .sd-scale b span {
+        font-size: 11px;
+    }
+    .sd-foot dt {
+        font-size: 12px;
+    }
+}
+

@@ -158,14 +158,20 @@ html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-
     .sc-srv-logo {
         height: 42px;
     }
+    /* 【2026-11-02 移动端字号修复】11 → 12px：这两个徽章是服务器卡上唯一的文字，
+        11px 落在审计的小字清单里（/songs/ 与 /jubility/ 各 2 处）。
+        padding 保持窄屏的紧凑值，加大的只是字号。 */
     .sc-tag {
-        font-size: 11px;
-        padding: 4px 8px;
+        font-size: 12px;
+        padding: 4px 9px;
     }
     /* 【2026-10-28 迁入】计数徽章窄屏降一档。原先这条只写在 songs.css 的媒体查询里，
        /jubility/ 没有 → 窄屏下同一个控件两页字号不同。控件自身的规则应跟控件一起走。 */
     .sc-tag-c {
-        font-size: 11px;
+        font-size: 12px;
+    }
+    .sc-tag-c i {
+        font-size: 11.5px;
     }
 }
 

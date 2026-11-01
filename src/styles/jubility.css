@@ -495,3 +495,38 @@ html:not(.jb-js) .jb-tools {
     display: none;
 }
 
+/* ============================================================
+   移动端可读性（2026-11-02 审计 P2 修复）
+   依据：docs/audit-2026-11-02.md 第三节。390px 实测本页是 <12px 文本最多的
+   一页（48 处）：编号、世代名、均分副行、池子标签、说明里的代码片段都在 11px 档。
+   统一抬到 12px 下限；触控目标本页只有页脚那 1 个，已由 theme.css 统一处理。
+   ============================================================ */
+@media (max-width: 768px) {
+    .jb-idx {
+        font-size: 12px;
+    }
+    .jb-name span {
+        font-size: 12px;
+    }
+    .jb-pool-k {
+        font-size: 12px;
+    }
+    .jb-pool-v em {
+        font-size: 12px;
+    }
+    .jb-notes code {
+        font-size: 12px;
+    }
+    .jb-sum-k {
+        font-size: 12px;
+    }
+    .jb-sum-sub {
+        font-size: 12px;
+    }
+    .jb-legend,
+    .jb-legend span {
+        font-size: 12px;
+    }
+}
+
+
