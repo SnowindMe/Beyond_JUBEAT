@@ -8,17 +8,31 @@ import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import SongAudio from '../../components/SongAudio.astro';
-import { getSongById, type Song } from '../../lib/db';
+import { getSongById, getAllSongs, type Song } from '../../lib/db';
+import { LEVELS, gauge, dash as dashLv, buildDifficultyStats, HOLD_PCT_MAX } from '../../lib/difficulty';
 import { env } from 'cloudflare:workers';
 // BGM 试听映射（本站 songId → 上游相对路径），由 scripts/ub/build-ub-audio.cjs 生成。
 // 打包期内联进 Worker，运行时不读文件；未命中的曲目说明上游没有音源，不渲染播放器。
 import audioMap from '../../data/ub-audio.json';
+// 谱面密度：由 scripts/ub/build-ub-charts.cjs 从 ub 抓取并现算的「逐小节键数」。
+// 【关键：走 CF 边缘缓存】它是**构建期内联的静态数据**，和 ub-audio.json 同一个模式——
+// 打进 Worker 包后随静态资源一起下发，运行时不回源、不发请求。
+// 若改成运行时 fetch 上游，每次详情页请求都要多一次跨站往返（实测上游 ~300ms），
+// 而且上游挂了整页就废了。0.8 MB 的数据换掉 3 次上游请求，这笔账很划算。
+import chartMap from '../../data/ub-charts.json';
 
 export const prerender = false;
 
 const { songId } = Astro.params;
 const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
 const song: Song | null = songId ? await getSongById(db, songId) : null;
+
+// 【2026-11-01 键数 / 长押的参照系】分位要拿**全站同档谱面**当分母。
+// getAllSongs 在 isolate 内有 60s 内存缓存，与详情页的单曲查询分开缓存，
+// 所以这次多读一份全量不会让详情页变慢（同一 isolate 内第二次起是纯内存）。
+// 只在这首确实有谱面数据时才算，避免 404 页白跑一遍 3744 条统计。
+const diffStats =
+  song && song.notecounts ? buildDifficultyStats(await getAllSongs(db)) : null;
 
 // 找不到就渲染 404 内容并回 404 状态码：原 URL 不变，符合 HTTP 语义，
 // 也不会被搜索引擎当成「内容存在但跳走了」。不用 Astro.redirect——那会 302 到 /404，
@@ -109,19 +123,74 @@ const genColor = song
     : GEN_COLOR[song.gen]
   : undefined;
 
-const dash = (v: number | null) => (v == null ? '—' : String(v));
+const dash = dashLv;
+// 键数四位数（最高 1606）在窄卡里要读得快，加千分位
+const fmtInt = (v: number) => v.toLocaleString('en-US');
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
 const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
 
-// 定数刻度：jubeat 定数上限约 11，按比例画条。低于 1 的给个最小可见宽度，
-// 但用 .is-thin 提示「几乎为空」，避免短到看不见又被误读成没加载。
-const SCALE_MAX = 11;
-const gauge = (v: number | null) => (v == null ? null : Math.max(4, Math.round((v / SCALE_MAX) * 100)));
+// 定数刻度、难度顺序与空值显示已统一抽到 src/lib/difficulty.ts——
+// 加一档难度或改上限只需改那一处，模板与样式不再各持一份。
+// 【2026-11-01 难度卡片】主人要求「拓展难度条样式，希望能看到某个难度的一些基本信息」。
+// 现在每个难度是一张卡：等级 + 定数 + 填充条 + 键数 / 每键均时 / 长押。
+// 这三项全部来自库里已有字段（notecounts / holds / bpm），1248 首 100% 有键数，
+// 不再新增任何数据列，也就不存在"线上 D1 忘灌导致静默失效"的风险。
 
 // 有没有音源：映射表命中才渲染试听条。1248 首里 1185 首有（上游是日服谱面站，
 // 国服原创曲、拿不到官方 id 的 BTA- 占位曲、以及 2026-10-29 刚上架那 7 首——
 // 上游还没收录——本就没有），未命中的不摆空控件。
 const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)]);
+
+// ---------------------------------------------------------------------------
+// 谱面密度数据（2026-11-01 主人「要不去 ub 拉取谱面文件吧，做个如图所示的 bar 条」）
+//
+// 每档给：逐小节键数 bars[]、时长 dur、bpm、上游 level。
+// 【为什么先校验 level】ub 上有个别曲目还挂着旧版谱面（实测 paranoia 的 EXT 是 Lv8 老谱，
+// 库里已是 Lv9.5，键数 563 vs 965 差 40%）。拿旧谱的节奏形态当当前谱面展示是错的，
+// 所以上游 level 与库里定数不符时**整档不画密度条**，只留数字。
+// 宁可少一张图，也不能给一张谎图。
+// ---------------------------------------------------------------------------
+/** 官方口径的谱面密度数据（见 scripts/ub/build-ub-charts.cjs 头注释）。 */
+type ChartCols = {
+  cols: number[];   // 115 列，每列的颗数
+  dur: number;      // 时间轴秒数 = 最后一颗判定时刻 + 1s
+  keys: number;     // 物量 = 单点×1 + 长押×2
+  notes: number;    // 单点数
+  holds: number;    // 长押数
+  bpm: number;
+  level?: string | null;
+};
+/** 柱高封顶层数（官方 8 层）。超过 8 颗的列按 8 层画，不压峰归一化。 */
+const MAX_LAYERS = 8;
+const charts = song ? (chartMap as Record<string, Record<string, ChartCols>>)[String(song.id)] : undefined;
+
+/**
+ * 取某一档的谱面密度；**版本对不上就返回 null**（整档不画）。
+ *
+ * 两道校验，缺一不可（实测数据：只靠 level 会漏 89/93 个）：
+ *   ① level 不符：上游还挂着旧版谱面。实测 paranoia 的 EXT 在 ub 是 Lv8 老谱，
+ *      库里已是 Lv9.5，键数 563 vs 965。
+ *   ② **键数不符**：这一条更要紧——页面上「键数」显示的是库里的值，
+ *      如果谱面文件算出来的键数与之不符，那么密度条画的就不是这一份谱面。
+ *      实测 3493 个谱面里有 93 个键数对不上、但其中只有 4 个 level 也不符，
+ *      所以光查 level 挡不住 89 个「定了同一定数但谱面被改过」的情况。
+ *
+ * 判据很简单：密度条必须和它旁边那个「N 键」说的是同一份谱面，否则宁可不画。
+ */
+const chartOf = (key: 'bsc' | 'adv' | 'ext') => {
+  const c = charts?.[key];
+  if (!c || !c.cols?.length) return null;
+  const libLv = song?.lv[key];
+  const libNotes = song?.notecounts?.[key];
+  // ① 定数一致（上游 level 可能是 "10.7" 或 "10"，只在都有值时比较）
+  if (c.level != null && libLv != null) {
+    const ub = parseFloat(c.level);
+    if (Number.isFinite(ub) && Math.abs(ub - libLv) > 0.001) return null;
+  }
+  // ② 键数一致：算出来的必须等于库里那个数字
+  if (libNotes != null && c.keys !== libNotes) return null;
+  return c;
+};
 
 // 【2026-10-28 重设计·第三版】主人「这歌曲详情太小了」。
 // 上一版（10-22）是「左栏 = 封面 + 4 项硬数据，右栏 = 曲名 + 定数条，底部条 = 其余」。
@@ -259,18 +328,102 @@ const metaFoot: Meta[] = song
             【2026-10-29 主人「没有 bgm 的视图」】无音源时没有播放条占位，
             定数条会上移到曲绘高度；它又向左扩张到曲绘下方，于是被曲绘压住。
             给无音源加 .is-solo：把它推离曲绘底边（见 songs.css）。 */}
-        <div class={`sd-gauge${hasAudio ? '' : ' is-solo'}`}>
-          {([
-            ['bsc', 'BSC', song.lv.bsc],
-            ['adv', 'ADV', song.lv.adv],
-            ['ext', 'EXT', song.lv.ext],
-          ] as const).map(([key, label, val]) => (
-            <div class={`sd-row sd-row-${key}${val == null ? ' is-empty' : ''}`}>
-              <span class="sd-row-k">{label}</span>
-              <span class="sd-bar"><i style={`width:${gauge(val) ?? 0}%`}></i></span>
-              <span class="sd-row-v">{dash(val)}</span>
-            </div>
-          ))}
+        {/* 【2026-11-01 难度卡片】主人「拓展一下难度条样式（做成难度卡片也行），
+            我希望能看到某个难度的一些基本信息」。
+            原来每档只是一行「标签 + 条 + 数字」，只有定数一个字段；现在每档是一张卡，
+            把库里**已有**的谱面数据挂上去，不新增任何列：
+              · 定数（原来的数值，变成卡片视觉重心）
+              · 键数 notecounts[key]：1248 首 100% 覆盖，且每首键数都不同 → 纯信息增量
+              · 长押 holds[key]：只在 >0 时出现。全库 852 首是 0，把「长押 0」印上去
+                等于一列几乎没有差异的值（主人判过：多行重复同一值就不占版面），
+                所以「没有长押」这件事用「不显示」来表达，卡片上每一项都有信息量。
+                未抓到（98 首 holds 为 null）同样不显示，不拿「—」冒充「没有」。
+            【被否掉的字段·每键均时】想过显示 键数 ÷ (BPM/60) 的「每秒按键数」，
+            但换算出来 = 键数 × 60 / BPM，BPM 恒定的一首里它只是键数的线性缩放，
+            读的人拿不到新东西；真正有意义的密度要按谱面时长算，而时长库里没有。
+            宁可少一项，也不摆一个看不出所以然的数字。 */}
+        <div class={`sd-gauge${hasAudio ? '' : ' is-solo'}`} role="group" aria-label="难度信息">
+          {/* 共用刻度尺：三行读的是同一把 0-11 的尺，横向就能比出
+              「BSC 到哪、EXT 离上限还差多少」。刻度是尺子本身，不是装饰。 */}
+          <div class="sd-scale" aria-hidden="true">
+            <b style="grid-column:2">
+              <span style={`left:${(5 / SCALE_MAX) * 100}%`}>5</span>
+              <span style={`left:${(10 / SCALE_MAX) * 100}%`}>10</span>
+            </b>
+          </div>
+          {LEVELS.map(({ key, label }) => {
+            const lv = song.lv[key];
+            const notes = song.notecounts?.[key] ?? null;
+            const holds = song.holds?.[key] ?? null;
+            const st = diffStats?.get(`${song.id}|${key}`) ?? null;
+            return (
+              <div class={`sd-lrow sd-lrow-${key}${lv == null ? ' is-empty' : ''}`}
+                   style={`--fill:${gauge(lv) ?? 0}%`}>
+                <span class="sd-lrow-k">{label}</span>
+                <span class="sd-lrow-track"><span class="sd-lrow-fill"></span></span>
+                <span class="sd-lrow-v">{dash(lv)}</span>
+
+                {/* 副行：键数（带同档分位）+ 长押（带占全谱率与基准线）。
+                    两个数字都配了参照系——裸数字读不出「算多还是算少」。 */}
+                <span class="sd-lrow-sub">
+                  <span class="sd-facts">
+                    <span class="sd-fact"><em>{notes == null ? '—' : fmtInt(notes)}</em>键</span>
+                    {st?.notesPctl != null ? (
+                      <>
+                        <span class="sd-pctl" aria-hidden="true">
+                          {Array.from({ length: 10 }, (_, i) => (
+                            <b class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></b>
+                          ))}
+                        </span>
+                        <span class="sd-pctl-v">P{st.notesPctl}</span>
+                      </>
+                    ) : null}
+                    {holds != null && holds > 0 && st?.holdPct != null ? (
+                      <span class="sd-holdwrap">
+                        <span class="sd-fact"><em>{fmtInt(holds)}</em>长押</span>
+                        <span class="sd-holdbar" aria-hidden="true"
+                              style={`--w:${Math.min(100, (st.holdPct / HOLD_PCT_MAX) * 100)}%;--med:${
+                                st.holdBaseline ? (st.holdBaseline.medianPct / HOLD_PCT_MAX) * 100 : 0
+                              }%`}>
+                          {st.holdBaseline ? <u></u> : null}<i></i>
+                        </span>
+                        <span class="sd-pctl-v">{st.holdPct.toFixed(1)}%</span>
+                      </span>
+                    ) : holds === 0 ? (
+                      <span class="sd-fact sd-none">无长押</span>
+                    ) : null}
+                  </span>
+                </span>
+
+                {/* 谱面密度条（2026-11-01，按 jubeat 官方口径）：
+                    · 固定 115 列等分时间轴，柱高封顶 8 层，画**绝对颗数**、不按本曲峰值归一化
+                    · 物量 = 单点×1 + 长押×2，长押的头判与尾判各落一列
+                      （所以列合计 == 物量，两个独立算法互验）
+                    · 格子是正方形，整张图等比缩放后居中（见 songs.css 的 --cell）
+                    0 颗的列不画任何东西——曲中间的静音段本身就是信息。
+                    版本对不上（chartOf 返回 null）就整块不渲染，不给假图。 */}
+                {(() => {
+                  const c = chartOf(key);
+                  if (!c) return null;
+                  return (
+                    // 【空列必须占位】115 列是等分时间轴，空列（这一小段没有音符）
+                    // 也要占住自己的宽度，否则柱子挤在一起、时间轴就失真了——
+                    // 实测症状是「柱子之间没有间隔、节奏形态读不出来」。
+                    // is-rest 只负责保持列宽，不画任何方块。
+                    <span class="sd-chart" aria-hidden="true">
+                      {c.cols.map((v) => (
+                        <span class={v === 0 ? 'sd-col is-rest' : 'sd-col'}>
+                          {v === 0
+                            ? null
+                            : Array.from({ length: Math.min(MAX_LAYERS, v) }, () => <b></b>)}
+                        </span>
+                      ))}
+                    </span>
+                  );
+                })()}
+              </div>
+            );
+          })}
         </div>
       </div>
 

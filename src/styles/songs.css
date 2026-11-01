@@ -1218,9 +1218,10 @@ html[data-bgm="playing"] .sd-disc-spin {
     position: relative;
 }
 
-/* 定数条：三条横条按 0-11 刻度填充。
-   定数是最有信息量的字段，横条让「难度分布」一眼可读；
-   空值给一条虚线空槽，而不是一个写「—」的盒子。 */
+/* 难度区（2026-11-01）：三个难度各一行，共用一把 0-11 的刻度尺。
+   每行 = 等级 + 定数条 + 定数 | 键数(带同档分位) + 长押(带占比与基准线) | 谱面密度条。
+   数字全部来自库里已有字段（lv / notecounts / holds），
+   密度条来自 ub 谱面文件现算（见 scripts/ub/build-ub-charts.cjs）。 */
 /* 【2026-10-29 主人「难度条要往左扩张」】
    让它与播放条一起向左铺到曲绘下方：负 margin 抵消右栏偏移，宽度补回来。
    桌面原本右栏左缘距内容区左缘 267px（208 栏宽 + 58 栏间距），
@@ -1250,10 +1251,12 @@ html[data-bgm="playing"] .sd-disc-spin {
     margin-top: clamp(16px, 2vw, 22px);
     padding-top: clamp(18px, 2.2vw, 24px);
     border-top: 1px solid var(--edge);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    max-width: none;
+    /* 【2026-11-01 难度卡片】原先是「自上而下的三行 flex」，现在是三张卡并排。
+       排版直接写在这里，不再另起一条 .sd-gauge 规则——
+       2026-10-28 记过的坑：同属性写两处，后写的会把前面的修复盖回去。 */
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
 }
 
 /* 【2026-10-29 主人「没有 bgm 的桌面端/移动端视图」——无音源时的版面修正】
@@ -1282,65 +1285,194 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     --d-adv: #9a6d12;
     --d-ext: #cc2f26;
 }
-.sd-row {
+/* 每行 = 三栏网格（等级 | 条 | 定数），副行用 grid-column 横跨整行 */
+.sd-lrow {
     display: grid;
-    /* 【2026-10-28】标签与数值列各加宽：字号上去后旧列宽会把「9.3」挤到换行 */
-    grid-template-columns: 42px minmax(0, 1fr) 52px;
+    grid-template-columns: 46px minmax(0, 1fr) 74px;
+    gap: 4px 12px;
     align-items: center;
-    gap: 14px;
+    padding: 9px 0;
+    border-top: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
 }
-.sd-row-k {
+.sd-lrow:first-of-type { border-top: 0; }
+.sd-lrow-k {
     font-family: var(--font-data);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    color: var(--ink3);
+    letter-spacing: 0.12em;
+    color: var(--d-c);
 }
-.sd-row-v {
+.sd-lrow-track {
+    position: relative;
+    height: 10px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+/* 刻度叠在填充之上：没有它，「10.8 已经贴到第 11 格」读不出来。
+   2026-11-01 踩过：刻度若画在槽的 background 上，会被实心填充整段盖掉。 */
+.sd-lrow-track::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(100% / 11 - 1.5px),
+        color-mix(in srgb, #000 45%, transparent) calc(100% / 11 - 1.5px),
+        color-mix(in srgb, #000 45%, transparent) calc(100% / 11)
+    );
+}
+.sd-lrow-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: 2px;
+    background: var(--d-c);
+    clip-path: inset(0 calc(100% - var(--fill)) 0 0);
+    box-shadow: 0 0 10px -3px var(--d-c);
+    transition: clip-path 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+.sd-lrow-v {
     font-family: var(--font-data);
-    font-size: 19px;
+    font-size: 25px;
     font-weight: 700;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
     text-align: right;
-    color: var(--ink);
+    color: var(--d-c);
 }
-.sd-bar {
-    position: relative;
-    /* 【2026-10-28】6px → 10px：定数是这个页面信息量最大的字段，
-       旧版 6px 细条在 1180 宽的版面里像一根装饰线，撑不起重心。 */
-    height: 10px;
-    border-radius: var(--r-hair);
-    background: color-mix(in srgb, var(--ink) 9%, transparent);
-    overflow: hidden;
-}
-.sd-bar i {
-    display: block;
-    height: 100%;
-    border-radius: var(--r-hair);
-    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-.sd-row-bsc .sd-bar i { background: var(--d-bsc); }
-.sd-row-adv .sd-bar i { background: var(--d-adv); }
-.sd-row-ext .sd-bar i { background: var(--d-ext); }
-/* 数值与标签颜色跟难度走，条外再给一次色彩线索（不只靠条的填充长度） */
-.sd-row-bsc .sd-row-v { color: var(--d-bsc); }
-.sd-row-adv .sd-row-v { color: var(--d-adv); }
-.sd-row-ext .sd-row-v { color: var(--d-ext); }
-.sd-row-bsc .sd-row-k { color: var(--d-bsc); opacity: 0.85; }
-.sd-row-adv .sd-row-k { color: var(--d-adv); opacity: 0.85; }
-.sd-row-ext .sd-row-k { color: var(--d-ext); opacity: 0.85; }
+.sd-lrow-bsc { --d-c: var(--d-bsc); }
+.sd-lrow-adv { --d-c: var(--d-adv); }
+.sd-lrow-ext { --d-c: var(--d-ext); }
 
-/* 空档位：整行降权，条槽改成虚线，不再假装有个数值 */
-.sd-row.is-empty .sd-bar {
-    background: transparent;
-    border: 1px dashed var(--edge2);
-    border-radius: var(--r-hair);
+/* 副行：键数 / 分位 / 长押。缩进到与填充条同起点，与上面那行形成对齐关系。 */
+.sd-lrow-sub {
+    grid-column: 2 / 4;
+    display: block;
+    margin-top: -2px;
 }
-.sd-row.is-empty .sd-row-k,
-.sd-row.is-empty .sd-row-v {
+.sd-facts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+}
+.sd-fact {
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
     color: var(--ink3);
-    opacity: 0.7;
-    font-weight: 500;
+    white-space: nowrap;
+}
+.sd-fact em {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--ink2);
+}
+.sd-fact.sd-none { color: var(--ink3); opacity: 0.75; }
+/* 分位小格：10 格，亮到第 N 格 = 超过同档约 N 成谱面 */
+.sd-pctl { display: inline-flex; gap: 1.5px; }
+.sd-pctl b {
+    width: 2.5px;
+    height: 7px;
+    border-radius: 0.5px;
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.sd-pctl b.is-on { background: color-mix(in srgb, var(--d-c) 80%, #fff 20%); }
+.sd-pctl-v {
+    font-family: var(--font-data);
+    font-size: 10px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink3);
+}
+/* 长押率条：竖线是基准（有长押谱面的中位率），短于线 = 偏疏、长过线 = 偏密 */
+.sd-holdwrap { display: inline-flex; align-items: center; gap: 7px; }
+.sd-holdbar {
+    position: relative;
+    width: 52px;
+    height: 5px;
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.sd-holdbar i {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    border-radius: 1px;
+    width: var(--w);
+    background: color-mix(in srgb, var(--d-c) 72%, transparent);
+}
+.sd-holdbar u {
+    position: absolute;
+    top: -2px; bottom: -2px;
+    left: var(--med);
+    width: 1px;
+    background: color-mix(in srgb, var(--ink) 42%, transparent);
+}
+
+/* 谱面密度条（jubeat 官方口径，2026-11-01）：
+   · 固定 115 列，柱高封顶 8 层，画绝对颗数、不按本曲峰值归一化
+   · 格子是**正方形**（4px 亮面 + 1px 暗缝）
+   · 整张图按「屏宽 ÷ 768」等比缩放后水平居中
+   缩放用 --cell 一个变量控制：格子边长 = 4 × --cell，缝隙 = 1 × --cell。
+   容器高度 = 8 层格子 + 7 条缝，也由同一个变量算出，所以缩放时比例恒定，
+   不会出现「格子变方了但行高没跟上」的错位。 */
+.sd-chart {
+    --cell: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: calc(1px * var(--cell));
+    margin-top: 7px;
+    /* 【坑·2026-11-01 实测，两个都踩了】
+       ① 必须显式 grid-column，否则它被自动摆进第 1 列（等级列 46px 宽），
+          整条图只剩 38px —— 症状是「格数对、高度对，但宽度塌成一条」。
+       ② height 不能写成 calc(8 * 4px * var(--cell) + ...)：
+          --cell 在 @media 里是 clamp()，参与 calc 后在部分引擎上求值为 0，
+          症状是「宽度对、显示器里什么都没有」——因为高度真的是 0。
+          改用 --row 直接表达「一格的边长+缝」，height 只做乘法，不再嵌套 calc。 */
+    grid-column: 2 / 4;
+    /* 尺寸全部由 --cell 直接乘出来（不用嵌套 calc 包 calc）。
+       --cell 只允许是**纯数字**，在媒体查询里改它；不要再套 clamp()——
+       实测 clamp 在这里参与 calc 会求得 0，整条图高度变 0、屏幕上什么都没有。 */
+    height: calc(8 * (4px * var(--cell)) + 7 * (1px * var(--cell)));
+    /* 宽度 = 115 列 × (格边长 + 缝)。列全部占位（含空列），所以这个值是精确的，
+       不会因为某几列没音符就变窄 —— 那会让时间轴失真、柱子挤在一起。 */
+    width: calc(115 * (4px * var(--cell)) + 114 * (1px * var(--cell)));
+}
+/* 列宽锁死成「一格边长」而不是 flex:1 —— 官方要求格子是正方形，
+   而 flex:1 会把列撑满整条宽度，格子被拉成 6.64×6 的长方形。
+   缩放靠 --cell，不靠拉伸。 */
+.sd-chart .sd-col {
+    flex: 0 0 auto;
+    width: calc(4px * var(--cell));
+    display: flex;
+    flex-direction: column-reverse;
+    gap: calc(1px * var(--cell));
+    height: 100%;
+}
+/* 空列：占住宽度但不画方块。它代表「这一小段没有音符」，
+   是节奏信息的一部分（曲中间的静音段、前奏、尾奏都靠它体现）。 */
+.sd-chart .sd-col.is-rest {
+    height: 100%;
+}
+.sd-chart .sd-col b {
+    flex: 0 0 calc(4px * var(--cell));
+    border-radius: calc(0.5px * var(--cell));
+    background: var(--d-c);
+    opacity: 0.92;
+}
+/* 等比缩放：官方按「屏宽 ÷ 768」放大后水平居中。
+   不用 clamp/vw 表达式——见上面那条坑：--cell 必须是纯数字。
+   分档写，每档一个确定的倍数，行为可预测、也方便实测校验。
+   基准：--cell:1 时一格 4px、整条 115×5=575px（768 屏放得下且居中）。 */
+@media (min-width: 768px) {
+    .sd-chart { --cell: 1; }
+}
+@media (min-width: 1100px) {
+    .sd-chart { --cell: 1.5; } /* 一列 7.5px，整条 862px */
 }
 
 @media (max-width: 700px) {
@@ -1462,27 +1594,40 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
            18 → 44：细线离曲绘底边约 52px，与桌面档（40px）同量级，线才立得住。 */
         margin-top: 44px;
     }
-    /* 【2026-10-29 主人「移动端状态下字体同步变小，等级左边的 div 要缩小」】
-       实测窄屏问题：右栏总宽只有 203px，而 .sd-row 的固定列 + 间距吃掉 122px
-       （k 列 42 / v 列 52 / gap 14×2），进度条只剩 81px，看起来像根短线。
-       收法三管齐下：
-         · k 列 42 → 32（字号 12 → 10.5，letter-spacing 也收）；
-         · v 列 52 → 40（字号 19 → 15，够放 "10.9" 四个字符）；
-         · gap 14 → 7，两处共省 14；
-       横跨后可用宽度 203+124=327，扣掉 72 列宽与 14 间距，bar 约 241px。 */
-    .sd-row {
-        grid-template-columns: 32px minmax(0, 1fr) 40px;
-        gap: 7px;
+    /* 【2026-11-01 难度行·窄屏】390px 下右栏可用约 327px（横跨曲绘后）。
+       三栏网格收窄：等级 46→38、定数 74→54、间距 12→8，
+       留给填充条约 227px。实测此宽度下副行不折行、密度条 104 柱仍可分辨。 */
+    .sd-lrow {
+        grid-template-columns: 38px minmax(0, 1fr) 54px;
+        gap: 3px 8px;
+        padding: 8px 0;
     }
-    .sd-row-k {
+    .sd-lrow-k {
         font-size: 10.5px;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
     }
-    .sd-row-v {
-        font-size: 15px;
+    .sd-lrow-v {
+        font-size: 19px;
     }
-    .sd-bar {
+    .sd-lrow-track {
         height: 8px;
+    }
+    .sd-fact {
+        font-size: 10.5px;
+    }
+    .sd-pctl b {
+        width: 2px;
+        height: 6px;
+    }
+    .sd-holdbar {
+        width: 38px;
+    }
+    /* 密度条·窄屏：115 列要塞进 327px，每列只有约 2.8px。
+       等比缩到 --cell:0.55 → 格子 2.2px、缝 0.55px，整条宽约 316px，居中还有余量。
+       再小就糊成一片了，所以窄屏固定这个值、不跟随 vw。 */
+    .sd-chart {
+        --cell: 0.55;
+        margin-top: 6px;
     }
     /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
        在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */
@@ -1515,7 +1660,7 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 /* 尊重减少动效：定数条不做宽度过渡 */
 @media (prefers-reduced-motion: reduce) {
-    .sd-bar i {
+    .sd-lrow-fill {
         transition: none;
     }
 }
