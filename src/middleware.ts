@@ -46,6 +46,15 @@ async function snapshotOf(res: Response): Promise<CachedResponse> {
 function respondWith(snapshot: CachedResponse, tag: string): Response {
   const headers = new Headers(snapshot.headers);
   headers.set('x-jb-cache', tag);
+  /* 【2026-11-02 事故修复】「陈旧内容」绝不能再被下游缓存。
+     原实现把快照头原样回给调用方，而快照里存的是陈旧层的 max-age=86400：
+     于是浏览器与腾讯 EdgeOne（wiki-cn 那一跳）会把**旧页面**按 1 天缓存住，
+     部署新版本后普通 URL 仍吐旧 HTML（实测 Age: 1370、EO-Cache-Status: HIT）。
+     现在陈旧响应一律 no-store：拿到旧内容的那一次之后就一定会回来重新问源站。 */
+  if (tag === 'STALE') {
+    headers.set('cache-control', 'no-store, max-age=0');
+    headers.delete('age');
+  }
   return new Response(snapshot.body.slice(0), { status: snapshot.status, headers });
 }
 
