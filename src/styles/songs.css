@@ -1435,11 +1435,18 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    补上三段：① 尺子本体占满填充条那一栏（与 .sd-lrow 同一套列宽）；
              ② 标签绝对定位、按百分比落在刻度位上；
              ③ 不上色不描边，刻度只是参考，不该抢视觉。 */
+/* 【坑·2026-11-01，害我查了两轮】
+   这里**不能**写 grid-column: 1 / 4。别看它长得像"横跨整行"，
+   它作用的对象是父级 .sd-gauge 的网格——而 .sd-gauge 是单列布局，
+   写 1/4 等于告诉浏览器「这个网格有 3 列」，于是父级被隐式扩成 3 列，
+   三个 .sd-lrow 被横排成三列（实测 top 全为 479、left 分别是 209/703/997）。
+   与它同源的问题还有 .sd-lrow-sub / .sd-chart 上的 grid-column: 2/4：
+   那些是写给**.sd-lrow 内部**网格的，正确；但 .sd-lrow 自己在父级上不能带列定位。
+   判据：父级是单列时，子元素不要写任何跨列。 */
 .sd-scale {
     display: grid;
     grid-template-columns: 46px minmax(0, 1fr) 74px;
     gap: 4px 12px;
-    grid-column: 1 / 4;
     height: 13px;
 }
 .sd-scale b {
