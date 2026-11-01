@@ -42,106 +42,12 @@ export const dash = (v: number | null) => (v == null ? '—' : String(v));
 //   拿全难度比会把「10 级谱当然键多」这个常识误读成「这首特别长」。
 //   分到整数级后，比的才是「同为 EXT 10 级，谁的键更多」——那才是有用的信息。
 //
-// 【为什么下限是 MIN_BUCKET = 8】
-//   BSC 8 级全库只有 2 个谱面、10 级只有 1 个，分位数在这种桶里没有统计意义
-//   （1 个样本的 P99 必然成立）。样本不足时**不显示分位**，而不是显示一个假的分位。
-//   实测分布：BSC 多数档 21~413 个、ADV 36~375、EXT 22~506，只有高等级 BSC 会落到线下。
-export const MIN_BUCKET = 8;
-
-/** 有长押谱面的长押率中位数（%）。null = 样本不足，不画基准线。 */
-export type HoldBaseline = { medianPct: number; sample: number };
-
-export type DifficultyStats = {
-  /** 键数在同「难度×整级」桶里的分位（0-100 的整数）。null = 样本不足，不显示 */
-  notesPctl: number | null;
-  /** 该桶的样本数（调试与 tooltip 用） */
-  bucketSize: number;
-  /** 长押占该档键数的百分比；null = 无长押或键数未知 */
-  holdPct: number | null;
-  /** 长押率基准线：有长押谱面的中位率 */
-  holdBaseline: HoldBaseline | null;
-};
-
-type ChartRef = {
-  lv: { bsc: number | null; adv: number | null; ext: number | null };
-  notecounts?: Record<string, number> | null;
-  holds?: Record<string, number> | null;
-};
-
-/**
- * 从**整个曲库**现算参照系。每次请求都算一遍的成本：1248 首 × 3 档 = 3744 条，
- * 排序 O(n log n)，实测个位数毫秒，比在构建期焊死一份 JSON 更省心——
- * 曲库一变参照系自动跟着变，不会出现「曲线加了但分位还是旧的」。
- *
- * 注意：传进来的应该是**全量曲目**，不是当前视图。分位要拿全站同档谱面当分母，
- * 否则日服/国服各算一套，同一首在两屏下分位不同，看起来像 bug。
- */
-export function buildDifficultyStats(songs: ChartRef[]): Map<string, DifficultyStats> {
-  // ① 按「难度|整级」收集键数
-  const buckets = new Map<string, number[]>();
-  // ② 收集有长押谱面的长押率，用于基准线
-  const holdRates: number[] = [];
-
-  for (const s of songs) {
-    if (!s.notecounts) continue;
-    for (const { key } of LEVELS) {
-      const lv = s.lv[key];
-      const notes = s.notecounts[key];
-      if (lv == null || notes == null || notes <= 0) continue;
-      const bk = `${key}|${Math.floor(lv)}`;
-      let arr = buckets.get(bk);
-      if (!arr) buckets.set(bk, (arr = []));
-      arr.push(notes);
-
-      const h = s.holds?.[key];
-      if (h != null && h > 0) holdRates.push((h / notes) * 100);
-    }
-  }
-
-  for (const arr of buckets.values()) arr.sort((a, b) => a - b);
-  holdRates.sort((a, b) => a - b);
-
-  const baseline: HoldBaseline | null = holdRates.length
-    ? {
-        medianPct: holdRates[Math.floor(holdRates.length / 2)],
-        sample: holdRates.length,
-      }
-    : null;
-
-  // ③ 每首曲的每一项都算好，键用 songId 索引
-  const out = new Map<string, DifficultyStats>();
-  for (const s of songs as (ChartRef & { id: string })[]) {
-    if (!s.notecounts) continue;
-    for (const { key } of LEVELS) {
-      const lv = s.lv[key];
-      const notes = s.notecounts[key];
-      if (lv == null || notes == null) continue;
-
-      const arr = buckets.get(`${key}|${Math.floor(lv)}`) ?? [];
-      let notesPctl: number | null = null;
-      if (arr.length >= MIN_BUCKET) {
-        // 严格小于的个数 → 「超过了同档百分之多少」
-        let below = 0;
-        for (const x of arr) {
-          if (x < notes) below++;
-          else break;
-        }
-        notesPctl = Math.round((below / arr.length) * 100);
-      }
-
-      const h = s.holds?.[key] ?? null;
-      const holdPct = h != null && h > 0 && notes > 0 ? (h / notes) * 100 : null;
-
-      out.set(`${s.id}|${key}`, {
-        notesPctl,
-        bucketSize: arr.length,
-        holdPct,
-        holdBaseline: baseline,
-      });
-    }
-  }
-  return out;
-}
+// 【分位与长押率的计算在构建期，不在这里】
+// 2026-11-01 线上事故：这组统计最初写成 buildDifficultyStats() 在每次详情页请求时现算
+// （1248 首 × 3 档分桶 + 60 万次内层循环，实测 77 ms），CF Worker 的 CPU 预算撑不住。
+// 现在改由 scripts/build-difficulty-stats.cjs 在构建期算好、落成
+// src/data/difficulty-stats.json，运行时只查表（O(1)）。
+// 本文件只负责「显示规则」，不承担统计计算。
 
 /** 长押率条的显示上限（%）：超过它的按满格画。
  *  实测 P99 约 18.7%、最高 41.5%，取 20 作上限——绝大多数谱面都落在条的前半段。 */

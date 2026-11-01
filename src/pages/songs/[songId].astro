@@ -8,8 +8,14 @@ import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import SongAudio from '../../components/SongAudio.astro';
-import { getSongById, getAllSongs, type Song } from '../../lib/db';
-import { LEVELS, gauge, dash as dashLv, buildDifficultyStats, HOLD_PCT_MAX } from '../../lib/difficulty';
+import { getSongById, type Song } from '../../lib/db';
+import { LEVELS, gauge, dash as dashLv, SCALE_MAX, HOLD_PCT_MAX } from '../../lib/difficulty';
+// 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
+// 【2026-11-01 线上事故，别改回现算】最初写成每次请求调 buildDifficultyStats()，
+// 要对 1248 首 × 3 档做分桶 + 60 万次内层循环（实测 77 ms），
+// CF Worker 的 CPU 预算撑不住，详情页直接 500。
+// 这组统计只随曲库变、与请求无关，构建期算一次落盘才是对的。
+import diffStatsJson from '../../data/difficulty-stats.json';
 import { env } from 'cloudflare:workers';
 // BGM 试听映射（本站 songId → 上游相对路径），由 scripts/ub/build-ub-audio.cjs 生成。
 // 打包期内联进 Worker，运行时不读文件；未命中的曲目说明上游没有音源，不渲染播放器。
@@ -27,12 +33,18 @@ const { songId } = Astro.params;
 const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
 const song: Song | null = songId ? await getSongById(db, songId) : null;
 
-// 【2026-11-01 键数 / 长押的参照系】分位要拿**全站同档谱面**当分母。
-// getAllSongs 在 isolate 内有 60s 内存缓存，与详情页的单曲查询分开缓存，
-// 所以这次多读一份全量不会让详情页变慢（同一 isolate 内第二次起是纯内存）。
-// 只在这首确实有谱面数据时才算，避免 404 页白跑一遍 3744 条统计。
-const diffStats =
-  song && song.notecounts ? buildDifficultyStats(await getAllSongs(db)) : null;
+// 【2026-11-01 键数 / 长押的参照系】分位拿**全站同档谱面**当分母，
+// 由 scripts/build-difficulty-stats.cjs 在构建期算好，这里只做查表。
+// 存储形状是 [分位|null, 长押率|null] 的数组（压体积用），这里还原成具名对象。
+const DIFF_BASELINE = (diffStatsJson as { baseline: { medianPct: number; sample: number } | null }).baseline;
+const DIFF_RAW = (diffStatsJson as { stats: Record<string, [number | null, number | null]> }).stats;
+const diffStats = {
+  get: (k: string) => {
+    const v = DIFF_RAW[k];
+    if (!v) return null;
+    return { notesPctl: v[0], holdPct: v[1], holdBaseline: DIFF_BASELINE };
+  },
+};
 
 // 找不到就渲染 404 内容并回 404 状态码：原 URL 不变，符合 HTTP 语义，
 // 也不会被搜索引擎当成「内容存在但跳走了」。不用 Astro.redirect——那会 302 到 /404，
