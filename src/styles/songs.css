@@ -1244,6 +1244,16 @@ html[data-bgm="playing"] .sd-disc-spin {
    桌面原本右栏左缘距内容区左缘 267px（208 栏宽 + 58 栏间距），
    这一大块在曲名/艺人结束后是空的——难度条正好填进去。
    为什么定数条与播放条一起扩展：两者现在上下相邻，宽度不一致会显得断成两截。 */
+.sd-gauge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: var(--sd-main-offset);
+    right: 0;
+    height: 1px;
+    background: var(--edge);
+    pointer-events: none;
+}
 .sd-gauge {
     margin-left: calc(-1 * var(--sd-main-offset));
     width: calc(100% + var(--sd-main-offset));
@@ -1267,7 +1277,13 @@ html[data-bgm="playing"] .sd-disc-spin {
        注意 padding-top 不能写成 border-top 的简写——margin-left 的坑同源。 */
     margin-top: clamp(16px, 2vw, 22px);
     padding-top: clamp(18px, 2.2vw, 24px);
-    border-top: 1px solid var(--edge);
+    /* 【2026-11-02 主人「细线有一部分被曲绘遮挡」】
+       分隔线原来直接画在 .sd-gauge 的 border-top 上，而这块是负 margin 左扩到
+       曲绘下方的——左半截正好落在曲绘背后，于是线在曲绘边缘"断"掉，看着像少了一段。
+       改成伪元素：从右栏左缘（= 曲绘右侧，--sd-main-offset）画到最右，
+       定数卡的左扩保持不动，线不再钻进曲绘背后。 */
+    border-top: 0;
+    position: relative;
     /* 【2026-11-01 难度行 = 纵向三行，一行一个难度】
        【坑·当天实撞】上一版「三张卡并排」留下的 grid-template-columns: repeat(3,1fr)
        没删干净，新结构是「一行一个难度、每行内部再分三栏」，于是三档被横着排成了三列
@@ -1304,7 +1320,13 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     --d-adv: #9a6d12;
     --d-ext: #cc2f26;
 }
-/* 每行 = 三栏网格（等级 | 条 | 定数），副行用 grid-column 横跨整行 */
+/* 每行 = 三栏网格（等级 | 条 | 定数预留位），副行用 grid-column 横跨整行。
+   【2026-11-02 定数离开右栏，但右栏宽度保留】主人两句原话：
+   ①「标记3可以小些放在键数的下面」→ 定数挪进副行；
+   ②「我说让你把 bar 行缩小，没让你改变 bar」→ **条的长度和起点一格都不许动**。
+   所以第三栏（74px）继续留在网格里当占位：定数不在这里渲染了，
+   但它空出来的位置不给填充条吃掉——否则条会凭空变长 74px，
+   三档之间的横向比较就不是原来那把尺了。 */
 .sd-lrow {
     display: grid;
     grid-template-columns: 46px minmax(0, 1fr) 74px;
@@ -1367,7 +1389,8 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 /* 定数用主文字色，不用难度色。
    三行里如果等级、数值、条、长押率全是同一种彩色，
    色彩就失去了指向性——读者看到四个同色元素，等于没有强调。
-   现在颜色只留给「条」这一处：一眼扫过去先比长度，再读数字。 */
+   现在颜色只留给「条」这一处：一眼扫过去先比长度，再读数字。
+   【2026-11-02】主人要缩小的是下面的谱面密度条（bar），定数原样保留。 */
 .sd-lrow-v {
     font-family: var(--font-data);
     font-size: 24px;
@@ -1389,28 +1412,45 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sd-lrow-sub {
     grid-column: 2;
     display: block;
-    margin-top: -2px;
+    margin-top: 2px;
 }
 .sd-facts {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 4px 10px;
+    gap: 5px 8px;
 }
-.sd-fact {
+/* 数据徽章：Notes / Holds。
+   与页头的世代/分区徽章同一族（胶囊 + 等宽数据字体），只是压小一号——
+   它是「行内读数」，不是「本曲身份」。标签用 ink3、数字用 ink，
+   一眼先读数字、再回看标签，扫一列下来数字对齐。 */
+.sd-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
     font-family: var(--font-data);
-    font-size: 11px;
+    font-size: 9.5px;
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink3);
+    line-height: 1;
+    letter-spacing: 0.08em;
     white-space: nowrap;
+    color: var(--ink3);
 }
-.sd-fact em {
-    font-style: normal;
+.sd-tag i { font-style: normal; }
+.sd-tag b {
+    font-size: 11.5px;
     font-weight: 700;
-    color: var(--ink2);
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
 }
-.sd-fact.sd-none { color: var(--ink3); opacity: 0.75; }
+/* 长押 0：数字压成灰，让「有长押」的那一行在竖扫时自己跳出来 */
+.sd-tag.is-zero b { color: var(--ink3); font-weight: 600; }
 /* 分位小格：10 格，亮到第 N 格 = 超过同档约 N 成谱面 */
 .sd-pctl { display: inline-flex; gap: 1.5px; }
 .sd-pctl b {
@@ -1427,8 +1467,16 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     font-variant-numeric: tabular-nums;
     color: var(--ink3);
 }
-/* 长押率条：竖线是基准（有长押谱面的中位率），短于线 = 偏疏、长过线 = 偏密 */
-.sd-holdwrap { display: inline-flex; align-items: center; gap: 7px; }
+/* 长押率「条 + 百分比」作为一组，换行时一起走 */
+.sd-holdbarwrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+/* 长押率条：竖线是基准（有长押谱面的中位率），短于线 = 偏疏、长过线 = 偏密。
+   【2026-11-02】原来外面还有一个 .sd-holdwrap 把「长押数 + 条 + 百分比」包成一串；
+   长押数改成 Holds 徽章后不再需要那层包裹（徽章自己是一个 flex 项），整条删除。 */
 .sd-holdbar {
     position: relative;
     width: 52px;
@@ -1451,13 +1499,11 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     background: color-mix(in srgb, var(--ink) 42%, transparent);
 }
 
-/* 共用刻度尺：三行读的是同一把 0–11 的尺，横向比得出「EXT 离上限还差多少」。
-   【2026-11-01 主人截图指出：「这个 510 不要」】
-   那个 510 其实是刻度上 5 与 10 两个标签叠在一起——上一版**根本没写 .sd-scale 的样式**，
-   <b> 与两个 <span> 都是普通行内元素，于是「5」和「10」直接连排成了 "510"。
-   补上三段：① 尺子本体占满填充条那一栏（与 .sd-lrow 同一套列宽）；
-             ② 标签绝对定位、按百分比落在刻度位上；
-             ③ 不上色不描边，刻度只是参考，不该抢视觉。 */
+/* 【2026-11-02 主人「标记1的 5、10 可以不用」】.sd-scale 整块删除。
+   那把尺子只剩「5」「10」两个数字，数字去掉后它不承载任何信息，
+   0–11 的刻度由填充条上的 11 段细线表达，读得出比例。
+   连带删掉的还有：模板里的 .sd-scale 结构、SCALE_MAX 的 import、
+   与两处响应式覆盖（38px/54px 那套列宽、11px 那档字号）。 */
 /* 【坑·2026-11-01，害我查了两轮】
    这里**不能**写 grid-column: 1 / 4。别看它长得像"横跨整行"，
    它作用的对象是父级 .sd-gauge 的网格——而 .sd-gauge 是单列布局，
@@ -1466,31 +1512,6 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    与它同源的问题还有 .sd-lrow-sub / .sd-chart 上的 grid-column: 2/4：
    那些是写给**.sd-lrow 内部**网格的，正确；但 .sd-lrow 自己在父级上不能带列定位。
    判据：父级是单列时，子元素不要写任何跨列。 */
-.sd-scale {
-    display: grid;
-    grid-template-columns: 46px minmax(0, 1fr) 74px;
-    gap: 4px 12px;
-    height: 13px;
-}
-.sd-scale b {
-    grid-column: 2;
-    position: relative;
-    display: block;
-    height: 100%;
-}
-.sd-scale b span {
-    position: absolute;
-    bottom: 0;
-    transform: translateX(-50%);
-    font-family: var(--font-data);
-    font-size: 9.5px;
-    font-weight: 600;
-    line-height: 1;
-    color: var(--ink3);
-    opacity: 0.75;
-    white-space: nowrap;
-}
-
 /* 谱面密度条（jubeat 官方口径，2026-11-01）：
    · 固定 115 列，柱高封顶 8 层，画绝对颗数、不按本曲峰值归一化
    · 格子是**正方形**（4px 亮面 + 1px 暗缝），整张图等比缩放后居中
@@ -1521,7 +1542,14 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
        但**不能写 2/4**：那会跨到定数列，密度条宽 1032 而上面的定数条只有 946，
        右缘差 86px，三行读起来各走各的。收进 2/3：与填充条同起同止，右缘对齐。 */
     grid-column: 2;
+    /* 【2026-11-02 主人「标记3可以小些放在键数的下面（不需要太大）」】
+       原来 width:100% 占满整行宽度（实测 951×72，像一条压满的横幅）；
+       现在收成 560px 上限、从 Notes 的左缘起排，成为副行下面的附图而不是第二主角。
+       高度不用单独写——宽度由 max-width 收窄后，aspect-ratio 会等比带矮。
+       justify-self:start 保证左缘与 Notes 对齐（默认会被 stretch 拉开）。 */
     width: 100%;
+    max-width: 560px;
+    justify-self: start;
     /* 115 列 : 8 层，格子自然接近正方形；窄屏会略扁，但整条永远不溢出 */
     aspect-ratio: 115 / 8.8;
     max-height: 72px;
@@ -1673,17 +1701,10 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         margin-top: 44px;
     }
     /* 【2026-11-01 难度行·窄屏】390px 下右栏可用约 327px（横跨曲绘后）。
-       三栏网格收窄：等级 46→38、定数 74→54、间距 12→8，
-       留给填充条约 227px。实测此宽度下副行不折行、密度条 104 柱仍可分辨。 */
-    /* 刻度尺要与 .sd-lrow 用同一套列宽，否则 5/10 标签落不到刻度位上 */
-    .sd-scale {
-        grid-template-columns: 38px minmax(0, 1fr) 54px;
-        gap: 3px 8px;
-        height: 12px;
-    }
-    .sd-scale b span {
-        font-size: 9px;
-    }
+       网格收窄：等级 46→38、定数位 74→54、间距 12→8，留给填充条约 227px。
+       实测此宽度下副行不折行、密度条 104 柱仍可分辨。
+       【2026-11-02】定数挪进副行后，第三栏仍保留 54px 空占位——
+       理由见上方基础规则：条长不许变。 */
     .sd-lrow {
         grid-template-columns: 38px minmax(0, 1fr) 54px;
         gap: 3px 8px;
@@ -1693,27 +1714,52 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         font-size: 10.5px;
         letter-spacing: 0.06em;
     }
-    .sd-lrow-v {
-        font-size: 19px;
-    }
     .sd-lrow-track {
         height: 8px;
     }
-    .sd-fact {
+    /* 徽章与副行在 390px 里要挤进 col2（扣掉等级 38 + 定数位 54 + 间距后约 256px）。
+       【2026-11-02 实测】原始尺寸下 ADV/EXT 会把长押百分比挤到第二行、行高翻倍，
+       于是整体收一档：徽章 9→8.5px、内边距 6→5、间距 8→6，分位小格 2→1.5px、长押条 38→30px。
+       实测收窄后三档都能在一行内排完。 */
+    .sd-facts {
+        gap: 4px 6px;
+    }
+    .sd-tag {
+        height: 16px;
+        padding: 0 5px;
+        font-size: 8.5px;
+        gap: 3px;
+    }
+    .sd-tag b {
         font-size: 10.5px;
+    }
+    .sd-pctl {
+        gap: 1px;
+    }
+    .sd-pctl b {
+        width: 1.5px;
+        height: 6px;
+    }
+    .sd-lrow-v {
+        font-size: 19px;
     }
     .sd-pctl b {
         width: 2px;
         height: 6px;
     }
+    /* 【2026-11-02】窄屏把长押率那条小条藏掉：390px 下副行只有约 256px 宽，
+       徽章 + 分位格 + 长押条 + 百分比必然折行，实测行高从 88 涨到 112。
+       百分比数字本身已经说清「占全谱几张」，小条在这里只是把同一条信息画第二遍。 */
     .sd-holdbar {
-        width: 38px;
+        display: none;
     }
     /* 密度条·窄屏：宽度已经由容器决定（width:100% + aspect-ratio），
        这里只把上间距收一点、并把块高压矮，避免窄屏占掉太多纵向空间。 */
     .sd-chart {
         margin-top: 6px;
         max-height: 52px;
+        /* 窄屏整条本来就只有 250 上下，再收就只剩 1px 一列了，不再压宽度 */
+        max-width: none;
     }
     /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
        在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */
@@ -2696,8 +2742,11 @@ html.sc-js .sc-panel[hidden] {
         padding: 0 9px;
         font-size: 12px;
     }
-    /* 难度行副行（键数 / 分位 / 长押率）10.5 → 12px；分位数字 10 → 11px */
-    .sd-fact {
+    /* 难度行副行：徽章字号 9 → 10px、数字 11 → 12px；分位数字 10 → 11px */
+    .sd-tag {
+        font-size: 10px;
+    }
+    .sd-tag b {
         font-size: 12px;
     }
     .sd-pctl-v {
@@ -2719,13 +2768,6 @@ html.sc-js .sc-panel[hidden] {
        （审计扫描把它算成第 6 个 <44px 目标；平时不可见，但键盘用户会真的点它） */
     .sc-skip {
         padding: 12px 16px;
-    }
-    /* 刻度尺数字 9 → 11px，尺子本身加高 2px 托住（仍属图形标注，没有再往上拉） */
-    .sd-scale {
-        height: 14px;
-    }
-    .sd-scale b span {
-        font-size: 11px;
     }
     .sd-foot dt {
         font-size: 12px;

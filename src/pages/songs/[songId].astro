@@ -9,7 +9,7 @@ import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import SongAudio from '../../components/SongAudio.astro';
 import { getSongById, type Song } from '../../lib/db';
-import { LEVELS, gauge, dash as dashLv, SCALE_MAX, HOLD_PCT_MAX } from '../../lib/difficulty';
+import { LEVELS, gauge, dash as dashLv, HOLD_PCT_MAX } from '../../lib/difficulty';
 // 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
 // 【2026-11-01 线上事故，别改回现算】最初写成每次请求调 buildDifficultyStats()，
 // 要对 1248 首 × 3 档做分桶 + 60 万次内层循环（实测 77 ms），
@@ -397,14 +397,10 @@ const metaFoot: Meta[] = song
             读的人拿不到新东西；真正有意义的密度要按谱面时长算，而时长库里没有。
             宁可少一项，也不摆一个看不出所以然的数字。 */}
         <div class={`sd-gauge${hasAudio ? '' : ' is-solo'}`} role="group" aria-label="难度信息">
-          {/* 共用刻度尺：三行读的是同一把 0-11 的尺，横向就能比出
-              「BSC 到哪、EXT 离上限还差多少」。刻度是尺子本身，不是装饰。 */}
-          <div class="sd-scale" aria-hidden="true">
-            <b style="grid-column:2">
-              <span style={`left:${(5 / SCALE_MAX) * 100}%`}>5</span>
-              <span style={`left:${(10 / SCALE_MAX) * 100}%`}>10</span>
-            </b>
-          </div>
+          {/* 【2026-11-02 主人「标记1的 5、10 可以不用」】顶部那把刻度尺整条删除。
+              尺子本体只剩「5」「10」两个数字，去掉数字后它就不再承载信息了——
+              0-11 的刻度仍由填充条上的 11 段细线表达（.sd-lrow-track::after），
+              横向比例读得出来，数字是多余的注解。 */}
           {LEVELS.map(({ key, label }) => {
             const lv = song.lv[key];
             const notes = song.notecounts?.[key] ?? null;
@@ -423,11 +419,20 @@ const metaFoot: Meta[] = song
                 </span>
                 <span class="sd-lrow-v">{dash(lv)}</span>
 
-                {/* 副行：键数（带同档分位）+ 长押（带占全谱率与基准线）。
-                    两个数字都配了参照系——裸数字读不出「算多还是算少」。 */}
+                {/* 副行：Notes / Holds 两枚数据徽章。
+                    【2026-11-02 主人三条】①「Notes XXX」「Holds XXX」并用徽章——
+                    原来是「282键 / 34长押 / 无长押」三种句式混排，读起来像三套写法；
+                    统一成「标签 + 数字」的徽章后，扫一列下来是对齐的。
+                    长押为 0 时不再写「无长押」，直接 Holds 0，仍是同一句式（数字压成灰）。
+                    分位小格与长押率条保留：它们给的是参照系，不是重复值。
+                    【2026-11-02 第二次纠正】定数**留在右栏**、尺寸不变——
+                    主人「我说让你把 bar 行缩小，没让你改变 bar」，这里的 bar 指的是
+                    下面那条**谱面密度条**，不是定数字。定数原样退回第 3 栏。 */}
                 <span class="sd-lrow-sub">
                   <span class="sd-facts">
-                    <span class="sd-fact"><em>{notes == null ? '—' : fmtInt(notes)}</em>键</span>
+                    {notes == null ? null : (
+                      <span class="sd-tag" title="总键数"><i>Notes</i><b>{fmtInt(notes)}</b></span>
+                    )}
                     {st?.notesPctl != null ? (
                       <>
                         <span class="sd-pctl" aria-hidden="true">
@@ -438,9 +443,15 @@ const metaFoot: Meta[] = song
                         <span class="sd-pctl-v">P{st.notesPctl}</span>
                       </>
                     ) : null}
+                    {holds == null ? null : (
+                      <span class={`sd-tag${holds === 0 ? ' is-zero' : ''}`} title="长押数">
+                        <i>Holds</i><b>{fmtInt(holds)}</b>
+                      </span>
+                    )}
                     {holds != null && holds > 0 && st?.holdPct != null ? (
-                      <span class="sd-holdwrap">
-                        <span class="sd-fact"><em>{fmtInt(holds)}</em>长押</span>
+                      /* 条与百分比包成一组：窄屏放不下时两者一起换行，
+                         不会出现「条留在上行、百分比被挤到下一行」的断体。 */
+                      <span class="sd-holdbarwrap">
                         <span class="sd-holdbar" aria-hidden="true"
                               style={`--w:${Math.min(100, (st.holdPct / HOLD_PCT_MAX) * 100)}%;--med:${
                                 st.holdBaseline ? (st.holdBaseline.medianPct / HOLD_PCT_MAX) * 100 : 0
@@ -449,8 +460,6 @@ const metaFoot: Meta[] = song
                         </span>
                         <span class="sd-pctl-v">{st.holdPct.toFixed(1)}%</span>
                       </span>
-                    ) : holds === 0 ? (
-                      <span class="sd-fact sd-none">无长押</span>
                     ) : null}
                   </span>
                 </span>
