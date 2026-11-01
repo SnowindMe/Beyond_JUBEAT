@@ -24,7 +24,10 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   ├─ ✅ 无 JS 也完整可读：工具条默认隐藏（.sc-find/.sc-panel 均 display:none），脚本跑起来才显示，内容不依赖脚本
 │   ├─ ✅ 卡片区跳过链接 .sc-skip（Tab 第 9 位 → 直达列表锚点 #scList）
 │   ├─ ✅ 数据来源：运行时查 Cloudflare D1（`beyond_jubeat` 绑定），1241 首走 `idx_songs_order` 覆盖索引；
-│   │   页面 `prerender = false` 是本站两个 SSR 页之一（另一个是 /recent/），缓存 `max-age=30, s-maxage=300, stale-while-revalidate=60` + isolate 内 60s 内存缓存
+│   │   页面 `prerender = false` 是本站两个 SSR 页之一（另一个是 /recent/）；isolate 内 60s 内存缓存 + 中间件两层边缘缓存（2026-11-02 起，见下）
+│   │   边缘缓存 = **新鲜层 300s + 陈旧层 24h**（caches.default，key 只用 pathname、忽略查询串），
+│   │   新鲜层过期时先吐旧 HTML、用 `ctx.waitUntil` 后台重渲一次；同一 isolate 内并发渲染共用一个 Promise（单飞）。
+│   │   响应头 `x-jb-cache: HIT / STALE / MISS` 用于线上验收。目的：语义上完全保留 SSR，但并发尖峰不再同时跑 N 次 1683 卡的渲染
 │   ├─ ✅ 曲目详情 /songs/[songId]/（2026-10-22 上线，v1.10.0；与 /songs/ 同为 SSR 查 D1）
 │   │   ├─ ✅ 曲绘 / 曲名 / 作曲者 / 三档定数刻度条 / songId / 世代 / 分区 / 服务器 / BPM / 上线 / 解禁
 │   │   ├─ ✅ 不存在的 id 在原 URL 回 404 状态 + noindex
