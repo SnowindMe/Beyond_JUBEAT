@@ -189,9 +189,14 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
     </main>
     <footer class="foot mono">
       <div class="foot-l">
-        <span class="foot-k">最后一次编辑 <b>{BUILD_DATE}</b></span>
+        {/* 【2026-11-01 23:05 主人「下面的最后编辑时间和版本号换成徽章吧，把『最后一次编辑』去掉」】
+            两个都是徽章，「最后一次编辑」这五个字不再显示，语义挪到 title / aria-label 上，
+            这样读屏和悬停仍能知道这串数字是什么，视觉上只剩两个干净的数据徽章。 */}
+        <span class="foot-badge foot-date" title="页面最后一次编辑的时间（最后一次构建时刻，全站一致）" aria-label={`最后一次编辑 ${BUILD_DATE}`}>
+          <b>{BUILD_DATE}</b>
+        </span>
         {/* title：页脚只显示 v1.15.0，读者不知道这是站点迭代版本还是 npm 包版本（审计第 21 条） */}
-        <span class="foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
+        <span class="foot-badge foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
       </div>
       <div class="foot-r">
         {/* 站点标识（logo + 品牌字 + Enjoy Yourself）已于 2026-10-27 按主人要求

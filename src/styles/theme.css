@@ -1391,10 +1391,39 @@ html[data-g="saucerfulfill"] .sub {
     font-weight: 700;
     letter-spacing: 0.04em;
 }
-.foot-ver {
-    font-size: 11px;
-    opacity: 0.72;
+/* 【2026-11-01 23:05】页脚左列从「最后一次编辑 日期」+「v X.X.X」两行文字改成**两个并排徽章**
+   （主人：「换成徽章吧，把『最后一次编辑』去掉」）。原来是 column 堆两行，现在改 row。
+   徽章走「透明底 + 1px 描边」而不是填色块：页脚是收尾区，填色会抢主内容的重心。 */
+.foot-l {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.foot-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    white-space: nowrap;
     font-variant-numeric: tabular-nums;
+}
+/* 日期徽章是「有信息量」的那个，抬到 --ink2；版本号是元信息，留在 --ink3。 */
+.foot-date {
+    color: var(--ink2);
+}
+.foot-date b {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.foot-ver {
+    color: var(--ink3);
 }
 .foot-slogan {
     font-size: 11px;
