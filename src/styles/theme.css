@@ -2560,6 +2560,20 @@ html[data-g="yymf"] {
     .wl-pre {
         letter-spacing: 0.18em;
     }
+    /* 移动端简介块居中（主人 2026-11-01「移动端视图的『这是什么』块要居中」）：
+       上面标题行在窄屏已经居中，简介块若还左对齐，同一屏里就有两个重心。
+       文字和按钮一起居中；段落仍按 34em 限宽，用 margin-inline 居中而不是撑满整行。 */
+    .intro {
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+    }
+    .intro-p {
+        margin-inline: auto;
+    }
+    .intro-act {
+        justify-content: center;
+    }
 
     /* 移动端：文字链接收进汉堡抽屉（主人 2026-10-22）。
        2026-10-28 主人明确「移动端导航栏只有登录/汉堡/主题三个图标」：
