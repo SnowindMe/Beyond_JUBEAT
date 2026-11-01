@@ -369,10 +369,16 @@ const metaFoot: Meta[] = song
             const holds = song.holds?.[key] ?? null;
             const st = diffStats?.get(`${song.id}|${key}`) ?? null;
             return (
-              <div class={`sd-lrow sd-lrow-${key}${lv == null ? ' is-empty' : ''}`}
-                   style={`--fill:${gauge(lv) ?? 0}%`}>
+              <div class={`sd-lrow sd-lrow-${key}${lv == null ? ' is-empty' : ''}`}>
                 <span class="sd-lrow-k">{label}</span>
-                <span class="sd-lrow-track"><span class="sd-lrow-fill"></span></span>
+                {/* 【坑·2026-11-01】--fill 必须写在填充元素自己身上。
+                    写在 .sd-lrow 上时，填充元素隔着 .sd-lrow-track 一层，
+                    自定义属性**会继承**但 clip-path 里的 calc 拿不到有效长度，
+                    实测三档全都填满 100%（213/213），定数 5 和 10.7 长得一模一样。
+                    直接内联到 .sd-lrow-fill 上就没有这层歧义。 */}
+                <span class="sd-lrow-track">
+                  <span class="sd-lrow-fill" style={`width:${gauge(lv) ?? 0}%`}></span>
+                </span>
                 <span class="sd-lrow-v">{dash(lv)}</span>
 
                 {/* 副行：键数（带同档分位）+ 长押（带占全谱率与基准线）。

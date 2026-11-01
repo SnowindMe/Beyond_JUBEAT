@@ -1251,12 +1251,14 @@ html[data-bgm="playing"] .sd-disc-spin {
     margin-top: clamp(16px, 2vw, 22px);
     padding-top: clamp(18px, 2.2vw, 24px);
     border-top: 1px solid var(--edge);
-    /* 【2026-11-01 难度卡片】原先是「自上而下的三行 flex」，现在是三张卡并排。
-       排版直接写在这里，不再另起一条 .sd-gauge 规则——
-       2026-10-28 记过的坑：同属性写两处，后写的会把前面的修复盖回去。 */
+    /* 【2026-11-01 难度行 = 纵向三行，一行一个难度】
+       【坑·当天实撞】上一版「三张卡并排」留下的 grid-template-columns: repeat(3,1fr)
+       没删干净，新结构是「一行一个难度、每行内部再分三栏」，于是三档被横着排成了三列
+       （实测 BSC 在 left 209、ADV 在 576、EXT 在 943），整块高度还翻了一倍。
+       这里必须是**单列**：每行自己管理内部栏位，父级只负责纵向堆叠。 */
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
 }
 
 /* 【2026-10-29 主人「没有 bgm 的桌面端/移动端视图」——无音源时的版面修正】
@@ -1291,16 +1293,22 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     grid-template-columns: 46px minmax(0, 1fr) 74px;
     gap: 4px 12px;
     align-items: center;
-    padding: 9px 0;
-    border-top: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+    padding: 12px 0;
 }
-.sd-lrow:first-of-type { border-top: 0; }
+/* 行与行之间用一条极淡的分隔线收口，而不是每行都套边框——
+   三行本来就属于同一块读数区，线只用在「两档之间」，读起来是一条仪表面板而不是三张卡。 */
+.sd-lrow + .sd-lrow {
+    border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
+}
+/* 等级标签保持难度色，但压到 10.5px 小字——它是「这一行是谁」的索引，
+   不需要和定数抢注意力；难度色在这里只做辨识，不做强调。 */
 .sd-lrow-k {
     font-family: var(--font-data);
-    font-size: 11.5px;
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     color: var(--d-c);
+    opacity: 0.9;
 }
 .sd-lrow-track {
     position: relative;
@@ -1324,23 +1332,31 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
         color-mix(in srgb, #000 45%, transparent) calc(100% / 11)
     );
 }
+/* 填充条：宽度由模板内联给（width:xx%），不再用 clip-path + CSS 变量。
+   见模板里那条注释：变量跨一层 grid 子项后 calc 取不到有效长度，
+   实测三档全填满，定数 5 与 10.7 看起来一样长。 */
 .sd-lrow-fill {
     position: absolute;
-    inset: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
     border-radius: 2px;
     background: var(--d-c);
-    clip-path: inset(0 calc(100% - var(--fill)) 0 0);
-    box-shadow: 0 0 10px -3px var(--d-c);
-    transition: clip-path 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
+    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
+/* 定数用主文字色，不用难度色。
+   三行里如果等级、数值、条、长押率全是同一种彩色，
+   色彩就失去了指向性——读者看到四个同色元素，等于没有强调。
+   现在颜色只留给「条」这一处：一眼扫过去先比长度，再读数字。 */
 .sd-lrow-v {
     font-family: var(--font-data);
-    font-size: 25px;
+    font-size: 24px;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
     text-align: right;
-    color: var(--d-c);
+    color: var(--ink);
+    letter-spacing: -0.01em;
 }
 .sd-lrow-bsc { --d-c: var(--d-bsc); }
 .sd-lrow-adv { --d-c: var(--d-adv); }
