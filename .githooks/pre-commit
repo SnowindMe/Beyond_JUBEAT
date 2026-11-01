@@ -1,0 +1,13 @@
+#!/bin/sh
+# 【2026-11-01】拦截临时调试产物的提交。
+# 同一天里 tmp-*.cjs / preview-*.html / m*.txt / geom.html 被 git add -A 带进 commit 三次，
+# 每次都要再补一个「删掉误提交文件」的提交。规则写进 .gitignore 不够——
+# 已经 add 进索引的文件 .gitignore 拦不住，所以在这里硬拦。
+bad=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(tmp-|preview-|shot-|app-)|(^|/)(m[0-9]*\.txt|cm\.txt|commit-msg\.txt|geom\.html|songs-live\.css)$')
+if [ -n "$bad" ]; then
+  echo "拒绝提交：检测到临时调试文件" >&2
+  echo "$bad" >&2
+  echo "确认要提交请用 git commit --no-verify" >&2
+  exit 1
+fi
+exit 0
