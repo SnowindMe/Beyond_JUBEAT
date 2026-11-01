@@ -20,9 +20,11 @@
 #   · 文件名不带内容哈希，但内容只在构建时变，用 1 年也不会读到旧数据
 #     —— 曲目数据变更是重新部署，部署会带新的 Worker 版本号。
 # 兜底：万一将来改成运行时更新，这里要跟着改成 s-maxage + SWR。
-/* 世代字标字体（2026-11-02 从 fontsource CDN 改为自托管，见 src/styles/theme.css 顶部）。
-   文件名不带内容哈希，但字体只在「换世代字体」时变，届时要改文件名或加 ?v=N；
-   平时按 1 年 immutable 缓存，首屏只请求当前世代那一款（5–21KB）。 */
+# 世代字标字体（2026-11-02 从 fontsource CDN 改为自托管，见 src/styles/theme.css 顶部）。
+# 文件名不带内容哈希，但字体只在「换世代字体」时变，届时要改文件名或加 ?v=N；
+# 平时按 1 年 immutable 缓存，首屏只请求当前世代那一款（5–21KB）。
+# 注意：本文件的注释只能用 # —— 写成 CSS 的 /* */ 会让 wrangler 把注释行当路径，
+# 报 "Expected a colon-separated header pair"（2026-11-02 因此挂过一次部署）。
 /assets/fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
