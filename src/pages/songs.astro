@@ -210,14 +210,22 @@ const EAGER = new Set(
 // 分界按「累计卡数」而不是「固定几个世代」：世代大小差很多（jubeat 20 首、
 // festo 226 首），按个数切会在某些世代切出 1000 张、另一些只切出 30 张。
 // 120 首 ≈ 390px 屏两屏多，足够覆盖首屏与第一次滚动。
-const FIRST_LOAD_CARDS = 120;
+// 阈值取「下限 100 / 上限 220」两个数，而不是一个：
+//   世代大小差得离谱（jubeat 20 首、festo 226 首、saucer 201 首），
+//   只写下限会在边界上撞进一个 200 首的大世代，首屏直接翻倍。
+//   实测日服前四代累计 20+25+28+40=113 → 首屏约 113 张/服（含国服共约 230 张），
+//   HTML 从 1.74MB 降到约 250KB；saucer(201) 起全部走骨架。
+const FIRST_LOAD_MIN = 100;
+const FIRST_LOAD_MAX = 220;
 const firstLoadGens = (srv: Srv): Set<string> => {
   const out = new Set<string>();
   let n = 0;
   for (const g of srvGenOrder(srv)) {
+    const size = (byGen[srv][g] || []).length;
+    if (n >= FIRST_LOAD_MIN) break;            // 已经够一屏多了
+    if (n > 0 && n + size > FIRST_LOAD_MAX) break; // 这一代太大，宁可整代留给骨架
     out.add(g);
-    n += (byGen[srv][g] || []).length;
-    if (n >= FIRST_LOAD_CARDS) break;
+    n += size;
   }
   return out;
 };
@@ -1058,6 +1066,14 @@ const TYPES = [
         if (lazyState === 1) return;
         if (lazyState === 0 && hasFilters() && hasSkeletons()) {
           lazyState = 1;
+          // 补拉要几秒（14 段 SSR）：先把命中条亮出来给个回执，否则用户点完筛选像没反应。
+          // 文案写「正在加载」而不是假数字——补拉完 apply() 会立刻用真实数字覆盖它。
+          var pending = root.querySelectorAll('.sc-gen-ph').length;
+          if (activeBox) {
+            activeBox.hidden = false;
+            if (activeTxt) activeTxt.textContent = '…';
+            if (activeCostTxt) activeCostTxt.textContent = '正在加载剩余 ' + pending + ' 个世代';
+          }
           ensureAll().then(function () {
             lazyState = 2;
             apply();
