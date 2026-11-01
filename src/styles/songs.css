@@ -1293,7 +1293,10 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     grid-template-columns: 46px minmax(0, 1fr) 74px;
     gap: 4px 12px;
     align-items: center;
-    padding: 12px 0;
+    /* 三行是一个读数区，行内要松、行间要紧。实测原 padding 12 + 密度图上边距 11
+       让每行高到 151px，三行占去 453px，页面被这一块吃满。
+       收到 10 / 8，行高约 138，仍然留得开气口。 */
+    padding: 10px 0;
 }
 /* 行与行之间用一条极淡的分隔线收口，而不是每行都套边框——
    三行本来就属于同一块读数区，线只用在「两档之间」，读起来是一条仪表面板而不是三张卡。 */
@@ -1363,8 +1366,11 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 .sd-lrow-ext { --d-c: var(--d-ext); }
 
 /* 副行：键数 / 分位 / 长押。缩进到与填充条同起点，与上面那行形成对齐关系。 */
+/* 副行收到与填充条同一栏（第 2 栏）：键数/分位/长押是「这一条」的注解，
+   跟定数列对齐反而不如跟条对齐——它们是读条时的补充说明。
+   实测对齐后左缘 267 与填充条左缘一致，右缘也不再越过定数。 */
 .sd-lrow-sub {
-    grid-column: 2 / 4;
+    grid-column: 2;
     display: block;
     margin-top: -2px;
 }
@@ -1491,10 +1497,13 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
     align-items: flex-end;
     justify-content: center;
     gap: 1px;
-    margin-top: 7px;
-    /* 必须显式 grid-column，否则被自动摆进第 1 列（等级列 46px 宽），
-       整条图只剩 38px —— 症状是「格数对、高度对，但宽度塌成一条」。 */
-    grid-column: 2 / 4;
+    /* 与副行之间 11px 偏松，收到 8 —— 密度图是副行的延续，不该像另起一段 */
+    margin-top: 8px;
+    /* 【坑·2026-11-01 实测】这里必须显式 grid-column，否则被自动摆进第 1 列
+       （等级列 46px 宽），整条图只剩 38px，症状是「格数对、高度对，但宽度塌成一条」。
+       但**不能写 2/4**：那会跨到定数列，密度条宽 1032 而上面的定数条只有 946，
+       右缘差 86px，三行读起来各走各的。收进 2/3：与填充条同起同止，右缘对齐。 */
+    grid-column: 2;
     width: 100%;
     /* 115 列 : 8 层，格子自然接近正方形；窄屏会略扁，但整条永远不溢出 */
     aspect-ratio: 115 / 8.8;

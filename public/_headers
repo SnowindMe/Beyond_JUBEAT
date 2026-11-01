@@ -10,6 +10,19 @@
 /assets/images/*
   Cache-Control: public, max-age=31536000, immutable
 
+# 谱面密度数据（2026-11-01 主人「要记得谱面 json 文件也要击中 cf cdn，
+# 不给别人服务器太大流量负担」）。
+# 详情页 SSR 时按 songId 取 /assets/diff/<id>.json，每个约 1KB、共 1185 个。
+# 这组文件**只在构建期生成**（scripts/ub/split-ub-charts.cjs 从构建期快照拆分，
+# 运行时不碰 ub.thregren.world），所以完全可以同年缓存：
+#   · immutable + 1 年 → 浏览器端不再重复请求；
+#   · CF 边缘层按同一条 Cache-Control 缓存，源站（Worker 静态资源层）几乎不被回源；
+#   · 文件名不带内容哈希，但内容只在构建时变，用 1 年也不会读到旧数据
+#     —— 曲目数据变更是重新部署，部署会带新的 Worker 版本号。
+# 兜底：万一将来改成运行时更新，这里要跟着改成 s-maxage + SWR。
+/assets/diff/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 

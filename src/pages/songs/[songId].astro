@@ -20,12 +20,17 @@ import { env } from 'cloudflare:workers';
 // BGM 试听映射（本站 songId → 上游相对路径），由 scripts/ub/build-ub-audio.cjs 生成。
 // 打包期内联进 Worker，运行时不读文件；未命中的曲目说明上游没有音源，不渲染播放器。
 import audioMap from '../../data/ub-audio.json';
-// 谱面密度：由 scripts/ub/build-ub-charts.cjs 从 ub 抓取并现算的「逐小节键数」。
-// 【关键：走 CF 边缘缓存】它是**构建期内联的静态数据**，和 ub-audio.json 同一个模式——
-// 打进 Worker 包后随静态资源一起下发，运行时不回源、不发请求。
-// 若改成运行时 fetch 上游，每次详情页请求都要多一次跨站往返（实测上游 ~300ms），
-// 而且上游挂了整页就废了。0.8 MB 的数据换掉 3 次上游请求，这笔账很划算。
-import chartMap from '../../data/ub-charts.json';
+// 谱面密度数据**不再 import 进 Worker 包**。
+// 【2026-11-01 主人「能不能不需要全量获得谱面，进入到歌曲详情页才加载」】
+// 原先把整张表（1.07MB）import 进来，实测详情页 chunk 3.3MB，
+// 而每次请求只用到其中一首（中位 961 字节），1200 首被批量访问时纯属浪费。
+//
+// 三种做法的实测对比：
+//   ① 打进 Worker 包：用户 0 下载、无延迟，但 Worker 每次载入整表（原方案）。
+//   ② 进页面再找 ub 拉：用户 +3KB、+3 次跨站（各 ~300ms），且 ub 挂了图就没了。
+//   ③ **每首一个同源静态 JSON**（现方案）：用户 0 下载（同源、边缘缓存）、
+//      单次约 20ms，Worker 只读这 1KB。取不到就整块不渲染。
+// 产物：public/assets/diff/<songId>.json，由 scripts/ub/split-ub-charts.cjs 生成。
 
 export const prerender = false;
 
@@ -174,7 +179,40 @@ type ChartCols = {
 };
 /** 柱高封顶层数（官方 8 层）。超过 8 颗的列按 8 层画，不压峰归一化。 */
 const MAX_LAYERS = 8;
-const charts = song ? (chartMap as Record<string, Record<string, ChartCols>>)[String(song.id)] : undefined;
+
+/**
+ * 按 songId 取这一首的谱面密度（三档一起，约 1KB）。
+ *
+ * 【为什么用 ASSETS 绑定而不是 fetch】
+ * 直觉写法是 fetch 自己的同源 URL，但那是**一次真实的 HTTP 请求**：
+ * 在 Worker 里对同 zone 的 URL 发 fetch，可能走成外网回环、
+ * 也可能因 zone 的缓存规则命中或不命中，行为不确定，还会额外算一次子请求。
+ * ASSETS 绑定（wrangler.jsonc 里 assets.binding 已配）直接读静态资源层，
+ * 不发网络、不占子请求配额，天然就是「边缘最近的副本」。
+ *
+ * 关于流量分摊（主人要求）：/assets/* **不在 run_worker_first 里**，
+ * 所以浏览器直接请求这些文件时由 CF 静态资源层返回，根本不进 Worker；
+ * 加上 public/_headers 里 /assets/diff/* 配了 1 年 immutable，
+ * 边缘与浏览器都长缓存。而这份数据是**构建期快照**，
+ * 运行时完全不碰 ub.thregren.world —— 上游不承担本站的读取流量。
+ *
+ * 拿不到就返回 null，与版本校验共用同一个兜底：整块不画，不摆假图。
+ */
+const loadCharts = async (id: string): Promise<Record<string, ChartCols> | null> => {
+  try {
+    const assets = (env as { ASSETS?: { fetch: (r: Request) => Promise<Response> } })?.ASSETS;
+    const url = new URL(`/assets/diff/${id}.json`, Astro.url);
+    // 开发期没有 ASSETS 绑定（astro dev 不起 workerd），退回直接读文件系统
+    const res = assets
+      ? await assets.fetch(new Request(url))
+      : await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, ChartCols>;
+  } catch {
+    return null;
+  }
+};
+const charts = song ? await loadCharts(String(song.id)) : null;
 
 /**
  * 取某一档的谱面密度；**版本对不上就返回 null**（整档不画）。
