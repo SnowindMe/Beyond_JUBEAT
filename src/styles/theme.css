@@ -1493,8 +1493,12 @@ html[data-g="saucerfulfill"] .sub {
    为什么不用卡片：卡片会把 11 条链接拆成 11 个块，扫读成本翻倍；
    这是清单，不是功能入口。 */
 .links {
-    margin: clamp(30px, 4.4vw, 58px) 0 0;
-    padding-top: clamp(20px, 2.6vw, 30px);
+    /* 【2026-11-01 主人「间隔有点宽，缩小一些」】
+       线上实测上方空白 = margin 58 + padding 30 = 88px，确实比 Hero 与 brandblock
+       之间任何一段都宽。收到 24 + 18 ≈ 42px（约原来的一半）：
+       区块之间靠留白分节，但这个块是「附属索引」，不该自带章节级气口。 */
+    margin: clamp(14px, 1.8vw, 24px) 0 0;
+    padding-top: clamp(12px, 1.5vw, 18px);
     /* 【2026-11-01 主人「这条细线可以不用」】上缘那条 1px 分隔线去掉。
        去除理由（也是设计上的）：它上方是 Hero、下方是站点标识区，
        两块本来就有足够留白（margin-top 30-58px）把语义分开；
