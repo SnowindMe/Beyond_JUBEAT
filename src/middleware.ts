@@ -16,8 +16,16 @@ import { getUserByToken, readSessionToken, type AuthUser } from './lib/auth';
 // 改成只在真正跑 SSR 请求时动态导入，预渲染分支根本不执行它。
 
 /* ---------------- 边缘缓存的两层存储（2026-11-02 v2） ----------------
-   CACHE_PREFIX 带版本号：改缓存策略时 +1，旧条目自然失效，不用等 TTL。 */
-const CACHE_PREFIX = '/_jb-cache/v2';
+   CACHE_PREFIX 带两层版本：
+     · `v2` = 缓存**策略**版本，改动规则时 +1；
+     · `site.json 的 version` = **站点版本**，每次发版自动变。
+   为什么要带站点版本：陈旧层保留 24h，意味着「部署完了但边缘还在吐旧 HTML」——
+   2026-11-02 实测过：v1.58.1 上线后 /songs/ 仍回旧页面（旧 preload 映射还指着 CDN），
+   最长要等一个陈旧期。把版本号拼进 key 后，**每次发版 = 换一个新命名空间**，
+   老条目自然作废；代价是每次发版后每个 PoP 的第一次访问要真渲染一次（本来就该这样）。
+   注意：import 的是构建期常量，运行时不变，不会让缓存 key 抖动。 */
+import { version as SITE_VERSION } from './data/site.json';
+const CACHE_PREFIX = `/_jb-cache/v2/${SITE_VERSION}`;
 /** 新鲜期：这段时间内命中直接返回，连缓存校验都省了 */
 const FRESH_TTL = 300;
 /** 陈旧期：新鲜期过后仍可「先吐旧的、后台再刷新」，留 24h 兜住冷 PoP 与流量尖峰 */
