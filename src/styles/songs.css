@@ -2698,6 +2698,11 @@ html.sc-js .sc-panel[hidden] {
     .sda-bpm b {
         font-size: 12px;
     }
+    /* 「跳到曲目列表」skip link：只在键盘聚焦时露出，给它补齐 44 高
+       （审计扫描把它算成第 6 个 <44px 目标；平时不可见，但键盘用户会真的点它） */
+    .sc-skip {
+        padding: 12px 16px;
+    }
     /* 刻度尺数字 9 → 11px，尺子本身加高 2px 托住（仍属图形标注，没有再往上拉） */
     .sd-scale {
         height: 14px;
