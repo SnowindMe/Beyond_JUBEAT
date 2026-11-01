@@ -564,6 +564,37 @@ const metaFoot: Meta[] = song
       }
       return Promise.resolve(fallbackCopy(text));
     }
+    /* 【2026-11-02 主人「详情页桌面端的歌名要保持在一行」】
+       CSS 只能禁止折行，曲名够长时会溢出右栏。这里按实际可用宽度逐级降字号，
+       保证「一行 + 不溢出」同时成立：
+         · 先清掉内联字号回到 CSS 的 clamp 值重新量（缩放窗口时不会越缩越小）；
+         · 每次减 1px，下限 20px（再小就失去标题的视觉重量，宁可略微拥挤）；
+         · 窄屏（≤700px）直接跳过——那里保留折行，字号已压到 24px 档。
+       依赖：h1.sd-title-wrap 是块级容器，clientWidth 即右栏可用宽度。 */
+    function fitTitle() {
+      var wrap = document.querySelector('.sd-title-wrap');
+      if (!wrap) return;
+      var btn = wrap.querySelector('.sd-title');
+      if (!btn) return;
+      btn.style.fontSize = '';
+      if (window.innerWidth <= 700) return;
+      var avail = wrap.clientWidth;
+      var fs = parseFloat(getComputedStyle(btn).fontSize);
+      var guard = 0;
+      while (wrap.scrollWidth > avail + 1 && fs > 20 && guard < 80) {
+        fs -= 1;
+        btn.style.fontSize = fs + 'px';
+        guard++;
+      }
+    }
+    fitTitle();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTitle);
+    var fitTimer = null;
+    window.addEventListener('resize', function () {
+      if (fitTimer) clearTimeout(fitTimer);
+      fitTimer = setTimeout(fitTitle, 120);
+    });
+
     var targets = document.querySelectorAll('[data-copy]');
     for (var i = 0; i < targets.length; i++) {
       targets[i].addEventListener('click', function () {

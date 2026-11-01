@@ -1132,6 +1132,23 @@ html[data-bgm="playing"] .sd-disc-spin {
 .sd-title:hover {
     color: var(--acc);
 }
+/* 【2026-11-02 主人「详情页桌面端的歌名要保持在一行」】
+   长曲名（如 "Dash Dash Groovy Rush!!!"、"I'm so Happy"）在右栏会折成两三行，
+   把艺人、播放条、定数卡整块往下推，右栏高度随曲名长度跳动。
+   桌面端强制单行：不折行、不在词中断行；宽度不够时由页面末尾的 fitTitle()
+   逐级降字号（下限 20px）保证既是一行、又不溢出右栏。
+   窄屏（≤700px）保持原样允许折行——那里版面窄，硬压字号会小到看不清。 */
+@media (min-width: 701px) {
+    .sd-title-wrap {
+        white-space: nowrap;
+        min-width: 0;
+    }
+    .sd-title {
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: keep-all;
+    }
+}
 .sd-title:focus-visible {
     outline: 2px solid var(--acc);
     outline-offset: 6px;
