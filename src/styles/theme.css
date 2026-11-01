@@ -41,23 +41,24 @@
    A 霓虹细几何 / B 宽字距几何 / C 西部粗 slab(Rye) / D Didone(Playfair) /
    E 笔刷手写(Caveat, prop) / F 复古气泡连笔(Yellowtail, festo) / F 亦作几何科技(Jost, ave·bta·copious·saucer 系)
 
-   【字体走第三方 CDN：@fontsource + cdn.jsdmirror（2026-10-25）】
-   主人明确「不想把字体文件放在自己仓库里」，所以字体不再由本站 /assets/fonts/ 提供，
-   也不再走自家仓库的 GitHub 镜像，改用 fontsource 官方字体包分发：
-       https://cdn.jsdmirror.com/npm/@fontsource/<pkg>/files/<pkg>-latin-<weight>-normal.woff2
-
-   为什么是 jsdmirror 而不是 jsdelivr 原站（连打 3 次实测，同一 rye 文件）：
-       fontsource@jsdelivr    avg ttfb 1.86s
-       fontsource@jsdmirror   avg ttfb 0.31s
-       （对照：本站 CF 1.16s；fontelio 2.19s 且首次 4.7s）
-   代价（已知并接受）：fontsource 是通用拉丁集，比本站自裁剪子集大 48%（105.6→156.6KB）；
-   首屏只加载当前世代 1 款，实际约 +20KB。换来的是仓库里不再存二进制字体。
-
-   注意：路径一律要带 -normal.woff2；Playfair 的包名是 @fontsource/playfair-display
-   （不是 @fontsource/playfair），写错会 404 且只在浏览器控制台可见。 */
+   【字体已改为站内自托管：/assets/fonts/（2026-11-02，v1.58.1）】
+   历史：2026-10-25 起字体走第三方 fontsource CDN（cdn.jsdmirror），理由是「仓库不放二进制」。
+   2026-11-02 审计（docs/audit-2026-11-02.md P1）指出两条硬伤：
+     ① 字体参与首屏文本绘制，却要多一次跨域往返（DNS + TLS + 请求排队）；
+     ② preload 映射还停留在 10-27 换字体之前（预载的是 jost/rye/shrikhand——
+        这三款当时已经没有任何 @font-face 在用了），真正要用的 Montserrat
+        反而没被预载。等于白预载 + 慢一步。
+   所以主人拍板改成**自托管 + 站内预载**：
+     · 文件在 public/assets/fonts/，命名 <pkg>-<weight>.woff2（保留 fontsource 原名便于溯源）
+     · 只保留**实际在用的 10 款**；10-27 之前遗留的 Dancing Script / Roboto Slab /
+       Bangers / Anton / Great Vibes / Poppins Light 六条 @font-face 已删除（死代码）
+     · 与 Base.astro 的 preload 映射必须同改（那边按世代给一款，地址要与这里**完全一致**，
+       否则浏览器当成两个 URL、字体被下载两次）
+     · 缓存头在 public/_headers：/assets/fonts/* 一年 immutable
+   体积：10 款合计约 220KB，但首屏只加载当前世代 1 款（5–21KB）。 */
 /* 世代字体（2026-10-27 按主人提供的「主题字体.csv」逐世代指定）：
-   每套世代各自一款字体，不再按 A-G 分组。字体仍走 @fontsource + cdn.jsdmirror，
-   仓库不存二进制（见下方 CDN 说明）。CSV 里的世代名与实际 key 对应关系：
+   每套世代各自一款字体，不再按 A-G 分组。字体文件在 /assets/fonts/（见上方说明）。
+   CSV 里的世代名与实际 key 对应关系：
    clan_resd → clan_red、Qubell → qubell、saucer fulfill → saucerfulfill、
    音乐魔方 → yymf（ZCOOL KuaiLe 只取 latin 子集 5.3KB；完整中文子集 726KB，
    prop 原 CSV 指定 Great Vibes，主人 2026-10-27 要求换成 Caveat（手写体更易读）；
@@ -67,82 +68,52 @@
    首屏不加载，中文正文仍走系统字体）。 */
 @font-face {
     font-family: "Montserrat Medium";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/montserrat/files/montserrat-latin-500-normal.woff2") format("woff2");
+    src: url("/assets/fonts/montserrat-500.woff2") format("woff2");
     font-weight: 500; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Montserrat Bold";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2") format("woff2");
+    src: url("/assets/fonts/montserrat-700.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Dancing Script";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/dancing-script/files/dancing-script-latin-400-normal.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Roboto Slab Bold";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/roboto-slab/files/roboto-slab-latin-700-normal.woff2") format("woff2");
-    font-weight: 700; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Bangers";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/bangers/files/bangers-latin-400-normal.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Anton";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/anton/files/anton-latin-400-normal.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Oswald Bold";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/oswald/files/oswald-latin-700-normal.woff2") format("woff2");
+    src: url("/assets/fonts/oswald-700.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Lora";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/lora/files/lora-latin-400-normal.woff2") format("woff2");
+    src: url("/assets/fonts/lora-400.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Quicksand Medium";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/quicksand/files/quicksand-latin-500-normal.woff2") format("woff2");
+    src: url("/assets/fonts/quicksand-500.woff2") format("woff2");
     font-weight: 500; font-style: normal; font-display: swap;
 }
 @font-face {
-    font-family: "Great Vibes";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/great-vibes/files/great-vibes-latin-400-normal.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
     font-family: "Raleway Light";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/raleway/files/raleway-latin-300-normal.woff2") format("woff2");
-    font-weight: 300; font-style: normal; font-display: swap;
-}
-@font-face {
-    font-family: "Poppins Light";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/poppins/files/poppins-latin-300-normal.woff2") format("woff2");
+    src: url("/assets/fonts/raleway-300.woff2") format("woff2");
     font-weight: 300; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Playfair Display";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2") format("woff2");
+    src: url("/assets/fonts/playfair-display-400.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Caveat";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/caveat/files/caveat-latin-700-normal.woff2") format("woff2");
+    src: url("/assets/fonts/caveat-700.woff2") format("woff2");
     font-weight: 700; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "Pacifico";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/pacifico/files/pacifico-latin-400-normal.woff2") format("woff2");
+    src: url("/assets/fonts/pacifico-400.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 @font-face {
     font-family: "ZCOOL KuaiLe";
-    src: url("https://cdn.jsdmirror.com/npm/@fontsource/zcool-kuaile/files/zcool-kuaile-latin-400-normal.woff2") format("woff2");
+    src: url("/assets/fonts/zcool-kuaile-400.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
 

@@ -146,15 +146,31 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
          /assets/images/* 是 immutable 一年缓存，不改文件名的话老访客永远看旧图；
          只有这里登记过的图才会带参数，其余 14 张照旧命中缓存。 */
       window.JB_BGVER = { festo: 3, jubeat: 2 };
-      /* 字体走 fontsource + jsdmirror（2026-10-25，见 theme.css 顶部）：仓库不再存字体二进制，
-         所以这里直接拼第三方 URL。键仍是「字体代号 → 完整 URL 路径」，与 @font-face 一一对应。 */
-      var FONTCDN = 'https://cdn.jsdmirror.com/npm/@fontsource/';
+      /* 字体自托管（2026-11-02，见 theme.css 顶部）：文件在 /assets/fonts/。
+
+         【为什么按「世代」而不是按那个 A-G 字母映射】
+         2026-10-27 改成「一世代一款字体」之后，旧映射（F/C/D/E/G 五个字母 →
+         jost/rye/playfair/caveat/shrikhand）就已经失效了：那五款里只有 Caveat 还在用，
+         其余四款没有任何 @font-face，预载等于白下（audit P1 的成因之一）。
+         现在直接以世代 key 为键，与 theme.css 里 html[data-g=…] 的 --font-label 一一对应，
+         换字体时两处同改即可。 */
       var FONTFILE = {
-        F: 'jost/files/jost-latin-500-normal.woff2',
-        C: 'rye/files/rye-latin-400-normal.woff2',
-        D: 'playfair-display/files/playfair-display-latin-700-normal.woff2',
-        E: 'caveat/files/caveat-latin-700-normal.woff2',
-        G: 'shrikhand/files/shrikhand-latin-400-normal.woff2'
+        jubeat: 'montserrat-700',
+        ave: 'montserrat-500',
+        ripples: 'quicksand-500',
+        bta: 'quicksand-500',
+        knit: 'playfair-display-400',
+        qubell: 'lora-400',
+        copious: 'raleway-300',
+        saucer: 'raleway-300',
+        saucerfulfill: 'raleway-300',
+        prop: 'caveat-700',
+        festo: 'pacifico-400',
+        clan_red: 'oswald-700',
+        clan_blue: 'oswald-700',
+        clan_green: 'oswald-700',
+        clan_purple: 'oswald-700',
+        yymf: 'zcool-kuaile-400'
       };
       function pre(href, as, type) {
         var l = document.createElement('link');
@@ -167,10 +183,10 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         document.head.appendChild(l);
       }
       pre('/assets/images/bg/' + g + '.webp' + (window.JB_BGVER[g] ? '?v=' + window.JB_BGVER[g] : ''), 'image');
-      var ff = FONTFILE[FONT[g]];
-      /* preload 地址必须与 @font-face 的 src **完全一致**（含域名），否则浏览器当成
-         两个 URL、字体会被下载两次。改字体时 theme.css 与这里要同改。 */
-      if (ff) pre(FONTCDN + ff, 'font', 'font/woff2');
+      var ff = FONTFILE[g] || FONTFILE.ave;
+      /* preload 地址必须与 @font-face 的 src **完全一致**，否则浏览器当成两个 URL、
+         字体会被下载两次。改字体时 theme.css 与这里要同改。 */
+      if (ff) pre('/assets/fonts/' + ff + '.woff2', 'font', 'font/woff2');
     })();
   </script>
 </head>
