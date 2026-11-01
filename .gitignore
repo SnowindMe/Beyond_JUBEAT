@@ -54,3 +54,15 @@ scripts/probe/
 .devhome/
 # save_paste 工具落盘的原文（一次性参考用，不是站点产物）
 pastes/
+
+# 【2026-11-01】临时调试产物：一次性脚本、预览页、截图、提交信息文件。
+# 这个仓库的提交习惯是「只提交产物」——cp/预览/截图都是过程物，
+# 已经两次被 git add -A 误带进 commit（v1.53.0 / v1.53.1 的 commit-msg 与 tmp-*.cjs）。
+tmp-*.cjs
+tmp-*.mjs
+preview-*.html
+preview.css
+shot-*.png
+cm.txt
+commit-msg.txt
+pastes/
