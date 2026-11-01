@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
+import SiteLinks from '../components/SiteLinks.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
 // 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：
@@ -16,6 +17,11 @@ const THEME_COUNT = 15;
   description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
   <Hero />
+
+  {/* 友链 / 数据来源 / 设计参考（2026-11-01 主人要求，放在首页那条横向分隔线处）。
+      位置在 Hero 与站点标识区之间：读者看完首屏、还没到落款时，
+      先看到「这些数据从哪来」——比塞进页脚更容易被读到。 */}
+  <SiteLinks />
 
   {/* 站点标识区（2026-10-27 主人要求）：原来在页脚右下角的小号 logo + 品牌字
       挪到这里，在首页用一个居中的 div 放大显示。品牌字沿用顶栏 .mark 的世代字体

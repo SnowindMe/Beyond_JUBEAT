@@ -1,0 +1,111 @@
+---
+// 首页 · 友链 / 数据来源 / 设计参考（2026-11-01 主人要求）
+// 「在黄线处添加一个div，用来存放友链，数据来源，设计参考的网址」→ 后续「小字解释不用了」「做美观一些」「可以加图标」
+//
+// 位置：Hero 与 brandblock 之间。
+//
+// 【设计取向】这是索引性质的区块，不是营销内容：
+//   · 去掉所有说明小字（主人明确要求）——只留「名字」与图标，
+//     读者看链接名就知道是什么，解释反而是噪音；
+//   · 图标承担「这是什么类型站点」的识别，替代了被删掉的那行小字；
+//   · 每条是一行「图标 + 名字」，靠行高与悬停底色构成可点的目标，不套卡片边框；
+//   · 三组用竖线分隔（结构即信息），组标题压到最小。
+//
+// 【图标规范】与站内既有 SVG 一致：viewBox 24×24、stroke 描边、fill:none、
+// aria-hidden（名字已在旁边，图标不重复朗读）。
+// 不用 emoji、不引入图标库——本区块只有 11 个图标，手写这 11 个路径比多一个依赖划算。
+type Link = { name: string; url: string; icon: IconKey };
+
+/** 图标 key → 路径数据。按站点性质分：谱面站用网格、wiki 用书本、视频站用播放、官方站用徽章。 */
+const ICONS = {
+  chart: 'M4 6h16M4 12h10M4 18h13', // 谱面/谱面确认
+  grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', // 表格/评级表
+  play: 'M5 4.5l13 7.5-13 7.5z', // 视频站
+  book: 'M4 5.5c2.5-1.5 6-1.5 8 0v13c-2-1.5-5.5-1.5-8 0zM20 5.5c-2.5-1.5-6-1.5-8 0v13c2-1.5 5.5-1.5 8 0z', // wiki
+  badge: 'M12 3.5l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8v-6z', // 官方
+  pen: 'M15.5 4.5l4 4L9 19H5v-4z', // 设计
+  code: 'M9 6l-5 6 5 6M15 6l5 6-5 6', // 代码
+  link: 'M9.5 14.5l5-5M10 6.5l1.8-1.8a4 4 0 015.6 5.6L15.6 12M8.4 12l-2 1.8a4 4 0 005.6 5.6L13.8 17.6', // 通用外链
+} as const;
+type IconKey = keyof typeof ICONS;
+
+const GROUPS: { key: string; title: string; links: Link[] }[] = [
+  {
+    key: 'friends',
+    title: '友链',
+    // 【2026-11-01 主人给定，原样照抄】· JUBEAT VIEWER · Jubeat2Malody · Jubeat LV.10 SSS难易度表
+    links: [
+      { name: 'JUBEAT VIEWER', url: 'https://ub.thregren.world/', icon: 'chart' },
+      { name: 'Jubeat2Malody', url: 'https://swan416.top/jubeat', icon: 'grid' },
+      { name: 'Jubeat LV.10 SSS难易度表', url: 'https://sss-jubeat.pages.dev/', icon: 'badge' },
+    ],
+  },
+  {
+    key: 'data',
+    title: '数据来源',
+    // 【2026-11-01 主人给定，原样照抄六条】
+    links: [
+      { name: 'Jubeat音乐魔方', url: 'https://space.bilibili.com/3546949219256767', icon: 'play' },
+      { name: 'jubeat beyond the Ave.', url: 'https://p.eagate.573.jp/game/jubeat/beyond/', icon: 'badge' },
+      { name: 'Remywiki', url: 'https://remywiki.com', icon: 'book' },
+      { name: 'BEMANIWiki 2nd', url: 'https://bemaniwiki.com', icon: 'book' },
+      { name: 'jubeat@Wiki', url: 'https://w.atwiki.jp/jubeat', icon: 'book' },
+      { name: 'BaseForJubeaters', url: 'https://b4j-beyond.mono-logic.com/', icon: 'chart' },
+    ],
+  },
+  {
+    key: 'design',
+    title: '设计参考',
+    // 【2026-11-01 主人给定，原样照抄】
+    //   · jubeat（ユビート）https://p.eagate.573.jp/game/jubeat/mobile/
+    //   · DXRating https://dxrating.net/
+    //   · 落雪咖啡屋 https://maimai.lxns.net/
+    //   · Union https://union.godserver.cn/
+    //   · 音游街小程序（小程序，无 URL）
+    // 「音游街」是小程序、没有网址，所以不用 <a> 而是纯文本条目，
+    // 避免出现一个点不动的链接（那比没有更让人恼火）。
+    links: [
+      { name: 'jubeat（ユビート）', url: 'https://p.eagate.573.jp/game/jubeat/mobile/', icon: 'badge' },
+      { name: 'DXRating', url: 'https://dxrating.net/', icon: 'chart' },
+      { name: '落雪咖啡屋', url: 'https://maimai.lxns.net/', icon: 'grid' },
+      { name: 'Union', url: 'https://union.godserver.cn/', icon: 'link' },
+      { name: '音游街小程序', url: '', icon: 'play' },
+    ],
+  },
+];
+---
+
+<section class="links" aria-labelledby="linksTitle">
+  <h2 class="links-title" id="linksTitle">相关站点</h2>
+  <div class="links-grid">
+    {GROUPS.map((g) => (
+      <div class="links-col">
+        <p class="links-col-t">{g.title}</p>
+        <ul class="links-list">
+          {g.links.map((l) => {
+            const ico = (
+              <svg class="links-ico" viewBox="0 0 24 24" aria-hidden="true"
+                   fill={l.icon === 'play' ? 'currentColor' : 'none'}
+                   stroke={l.icon === 'play' ? 'none' : 'currentColor'}
+                   stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d={ICONS[l.icon]} />
+              </svg>
+            );
+            // 【空 url = 不是网页，只有名字】「音游街」是小程序，没有网址。
+            // 渲染成 <a> 会得到一个点不动的死链，比没有更让人恼火；
+            // 用纯文本 + 稍淡的颜色，读者一看就知道「这个不是链接」。
+            return (
+              <li>
+                {l.url ? (
+                  <a href={l.url} target="_blank" rel="noopener">{ico}<span>{l.name}</span></a>
+                ) : (
+                  <span class="links-part">{ico}<span>{l.name}</span></span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

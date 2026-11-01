@@ -1524,11 +1524,16 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
    上一版方块写 flex:1，于是有没有音符都撑满整列，每根柱顶到天花板、齐成一块方板，
    密度差异完全消失（看起来像一张实心网格）。
    现在单块高度固定为 1/8 列高，颗数少柱子就矮 —— 高度才是要读的那个变量。 */
+/* 方块：暗边 + 亮芯（ub 官方用 #8f6c05 边 / #ffd94a 芯）。
+   为什么要描边：格子缩到 2-3px 时，单色块会糊成一片，看不出是方格；
+   一圈更深的边在极小的尺寸下仍能把格子分开。
+   这里用 inset 阴影而不是 border —— border 会占掉盒子尺寸，
+   在 flex 固定高度下会把方块挤扁。 */
 .sd-chart .sd-col b {
     flex: 0 0 calc((100% - 7px) / 8);
     border-radius: 0.5px;
     background: var(--d-c);
-    opacity: 0.92;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--d-c) 55%, #000);
 }
 
 @media (max-width: 700px) {

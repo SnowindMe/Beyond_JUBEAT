@@ -1477,6 +1477,186 @@ html[data-g="saucerfulfill"] .sub {
    原来这套 logo + 品牌字 + Enjoy Yourself 挤在页脚右下角，尺寸 13~18px 很小。
    主人要求：页脚去掉它，首页做一个居中放大的 div 显示。
    沿用 .mark 的世代字体与 ↑ ♪ ~ 符号处理，只把尺寸放大、整体居中。 */
+/* ---------- 首页 · 友链 / 数据来源 / 设计参考（2026-11-01 主人要求） ----------
+   位置：Hero 与站点标识区之间（主人说的「黄线处」）。
+
+   【2026-11-01 第二版，按主人三条意见重做】
+   「小字解释不用了」「做美观一些」「可以加图标」。
+
+   设计取向：这是**索引性质的区块**，读者只想快点找到「去哪查资料」，所以：
+     · 删掉全部说明小字 —— 链接名本身已经说明是什么，解释是噪音；
+     · 图标接管「这是什么类型的站」这一层识别，替代被删掉的那行小字；
+     · 每条做成「图标 + 名字」的一行，用行内悬停底色 + 左移构成点击反馈，
+       而不是给每条套边框（11 条框子会糊成一片网格，反而更难扫）；
+     · 三组之间用竖线分隔（结构即信息），组标题压到最小号。
+
+   为什么不用卡片：卡片会把 11 条链接拆成 11 个块，扫读成本翻倍；
+   这是清单，不是功能入口。 */
+.links {
+    margin: clamp(30px, 4.4vw, 58px) 0 0;
+    padding-top: clamp(20px, 2.6vw, 30px);
+    border-top: 1px solid var(--edge);
+}
+/* 组标题：小号、宽字距、次级色。它只是「这一栏叫什么」的标签，不抢注意力。
+   右上角一条渐隐细线把标题行收束成「一栏的开头」，而不是孤零零一个词。 */
+.links-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 clamp(14px, 1.8vw, 18px);
+    font-family: var(--font-label);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    white-space: nowrap;
+}
+.links-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--edge) 90%, transparent), transparent);
+}
+.links-grid {
+    display: grid;
+    /* 友链 3 / 数据来源 6 / 设计参考 2 —— 按条数自然分宽，数据来源那栏最宽。
+       等宽会让 6 条那栏挤成两行折叠，3 条那栏留一大片空。 */
+    grid-template-columns: 1.05fr 1.5fr 1.05fr;
+    gap: 0 clamp(18px, 2.6vw, 40px);
+}
+.links-col + .links-col {
+    padding-left: clamp(18px, 2.6vw, 40px);
+    border-left: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+}
+.links-col-t {
+    margin: 0 0 8px;
+    font-family: var(--font-label);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ink2);
+}
+.links-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+/* 一条 = 图标 + 名字。整行是热区（不只是文字），鼠标移到行内任意处都能点中。
+   负 margin 让悬停底色略微溢出文字边界，读起来像「一行被点亮」而不是「文字变色」。 */
+.links-list a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 -7px;
+    padding: 6px 7px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ink);
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    overflow-wrap: anywhere;
+}
+.links-list a:hover {
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    color: var(--acc-ink);
+    transform: translateX(2px);
+}
+.links-list a:focus-visible {
+    outline: 2px solid var(--acc-ink);
+    outline-offset: 1px;
+    border-radius: 5px;
+}
+/* 图标：固定 15px 方形占位，颜色跟着链接走；默认压一档透明度，
+   悬停时随文字一起变主题色。所有图标同一描边宽度，排列才不会参差。 */
+.links-ico {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    color: var(--ink3);
+    opacity: 0.9;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+.links-list a:hover .links-ico {
+    color: var(--acc-ink);
+    opacity: 1;
+}
+/* 播放类图标是实心三角，视觉重量比描边图标重，缩一档找齐 */
+.links-ico[fill='currentColor'] {
+    width: 13px;
+    height: 13px;
+}
+/* 无网址的条目（如「音游街小程序」）：与链接行同一套版式，但不可点、颜色压淡，
+   读者扫过去就知道「这个不是链接」，不会去点它。 */
+.links-part {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 -7px;
+    padding: 6px 7px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--ink2);
+    opacity: 0.72;
+    cursor: default;
+}
+
+/* 中号屏折两栏：数据来源那栏独占一行，友链与设计参考并排。
+   比硬折一栏紧凑，又不至于让每栏只剩百来像素。 */
+@media (max-width: 900px) {
+    .links-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px clamp(18px, 3vw, 32px);
+    }
+    .links-col:first-child { order: 1; }
+    .links-col:nth-child(3) { order: 2; }
+    .links-col:nth-child(2) {
+        order: 3;
+        grid-column: 1 / -1;
+        padding-left: 0;
+        border-left: 0;
+        padding-top: 18px;
+        border-top: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+    }
+    .links-col:nth-child(3) {
+        padding-left: clamp(18px, 3vw, 32px);
+        border-left: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+    }
+}
+/* 窄屏回到单列 */
+@media (max-width: 620px) {
+    .links-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    .links-col {
+        padding-left: 0 !important;
+        border-left: 0 !important;
+        padding-top: 16px;
+        border-top: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+    }
+    .links-col:first-child {
+        padding-top: 0;
+        border-top: 0;
+    }
+}
+/* 尊重减少动效：保留悬停变色（那是反馈），去掉位移与过渡时间 */
+@media (prefers-reduced-motion: reduce) {
+    .links-list a {
+        transition: none;
+    }
+    .links-list a:hover {
+        transform: none;
+    }
+}
+
 .brandblock {
     display: flex;
     flex-direction: row;
