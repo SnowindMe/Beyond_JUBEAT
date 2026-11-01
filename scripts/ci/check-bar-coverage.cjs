@@ -9,15 +9,20 @@
 //   ① 有谱面文件；② 上游 level 与库定数一致；③ 算出的键数等于库 notecounts。
 //   任一条不满足就不画 —— 因为画了就是错图（旁边那个「N 键」会是另一个数）。
 //
-// 【2026-11-01 实测基线，改代码后拿它对照】
-//   曲目 1248 / 有谱面的档位 3744 / 能出图 3396 (90.7%) / 不出图 348 档
-//   一首都出不了的曲目 75 首：
-//     · 63 首 ub 完全没收录（61 首国服音乐魔方原创 + 2 首 BTA 占位曲）
+// 【2026-11-01 23:00 实测基线，改代码后拿它对照】
+//   曲目 1248 / 有谱面的档位 3744 / 能出图 3493 (93.3%) / 不出图 251 档
+//     ① 无谱面文件 251 / ② 键数不符 0 / 另有 4 档「定数与 ub 不同但键数一致」，照样出图
+//   一首都出不了的曲目 63 首（全是 ub 根本没收录：61 首国服音乐魔方原创 + 2 首 BTA 占位曲）
 //       —— 查过 ub 的 library.json，这些 songId 一个都没有，连 BGM 音源也没有；
 //          ub 是日服谱面站，国服原创曲它本来就不收。
-//     · 12 首 ub 上有文件但版本不符（全是日服），最严重的是 paranoia：
-//       ub 挂 Lv8 老谱（563 键），现行是 Lv9.5（965 键），偏差 41%。
-//   主人 2026-11-01 拍板：**就这样留空，不补**。
+//   沿革：
+//     · 2026-11-01 早先基线 3396 (90.7%)，75 首无图，其中 7 首是 CS Charts（jubeat plus）误当街机谱，
+//       已按 AC Charts / Regular Charts 修正 11 首（data/chart-overrides.json）。
+//     · 2026-11-01 22:45 主人拍板「键数不符的按 ub 上的键数更改」→ 52 首 / 60 档 notecounts
+//       按 ub 校正，键数不符归零，覆盖率 91.6% → 93.2%，一首都出不了的曲目 64 → 63 首。
+//     · 2026-11-01 23:00 主人「等级差异不按 ub 的来（等级都是官方的）」→ 判据去掉定数比对，
+//       只认键数。原先被定数挡住的 4 档（键数其实全等）恢复出图，93.2% → 93.3%。
+//   剩余 251 档不再补：全部是上游根本没有谱面文件（63 首一首都出不了的那批）。
 const fs = require('fs');
 const path = require('path');
 
@@ -30,18 +35,17 @@ const LEVELS = ['bsc', 'adv', 'ext'];
 function chartOf(s, key) {
   const c = charts[String(s.id)]?.[key];
   if (!c || !c.cols || !c.cols.length) return null;
-  const libLv = s.lv ? s.lv[key] : null;
   const libNotes = s.notecounts ? s.notecounts[key] : null;
-  if (c.level != null && libLv != null) {
-    const ub = parseFloat(c.level);
-    if (Number.isFinite(ub) && Math.abs(ub - libLv) > 0.001) return null;
-  }
+  // 【判据只有键数一条】2026-11-01 22:55 主人「等级差异不按 ub 的来（等级都是官方的）」：
+  // 库里的定数是官方值，ub 的 level 标签会滞后（4 例定数不同但键数全等的谱面以前被误判成不可画）。
+  // 取错页的情况（paranoia 老谱 563≠965）照样被键数这一条抓住，定数判据是多余且有害的。
   if (libNotes != null && c.keys !== libNotes) return null;
   return c;
 }
 
 let totalCharts = 0, shown = 0;
-const noFile = [], lvBad = [], keysBad = [];
+const noFile = [], keysBad = [];
+const lvOnly = []; // 定数与 ub 不同但键数一致 → 现在照样出图，只作观察量打出来
 const songsNoBar = [];
 
 for (const s of songs) {
@@ -54,15 +58,13 @@ for (const s of songs) {
     const e = charts[String(s.id)];
     if (!e || !e[key]) { noFile.push({ id: s.id, key }); diag.push(key + ':noFile'); continue; }
     const c = chartOf(s, key);
+    const cu = e[key];
+    if (cu.level != null && Math.abs(parseFloat(cu.level) - lv) > 0.001) {
+      lvOnly.push({ id: s.id, t: s.t, key, ubLv: cu.level, libLv: lv });
+    }
     if (!c) {
-      const cu = e[key];
-      if (cu.level != null && parseFloat(cu.level) !== lv) {
-        lvBad.push({ id: s.id, t: s.t, key, ubLv: cu.level, libLv: lv });
-        diag.push(key + ':lv' + cu.level + '!=' + lv);
-      } else {
-        keysBad.push({ id: s.id, t: s.t, key, calc: cu.keys, lib: s.notecounts ? s.notecounts[key] : null });
-        diag.push(key + ':keys');
-      }
+      keysBad.push({ id: s.id, t: s.t, key, calc: cu.keys, lib: s.notecounts ? s.notecounts[key] : null });
+      diag.push(key + ':keys');
       continue;
     }
     shown++;
@@ -74,8 +76,8 @@ for (const s of songs) {
 const pct = (shown / totalCharts * 100).toFixed(1);
 console.log('密度条覆盖：' + shown + '/' + totalCharts + ' 档（' + pct + '%），不出图 ' + (totalCharts - shown) + ' 档');
 console.log('  ① 无谱面文件        ' + noFile.length);
-console.log('  ② 定数不符(旧版谱面) ' + lvBad.length);
-console.log('  ③ 键数不符(谱面变过) ' + keysBad.length);
+console.log('  ② 键数不符(谱面变过) ' + keysBad.length);
+console.log('  ·  定数不同但键数一致（照样出图，仅观察） ' + lvOnly.length);
 console.log('一首都出不了的曲目：' + songsNoBar.length + ' 首');
 
 if (songsNoBar.length) {

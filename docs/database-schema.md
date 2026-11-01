@@ -109,8 +109,8 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 | --- | --- |
 | 来源 | remywiki 单曲页的 jubeat 难度表，抓取产物 data/remy/jubeat-charts.json（1138 条，含 [ 2 ] 变体）+ 榜单外补充页 8 条（见 data/remy/README.md） |
 | 入库输入 | data/remy/by-song-id.json（按 song_id 归并好的快照，build-db.cjs 回填） |
-| 有键数的行 | 1245（快照 + 人工补录 100） |
-| 长押谱（has_hold=1） | **327** |
+| 有键数的行 | 1248（快照 + 人工补录 166，2026-11-01 按 ub 物量校正后补满） |
+| 长押谱（has_hold=1） | **330** |
 | 长押未知（has_hold IS NULL） | **0** |
 | 回填 BPM | 新增 722 行、改写 22 行 |
 

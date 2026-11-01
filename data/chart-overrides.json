@@ -35,6 +35,482 @@
       },
       "note": "凛として咲く花の如く（原版，紅色リトマス）｜RemyWiki Rin_to_shite_saku_hana_no_gotoku 页 Notecounts 331/532/772，定数 jubeat festo→Present 4/6/9.1。原解析器误取了 (Ookami_Mio_Cover) 那页（326/542/926）。2026-11-01 修正"
     },
+    "11000009": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 415,
+        "adv": 658,
+        "ext": 885
+      },
+      "holds": {
+        "bsc": 14,
+        "adv": 4,
+        "ext": 27
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 414 / adv 658 / ext 885，ub bsc 415 / adv 658 / ext 885；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000101": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 437,
+        "adv": 768,
+        "ext": 974
+      },
+      "holds": {
+        "bsc": 18,
+        "adv": 12,
+        "ext": 17
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 437 / adv 769 / ext 974，ub bsc 437 / adv 768 / ext 974；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000105": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 173,
+        "adv": 372,
+        "ext": 690
+      },
+      "holds": {
+        "bsc": 18,
+        "adv": 19,
+        "ext": 24
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 175 / adv 372 / ext 690，ub bsc 173 / adv 372 / ext 690；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000121": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 332,
+        "adv": 628,
+        "ext": 966
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 332 / adv 622 / ext 966，ub bsc 332 / adv 628 / ext 966；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000138": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 140,
+        "adv": 317,
+        "ext": 595
+      },
+      "holds": {
+        "bsc": 16,
+        "adv": 30,
+        "ext": 24
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 140 / adv 257 / ext 547，ub bsc 140 / adv 317 / ext 595；改动档 adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000142": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 154,
+        "adv": 277,
+        "ext": 396
+      },
+      "holds": {
+        "bsc": 18,
+        "adv": 25,
+        "ext": 32
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 154 / adv 227 / ext 396，ub bsc 154 / adv 277 / ext 396；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000175": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 346,
+        "adv": 628,
+        "ext": 911
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 346 / adv 628 / ext 910，ub bsc 346 / adv 628 / ext 911；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11000177": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 286,
+        "adv": 511,
+        "ext": 735
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 286 / adv 521 / ext 735，ub bsc 286 / adv 511 / ext 735；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "11001006": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 246,
+        "adv": 536,
+        "ext": 792
+      },
+      "holds": {
+        "bsc": 60,
+        "adv": 89,
+        "ext": 142
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 246 / adv 536 / ext 782，ub bsc 246 / adv 536 / ext 792；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000002": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 188,
+        "adv": 415,
+        "ext": 721
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 188 / adv 412 / ext 683，ub bsc 188 / adv 415 / ext 721；改动档 adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000021": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 118,
+        "adv": 251,
+        "ext": 395
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 118 / adv 251 / ext 391，ub bsc 118 / adv 251 / ext 395；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000031": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 206,
+        "adv": 332,
+        "ext": 515
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 206 / adv 332 / ext 510，ub bsc 206 / adv 332 / ext 515；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000042": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 317,
+        "adv": 408,
+        "ext": 629
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 317 / adv 404 / ext 611，ub bsc 317 / adv 408 / ext 629；改动档 adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000044": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 279,
+        "adv": 406,
+        "ext": 602
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 279 / adv 401 / ext 591，ub bsc 279 / adv 406 / ext 602；改动档 adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000046": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 210,
+        "adv": 370,
+        "ext": 641
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 210 / adv 370 / ext 633，ub bsc 210 / adv 370 / ext 641；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000047": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 230,
+        "adv": 461,
+        "ext": 656
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 230 / adv 459 / ext 630，ub bsc 230 / adv 461 / ext 656；改动档 adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000048": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 380,
+        "adv": 588,
+        "ext": 706
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 376 / adv 574 / ext 706，ub bsc 380 / adv 588 / ext 706；改动档 bsc/adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "20000049": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 333,
+        "adv": 506,
+        "ext": 673
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 330 / adv 506 / ext 673，ub bsc 333 / adv 506 / ext 673；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "30000126": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 266,
+        "adv": 542,
+        "ext": 758
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 266 / adv 542 / ext 618，ub bsc 266 / adv 542 / ext 758；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "40000125": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 306,
+        "adv": 522,
+        "ext": 700
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 306 / adv 522 / ext 710，ub bsc 306 / adv 522 / ext 700；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "40000126": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 214,
+        "adv": 484,
+        "ext": 708
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 212 / adv 484 / ext 708，ub bsc 214 / adv 484 / ext 708；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000026": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 308,
+        "adv": 568,
+        "ext": 716
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 308 / adv 568 / ext 708，ub bsc 308 / adv 568 / ext 716；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000033": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 278,
+        "adv": 534,
+        "ext": 711
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 278 / adv 574 / ext 711，ub bsc 278 / adv 534 / ext 711；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000050": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 367,
+        "adv": 653,
+        "ext": 922
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 357 / adv 653 / ext 922，ub bsc 367 / adv 653 / ext 922；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000088": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 181,
+        "adv": 348,
+        "ext": 485
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 181 / adv 384 / ext 485，ub bsc 181 / adv 348 / ext 485；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000102": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 539,
+        "adv": 919,
+        "ext": 1021
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 542 / adv 919 / ext 1021，ub bsc 539 / adv 919 / ext 1021；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000109": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 257,
+        "adv": 498,
+        "ext": 646
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 257 / adv 489 / ext 646，ub bsc 257 / adv 498 / ext 646；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000111": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 311,
+        "adv": 550,
+        "ext": 804
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 331 / adv 550 / ext 804，ub bsc 311 / adv 550 / ext 804；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000112": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 230,
+        "adv": 509,
+        "ext": 797
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 238 / adv 509 / ext 797，ub bsc 230 / adv 509 / ext 797；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000129": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 387,
+        "adv": 715,
+        "ext": 956
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 376 / adv 715 / ext 956，ub bsc 387 / adv 715 / ext 956；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000135": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 220,
+        "adv": 615,
+        "ext": 759
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 220 / adv 615 / ext 760，ub bsc 220 / adv 615 / ext 759；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000184": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 251,
+        "adv": 367,
+        "ext": 713
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 291 / adv 367 / ext 713，ub bsc 251 / adv 367 / ext 713；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000233": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 196,
+        "adv": 398,
+        "ext": 675
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 155 / adv 340 / ext 618，ub bsc 196 / adv 398 / ext 675；改动档 bsc/adv/ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000240": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 147,
+        "adv": 343,
+        "ext": 521
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 147 / adv 343 / ext 582，ub bsc 147 / adv 343 / ext 521；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
     "50000267": {
       "has_hold": 0,
       "notecounts": {
@@ -63,6 +539,34 @@
       },
       "note": "ロストワンの号哭｜RemyWiki AC Charts：336/629/930。库取 CS Charts（267/696/1083）。2026-11-01 修"
     },
+    "50000269": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 255,
+        "adv": 637,
+        "ext": 772
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 255 / adv 673 / ext 772，ub bsc 255 / adv 637 / ext 772；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "50000315": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 306,
+        "adv": 511,
+        "ext": 693
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 306 / adv 511 / ext 582，ub bsc 306 / adv 511 / ext 693；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
     "50000337": {
       "has_hold": 0,
       "notecounts": {
@@ -76,6 +580,20 @@
         "ext": 0
       },
       "note": "きょうもハレバレ｜RemyWiki AC Charts：184/387/544。库取 CS Charts（176/389/657）。2026-11-01 修"
+    },
+    "50000372": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 288,
+        "adv": 549,
+        "ext": 810
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 288 / adv 439 / ext 810，ub bsc 288 / adv 549 / ext 810；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
     },
     "60000025": {
       "has_hold": 0,
@@ -105,6 +623,76 @@
       },
       "note": "ミライプリズム(collaboration ver.)｜RemyWiki Mirai_prism 页 collaboration ver. 表 Notecounts / Holds 358/29 · 496/33 · 628/41，定数 jubeat clan→Present 5/7/↓8。原解析器误取了同一页的 Original Version 表（162/433/658）。2026-11-01 修正"
     },
+    "60000068": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 298,
+        "adv": 502,
+        "ext": 747
+      },
+      "holds": {
+        "bsc": 20,
+        "adv": 29,
+        "ext": 57
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 296 / adv 502 / ext 747，ub bsc 298 / adv 502 / ext 747；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "60000078": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 312,
+        "adv": 595,
+        "ext": 738
+      },
+      "holds": {
+        "bsc": 16,
+        "adv": 28,
+        "ext": 24
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 312 / adv 594 / ext 738，ub bsc 312 / adv 595 / ext 738；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "60000121": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 300,
+        "adv": 584,
+        "ext": 705
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 300 / adv 584 / ext 715，ub bsc 300 / adv 584 / ext 705；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "70000009": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 254,
+        "adv": 485,
+        "ext": 662
+      },
+      "holds": {
+        "bsc": 12,
+        "adv": 13,
+        "ext": 18
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 245 / adv 485 / ext 662，ub bsc 254 / adv 485 / ext 662；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "70000010": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 329,
+        "adv": 630,
+        "ext": 763
+      },
+      "holds": {
+        "bsc": 8,
+        "adv": 16,
+        "ext": 15
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 326 / adv 630 / ext 763，ub bsc 329 / adv 630 / ext 763；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
     "70000042": {
       "has_hold": 0,
       "notecounts": {
@@ -133,6 +721,76 @@
       },
       "note": "KHAMEN BREAK -SDVX Infinity MashUp-｜主人 2026-11-01 截图：SDVX Infinity MashUp 版 Notecounts 490/684/1050，定数 jubeat festo→Present 4/8/↓10.3。库里误存了同页 Original Version 的 400/662/1042"
     },
+    "70000138": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 274,
+        "adv": 567,
+        "ext": 751
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 274 / adv 567 / ext 771，ub bsc 274 / adv 567 / ext 751；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "70000152": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 188,
+        "adv": 370,
+        "ext": 526
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 188 / adv 372 / ext 526，ub bsc 188 / adv 370 / ext 526；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "70000153": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 271,
+        "adv": 417,
+        "ext": 648
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 271 / adv 417 / ext 668，ub bsc 271 / adv 417 / ext 648；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "70001004": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 198,
+        "adv": 372,
+        "ext": 618
+      },
+      "holds": {
+        "bsc": 14,
+        "adv": 16,
+        "ext": 30
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 198 / adv 372 / ext 615，ub bsc 198 / adv 372 / ext 618；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "80000024": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 377,
+        "adv": 592,
+        "ext": 661
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 333 / adv 592 / ext 661，ub bsc 377 / adv 592 / ext 661；改动档 bsc。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
     "80000066": {
       "has_hold": 0,
       "notecounts": {
@@ -147,6 +805,34 @@
       },
       "note": "エレシュキガル｜RemyWiki jubeat 小节 AC Charts：205/352/705。库取的是 CS Charts（191/331/602）。2026-11-01 修"
     },
+    "80000075": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 304,
+        "adv": 535,
+        "ext": 719
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 304 / adv 535 / ext 718，ub bsc 304 / adv 535 / ext 719；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "80000087": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 487,
+        "adv": 757,
+        "ext": 1033
+      },
+      "holds": {
+        "bsc": 72,
+        "adv": 80,
+        "ext": 113
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 487 / adv 755 / ext 1033，ub bsc 487 / adv 757 / ext 1033；改动档 adv。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
     "90000024": {
       "has_hold": 1,
       "notecounts": {
@@ -160,6 +846,34 @@
         "ext": 137
       },
       "note": "泡沫、哀のまほろば｜RemyWiki AC Charts: Notecounts/Holds 133/18 · 365/65 · 608/137。库取 CS Charts（278/433/710，无长押）。2026-11-01 修"
+    },
+    "90000061": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 275,
+        "adv": 497,
+        "ext": 799
+      },
+      "holds": {
+        "bsc": 2,
+        "adv": 6,
+        "ext": 51
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 275 / adv 497 / ext 798，ub bsc 275 / adv 497 / ext 799；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "90000063": {
+      "has_hold": 0,
+      "notecounts": {
+        "bsc": 133,
+        "adv": 511,
+        "ext": 662
+      },
+      "holds": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 133 / adv 511 / ext 663，ub bsc 133 / adv 511 / ext 662；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
     },
     "90000120": {
       "bpm": "156",
@@ -249,6 +963,20 @@
         "ext": 60
       },
       "note": "Idola (BEMANI SYMPHONY Arr.)｜主人截图图五：253/14 · 509/50 · 782/60，定数 3/8/9.7 与库一致；BPM 是区间，原样保留"
+    },
+    "90001023": {
+      "has_hold": 1,
+      "notecounts": {
+        "bsc": 204,
+        "adv": 346,
+        "ext": 559
+      },
+      "holds": {
+        "bsc": 42,
+        "adv": 39,
+        "ext": 113
+      },
+      "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 204 / adv 346 / ext 558，ub bsc 204 / adv 346 / ext 559；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
     },
     "990000001": {
       "has_hold": 0,

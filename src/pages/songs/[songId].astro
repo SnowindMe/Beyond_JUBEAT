@@ -232,14 +232,16 @@ const charts = song ? await loadCharts(String(song.id)) : null;
 const chartOf = (key: 'bsc' | 'adv' | 'ext') => {
   const c = charts?.[key];
   if (!c || !c.cols?.length) return null;
-  const libLv = song?.lv[key];
   const libNotes = song?.notecounts?.[key];
-  // ① 定数一致（上游 level 可能是 "10.7" 或 "10"，只在都有值时比较）
-  if (c.level != null && libLv != null) {
-    const ub = parseFloat(c.level);
-    if (Number.isFinite(ub) && Math.abs(ub - libLv) > 0.001) return null;
-  }
-  // ② 键数一致：算出来的必须等于库里那个数字
+  // 【判据只有一条：键数必须一致】算出来的 ub 键数要等于库里那个官方物量。
+  // 键数一致就说明「这确实是同一张谱面」，图形有效。
+  //
+  // 【2026-11-01 22:55 为什么去掉定数比对】主人原话「等级差异不按 ub 的来（等级都是官方的）」。
+  // 库里的定数是官方值，ub 页上那一栏的 level 标签会滞后（实测 4 例：50000228 EXT 库 9.3 / ub 9，
+  // 990000003 EXT 9.8/9.6，991000003 EXT 9.5/9.3，991000001 ADV 6/7——这四例的**键数全部相等**，
+  // 谱面本身没问题）。用定数当判据会把「谱面对、只是标签旧」的四档误判成不可画。
+  // 反过来，定数比对原先要防的「取错页」（如 paranoia 把 Lv8 老谱当现行谱）也由键数这一条
+  // 完整抓住：老谱 563 键≠965 键，照样不画。所以定数判据是多余且有害的。
   if (libNotes != null && c.keys !== libNotes) return null;
   return c;
 };
