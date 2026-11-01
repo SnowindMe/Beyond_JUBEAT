@@ -1618,27 +1618,29 @@ html[data-g="saucerfulfill"] .sub {
 
 /* 中号屏折两栏：数据来源那栏独占一行，友链与设计参考并排。
    比硬折一栏紧凑，又不至于让每栏只剩百来像素。 */
+/* 中号屏折两栏。
+   【2026-11-01 修正】这里原先用 order 把「数据来源」排到最后，
+   结果小屏上看到的分组顺序是「友链 → 设计参考 → 数据来源」，
+   与桌面端的「友链 → 数据来源 → 设计参考」不一致（被实测截图抓出来）。
+   **分组顺序在任何断点下都必须与源码顺序一致**，否则读者会以为漏读了一组。
+   现在去掉所有 order / grid-row 花活，交给自然流：
+   友链(1,1) → 数据来源(1,2) → 设计参考(2,1)，顺序天然正确。 */
 @media (max-width: 900px) {
     .links-grid {
         grid-template-columns: 1fr 1fr;
-        gap: 20px clamp(18px, 3vw, 32px);
+        gap: 18px clamp(18px, 3vw, 32px);
     }
-    .links-col:first-child { order: 1; }
-    .links-col:nth-child(3) { order: 2; }
-    .links-col:nth-child(2) {
-        order: 3;
-        grid-column: 1 / -1;
+    /* 第 2 组起左侧不再有竖线（换行了，竖线会变成悬空的一段） */
+    .links-col:nth-child(n + 3) {
         padding-left: 0;
         border-left: 0;
-        padding-top: 18px;
-        border-top: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
-    }
-    .links-col:nth-child(3) {
-        padding-left: clamp(18px, 3vw, 32px);
-        border-left: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
     }
 }
-/* 窄屏回到单列 */
+/* 窄屏：三组各自独占一行（纵向堆叠），但**每组内部的链接排成两列**。
+   【2026-11-01 主人「移动端的相关站点内的网址放两列」】
+   之前这里是单列，12 条链接要从上到下滚很久；改成两列后列表高度砍半，
+   在手机上更好扫。注意是「每组内部两列」，不是把三组排成两栏——
+   三组本身仍按行堆叠，组标题各自带一条分隔线。 */
 @media (max-width: 620px) {
     .links-grid {
         grid-template-columns: 1fr;
@@ -1653,6 +1655,32 @@ html[data-g="saucerfulfill"] .sub {
     .links-col:first-child {
         padding-top: 0;
         border-top: 0;
+    }
+    /* 组内链接两列。grid 而不是 column-count：
+       grid 保证「左列读完读右列」的阅读顺序不被打乱（column-count 会按高度切分，
+       顺序是竖着走的，读者容易漏读）。 */
+    .links-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1px clamp(8px, 2.5vw, 16px);
+    }
+    /* 两列后每列更窄，长名字（Jubeat LV.10 SSS难易度表）会折行 —— 允许折行，
+       但把行高收紧、图标顶对齐，避免同一行两条高度不一而参差。 */
+    .links-list a,
+    .links-part {
+        margin: 0 -5px;
+        padding: 6px 5px;
+        align-items: flex-start;
+        gap: 7px;
+    }
+    .links-list a:hover {
+        /* 两列里横向位移会撞到右列，改成只变色 + 缩进 1px */
+        transform: translateX(1px);
+    }
+    .links-ico {
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
     }
 }
 /* 尊重减少动效：保留悬停变色（那是反馈），去掉位移与过渡时间 */
