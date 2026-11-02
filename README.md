@@ -97,6 +97,12 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 > 3. **窄屏可读性**：`≤480px` 不画谱面密度条（115 列挤进 188px 只有 1.6px/列，读不出形态只剩噪点，却仍占 3×14px）；曲名最多两行、曲师一行，**都用降字号达成**（曲名下限 13px、曲师下限 12px，见页面末尾 `fitTitle`/`fitArtist`），只有缩到下限仍超行数时才给 `.sd-title-t.is-clamp` 截断兜底。行数用 `Range.getClientRects()` 数，不拿「高度÷行高」算——行内元素的高度是按字体上下伸出来的。
 > 4. **触达范围**：「曲目库」返回 52×26→约 52×46、songId 复制按钮 66×15→约 66×29，都用「加大内边距 + 等量负 margin」实现，排版位置不变。播放进度条原本就有 `::before inset:-10px` 的 28px 命中区，**审计时误判过**——量命中区要看伪元素，不能只量元素盒子。
 
+> **2026-11-02 登录/注册收口（v1.60.1）**——补掉审计里剩下的两条 P3：
+> 1. **表单居中**：login/register 的 `<section class="band">` 加 `is-auth`，`auth.css` 里 `@media (min-width:721px)` 给 `.band.is-auth .band-h` / `.band.is-auth .panel` 统一 `max-width:520px` + `margin-inline:auto`。窄屏不受影响（本来就是满宽堆叠）。
+> 2. **Turnstile 跟随站点主题**：原来用 `data-theme="auto"`，那是跟**系统**深浅色走，而本站主题是用户在世代的 16 个主题里选的，两者经常不一致（深色主题里嵌一块白卡片）。改成 `render=explicit` 手动渲染：读 `getComputedStyle(document.documentElement).colorScheme` → 传 `theme: light|dark`；`MutationObserver` 盯 `html[data-g]`（切世代）变了就 `turnstile.remove()` 后按新主题重渲染。`color-scheme` 是本站明暗的唯一权威（见 `theme.css`），不要另立判断依据。
+>
+> 附带说明：本机 `wrangler dev` 起不来（workerd 在临时目录建目录被拒），这两条只能 push 后线上实测。
+
 裸数字之所以要配参照系：全库 25.9% 的谱面根本没有长押，「长押 34」单独看既不知大小、也不知「没有长押」才是多数；「1,111 键」也是同理——落在 EXT 10 级同档的 P99，才看得出这是超长谱。分位按「难度 × **整数定数**」分桶，不按整档：同档内定数 7 和 10 的键数量级差一倍，混着比会把「10 级谱当然键多」误读成「这首特别长」。桶内样本 < 8 个时**不显分位**（实测 3744 个谱面里只有 7 个落到线下），不拿假分位充数。
 
 密度条数据由 `node scripts/ub/build-ub-charts.cjs` 生成到 `src/data/ub-charts.json`（需联网，**不进 build 流程**，曲库更新后手动重跑并提交产物）。1185 首 × 3 档 = 3493 个谱面成功，输出 0.85 MB。

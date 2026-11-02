@@ -15,8 +15,49 @@ const siteKey = TURNSTILE_ENABLED ? TURNSTILE_SITE_KEY : '';
 ---
 
 {siteKey ? (
-  <div class="au-turn cf-turnstile" data-sitekey={siteKey} data-theme="auto" data-size="flexible"></div>
-  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <div class="au-turn cf-turnstile" data-sitekey={siteKey} data-size="flexible"></div>
+) : null}
+
+<script is:inline>
+  // widget 的明暗要跟随**站点世代主题**，而不是跟随系统 prefers-color-scheme。
+  // 原先用 data-theme="auto"：深色站点 + 浅色系统的访客会看到一块白卡片（审计 P3）。
+  // 现在读 theme.css 里声明的 color-scheme 作为唯一判据（knit/prop/qubell/saucer/ripples/yymf 是浅色），
+  // 不再维护一份「哪些世代是浅色」的副本——抄一份迟早和 CSS 走偏。
+  // Turnstile 的主题只能在 render 时传入，所以切世代要 remove + 重新 render（token 作废，
+  // 但那是用户还没提交时的操作，重解一次挑战即可）。
+  (function () {
+    var el = document.querySelector('.cf-turnstile');
+    if (!el) return;
+    var sitekey = el.getAttribute('data-sitekey');
+    var size = el.getAttribute('data-size') || 'flexible';
+    var wid = null;
+    function theme() {
+      var cs = '';
+      try { cs = getComputedStyle(document.documentElement).colorScheme || ''; } catch (e) {}
+      return cs.indexOf('light') === 0 ? 'light' : 'dark';
+    }
+    function draw() {
+      if (!window.turnstile || !sitekey) return;
+      if (wid !== null) { try { window.turnstile.remove(wid); } catch (e) {} wid = null; }
+      wid = window.turnstile.render(el, { sitekey: sitekey, theme: theme(), size: size });
+    }
+    // api.js 以 render=explicit&onload=jbTurnstileReady 加载，就绪后回调这里
+    window.jbTurnstileReady = function () { draw(); };
+    // 世代切换只改 html[data-g]，跟着重画
+    new MutationObserver(function (m) {
+      for (var i = 0; i < m.length; i++) {
+        if (m[i].attributeName === 'data-g') { draw(); return; }
+      }
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-g'] });
+    // 兜底：万一 api.js 已经先到（下面的 script 带 async，理论上不会，但别赌时序）
+    if (window.turnstile) draw();
+  })();
+</script>
+
+{/* api.js 必须排在配置脚本之后：它用 onload=jbTurnstileReady 回调，而 async 脚本可能比后面的内联脚本先执行，
+    那时 window.jbTurnstileReady 还不存在，widget 就永远不渲染。 */}
+{siteKey ? (
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=jbTurnstileReady" async defer></script>
 ) : null}
 
 <script is:inline>

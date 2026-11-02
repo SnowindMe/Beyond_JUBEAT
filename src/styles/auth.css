@@ -10,6 +10,18 @@
   gap: 18px;
 }
 
+/* 登录 / 注册：表单在 1168 宽的主栏里靠左会剩约 470px 空白（审计 P3）。
+   收成 520 的居中窄栏，页头一起进这条栏——标题与表单对齐成一列，
+   而不是「标题贴左、表单再往左缩一截」。只在桌面生效，窄屏本来就满宽。 */
+@media (min-width: 721px) {
+  .band.is-auth .band-h,
+  .band.is-auth .panel {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* 单字段：标签在上、输入在下，错误信息紧贴输入框 */
 .au-f {
   display: flex;
