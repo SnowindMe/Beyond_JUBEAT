@@ -622,7 +622,9 @@ const metaFoot: Meta[] = song
       var inner = btn.querySelector('.sd-title-t');
       btn.style.fontSize = '';
       if (inner) inner.classList.remove('is-clamp');
-      var fs = parseFloat(getComputedStyle(btn).fontSize);
+      /* 取整：CSS clamp 会给出 19.125 这种带小数的值，逐级减 1 之后就变成
+         13.125 这种「比整数小一档」的字号，既不好读也不利于对齐。 */
+      var fs = Math.round(parseFloat(getComputedStyle(btn).fontSize));
       if (window.innerWidth <= 700) {
         var guardM = 0;
         /* 【坑·2026-11-02】原来写的是 fs > 13：循环体先减再判断，
@@ -655,7 +657,7 @@ const metaFoot: Meta[] = song
       if (!a) return;
       a.style.fontSize = '';
       if (window.innerWidth > 700) return;
-      var fs = parseFloat(getComputedStyle(a).fontSize);
+      var fs = Math.round(parseFloat(getComputedStyle(a).fontSize));
       var guard = 0;
       while (a.scrollWidth > a.clientWidth + 1 && fs - 1 >= 12 && guard < 40) {
         fs -= 1;
