@@ -1611,11 +1611,12 @@ html[data-g="saucerfulfill"] .sub {
     border-radius: 14px;
     background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
-/* 一行 = 组标签（固定 76px，让三组胶囊左缘对齐）+ 胶囊流。
+/* 一行 = 组标签（固定 92px，让五组胶囊左缘对齐）+ 胶囊流。
+   92 是量出来的：最长标签「大白饭中转站」13px 下实际占 82px，76（原先按 4 字给的）会溢出。
    标签只在宽屏侧置；窄屏改到上方（见底部媒体查询）。 */
 .links-row {
     display: grid;
-    grid-template-columns: 76px minmax(0, 1fr);
+    grid-template-columns: 92px minmax(0, 1fr);
     gap: 8px 14px;
     align-items: start;
 }

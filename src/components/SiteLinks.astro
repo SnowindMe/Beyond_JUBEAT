@@ -1,31 +1,34 @@
 ---
-// 首页 · 相关站点：友链 / 数据来源 / 设计参考（2026-11-01 主人要求，2026-11-02 改为胶囊容器）
-// 主人原话：「在黄线处添加一个div，用来存放友链，数据来源，设计参考的网址」
-//        → 「小字解释不用了」「做美观一些」「可以加图标」
-//        → 「相关站点这样设计太占地方了，能否将站点设计成一个个小胶囊放进一个容器里展示（友链胶囊就设置成金色）」
+// 首页 · 相关站点：友链 / Officials / 数据来源 / 设计参考 / 大白饭中转站
+// 2026-11-01 主人要求建立本区块，2026-11-02 改胶囊容器，同日再要求分组与图标规范化。
+// 主人原话：「在【友链】和【数据来源】中间加入【Officials】，把 jubeat_staff，Jubeat音乐魔方，
+//   jubeat beyond the Ave. 和 jubeat（ユビート）移过去」「在【设计参考】后面加入【大白饭中转站】」
+//   「jubeat_staff，Jubeat音乐魔方 的图标换为用户小图标（人形），其他站点用网站小图标（地球），
+//    wiki 用 wiki 小图标（书本），整理好不要乱」。
 //
-// 【设计取向】这是索引性质的区块，读者只想快点找到「去哪查资料」：
-//   · 一个容器收三组，每组一行：标签 + 胶囊流（原先是三栏竖清单，11 条各占 30px 行）；
-//   · 胶囊 = 图标 + 名字，横向 wrap，整块高度从约 250px 降到约 150px；
-//   · 友链是全块唯一的彩色强调（金色）——它是最主要的出口，其余两组让位给它；
+// 【设计取向】
+//   · 一个容器收五组，每组一行：组标签 + 胶囊流；
+//   · 友链是全块唯一的彩色强调（金色），其余组用中性描边；
 //   · 没有网址的条目用虚线胶囊（.links-nolink），不做点不动的死链。
 //
-// 【图标规范】与站内既有 SVG 一致：viewBox 24×24、stroke 描边、fill:none、
-// aria-hidden（名字已在旁边，图标不重复朗读）。不引入图标库。
-type Link = { name: string; url: string; icon: IconKey };
+// 【图标规范】不再由每条链接自己挑图标，改由「站点性质」推导，全块只有三种：
+//   · user = 人（个人/账号类：B 站 UP 主、X 账号）——按名字显式指定；
+//   · book = 书本（wiki 类）——按名字显式指定；
+//   · globe = 地球（其余一切站点，默认）。
+// 以前每条自己选 chart/grid/badge/play，同类站点会拿到不同图标；现在同类必然同图标。
+type Link = { name: string; url: string };
 
-/** 图标 key → 路径数据。按站点性质分：谱面站用网格、wiki 用书本、视频站用播放、官方站用徽章。 */
 const ICONS = {
-  chart: 'M4 6h16M4 12h10M4 18h13', // 谱面/谱面确认
-  grid: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z', // 表格/评级表
-  play: 'M5 4.5l13 7.5-13 7.5z', // 视频站
-  book: 'M4 5.5c2.5-1.5 6-1.5 8 0v13c-2-1.5-5.5-1.5-8 0zM20 5.5c-2.5-1.5-6-1.5-8 0v13c2-1.5 5.5-1.5 8 0z', // wiki
-  badge: 'M12 3.5l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8v-6z', // 官方
-  pen: 'M15.5 4.5l4 4L9 19H5v-4z', // 设计
-  code: 'M9 6l-5 6 5 6M15 6l5 6-5 6', // 代码
-  link: 'M9.5 14.5l5-5M10 6.5l1.8-1.8a4 4 0 015.6 5.6L15.6 12M8.4 12l-2 1.8a4 4 0 005.6 5.6L13.8 17.6', // 通用外链
+  user: 'M12 4.2a3.6 3.6 0 110 7.2 3.6 3.6 0 010-7.2M4.8 20.2c0-3.7 3.2-5.6 7.2-5.6s7.2 1.9 7.2 5.6',
+  globe: 'M12 3.4a8.6 8.6 0 100 17.2 8.6 8.6 0 000-17.2M3.4 12h17.2M12 3.4c2.4 2.4 3.6 5.3 3.6 8.6s-1.2 6.2-3.6 8.6c-2.4-2.4-3.6-5.3-3.6-8.6S9.6 5.8 12 3.4',
+  book: 'M4 5.5c2.5-1.5 6-1.5 8 0v13c-2-1.5-5.5-1.5-8 0zM20 5.5c-2.5-1.5-6-1.5-8 0v13c2-1.5 5.5-1.5 8 0z',
 } as const;
 type IconKey = keyof typeof ICONS;
+/** 显式指定的人形图标（个人/账号类） */
+const USERS = new Set(['Jubeat音乐魔方', 'jubeat_staff']);
+/** 显式指定的书本图标（wiki 类） */
+const WIKIS = new Set(['Remywiki', 'BEMANIWiki 2nd', 'jubeat@Wiki']);
+const iconOf = (name: string): IconKey => (USERS.has(name) ? 'user' : WIKIS.has(name) ? 'book' : 'globe');
 
 /** gold: 这组的胶囊用金色强调（目前只有友链）。 */
 const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = [
@@ -35,41 +38,56 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
     gold: true,
     // 【2026-11-01 主人给定，原样照抄】· JUBEAT VIEWER · Jubeat2Malody · Jubeat LV.10 SSS难易度表
     links: [
-      { name: 'JUBEAT VIEWER', url: 'https://ub.thregren.world/', icon: 'chart' },
-      { name: 'Jubeat2Malody', url: 'https://swan416.top/jubeat', icon: 'grid' },
-      { name: 'Jubeat LV.10 SSS难易度表', url: 'https://sss-jubeat.pages.dev/', icon: 'badge' },
+      { name: 'JUBEAT VIEWER', url: 'https://ub.thregren.world/' },
+      { name: 'Jubeat2Malody', url: 'https://swan416.top/jubeat' },
+      { name: 'Jubeat LV.10 SSS难易度表', url: 'https://sss-jubeat.pages.dev/' },
+    ],
+  },
+  {
+    key: 'officials',
+    title: 'Officials',
+    // 【2026-11-02 主人要求新建本组】把原来分散在「数据来源」「设计参考」里的官方账号/官网挪进来
+    links: [
+      { name: 'jubeat_staff', url: 'https://x.com/jubeat_staff' },
+      { name: 'Jubeat音乐魔方', url: 'https://space.bilibili.com/3546949219256767' },
+      { name: 'jubeat beyond the Ave.', url: 'https://p.eagate.573.jp/game/jubeat/beyond/' },
+      { name: 'jubeat（ユビート）', url: 'https://p.eagate.573.jp/game/jubeat/mobile/' },
     ],
   },
   {
     key: 'data',
     title: '数据来源',
-    // 【2026-11-01 主人给定，原样照抄六条】
+    // 【2026-11-01 主人给定，原样照抄】官方两条已移入 Officials
     links: [
-      { name: 'Jubeat音乐魔方', url: 'https://space.bilibili.com/3546949219256767', icon: 'play' },
-      { name: 'jubeat beyond the Ave.', url: 'https://p.eagate.573.jp/game/jubeat/beyond/', icon: 'badge' },
-      { name: 'Remywiki', url: 'https://remywiki.com', icon: 'book' },
-      { name: 'BEMANIWiki 2nd', url: 'https://bemaniwiki.com', icon: 'book' },
-      { name: 'jubeat@Wiki', url: 'https://w.atwiki.jp/jubeat', icon: 'book' },
-      { name: 'BaseForJubeaters', url: 'https://b4j-beyond.mono-logic.com/', icon: 'chart' },
-      { name: 'arcade-songs', url: 'https://arcade-songs.zetaraku.dev', icon: 'grid' },
+      { name: 'Remywiki', url: 'https://remywiki.com' },
+      { name: 'BEMANIWiki 2nd', url: 'https://bemaniwiki.com' },
+      { name: 'jubeat@Wiki', url: 'https://w.atwiki.jp/jubeat' },
+      { name: 'BaseForJubeaters', url: 'https://b4j-beyond.mono-logic.com/' },
+      { name: 'arcade-songs', url: 'https://arcade-songs.zetaraku.dev' },
     ],
   },
   {
     key: 'design',
     title: '设计参考',
-    // 【2026-11-01 主人给定，原样照抄】
-    //   · jubeat（ユビート）https://p.eagate.573.jp/game/jubeat/mobile/
+    // 【2026-11-01 主人给定，原样照抄】官方一条已移入 Officials
     //   · DXRating https://dxrating.net/
     //   · 落雪咖啡屋 https://maimai.lxns.net/
     //   · Union https://union.godserver.cn/
     //   · 音游街小程序（小程序，无 URL）
     links: [
-      { name: 'jubeat（ユビート）', url: 'https://p.eagate.573.jp/game/jubeat/mobile/', icon: 'badge' },
-      { name: 'DXRating', url: 'https://dxrating.net/', icon: 'chart' },
-      { name: '落雪咖啡屋', url: 'https://maimai.lxns.net/', icon: 'grid' },
-      { name: 'Union', url: 'https://union.godserver.cn/', icon: 'link' },
-      { name: 'jubeat_staff', url: 'https://x.com/jubeat_staff', icon: 'badge' },
-      { name: '音游街小程序', url: '', icon: 'play' },
+      { name: 'DXRating', url: 'https://dxrating.net/' },
+      { name: '落雪咖啡屋', url: 'https://maimai.lxns.net/' },
+      { name: 'Union', url: 'https://union.godserver.cn/' },
+      { name: '音游街小程序', url: '' },
+    ],
+  },
+  {
+    key: 'rice',
+    title: '大白饭中转站',
+    // 【2026-11-02 主人给定，原样照抄】两个中转站点
+    links: [
+      { name: 'GINKA', url: 'https://api.ginka.cloud/' },
+      { name: 'ChooseC', url: 'https://api.choosec.cn/' },
     ],
   },
 ];
@@ -83,12 +101,12 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
         <p class="links-row-t">{g.title}</p>
         <ul class="links-pills">
           {g.links.map((l) => {
+            const k = iconOf(l.name);
             const ico = (
               <svg class="links-ico" viewBox="0 0 24 24" aria-hidden="true"
-                   fill={l.icon === 'play' ? 'currentColor' : 'none'}
-                   stroke={l.icon === 'play' ? 'none' : 'currentColor'}
+                   fill="none" stroke="currentColor"
                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <path d={ICONS[l.icon]} />
+                <path d={ICONS[k]} />
               </svg>
             );
             const cls = 'links-pill' + (g.gold ? ' is-gold' : '');
