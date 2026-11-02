@@ -26,7 +26,7 @@ const bpmText = String(bpm ?? '')
   .slice(0, 16);
 ---
 
-<div class="sda" data-audio={"/api/audio/" + songId}>
+<div class="sda" data-audio={"/api/audio/" + songId} data-song={songId}>
   <button class="sda-play" type="button" aria-label="试听 BGM" title="试听 BGM">
     <svg class="sda-ico sda-ico-play" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M8 5.5v13l11-6.5z" />
@@ -386,6 +386,27 @@ const bpmText = String(bpm ?? '')
       track.setAttribute('aria-valuetext', fmt(c) + ' / ' + (d > 0 ? fmt(d) : '未知'));
     }
 
+    /* 【2026-11-03 热门榜埋点】真正出声 8 秒才记一次。
+       为什么不是一点播放就记：详情页上"随手试听一下"很多，3 秒就走人的不该算热度，
+       所以用定时器验满。播到一半暂停再播不重复计时（hitTimer 还在就不重开）。
+       接口 /api/hot/hit 自己还有同曲 30 秒节流与 IP 闸门，这里只负责"真听到"这一件事。
+       失败一律静默：埋点挂掉不能影响播放。 */
+    var hitTimer = null;
+    function countHit() {
+      if (hitTimer || countHit.done) return;
+      hitTimer = setTimeout(function () {
+        countHit.done = true;
+        try {
+          fetch('/api/hot/hit', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ songId: root.getAttribute('data-song') || '' }),
+            keepalive: true,
+          }).catch(function () {});
+        } catch (e) { /* 老浏览器没 keepalive 也一样走 */ }
+      }, 8000);
+    }
+
     function ensure() {
       if (audio) return audio;
       // 首次点击才创建并拉流：1241 首的详情页若都预载，流量与首屏都不划算
@@ -445,10 +466,13 @@ const bpmText = String(bpm ?? '')
         // 由 canplay / canplaythrough / 轮询按 readyState>=3 来撤转圈，见上面。
         clearLoadingIfReady();
         setBgm('playing');
+        countHit();
       });
       audio.addEventListener('pause', function () {
         root.classList.remove('is-playing');
         setBgm('');
+        // 暂停即作废这轮计时：播了 7 秒就停在 8 秒门前不该算，重新播要从头数
+        if (hitTimer && !countHit.done) { clearTimeout(hitTimer); hitTimer = null; }
       });
       audio.addEventListener('ended', function () {
         root.classList.remove('is-playing');

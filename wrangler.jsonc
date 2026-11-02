@@ -26,11 +26,12 @@
       "enabled": false
     }
   },
-  // Worker 入口用适配器提供的统一入口（官方写法）。
-  // 不能写 dist/server/entry.mjs：构建期的 vite 插件会校验「main 指向的文件必须已存在」，
-  // 而它在构建末尾才产出，必然失败。写成包说明符则交给 vite/esbuild 解析，
-  // 开发与部署共用同一份配置。
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  // Worker 入口（2026-11-03 起是我们自己的 src/worker.ts，原来是适配器的
+  // "@astrojs/cloudflare/entrypoints/server"）：那个入口只导出 fetch，挂不了 scheduled，
+  // 而每日封榜必须由顶层导出 cron。我们的文件把 fetch 原样转发给适配器的 handle，
+  // 只在旁边多一个 scheduled，路由 / 中间件 / session 全都不受影响。
+  // 仍不能写 dist/server/entry.mjs：构建期 vite 插件会校验 main 指向的文件必须已存在。
+  "main": "src/worker.ts",
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
@@ -54,6 +55,9 @@
     //               资源层按 not_found_handling 直接截成 404.html，进不了 Worker。
     //   /api/*   = 注册/登录/退出/改密/自荐/审批/曲目编辑等表单提交端点
     "run_worker_first": [
+      //   "/" = 首页（2026-11-03 起）。它要读 D1 出当日运势与榜，静态产物没有这些数据。
+      //   代价是首页不再走资源层，好在这条路径本来就有中间件的边缘缓存兜着。
+      "/",
       "/songs", "/songs/*",
       //   /jubility = Jubility 层级页（2026-10-26 加）。它和 /songs/ 一样要在运行时
       //   读 D1 现算理论值（曲库一加曲，理论值就要跟着变），所以必须走 Worker，
@@ -66,6 +70,13 @@
       "/recent", "/recent/*",
       "/api/*"
     ]
+  },
+  // 定时任务：每天 00:05（UTC 16:05）封一次榜。
+  // 定 00:05 而不是 00:00：跨零点的那次执行若正好压在日界上，
+  // 窗口末日（昨天）可能还没完全变过去，留五分钟余量。
+  // 工作日与周末一样跑——窗口是按天切的，不是按"上一天有几个人听"。
+  "triggers": {
+    "crons": ["5 16 * * *"]
   },
   // 适配器默认会给 Astro Sessions 挂一个名为 SESSION 的 KV 绑定（我们暂未用会话），
   // 不在这里写死 id 的话，构建产物里的 bindings 会缺 id，wrangler deploy 会失败。

@@ -2,6 +2,8 @@
 import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import SiteLinks from '../components/SiteLinks.astro';
+import Fortune from '../components/Fortune.astro';
+import HotBoard from '../components/HotBoard.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
 // 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：
@@ -9,6 +11,12 @@ import { pageTitle } from '../lib/title';
 // 所以世代数（src/lib/gens.ts 的 GEN_ORDER，13 条）与主题数（14 条可切换 + 音乐魔方 = 15）不同。
 // 实测 ThemeScript 的 GEN 数组就是 15 条。别再把这两个数写成打架的两个值。
 const THEME_COUNT = 15;
+
+// 【2026-11-03 起首页是 SSR】「今日运势 / 热门歌曲」要读 D1 的每日快照，
+// 构建期没有那一天的数据，静态页会永远停在发版那天。
+// 代价是首页每次请求都过 Worker：快照读的是 KV（毫秒级），
+// 而且中间件那层边缘缓存对它同样生效，不会真的每次打 D1。
+export const prerender = false;
 ---
 
 <Layout
@@ -17,6 +25,16 @@ const THEME_COUNT = 15;
   description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
   <Hero />
+
+  {/* 今日运势、热门歌曲（2026-11-03）。两块各自独立成板块，中间留正常区块间距
+      （主人当日要求「中间不连着」）。放在 Hero 与友链之间：
+      Hero 是"这是什么站"，接下来读者最想知道的是"今天打哪首"，
+      友链这类出处信息往后排。 */}
+  <div class="fh-split">
+    {/* 运势在左（DOM 在前）：窄屏转单栏时它自然排在前，与 fortune.css 的窄屏注释一致 */}
+    <Fortune />
+    <HotBoard />
+  </div>
 
   {/* 友链 / 数据来源 / 设计参考（2026-11-01 主人要求，放在首页那条横向分隔线处）。
       位置在 Hero 与站点标识区之间：读者看完首屏、还没到落款时，

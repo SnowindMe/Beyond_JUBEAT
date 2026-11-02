@@ -129,7 +129,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
        ② 只缓存 GET/HEAD 的 200，且响应不带 Set-Cookie；
        ③ 白名单路径（只放 /songs/ 与 /recent/）。缓存是优化，任何异常都退回正常渲染。 */
   const url = new URL(context.request.url);
-  const PUBLIC_CACHE = /^\/(songs(\/|$)|recent(\/|$))/.test(url.pathname);
+  /* 【2026-11-03 首页加入白名单】/ 从此是 SSR（当日运势 + 热榜要读 D1 快照），
+     不缓存就每次请求都真打 D1 + KV，还会连带压到 miniflare/workerd 的 CPU。
+     个性化与缓存不冲突：游客的运势种子恒为 'guest'（见 Fortune.astro 的 visitor），
+     全体游客本就该看到同一份；登录态带 cookie，下面 hasSession 直接绕过缓存。 */
+  const PUBLIC_CACHE = /^\/($|songs(\/|$)|recent(\/|$))/.test(url.pathname);
   const hasSession = !!token;
   const isRead = context.request.method === 'GET' || context.request.method === 'HEAD';
 

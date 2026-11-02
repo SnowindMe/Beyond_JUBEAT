@@ -1,0 +1,426 @@
+/* 首页「今日运势 / 热门歌曲」两块（2026-11-03）
+ *
+ * 【设计计划，先写在这里，改样式前先读它】
+ *
+ * 命题：这是**街机厅的机能**，不是数据中心的图表。jubeat 的结算画面就用
+ * 高饱和纯色块 + 粗描边，机台一整墙摆着；但它**长在深色木纹底上**，
+ * 所以本块是**暗扣的机台面板**：深底、细边、冷光，靠重音色和字号立信息，
+ * 不靠白底压。
+ *
+ * 为什么不跟主题（主人 2026-11-03 定 b，2026-11-03 追加「底色白色太亮眼」）：
+ * 跟主题就要为 15 个世代各调一版，而浅色世代（knit/saucer…）本身底色就浅，
+ * 白卡贴上去正好糊成一片。固定暗色反而在**所有**世代上都成立。
+ *
+ * 配色（4 个值，全在这里，别散落）：
+ *   --fh-panel  #0a1017  面板底，比站点 --base 略抬一档，不透明度 0.72 让木纹透一点
+ *   --fh-ink    #e8f1f7  主文字
+ *   --fh-cyan   #2ee6d6  重音，只给"上升/吉"这类正向信号与刻度
+ *   --fh-hot    #ff7a4d  热力，只给名次数字与"新"
+ * 对比度（对 --fh-panel 合成底 ~#0d151d）：ink 15.2:1，hot 7.4:1，cyan 11.6:1，
+ * 全部过 AA；次级文字用 ink 的 62% 透明度，仍 ≥ 4.6:1。
+ *
+ * 字体：只换**名次**，用 Bahnschrift 窄体放大到 40px 当图形；正文跟站点系统栈。
+ *
+ * 版式：两栏等分。左栏"判决 → 依据"，右栏是表。窄屏单栏、运势在前。
+ *
+ * 自己的三个记号：① 顶部热力条按当日运势宽度变化；② 名次数字压在曲绘外侧
+ * 不上底色；③ 升降用三格刻度而不是箭头，亮几格就是动了几位。
+ */
+
+.fh {
+  --fh-panel: rgb(8 15 23 / 0.72);
+  --fh-ink: #e8f1f7;
+  --fh-cyan: #2ee6d6;
+  --fh-hot: #ff7a4d;
+  --fh-edge: rgb(232 241 247 / 0.13);
+  --fh-num: Bahnschrift, 'Bahnschrift SemiCondensed', 'DIN Alternate', 'Segoe UI', sans-serif;
+
+  position: relative;
+  margin: 0 0 42px;
+  padding: 26px 28px 24px;
+  border-radius: var(--r);
+  background: var(--fh-panel);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  backdrop-filter: blur(18px) saturate(1.1);
+  color: var(--fh-ink);
+  box-shadow: 0 0 0 1px var(--fh-edge), 0 24px 60px -30px rgb(0 0 0 / 0.85);
+  overflow: hidden;
+}
+
+/* ① 顶部热力条：宽度 = 当日运势高低，晴雨天一眼可见 */
+.fh::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  width: var(--fh-heat, 40%);
+  background: linear-gradient(90deg, var(--fh-cyan), var(--fh-hot));
+  box-shadow: 0 0 14px rgb(46 230 214 / 0.5);
+  transition: width 0.6s ease;
+}
+
+/* 面板四角各一道极短的角标，是唯一的结构装饰 */
+.fh::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  border: 1px solid transparent;
+  border-image: none;
+  box-shadow:
+    inset 0 1px 0 rgb(232 241 247 / 0.06),
+    inset 0 -1px 0 rgb(0 0 0 / 0.3);
+  border-radius: calc(var(--r) - 8px);
+}
+
+/* 两块并排、各自独立成面板（主人 2026-11-03「两个独立组件一左一右」）：
+   左右各一个完整面板，中间只留 24px 缝，不共用边框也不共用表头。
+   用 1fr 1fr 而不是写死宽度——内容区最大内宽只有 1168，写死会溢出。 */
+.fh-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.fh-split > .fh { margin-bottom: 42px; }
+
+@media (max-width: 900px) {
+  .fh-split { display: block; }
+  .fh-split > .fh + .fh { margin-top: 22px; }
+}
+
+/* 窄屏：运势在前、榜在后，单栏；分界线改成横线 */
+@media (max-width: 900px) {
+  .fh { padding: 20px 18px; }
+}
+
+
+.fh-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+.fh-hd h2 {
+  margin: 0;
+  flex: none;
+  white-space: nowrap;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.fh-hd span {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgb(232 241 247 / 0.45);
+}
+
+/* ---------------- 运势 ---------------- */
+
+.fh-verdict {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: radial-gradient(120% 140% at 0% 0%, rgb(46 230 214 / 0.12), transparent 62%);
+  box-shadow: inset 0 0 0 1px var(--fh-edge);
+}
+/* 评级图是深藏青描边的彩图，深底上会糊成一块，用冷光托出来 */
+.fh-grado {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  filter: drop-shadow(0 0 10px rgb(46 230 214 / 0.45)) drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
+}
+.fh-said {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.fh-said b {
+  font-size: 21px;
+  letter-spacing: 0.04em;
+  color: var(--fh-cyan);
+}
+.fh-said small { color: rgb(232 241 247 / 0.55); font-size: 12px; }
+
+.fh-picks,
+.fh-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fh-row { position: relative; }
+
+.fh-pick {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 0;
+  border-top: 1px solid var(--fh-edge);
+}
+.fh-pick:first-child { border-top: 0; }
+
+.fh-tier {
+  flex: none;
+  width: 34px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--fh-cyan);
+  opacity: 0.8;
+}
+
+.fh-cover {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 6px;
+  object-fit: cover;
+  background: rgb(232 241 247 / 0.08);
+  box-shadow: 0 0 0 1px rgb(232 241 247 / 0.12);
+}
+
+.fh-name {
+  min-width: 0;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.fh-name b,
+.fh-name small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fh-name b { font-size: 14px; font-weight: 600; }
+.fh-name small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
+.fh-name:hover b { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 每首自己的评级图，行尾当印章 */
+.fh-seal {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  margin-left: auto;
+  filter: drop-shadow(0 0 6px rgb(46 230 214 / 0.35));
+}
+
+/* ---------------- 榜 ---------------- */
+
+/* 视窗：一屏三条（3 × 56 = 168），超出裁掉，靠 transform 匀速上移 */
+/* 视窗高 260 = 五条（5 × 52）。写成三条时面板下半截会空出一大块，
+   看着像榜断在半途；260 与左栏齐平，顺带露出第六条的上缘，成了"下面还有"的提示。
+   高度必须 ≤ 一次回卷距离（260），否则会在顶部露出第二份副本——
+   所以行高一改，这里的数必须跟着改。 */
+.fh-hot .fh-view {
+  height: 260px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+}
+/* 视窗下方补 30px：右栏（表头 + 260 视窗）比左栏矮一截，
+   补齐让两块面板同高；回卷距离仍是 260，不受这段留白影响。 */
+.fh-hot .fh-board { padding-bottom: 30px; }
+
+.fh-list { animation: fh-roll 40s linear infinite; }
+.fh-view:hover .fh-list,
+.fh-view:focus-within .fh-list { animation-play-state: paused; }
+
+/* 滚完前 5 条（5 × 52 = 260）即回到起点：列表渲染两遍，第 6 行就是第 1 行
+   的副本，走满视窗高度正好重合，接缝看不见。 */
+@keyframes fh-roll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-260px); }
+}
+
+.fh-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+}
+
+.fh-rank {
+  flex: none;
+  width: 26px;
+  text-align: right;
+  font-family: var(--fh-num);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 700;
+  font-stretch: condensed;
+  color: var(--fh-hot);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 16px rgb(255 122 77 / 0.35);
+}
+.fh-row:nth-child(n + 4) .fh-rank { color: rgb(255 122 77 / 0.6); text-shadow: none; }
+
+/* ② 升降用三格刻度，不用箭头 */
+.fh-delta {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  width: 12px;
+  align-items: flex-end;
+}
+.fh-delta i {
+  width: 3px;
+  height: 7px;
+  border-radius: 1px;
+  background: rgb(232 241 247 / 0.18);
+}
+.fh-up i { background: var(--fh-cyan); }
+.fh-down i { background: var(--fh-hot); }
+.fh-delta.fh-up { transform: rotate(180deg); }
+.fh-flat { opacity: 0.4; }
+
+/* 刻度与「新」的共用槽：固定 22px、居中，换内容也不会把右边整段推走。
+   徽章自己缩到内容宽，由槽居中承载，曲名左沿因此恒定。 */
+.fh-slot {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  width: 22px;
+}
+/* 「新」做成描边小签而不是实心块：它是旁注，实心青会在每行最左侧
+   跟橙色的名次抢视线（名次才是行的主角）。 */
+.fh-new {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  padding: 2px 3px;
+  border-radius: 3px;
+  color: var(--fh-cyan);
+  border: 1px solid rgb(46 230 214 / 0.45);
+}
+
+/* 整块可点：链接层铺满整行 */
+.fh-row .fh-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  text-decoration: none;
+  color: inherit;
+}
+.fh-row .fh-name:focus-visible {
+  outline: 2px solid var(--fh-cyan);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.fh-txt { min-width: 0; }
+.fh-txt b,
+.fh-txt small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fh-txt b { font-size: 14px; font-weight: 600; }
+.fh-txt small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
+.fh-row:hover .fh-txt b { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 升降的文字版只给读屏 */
+.fh-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 冷启动：榜里装的是最近上架，不是热度 */
+.fh-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: var(--r-hair);
+  color: rgb(232 241 247 / 0.7);
+  background: rgb(232 241 247 / 0.06);
+}
+
+/* 尊重减少动效：停掉循环，交给用户自己滚 */
+@media (prefers-reduced-motion: reduce) {
+  .fh-list { animation: none; }
+  .fh-view { height: auto; max-height: 336px; overflow-y: auto; }
+  .fh::before { transition: none; }
+}
+
+@media (max-width: 900px) {
+  .fh-hot .fh-view { height: 168px; }
+}
+/* ---------------- 选项与面板（2026-11-03 拆分后新增） ---------------- */
+
+/* 表头右侧：服务器与难度两组段落开关。用 <button> 而不是链接——
+   面板全在文档里，切换不走 HTTP，也不丢滚动位置。 */
+.fh-ctl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.fh-seg {
+  display: flex;
+  border: 1px solid var(--fh-edge);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.fh-seg-b {
+  padding: 4px 9px;
+  border: 0;
+  background: transparent;
+  color: rgb(232 241 247 / 0.62);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.fh-seg-b + .fh-seg-b { border-left: 1px solid var(--fh-edge); }
+.fh-seg-b:hover { background: rgb(232 241 247 / 0.07); color: var(--fh-ink); }
+.fh-seg-b.is-on { background: var(--fh-cyan); color: #08121b; font-weight: 700; }
+.fh-seg-b:focus-visible { outline: 2px solid var(--fh-cyan); outline-offset: -2px; }
+.fh-seg-b[hidden] { display: none; }
+
+.fh-span { font-size: 11px; letter-spacing: 0.08em; color: rgb(232 241 247 / 0.45); }
+
+/* 难度-定数徽章：结构照曲目页的 .sc-lv .lv，但底在深色面板上，
+   所以难度色按 ~#0d151d 重新反解到 ≥4.5:1（原浅底那组直接放过来只有 2.6:1）。 */
+.fh-lv {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px 2px;
+  border-radius: var(--r-xs);
+  font-family: var(--f-data, var(--font-data));
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  background: rgb(232 241 247 / 0.08);
+}
+.fh-lv u {
+  text-decoration: none;
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+.fh-lv-bsc { color: #5ce3a6; }
+.fh-lv-adv { color: #f2c85a; }
+.fh-lv-ext { color: #ff7f76; }
+
+/* 冷启动/切换时不留空框 */
+[hidden] { display: none !important; }

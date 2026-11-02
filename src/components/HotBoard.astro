@@ -1,0 +1,126 @@
+---
+// 首页「热门歌曲」榜（2026-11-03，原 FortuneHot 拆分而来）。
+//
+// 与运势块**不连接**（主人 2026-11-03 追加「中间不连着，独立成两个板块」）：
+// 各自一个面板、各自一道顶部热力条、各自一个表头，中间留一个正常区块间距。
+//
+// 数据：读当天快照（00:05 由 cron 封好），请求里不现算名次。
+// 快照名次是**全局**排的，服务器只作"看哪一服的榜"的过滤，不做两套计票——
+// 这样一首歌在两服的名次是同一个数，不会因为切换而显得人格分裂。
+//
+// 冷启动（快照未成型）时整段换成"新曲推荐"并标「热度统计中」（主人 2026-11-03 定 a）。
+import '../styles/fortune.css';
+import { env } from 'cloudflare:workers';
+import { DIFFS, type Diff, type Svr } from '../lib/hot';
+import { byIds, poolForSrv, todaySnapshot, type PoolSong } from '../lib/hotPage';
+
+export const prerender = false;
+
+const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+const db = e.beyond_jubeat as D1Database;
+
+const snap = await todaySnapshot(e).catch(() => null);
+const ready = !!snap && !snap.seeded;
+
+/** 哪一服有曲：决定选项卡出不出 */
+const COUNT_SQL = 'SELECT SUM(CASE WHEN server_jp = 1 THEN 1 ELSE 0 END) AS jp, SUM(CASE WHEN server_cn = 1 THEN 1 ELSE 0 END) AS cn FROM songs';
+type CountRow = Record<string, number | null>;
+const counted = await db.prepare(COUNT_SQL).first<CountRow>().catch(() => null);
+const has = { jp: (counted?.jp ?? 0) > 0, cn: (counted?.cn ?? 0) > 0 };
+const SRVS = (['cn', 'jp'] as const).filter((s) => has[s]);
+
+type Row = PoolSong & { rank: number; delta: number; isNew: boolean };
+const rows = snap?.entries.slice(0, 10) ?? [];
+const songs = rows.length ? await byIds(db, rows.map((r) => r.songId)).catch(() => []) : [];
+
+/** 每服一版榜：名次沿用快照的全局名次，行内按服裁掉没谱的曲 */
+const boards: { srv: Svr; rows: Row[] }[] = SRVS.map((srv) => ({
+  srv,
+  rows: poolForSrv(songs, srv).map((s) => {
+    const meta = rows.find((r) => r.songId === s.songId)!;
+    return { ...s, rank: meta.rank, delta: meta.delta, isNew: meta.isNew };
+  }),
+})).filter((b) => b.rows.length > 0);
+
+const first = boards.find((b) => b.srv === 'jp')?.srv ?? boards[0]?.srv ?? 'jp';
+---
+
+<section class="fh fh-hot" aria-labelledby="fh-hot">
+  <div class="fh-hd">
+    <h2 id="fh-hot">热门歌曲</h2>
+    {ready && boards.length ? (
+      <div class="fh-ctl">
+        {boards.length > 1 ? (
+          <div class="fh-seg" role="group" aria-label="切换服务器">
+            {boards.map((b) => (
+              <button type="button" class={`fh-seg-b${b.srv === first ? ' is-on' : ''}`} data-srv={b.srv} aria-pressed={b.srv === first ? 'true' : 'false'}>
+                {b.srv === 'jp' ? '日服' : '国服'}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <span class="fh-span">最近 7 天 · 前 10 名</span>
+      </div>
+    ) : (
+      <span>待统计</span>
+    )}
+  </div>
+
+  {ready && boards.length ? (
+    boards.map((b) => (
+      <div class="fh-board" data-board={b.srv} hidden={b.srv !== first}>
+        {/* 渲染两遍、走完前 5 条（= 视窗高度）即回卷，接缝看不见；悬停与聚焦都停 */}
+        <div class="fh-view">
+          <ul class="fh-list">
+            {b.rows.concat(b.rows.slice(0, 5)).map((s, i) => (
+              <li class="fh-row" key={i}>
+                <span class="fh-rank">{s.rank}</span>
+                {/* 升降刻度与「新」共用一个 22px 槽：谁在都占同样的位，曲名不会跳 */}
+                <span class="fh-slot" aria-hidden="true">
+                  {s.isNew ? (
+                    <span class="fh-new">新</span>
+                  ) : (
+                    <span class={`fh-delta ${s.delta > 0 ? 'fh-up' : s.delta < 0 ? 'fh-down' : 'fh-flat'}`}>
+                      <i /><i /><i />
+                    </span>
+                  )}
+                </span>
+                <span class="fh-sr">
+                  {s.isNew ? '新进榜' : s.delta > 0 ? `上升 ${s.delta} 位` : s.delta < 0 ? `下降 ${-s.delta} 位` : '名次不变'}
+                </span>
+                <a class="fh-name" href={`/songs/${s.songId}/`} tabindex={i < b.rows.length || i === 0 ? undefined : -1}>
+                  <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
+                  <span class="fh-txt">
+                    <b>{s.title}</b>
+                    <small>{s.artist}</small>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    ))
+  ) : (
+    <p class="fh-note">热度统计中，榜内是最近上架的曲目。</p>
+  )}
+</section>
+
+<script>
+  // 与运势块同构：只切显示。榜单用 hidden 切，不重排两版数据
+  document.querySelectorAll<HTMLElement>('.fh-hot .fh-ctl').forEach((ctl) => {
+    ctl.addEventListener('click', (ev) => {
+      const btn = (ev.target as HTMLElement).closest<HTMLElement>('[data-srv]');
+      const srv = btn?.dataset.srv;
+      if (!srv) return;
+      document.querySelectorAll<HTMLElement>('.fh-hot .fh-board').forEach((b) => {
+        b.hidden = b.dataset.board !== srv;
+      });
+      ctl.querySelectorAll<HTMLElement>('[data-srv]').forEach((b) => {
+        const isOn = b.dataset.srv === srv;
+        b.classList.toggle('is-on', isOn);
+        b.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+      });
+    });
+  });
+</script>

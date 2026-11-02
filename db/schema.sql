@@ -135,3 +135,27 @@ CREATE TABLE role_requests (
 -- 同一用户同时只允许一条待审申请（部分索引：D1/SQLite 都支持 WHERE 子句）
 CREATE UNIQUE INDEX idx_role_req_pending ON role_requests(user_id) WHERE state = 'pending';
 CREATE INDEX idx_role_req_state ON role_requests(state, created_at DESC);
+
+-- 热门榜埋点（2026-11-03）。增量脚本是同内容的 db/migrate-hot.sql，线上只跑那个。
+-- 「一个访客对一首歌一个日历日一行」= 去重即表约束，热度口径为独立听众数。
+DROP TABLE IF EXISTS hot_hits;
+CREATE TABLE hot_hits (
+  day        TEXT NOT NULL,
+  song_id    TEXT NOT NULL,
+  visitor    TEXT NOT NULL,
+  ip_hash    TEXT,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (day, song_id, visitor)
+);
+CREATE INDEX idx_hot_hits_day_song ON hot_hits(day, song_id);
+CREATE INDEX idx_hot_hits_day_ip ON hot_hits(day, ip_hash);
+
+-- 每日快照（2026-11-03）。增量脚本是同内容的 db/migrate-hot.sql，线上只跑那个。
+CREATE TABLE hot_snapshots (
+  date       TEXT PRIMARY KEY,
+  from_day   TEXT NOT NULL,
+  to_day     TEXT NOT NULL,
+  entries    TEXT NOT NULL,
+  seeded     INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
