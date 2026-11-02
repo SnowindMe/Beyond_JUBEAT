@@ -98,7 +98,7 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 > 4. **触达范围**：「曲目库」返回 52×26→约 52×46、songId 复制按钮 66×15→约 66×29，都用「加大内边距 + 等量负 margin」实现，排版位置不变。播放进度条原本就有 `::before inset:-10px` 的 28px 命中区，**审计时误判过**——量命中区要看伪元素，不能只量元素盒子。
 
 > **2026-11-02 登录/注册收口（v1.60.1）**——补掉审计里剩下的两条 P3：
-> 1. **表单居中**：login/register 的 `<section class="band">` 加 `is-auth`，`auth.css` 里 `@media (min-width:721px)` 给 `.band.is-auth .band-h` / `.band.is-auth .panel` 统一 `max-width:520px` + `margin-inline:auto`。窄屏不受影响（本来就是满宽堆叠）。
+> 1. **表单居中**：login/register 的 `<section class="band">` 加 `is-auth`，`auth.css` 里 `@media (min-width:721px)` 里页头与面板都 `margin-inline:auto`；页头 `max-width:460px` 与表单同宽同左缘，面板 `max-width:calc(460px + 2 * clamp(16px,2vw,24px))`——`.panel` 的 padding 是随视口变的 clamp，写死一个数（先写 520）会让表单右侧留一条 12px 的缝，改成从表单宽度加回内边距就不会。窄屏不受影响（本来就是满宽堆叠）。实测 1440 视口：面板 466–974、表单 490.8–949.2，主栏中心 720。
 > 2. **Turnstile 跟随站点主题**：原来用 `data-theme="auto"`，那是跟**系统**深浅色走，而本站主题是用户在世代的 16 个主题里选的，两者经常不一致（深色主题里嵌一块白卡片）。改成 `render=explicit` 手动渲染：读 `getComputedStyle(document.documentElement).colorScheme` → 传 `theme: light|dark`；`MutationObserver` 盯 `html[data-g]`（切世代）变了就 `turnstile.remove()` 后按新主题重渲染。`color-scheme` 是本站明暗的唯一权威（见 `theme.css`），不要另立判断依据。
 >
 > 附带说明：本机 `wrangler dev` 起不来（workerd 在临时目录建目录被拒），这两条只能 push 后线上实测。
