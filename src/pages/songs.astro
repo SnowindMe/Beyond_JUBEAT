@@ -1872,6 +1872,25 @@ const TYPES = [
             tmp.innerHTML = html.trim();
             var node = tmp.firstElementChild;
             if (!node) throw new Error('frag empty');
+            /* 【2026-11-03 修「打字一快就把没筛选的结果也带上来」】
+               片段落地时页面可能已经有搜索词了，但它此刻是「全量、未筛选」的。
+               调用方在 loadFrag 之后才 apply，而这里先写进 DOM，下一帧就会画出来 ——
+               实测快速连打时，saucer/prop/Qubell 等块会带着 201 首、121 首整块闪一下，
+               屏幕上全是 bass 搜不到的曲。所以先就地按当前条件筛一遍再插入，
+               逐张卡调同一个 matchCard，判据不另写一份。 */
+            if (hasFilters()) {
+              var srvOfNode = node.getAttribute('data-srv') || 'jp';
+              var incoming = node.querySelectorAll('.sc-card');
+              var kept = 0;
+              for (var ci = 0; ci < incoming.length; ci++) {
+                var okc = matchCard(incoming[ci], srvOfNode);
+                incoming[ci].hidden = !okc;
+                if (okc) kept++;
+              }
+              node.hidden = kept === 0;
+              var cntEl = node.querySelector('.sc-gen-h i');
+              if (cntEl) cntEl.textContent = kept + ' 首';
+            }
             ph.parentNode.replaceChild(node, ph);
             // 新块里的卡片立刻套上当前排序，否则滚下去看到的是服务端默认序
             sortCards(node.querySelectorAll('.sc-card'));
