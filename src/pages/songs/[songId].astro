@@ -625,7 +625,10 @@ const metaFoot: Meta[] = song
       var fs = parseFloat(getComputedStyle(btn).fontSize);
       if (window.innerWidth <= 700) {
         var guardM = 0;
-        while (countLines(btn) > 2 && fs > 13 && guardM < 60) {
+        /* 【坑·2026-11-02】原来写的是 fs > 13：循环体先减再判断，
+           于是最后一档落在 12.125px（比下限还小 1px 的零头）。
+           改成「再减 1 之后仍 ≥ 下限」才继续减，最低正好停在 13px。 */
+        while (countLines(btn) > 2 && fs - 1 >= 13 && guardM < 60) {
           fs -= 1;
           btn.style.fontSize = fs + 'px';
           guardM++;
@@ -635,7 +638,7 @@ const metaFoot: Meta[] = song
       }
       var avail = wrap.clientWidth;
       var guard = 0;
-      while (wrap.scrollWidth > avail + 1 && fs > 20 && guard < 80) {
+      while (wrap.scrollWidth > avail + 1 && fs - 1 >= 20 && guard < 80) {
         fs -= 1;
         btn.style.fontSize = fs + 'px';
         guard++;
@@ -654,7 +657,7 @@ const metaFoot: Meta[] = song
       if (window.innerWidth > 700) return;
       var fs = parseFloat(getComputedStyle(a).fontSize);
       var guard = 0;
-      while (a.scrollWidth > a.clientWidth + 1 && fs > 12 && guard < 40) {
+      while (a.scrollWidth > a.clientWidth + 1 && fs - 1 >= 12 && guard < 40) {
         fs -= 1;
         a.style.fontSize = fs + 'px';
         guard++;
