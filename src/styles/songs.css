@@ -47,7 +47,7 @@
     gap: 6px;
     flex-wrap: wrap;
 }
-/* 【2026-10-28 显示限时曲】开关��与 .sc-chip 同高（44px 触控），
+/* 【2026-10-28 显示限时曲】开关与 .sc-chip 同高（44px 触控），
    但形态是"勾选框 + 文字"，不是一个选项片——它不参与互斥。
    勾选框用系统控件，不重画：这个开关不承担品牌感，自定义反而容易做坏可访问性。 */
 .sc-toggle {
@@ -699,8 +699,47 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
      · 曲名放大到 clamp(30, 4.4vw, 56)
    曲绘不能再大了：1312 张里 91.8% 原始只有 144-176px，再放大就糊。 */
 .sd {
+    /* 【2026-11-03 主人「给标记一套上一层容器限制」+「更改分辨率曲绘容易溢出」】
+       旧问题两件：①唱片以 left:-100px 挂在 .sd-cover 上、cover 又在 .sd-body 的 padding 里，
+       唱片**必然**探出面板左缘（实测 1905 宽出 43px、720 宽出 59px），全靠页面留白兜着，
+       一旦收窄就捅到视口外；②面板本身没有外层约束，任何元素都能往外跑。
+       现在由外层容器 .sd-shell 掌住：左侧留出 --sd-gutter（= 唱片实际悬出量）装下它，
+       再 overflow:clip 收口，任何分辨率下曲绘与唱片都不会跑到板外。
+       宽屏用负 margin 把这条 gutter 抵消掉 —— 面板位置与改动前逐像素一致，
+       只在确实没有余量的窄屏才真的把面板往右推。
+       另外悬出量本身也随宽度收：屏幕越窄露得越少，免得唱片把右栏挤没。 */
+    --sd-disc-out: 100px;
+    --sd-cover-indent: 18px;
+    /* gutter = 唱片真正探出面板的量 = 悬出量 - 封面缩进 - 面板内边距。
+       内边距是 clamp，所以这个值随宽度变；为负数（窄屏唱片整个落在面板内）
+       时取 0，否则 padding-left 拿到负值会被丢掉。 */
+    --sd-gutter: max(0px, calc(var(--sd-disc-out) - var(--sd-cover-indent) - clamp(22px, 2.8vw, 38px)));
     max-width: 1180px;
     margin: 0 auto;
+}
+/* 容器限制层：只负责横向装住悬出的唱片 + 收口，不参与排版语义。
+   clip 而不是 hidden —— hidden 会变成滚动容器、并在某些浏览器里吃掉焦点环。 */
+.sd-shell {
+    padding-left: var(--sd-gutter);
+    margin-left: calc(-1 * var(--sd-gutter));
+    overflow: clip;
+}
+/* 悬出量分档收缩：100px（露出半个盘）只在宽屏成立。
+   越窄留白越少，唱片必须让位给曲名与定数条，露出量随之递减。
+   每个档位的值是【实测】定的，不是拍脑袋：该宽度下「曲绘左缘 - 视口左缘」
+   只够铺开 --sd-cover-indent 加一点安全边距，再多就伸到视口外。
+   实测余量（改前）：1340→73px、1200→48、1000→33、860→28、760→24、
+   700→22（此档起唱片已隐藏，见下）。
+   注意 left 与 gutter 都读同一个 --sd-disc-out，不另写一份数字。 */
+@media (max-width: 1420px) { .sd { --sd-disc-out: 74px; } }
+@media (max-width: 1260px) { .sd { --sd-disc-out: 53px; } }
+@media (max-width: 1080px) { .sd { --sd-disc-out: 40px; } }
+@media (max-width: 930px)  { .sd { --sd-disc-out: 30px; } }
+@media (max-width: 800px)  { .sd { --sd-disc-out: 22px; } }
+@media (max-width: 700px) {
+    /* 窄屏压根不画唱片（见下 .sd-body 媒体查询里的 .sd-disc{display:none}），
+       gutter 没有东西要装，清零免得白白把面板往右推。 */
+    .sd { --sd-gutter: 0px; }
 }
 /* 底板容器：两栏 + 底部横向条用 grid-template-areas 排。
    之前 .sd-body 直接是两栏网格，加底部条后要重排——
@@ -863,8 +902,10 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
 .sd-cover {
     position: relative;
     flex: none;
-    /* 给左侧露出的唱片留出空间，否则它会顶到面板内边距外 */
-    margin-left: 18px;
+    /* 给左侧露出的唱片留出空间，否则它会顶到面板内边距外。
+       数值提到 .sd 的 --sd-cover-indent 上——它同时参与 --sd-gutter 的算式，
+       两处各写一份会让容器留白与封面缩进悄悄失配。 */
+    margin-left: var(--sd-cover-indent, 18px);
     width: 208px;
 }
 /* 唱片：黑胶同心圆。用 repeating-radial-gradient 画纹路，比多张图省事也清晰。
@@ -878,7 +919,9 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
        之前的 -132 露出 66%，明显过了——主人反馈「太出外面了」。
        垂直仍居中：top:50% + margin-top 半个高度
        （不写 translateY(-50%)，那个会和旋转层的 transform 打架）。 */
-    left: -100px;
+    /* 悬出量读 --sd-disc-out（见 .sd）—— 窄屏会分档收小，
+       这里再写一份 -100 就跟容器留的 gutter 不同步，唱片会被 clip 切掉。 */
+    left: calc(-1 * var(--sd-disc-out, 100px));
     top: 50%;
     width: 200px;
     height: 200px;
@@ -1606,6 +1649,8 @@ html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="
 }
 
 @media (max-width: 700px) {
+    /* gutter 已在上面 .sd 那段媒体查询里清零（那里连 --sd-disc-out 的档位一起管），
+       这里不再重复写一遍，免得两处数值各自漂移。 */
     .sd-body {
         /* 【2026-10-29 主人「移动端视图可以不用唱片，直接左边图片右边信息」】
            由"上下堆叠"改成"图片在左、信息在右"的两栏：

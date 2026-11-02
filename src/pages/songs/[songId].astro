@@ -285,6 +285,12 @@ const metaFoot: Meta[] = song
     {/* 顶部不再是「大圆角玻璃面板里塞一堆小方盒」，而是两栏唱片页式布局：
         左窄栏放曲绘与硬数据（像唱片封套背签），右栏让曲名与定数占据版面。
         曲绘原图只有 144px，放大必糊——所以不追求大图，做成贴合尺寸的实物感封面。 */}
+    {/* 【2026-11-03 主人「给标记一套上一层容器限制」】面板外面再套一层容器 .sd-shell：
+        唱片是以 left:-100px 挂在 .sd-cover 上的，cover 又坐在面板内边距里，
+        所以唱片必然探出面板左缘 40+px；面板原本 overflow:visible，探出的部分直接跑到板外。
+        交外层容器掌住：左侧预留 --sd-gutter 把悬出量吃进来，再 overflow:clip 兜底。
+        head 与 body 一起放进来，返回/面包屑才对得上面板左缘。 */}
+    <div class="sd-shell">
     <div class="sd-head">
       <a class="sd-back" href="/songs/">曲目库</a>
       <span class="sd-sep" aria-hidden="true"></span>
@@ -531,6 +537,7 @@ const metaFoot: Meta[] = song
           ))}
         </dl>
       ) : null}
+    </div>
     </div>
   </section>
   )}
