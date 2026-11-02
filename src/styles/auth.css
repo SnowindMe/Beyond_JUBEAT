@@ -16,9 +16,17 @@
 @media (min-width: 721px) {
   .band.is-auth .band-h,
   .band.is-auth .panel {
-    max-width: 520px;
     margin-left: auto;
     margin-right: auto;
+  }
+  /* 页头与表单都收敛到 460 这一列，两者左缘对齐 */
+  .band.is-auth .band-h {
+    max-width: 460px;
+  }
+  /* 面板比表单宽出左右内边距（.panel 的 padding 是 clamp(16px,2vw,24px)，随视口变），
+     这样表单正好铺满面板内容区——写死 520 会在右侧留下一条 12px 的缝。 */
+  .band.is-auth .panel {
+    max-width: calc(460px + 2 * clamp(16px, 2vw, 24px));
   }
 }
 
