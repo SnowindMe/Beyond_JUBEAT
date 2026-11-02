@@ -69,7 +69,7 @@ const freshPicks = ready ? [] : await (async () => {
 /** 默认组合：日服优先（站点主数据是日服，热榜块的首选也是日服，两块得一致）；
  *  难度取该服最难的可用项。SRVS 的排序（国服在前）只用于选项卡顺序，不能拿来当默认。 */
 const firstSrv = (panels.find((p) => p.srv === 'jp')?.srv ?? panels[0]?.srv ?? 'jp') as Svr;
-const firstDiff = (panels.find((p) => p.srv === firstSrv)?.diff ?? 'ext') as Diff;
+const firstDiff = ([...panels].reverse().find((p) => p.srv === firstSrv)?.diff ?? 'ext') as Diff;
 
 const TIER_LABEL: Record<string, string> = { sediment: '沉淀', balance: '均衡', challenge: '挑战' };
 /** 评级 → 分数中位（只用来算热力条宽度，不参与评级判定） */
