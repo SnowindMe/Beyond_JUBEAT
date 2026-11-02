@@ -1,19 +1,17 @@
 ---
-// 首页 · 友链 / 数据来源 / 设计参考（2026-11-01 主人要求）
-// 「在黄线处添加一个div，用来存放友链，数据来源，设计参考的网址」→ 后续「小字解释不用了」「做美观一些」「可以加图标」
+// 首页 · 相关站点：友链 / 数据来源 / 设计参考（2026-11-01 主人要求，2026-11-02 改为胶囊容器）
+// 主人原话：「在黄线处添加一个div，用来存放友链，数据来源，设计参考的网址」
+//        → 「小字解释不用了」「做美观一些」「可以加图标」
+//        → 「相关站点这样设计太占地方了，能否将站点设计成一个个小胶囊放进一个容器里展示（友链胶囊就设置成金色）」
 //
-// 位置：Hero 与 brandblock 之间。
-//
-// 【设计取向】这是索引性质的区块，不是营销内容：
-//   · 去掉所有说明小字（主人明确要求）——只留「名字」与图标，
-//     读者看链接名就知道是什么，解释反而是噪音；
-//   · 图标承担「这是什么类型站点」的识别，替代了被删掉的那行小字；
-//   · 每条是一行「图标 + 名字」，靠行高与悬停底色构成可点的目标，不套卡片边框；
-//   · 三组用竖线分隔（结构即信息），组标题压到最小。
+// 【设计取向】这是索引性质的区块，读者只想快点找到「去哪查资料」：
+//   · 一个容器收三组，每组一行：标签 + 胶囊流（原先是三栏竖清单，11 条各占 30px 行）；
+//   · 胶囊 = 图标 + 名字，横向 wrap，整块高度从约 250px 降到约 150px；
+//   · 友链是全块唯一的彩色强调（金色）——它是最主要的出口，其余两组让位给它；
+//   · 没有网址的条目用虚线胶囊（.links-nolink），不做点不动的死链。
 //
 // 【图标规范】与站内既有 SVG 一致：viewBox 24×24、stroke 描边、fill:none、
-// aria-hidden（名字已在旁边，图标不重复朗读）。
-// 不用 emoji、不引入图标库——本区块只有 11 个图标，手写这 11 个路径比多一个依赖划算。
+// aria-hidden（名字已在旁边，图标不重复朗读）。不引入图标库。
 type Link = { name: string; url: string; icon: IconKey };
 
 /** 图标 key → 路径数据。按站点性质分：谱面站用网格、wiki 用书本、视频站用播放、官方站用徽章。 */
@@ -29,10 +27,12 @@ const ICONS = {
 } as const;
 type IconKey = keyof typeof ICONS;
 
-const GROUPS: { key: string; title: string; links: Link[] }[] = [
+/** gold: 这组的胶囊用金色强调（目前只有友链）。 */
+const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = [
   {
     key: 'friends',
     title: '友链',
+    gold: true,
     // 【2026-11-01 主人给定，原样照抄】· JUBEAT VIEWER · Jubeat2Malody · Jubeat LV.10 SSS难易度表
     links: [
       { name: 'JUBEAT VIEWER', url: 'https://ub.thregren.world/', icon: 'chart' },
@@ -63,8 +63,6 @@ const GROUPS: { key: string; title: string; links: Link[] }[] = [
     //   · 落雪咖啡屋 https://maimai.lxns.net/
     //   · Union https://union.godserver.cn/
     //   · 音游街小程序（小程序，无 URL）
-    // 「音游街」是小程序、没有网址，所以不用 <a> 而是纯文本条目，
-    // 避免出现一个点不动的链接（那比没有更让人恼火）。
     links: [
       { name: 'jubeat（ユビート）', url: 'https://p.eagate.573.jp/game/jubeat/mobile/', icon: 'badge' },
       { name: 'DXRating', url: 'https://dxrating.net/', icon: 'chart' },
@@ -79,11 +77,11 @@ const GROUPS: { key: string; title: string; links: Link[] }[] = [
 
 <section class="links" aria-labelledby="linksTitle">
   <h2 class="links-title" id="linksTitle">相关站点</h2>
-  <div class="links-grid">
+  <div class="links-box">
     {GROUPS.map((g) => (
-      <div class="links-col">
-        <p class="links-col-t">{g.title}</p>
-        <ul class="links-list">
+      <div class="links-row">
+        <p class="links-row-t">{g.title}</p>
+        <ul class="links-pills">
           {g.links.map((l) => {
             const ico = (
               <svg class="links-ico" viewBox="0 0 24 24" aria-hidden="true"
@@ -93,15 +91,16 @@ const GROUPS: { key: string; title: string; links: Link[] }[] = [
                 <path d={ICONS[l.icon]} />
               </svg>
             );
+            const cls = 'links-pill' + (g.gold ? ' is-gold' : '');
             // 【空 url = 不是网页，只有名字】「音游街」是小程序，没有网址。
             // 渲染成 <a> 会得到一个点不动的死链，比没有更让人恼火；
-            // 用纯文本 + 稍淡的颜色，读者一看就知道「这个不是链接」。
+            // 用虚线胶囊 + 淡字色，读者一看就知道「这个不是链接」。
             return (
               <li>
                 {l.url ? (
-                  <a href={l.url} target="_blank" rel="noopener">{ico}<span>{l.name}</span></a>
+                  <a class={cls} href={l.url} target="_blank" rel="noopener">{ico}<span>{l.name}</span></a>
                 ) : (
-                  <span class="links-part">{ico}<span>{l.name}</span></span>
+                  <span class={cls + ' links-nolink'}>{ico}<span>{l.name}</span></span>
                 )}
               </li>
             );

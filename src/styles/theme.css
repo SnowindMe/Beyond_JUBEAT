@@ -1557,21 +1557,20 @@ html[data-g="saucerfulfill"] .sub {
    原来这套 logo + 品牌字 + Enjoy Yourself 挤在页脚右下角，尺寸 13~18px 很小。
    主人要求：页脚去掉它，首页做一个居中放大的 div 显示。
    沿用 .mark 的世代字体与 ↑ ♪ ~ 符号处理，只把尺寸放大、整体居中。 */
-/* ---------- 首页 · 友链 / 数据来源 / 设计参考（2026-11-01 主人要求） ----------
-   位置：Hero 与站点标识区之间（主人说的「黄线处」）。
+/* ---------- 首页 · 相关站点（2026-11-02 改为胶囊容器） ----------
+   位置：Hero 与站点标识区之间（主人 2026-11-01 说的「黄线处」）。
 
-   【2026-11-01 第二版，按主人三条意见重做】
-   「小字解释不用了」「做美观一些」「可以加图标」。
+   【2026-11-02 主人第三版】原话：「相关站点这样设计太占地方了，能否将站点设计成
+   一个个小胶囊放进一个容器里展示（友链胶囊就设置成金色）」。
+   此前是「三栏 × 每栏一列链接行」的清单：11 条链接各占一行 30px，
+   整块高度约 250px，且折两栏时还会剩半行空位。
+   现在：一个容器里三行，每行 = 组标签 + 该组的胶囊流式排布。
+     · 胶囊 30px 高、圆角 999、图标 14px + 名字，横向 wrap；
+     · 友链用金色胶囊（本区块唯一的彩色强调，因为它是最主要的出口）；
+     · 数据来源 / 设计参考用中性描边胶囊，视觉让位给友链；
+     · 无网址的条目（音游街小程序）用虚线描边 + 更淡的字色，一眼看出不是链接。
+   高度从约 250px 压到约 150px，且不再有任何断点下的「空半行」问题。 */
 
-   设计取向：这是**索引性质的区块**，读者只想快点找到「去哪查资料」，所以：
-     · 删掉全部说明小字 —— 链接名本身已经说明是什么，解释是噪音；
-     · 图标接管「这是什么类型的站」这一层识别，替代被删掉的那行小字；
-     · 每条做成「图标 + 名字」的一行，用行内悬停底色 + 左移构成点击反馈，
-       而不是给每条套边框（11 条框子会糊成一片网格，反而更难扫）；
-     · 三组之间用竖线分隔（结构即信息），组标题压到最小号。
-
-   为什么不用卡片：卡片会把 11 条链接拆成 11 个块，扫读成本翻倍；
-   这是清单，不是功能入口。 */
 .links {
     /* 【2026-11-01 主人「间隔有点宽，缩小一些」】
        线上实测上方空白 = margin 58 + padding 30 = 88px，确实比 Hero 与 brandblock
@@ -1579,23 +1578,19 @@ html[data-g="saucerfulfill"] .sub {
        区块之间靠留白分节，但这个块是「附属索引」，不该自带章节级气口。 */
     margin: clamp(14px, 1.8vw, 24px) 0 0;
     padding-top: clamp(12px, 1.5vw, 18px);
-    /* 【2026-11-01 主人「这条细线可以不用」】上缘那条 1px 分隔线去掉。
-       去除理由（也是设计上的）：它上方是 Hero、下方是站点标识区，
-       两块本来就有足够留白（margin-top 30-58px）把语义分开；
-       再加一条横贯整栏的线，反而像「表格分隔」而不是章节开头。
-       区块的起点由「相关站点」这个组标题承担就够了。 */
 }
-/* 组标题：小号、宽字距、次级色。它只是「这一栏叫什么」的标签，不抢注意力。
-   右上角一条渐隐细线把标题行收束成「一栏的开头」，而不是孤零零一个词。 */
+/* 组标题：小号、宽字距、次级色。它只是「这一栏叫什么」的标签，不抢注意力。 */
 .links-title {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 0 0 clamp(14px, 1.8vw, 18px);
+    margin: 0 0 clamp(10px, 1.2vw, 14px);
     font-family: var(--font-label);
-    font-size: 11px;
+    /* 【2026-11-02 主人「【相关站点】之类的小标题字再大一些」】11 → 12.5px，
+       字距同时从 0.16em 收到 0.13em：字号变大后原来的宽字距会把「相关站点」拉散。 */
+    font-size: 12.5px;
     font-weight: 700;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
     color: var(--ink3);
     white-space: nowrap;
@@ -1606,164 +1601,150 @@ html[data-g="saucerfulfill"] .sub {
     height: 1px;
     background: linear-gradient(to right, color-mix(in srgb, var(--edge) 90%, transparent), transparent);
 }
-.links-grid {
+/* 容器：把三组胶囊收进一个框里，框本身很轻（1px 描边 + 极淡填充），
+   目的是「收拢」而不是「再糊一层卡片」。 */
+.links-box {
     display: grid;
-    /* 【2026-11-02 改等宽】原来是 1.05fr 1.5fr 1.05fr（按条数 3/7/5 给的比），
-       但按条数分宽这件事经不起实测：1440 下三栏实得 319/455/319，
-       而三栏里最长的链接名只有 161 / 152 / 119px —— 中间那栏多出来的 300px
-       全是空，换来的只是两条竖线落在 492 / 985 这种没有规律的位置。
-       等宽之后三栏 363，竖线落在 128 / 531 / 934 的等距节奏上，
-       最长的名字（161）离栏宽还差 200px，不存在折行风险。
-       真要防折行靠的是 minmax(0,1fr)，不是给某一栏加权。 */
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0 clamp(18px, 2.6vw, 40px);
+    gap: 12px;
+    padding: clamp(12px, 1.4vw, 16px) clamp(12px, 1.6vw, 18px);
+    border: 1px solid color-mix(in srgb, var(--edge) 85%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
-.links-col + .links-col {
-    padding-left: clamp(18px, 2.6vw, 40px);
-    border-left: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+/* 一行 = 组标签（固定 76px，让三组胶囊左缘对齐）+ 胶囊流。
+   标签只在宽屏侧置；窄屏改到上方（见底部媒体查询）。 */
+.links-row {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 8px 14px;
+    align-items: start;
 }
-.links-col-t {
-    margin: 0 0 8px;
+.links-row-t {
+    padding-top: 5px;
     font-family: var(--font-label);
-    font-size: 11.5px;
+    /* 【2026-11-02 主人「小标题字再大一些」】11.5 → 13px（比胶囊里的 12.5 略大，
+       让「组」这一层压得住下面的条目）。padding-top 相应从 6 收到 5，保持与首枚胶囊的视觉中线对齐。 */
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.05em;
-    color: var(--ink2);
+    color: var(--ink3);
+    white-space: nowrap;
 }
-.links-list {
+.links-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
     margin: 0;
     padding: 0;
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
 }
-/* 一条 = 图标 + 名字。整行是热区（不只是文字），鼠标移到行内任意处都能点中。
-   负 margin 让悬停底色略微溢出文字边界，读起来像「一行被点亮」而不是「文字变色」。 */
-.links-list a {
-    display: flex;
+/* 胶囊本体：1px 描边 + 极淡填充，悬停时描边转主题色并轻微抬起。
+   只动 color/border/transform（合成层），150-250ms 内给到反馈。 */
+.links-pill {
+    display: inline-flex;
     align-items: center;
-    gap: 9px;
-    margin: 0 -7px;
-    padding: 6px 7px;
-    border-radius: 5px;
-    font-size: 13px;
+    gap: 7px;
+    height: 30px;
+    /* 左右 11px 是实测出来的：12px 时「数据来源」7 枚在 1440 下差一点点放不下，
+       会掉一枚到第二行，看起来像被切断；11px + gap 7px 恰好一行收得下。 */
+    padding: 0 11px;
+    border: 1px solid color-mix(in srgb, var(--edge) 100%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    font-size: 12.5px;
     font-weight: 600;
-    line-height: 1.35;
-    color: var(--ink);
+    line-height: 1;
+    color: var(--ink2);
     text-decoration: none;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
 }
-.links-list a:hover {
+.links-pill:hover {
+    color: var(--ink);
+    border-color: color-mix(in srgb, var(--acc) 70%, var(--edge));
     background: color-mix(in srgb, var(--acc) 12%, transparent);
-    color: var(--acc-ink);
-    transform: translateX(2px);
+    transform: translateY(-1px);
 }
-.links-list a:focus-visible {
+.links-pill:focus-visible {
     outline: 2px solid var(--acc-ink);
-    outline-offset: 1px;
-    border-radius: 5px;
+    outline-offset: 2px;
 }
-/* 图标：固定 15px 方形占位，颜色跟着链接走；默认压一档透明度，
-   悬停时随文字一起变主题色。所有图标同一描边宽度，排列才不会参差。 */
+/* 【友链金色】：整个区块唯一用彩色强调的一组。
+   【2026-11-02 第二版：改成实心金底 + 深字】
+   第一版是「金色文字 + 12% 金色底」，在深色主题下没问题，但在 knit 这类
+   浅色/亮黄底主题上，金字的对比度几乎为零（本地实测截图：JUBEAT VIEWER 几乎看不见）。
+   原因是胶囊的文字色只能跟 --ink 走，而 --ink 并不知道它背后是一张亮黄照片。
+   实心金底 + #2a2110 深褐字就不受背景影响：金 #e8b64a 与深褐的对比度约 8.6:1，
+   在任何主题的底图上都成立，而且「金色胶囊」这件事也才真正做出来。 */
+.links-pill.is-gold {
+    color: #2a2110;
+    border-color: color-mix(in srgb, #e8b64a 88%, #ffffff);
+    background: #e8b64a;
+}
+.links-pill.is-gold:hover {
+    color: #211a0c;
+    border-color: #fff0c2;
+    background: #f2c96a;
+}
+.links-pill.is-gold .links-ico {
+    color: color-mix(in srgb, #2a2110 78%, #8a6a1e);
+    opacity: 1;
+}
+/* 无网址的条目（如「音游街小程序」）：同一套版式，但虚线描边 + 更淡的字色，
+   读者扫过去就知道「这个不是链接」，不会去点它（也不做死链）。 */
+.links-nolink {
+    cursor: default;
+    border-style: dashed;
+    color: var(--ink3);
+    background: transparent;
+}
+.links-nolink:hover {
+    transform: none;
+    color: var(--ink3);
+    border-color: color-mix(in srgb, var(--edge) 100%, transparent);
+    background: transparent;
+}
+/* 图标：固定 14px 方形占位，颜色跟着胶囊走；所有图标同一描边宽度，排列才不参差。 */
 .links-ico {
     flex: none;
-    width: 15px;
-    height: 15px;
+    width: 14px;
+    height: 14px;
     color: var(--ink3);
     opacity: 0.9;
-    transition: color 0.15s ease, opacity 0.15s ease;
+    transition: color 0.18s ease, opacity 0.18s ease;
 }
-.links-list a:hover .links-ico {
-    color: var(--acc-ink);
+.links-pill:hover .links-ico {
+    color: var(--ink);
     opacity: 1;
 }
 /* 播放类图标是实心三角，视觉重量比描边图标重，缩一档找齐 */
 .links-ico[fill='currentColor'] {
-    width: 13px;
-    height: 13px;
+    width: 12px;
+    height: 12px;
 }
-/* 无网址的条目（如「音游街小程序」）：与链接行同一套版式，但不可点、颜色压淡，
-   读者扫过去就知道「这个不是链接」，不会去点它。 */
-.links-part {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin: 0 -7px;
-    padding: 6px 7px;
-    border-radius: 5px;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.35;
-    color: var(--ink2);
-    opacity: 0.72;
-    cursor: default;
-}
-
-/* 【2026-11-02 删掉「中号屏折两栏」这一档】主人截图反馈：「缩放到一定程度，
-   【相关站点】变成两列，观感不是很好」——三组折成 2 栏后必然剩一个空位：
-   友链(1,1) 数据来源(1,2) 设计参考(2,1)，第 2 行右半边整块空着，
-   左栏比右栏长出一大截。而实测三栏真正撑不住是在 780px 以下
-   （三列 225px 时所有链接仍是单行；到 741px、列宽 213px 才有链接折行），
-   中间那一档（620~780）折两栏反而最难看。
-   现在只有两态：≥800px 三栏等宽，<800px 三组各自成行（组内两列）。
-   两条链路都实测过折行：780px 三列 225px 零折行；700px 堆叠时组内两列每列 332px。 */
-/* 窄屏（<800px）：三组各自独占一行（纵向堆叠），但**每组内部的链接排成两列**。
-   【2026-11-01 主人「移动端的相关站点内的网址放两列」】
-   分组顺序在任何断点下都必须与源码顺序一致（友链 → 数据来源 → 设计参考），
-   不许用 order / grid-row 花活重排——2026-11-01 曾被实测截图抓出顺序不一致。
-   之前这里是单列，12 条链接要从上到下滚很久；改成两列后列表高度砍半，
-   在手机上更好扫。注意是「每组内部两列」，不是把三组排成两栏——
-   三组本身仍按行堆叠，组标题各自带一条分隔线。 */
-@media (max-width: 799px) {
-    .links-grid {
-        grid-template-columns: 1fr;
-        gap: 0;
+/* 窄屏：组标签挪到胶囊上方，胶囊铺满整行；触控目标抬到 36px（仍小于 44 的行式热区，
+   但胶囊本身是唯一目标、四周留白可点，实测 390px 下不误触）。 */
+@media (max-width: 640px) {
+    .links-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
     }
-    .links-col {
-        padding-left: 0 !important;
-        border-left: 0 !important;
-        padding-top: 16px;
-        border-top: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
-    }
-    .links-col:first-child {
+    .links-row-t {
         padding-top: 0;
-        border-top: 0;
+        font-size: 13.5px;
     }
-    /* 组内链接两列。grid 而不是 column-count：
-       grid 保证「左列读完读右列」的阅读顺序不被打乱（column-count 会按高度切分，
-       顺序是竖着走的，读者容易漏读）。 */
-    .links-list {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1px clamp(8px, 2.5vw, 16px);
-    }
-    /* 两列后每列更窄，长名字（Jubeat LV.10 SSS难易度表）会折行 —— 允许折行，
-       但把行高收紧、图标顶对齐，避免同一行两条高度不一而参差。 */
-    .links-list a,
-    .links-part {
-        margin: 0 -5px;
-        padding: 6px 5px;
-        align-items: flex-start;
-        gap: 7px;
-    }
-    .links-list a:hover {
-        /* 两列里横向位移会撞到右列，改成只变色 + 缩进 1px */
-        transform: translateX(1px);
-    }
-    .links-ico {
-        width: 14px;
-        height: 14px;
-        margin-top: 2px;
+    .links-pill {
+        height: 34px;
+        font-size: 13px;
     }
 }
 /* 尊重减少动效：保留悬停变色（那是反馈），去掉位移与过渡时间 */
 @media (prefers-reduced-motion: reduce) {
-    .links-list a {
+    .links-pill,
+    .links-ico {
         transition: none;
     }
-    .links-list a:hover {
+    .links-pill:hover {
         transform: none;
     }
 }
@@ -2937,18 +2918,9 @@ html[data-g="yymf"] {
    6 处 <12px 文本、16 个 <40px 触控目标（其中 13 个是「相关站点」链接行）。
    ============================================================ */
 @media (max-width: 768px) {
-    /* 「相关站点」分区标签 11 → 12；三列小标题 11.5 → 12.5 */
+    /* 「相关站点」分区标签 12.5 → 13（胶囊的触控高度见 links 段落的 640 断点） */
     .links-title {
-        font-size: 12px;
-    }
-    .links-col-t {
-        font-size: 12.5px;
-    }
-    /* 站点链接行 30 高 → 44 高。整行本来就是热区（.links-list a 是 flex 行），
-       加 min-height 即可，文字仍垂直居中；顺带把条目间距拉开，不再挤成一条细带。 */
-    .links-list a,
-    .links-part {
-        min-height: 44px;
+        font-size: 13px;
     }
     /* 首屏两个按钮 38 高 → 44 */
     .intro-btn {
