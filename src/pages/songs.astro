@@ -1063,22 +1063,24 @@ const TYPES = [
                否则这里会被连续触发、把补拉请求也放大好几倍；
              · 首屏那次 apply（无筛选）**不触发**补拉，否则懒加载等于不存在；
              · 只补拉一次（成功后 lazyState = 2），失败也不再重试，避免死循环。 */
-        if (lazyState === 1) return;
+        /* 【2026-11-02 晚修「查询要等一会才出结果」】
+           原先这里是「一旦要补拉就直接 return」，于是整个补拉期（14 段 SSR，好网 0.7s、
+           冷网更久）用户的每一次输入都被吞掉，页面上只有一条「正在加载剩余 N 个世代」，
+           看着像卡住。现在改成：补拉只启动一次（lazyState 守卫），但**不拦着往下算** ——
+           已经加载出来的卡片先按条件算一遍立刻出结果，等补拉完再算一次把数字补全。
+           代价是补拉期间的数字偏小（骨架块里没有卡片可匹配，故这一段不计数），
+           这是有意的：宁可先给个量级，也不要让输入框看起来没反应。 */
         if (lazyState === 0 && hasFilters() && hasSkeletons()) {
           lazyState = 1;
-          // 补拉要几秒（14 段 SSR）：先把命中条亮出来给个回执，否则用户点完筛选像没反应。
-          // 文案写「正在加载」而不是假数字——补拉完 apply() 会立刻用真实数字覆盖它。
-          var pending = root.querySelectorAll('.sc-gen-ph').length;
           if (activeBox) {
             activeBox.hidden = false;
             if (activeTxt) activeTxt.textContent = '…';
-            if (activeCostTxt) activeCostTxt.textContent = '正在加载剩余 ' + pending + ' 个世代';
+            if (activeCostTxt) activeCostTxt.textContent = '正在加载剩余 ' + root.querySelectorAll('.sc-gen-ph').length + ' 个世代';
           }
           ensureAll().then(function () {
             lazyState = 2;
             apply();
-          });
-          return;
+          }).catch(function () { lazyState = 2; });
         }
         // 耗时从「用户操作」到「列表已更新」为准，取 performance.now() 的差值。
         // 注意只能量到 JS 这一层（改 hidden / 写 CSS order），不含浏览器重绘与图片解码 ——
@@ -1140,7 +1142,12 @@ const TYPES = [
                  不走下面那套「匹配卡片」逻辑，直接按 data-count 计。
                  能走到这里说明当前没有筛选（有筛选时 apply 开头已先 ensureAll 换成真卡片）。 */
               if (genEl.className.indexOf('sc-gen-ph') !== -1) {
-                var phCount = Number(genEl.getAttribute('data-count') || 0);
+                // 【2026-11-02 晚】有筛选时不再一律当成「全部命中」：
+                // 补拉期间每敲一个字都会走到这里，若还按 data-count 全算，
+                // 命中数会先虚高（搜「りんとして」显示 1129 首）再突然掉到 1，
+                // 比偏小更让人困惑。所以有筛选时先按 0 算，补拉完换成真卡片自然就对了；
+                // 无筛选时仍按 data-count 出数（首屏那一刻的读数必须是对的）。
+                var phCount = hasFilters() ? 0 : Number(genEl.getAttribute('data-count') || 0);
                 genEl.hidden = false;
                 var phCnt = genEl.querySelector('.sc-gen-h i');
                 if (phCnt) phCnt.textContent = phCount + ' 首';
@@ -1728,14 +1735,22 @@ const TYPES = [
       //   世代块高度随列数变化（桌面 6 列 / 窄屏 3 列），写死偏移必然错；
       //   块头是 sticky（top:0），scrollIntoView({block:'start'}) 正好把它顶到吸顶位置。
       //   再减掉 .sc-gen-h 的高度会让它被吸顶条盖住一半，所以不减。
+      //
+      // 【2026-11-02 晚修「跳到没加载的世代会弹回 jubeat」】
+      // 骨架块（.sc-gen-ph）里没有 .sc-card，原先的过滤条件把它整块排除掉，
+      // 于是点「copious」时下一个命中项被算成 jubeat（第一个真块），
+      // 页面从当前位置平滑滚回顶部——看起来就是「弹回第一个世代」。
+      // 现在把骨架块也算进候选：它是真实存在的世代，滚过去会触达 IntersectionObserver
+      // 自动换成真卡片，正好等于「跳过去并加载」。只有 hidden 的块（筛选后空块）才跳过。
       function genJump(fromEl) {
         var sec = fromEl.closest('.sc-sec');
         if (!sec) return;
         var all = [];
         var list = sec.querySelectorAll('.sc-gen');
         for (var i = 0; i < list.length; i++) {
-          // 只收「块本身可见 + 不是空块」的世代
-          if (!list[i].hidden && list[i].querySelector('.sc-card:not([hidden])')) all.push(list[i]);
+          if (list[i].hidden) continue;                       // 筛掉的空块不跳
+          if (!list[i].querySelector('.sc-card:not([hidden])') && list[i].className.indexOf('sc-gen-ph') === -1) continue;
+          all.push(list[i]);
         }
         if (all.length < 2) return;                 // 只剩一个世代，没什么可跳的
         var idx = all.indexOf(fromEl);
