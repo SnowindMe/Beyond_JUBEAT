@@ -726,7 +726,14 @@ html[data-g="knit"] .mark b .til {
 /* ---------- hero ---------- */
 .hero {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(268px, 384px);
+    /* 【左栏必须按「内容宽度」兜底，不能用 minmax(0,1fr)】2026-11-02 主人截图报的
+       「logo 被曲绘墙压住」就是这个：标题行（WELCOME TO + 字标）是 nowrap 的定宽内容
+       （最宽的 jubeat / qubell 在 --wl-em:26px 下要 406px），而 minmax(0,1fr) 允许左栏
+       压到 0 —— 769~900px 这档实测左栏只有 306~395px，溢出部分直接画到曲绘墙上面。
+       改成 min-content 兜底后，左栏永远拿到标题行真正需要的宽度，让右栏（曲绘墙）
+       先收缩到 268px 下限；再窄就交给 768px 的堆叠断点处理。实测（桌面窄档）：
+       770px / ave 左 363+墙 301、jubeat 左 406+墙 268，logo 右缘比墙左缘少 38px。 */
+    grid-template-columns: minmax(min-content, 1fr) minmax(268px, 384px);
     gap: clamp(30px, 5vw, 72px);
     align-items: center;
     padding: clamp(30px, 4vw, 52px) 0 clamp(34px, 4.2vw, 56px);
