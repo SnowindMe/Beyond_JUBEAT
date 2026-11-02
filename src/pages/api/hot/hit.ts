@@ -21,7 +21,10 @@ export const prerender = false;
 
 const IP_PER_MIN = 30;
 const IP_PER_DAY = 400;
-const SAME_SONG_GAP = 30; // 秒
+// 秒。KV 的 expirationTtl 下限是 60，30 会被拒（400 Invalid expiration_ttl of 30），
+// 所以节流窗口取 60——副作用只是同一首多等半分钟才计入第二次，
+// 反正同一人同曲当天本来就只算一次（表主键去重），这个值只影响 KV 计数器的存活。
+const SAME_SONG_GAP = 60;
 
 const AID = 'jb_aid';
 /** 没配 HOT_SALT 时的兜底盐：hash 只用于聚合，不参与鉴权，公开无害 */
@@ -76,11 +79,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
   const db = dbOf(e);
 
-  // 闸门 4b：每天（查 D1，走 idx_hot_hits_day_ip）
-  if ((await countIpToday(db, day, ipHash)) >= IP_PER_DAY) return new Response(null, nh);
+  /* 【2026-11-03 全程兜底】埋点是顺带做的，它挂掉绝不能把 500 抛给播放器。
+     线上实测过：D1 确实写进去了，接口却仍然 500 —— 抛出点在写入之后
+     （KV 的 put 或闸门 4b 的查询）。这里把闸门之后的整段包起来，落库成功就当成功。 */
+  try {
+    // 闸门 4b：每天（查 D1，走 idx_hot_hits_day_ip）
+    if ((await countIpToday(db, day, ipHash)) >= IP_PER_DAY) return new Response(null, nh);
 
-  await recordHit(db, { day, songId, visitor, ipHash });
-  if (e.SESSION) await e.SESSION.put(gapKey, '1', { expirationTtl: SAME_SONG_GAP });
+    await recordHit(db, { day, songId, visitor, ipHash });
+    try {
+      if (e.SESSION) await e.SESSION.put(gapKey, '1', { expirationTtl: SAME_SONG_GAP });
+    } catch { /* 节流键写不进去只是少一层去重，不能连累落库结果 */ }
+  } catch (err) {
+    console.error('hot/hit failed', err);
+  }
 
   return new Response(null, nh);
 };

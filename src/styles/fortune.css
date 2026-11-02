@@ -214,13 +214,15 @@
 
 /* ---------------- 榜 ---------------- */
 
-/* 视窗：一屏三条（3 × 56 = 168），超出裁掉，靠 transform 匀速上移 */
-/* 视窗高 260 = 五条（5 × 52）。写成三条时面板下半截会空出一大块，
-   看着像榜断在半途；260 与左栏齐平，顺带露出第六条的上缘，成了"下面还有"的提示。
-   高度必须 ≤ 一次回卷距离（260），否则会在顶部露出第二份副本——
-   所以行高一改，这里的数必须跟着改。 */
+/* 视窗：一屏五条（5 × 52 = 260），超出裁掉，靠 transform 匀速上移。
+   写成三条时面板下半截会空出一大块，看着像榜断在半途；260 与左栏齐平，
+   顺带露出第六条的上缘，成了"下面还有"的提示。
+   步长与视窗必须相等：不等就会在顶部露出第二份副本——
+   所以行高一改，这里的数必须跟着改（步长、视窗、keyframes 是同一个数）。 */
 .fh-hot .fh-view {
-  height: 260px;
+  --fh-step: 260px;
+  --fh-dur: 40s;
+  height: var(--fh-step);
   overflow: hidden;
   -webkit-mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
   mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
@@ -229,7 +231,7 @@
    补齐让两块面板同高；回卷距离仍是 260，不受这段留白影响。 */
 .fh-hot .fh-board { padding-bottom: 30px; }
 
-.fh-list { animation: fh-roll 40s linear infinite; }
+.fh-list { animation: fh-roll var(--fh-dur) linear infinite; }
 .fh-view:hover .fh-list,
 .fh-view:focus-within .fh-list { animation-play-state: paused; }
 
@@ -237,7 +239,7 @@
    的副本，走满视窗高度正好重合，接缝看不见。 */
 @keyframes fh-roll {
   from { transform: translateY(0); }
-  to { transform: translateY(-260px); }
+  to { transform: translateY(calc(var(--fh-step) * -1)); }
 }
 
 .fh-row {
@@ -356,8 +358,9 @@
   .fh::before { transition: none; }
 }
 
+/* 窄屏一屏三条（3 × 52 = 156）：步长与时长同步缩到 0.6 倍，匀速感不变 */
 @media (max-width: 900px) {
-  .fh-hot .fh-view { height: 168px; }
+  .fh-hot .fh-view { --fh-step: 156px; --fh-dur: 24s; }
 }
 /* ---------------- 选项与面板（2026-11-03 拆分后新增） ---------------- */
 
