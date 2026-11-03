@@ -159,6 +159,17 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 
 > **修掉的三处静默失败（v1.63.0）**：①`hotPage.ts` 漏了 `poolForSrv` 的定义却仍被组件 import——ESM 解构导入不存在的导出拿到 undefined，调用即抛，而 SSR 是流式的，异常把**整段热门榜连同其后内容**吞掉，页面只剩一个孤零零的标题（不是组件没渲染，是渲染到一半断了）；②`byIds` 的 SELECT 少了 `bsc/adv/ext/server_jp/server_cn` 五列，取回来全是 `undefined`，榜因此永远走「待统计」兜底；③KV TTL 见上。教训：行内缺列不会报错，只会让 `r.x === 1` 恒为 false。
 
+> **2026-11-03 热榜扩到 25 名 + 整块可点（v1.64.0）**——主人三条：「热门歌曲改为前25名」（m01983）、「滚动的有些快了，稍微慢一点」（m01996）、「不要以链接形式，要求一个歌曲块都能点到」（m02034，附 XENOViA 截图）。
+
+> **25 名让滚动必须重写**。原来只有 10 名、靠补 5 行副本凑第二屏，滚到底接缝正好露出副本里的第 1 名——主人一眼看到「你这10之后怎么还跟着1啊」（m01955）。新做法是**不补副本**：一屏固定 5 行、位移一屏一屏走，25 行 = 5 屏（1–5 / 6–10 / 11–15 / 16–20 / 21–25），任何一屏都刚好填满视窗，副本本来也没地方露。总位移 `--fh-end = -(行数-5) × 52`（25 行时 -1040px）由组件算好写成内联 style，`@keyframes` 里只留百分比。末屏停最久，淡出时**不带位移**，等 `opacity` 到 0 的那一帧才把位移跳回 0 再淡入——早先那版把「回顶部」和「淡出」写成同一条曲线，位移连续，底部就会露出第 1 名。一轮 100s：每屏走 14s、停 3–8s、淡出淡入各 5s（窄屏 120s）。悬停与 `focus-within` 暂停。
+> 逐帧实测（WAAPI 把 `currentTime` 定到各百分比）：0% y=0 → 17%/22% −260 → 38%/45% −520 → 59%/66% −780 → 80%/86% −1040；90.4% `op=0.01` 且 y 仍是 −1040，90.6% 才 y=0 / `op=0`，接缝不露第 1 名；97% 回 `op=1`。
+
+> **整块可点**：`.fh-name` 改成空标签绝对定位层（`position:absolute; inset:0; z-index:1`）+ `aria-label="曲名 - 艺人"`，曲绘与文字移到层下；`.fh-txt{flex:1;min-width:0}` 撑宽，`.fh-row::before` 做整行悬停底衬。实测链接层与行同尺寸 516×52，行内左/中/右三点 `elementFromPoint` 全部命中链接层。
+
+> **同日修掉的真 bug**：`hot.ts` 的 `dayOf(ts = Date.now() + TZ_OFFSET)` 默认参数已经加过一次 8 小时，函数体里又加一次（等于 +16h），北京时间 16:00 之后整天都算成「明天」，页面去读一份不存在的次日快照。改成默认 `ts = Date.now()`。
+
+> **本地坑**：`src/middleware.ts` 的边缘缓存会把首页缓存 5 分钟（白名单 `/^/($|songs(\/|$)|recent(\/|$))/`），改完本地数据不清缓存就还是旧页面（`x-jb-cache: HIT`）——看到「只出 12 行」别急着改代码，先重启 dev。dev 本身在带 `HTTP_PROXY/ALL_PROXY` 的环境里启动会 `read ECONNRESET`：`fetchWorkerExportTypes` 要 fetch `http://localhost/__vite_plugin_cloudflare_get_export_types__`，被 undici 的 EnvHttpProxyAgent 塞进代理了，用 `env -u ALL_PROXY -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy -u NODE_USE_ENV_PROXY` 启动才稳（ready 从超时失败变成 176–238s 成功）。
+
 > **基础设施**：`wrangler.jsonc` 的 `main` 改成本地 `src/worker.ts`（适配器入口只导出 fetch，挂不了 cron；我们的文件把 fetch 原样转发，旁边只多一个 scheduled）；`/` 同时进 `run_worker_first` 与中间件缓存白名单——首页从此是 SSR，游客态必须能被缓存，否则每次请求都真打 D1 + KV。
 > **上线前必须先跑 `db/migrate-hot.sql`**（建 `hot_hits` / `hot_snapshots`），否则 `/api/hot/hit` 会 500；cron 由 `wrangler.jsonc` 的 `triggers` 注册，部署后第一次自动执行要等次日 00:05，当天页面会自己补一份 seeded 快照。
 

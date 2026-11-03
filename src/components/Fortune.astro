@@ -4,16 +4,19 @@
 // 拆开的原因：主人 2026-11-03 追加「运势与排行榜中间不连着，独立成两个板块」。
 // 两块原本共用一道竖分界、顶在同一个面板里，现在各成一个面板、各自有表头。
 //
-// 服务器与难度是**块内选项**（主人同日「要分日服和国服两个选项，而且要指定难度，
-// 显示难度-等级徽章」）。做法：服务端把每个可用组合都算好并渲染成面板，
-// 客户端只切显示——切选项卡不走 HTTP 往返，也不丢滚动位置。
-// 选项本身按库里真有谱的计数生成，全 0 的难度不下发。
+// 选项卡的最终形态（主人当日下午连续三句：先「1框可以去掉」（指难度）、
+// 再「日服和国服运势保持一致」、随后「把今日运势的服务器选项卡加回来」）：
+// **只留服务器一组，没有难度选项卡**。难度是三档自带属性（沉淀→BSC / 均衡→ADV /
+// 挑战→EXT），徽章显示每首自己的难度与定数，不让用户再选。
+//
+// 做法：服务端把两服都算好并渲染成面板，客户端只切 hidden——
+// 切换不走 HTTP 往返，也不丢滚动位置；同一/不同用户的两服结果各自独立抽样。
 //
 // 冷启动（快照未成型）时整段降级成"新曲推荐"（主人 2026-11-03 定 a）：
 // 那时留着运势，会把没人听过的歌当"吉"推荐。
 import '../styles/fortune.css';
 import { env } from 'cloudflare:workers';
-import { DIFF_LABEL, DIFFS, fortuneOf, type Diff, type GradeKey, type Svr } from '../lib/hot';
+import { DIFF_LABEL, fortuneOf, type Diff, type GradeKey, type Svr } from '../lib/hot';
 import { fallbackByIds, pickFortune, todaySnapshot, fortunePool, type PoolSong } from '../lib/hotPage';
 
 export const prerender = false;
@@ -27,54 +30,38 @@ const visitor = Astro.locals.user?.id ? 'u:' + Astro.locals.user.id : 'guest';
 const snap = await todaySnapshot(e).catch(() => null);
 const ready = !!snap && !snap.seeded;
 
-/** 各服 × 各难度的库存计数：决定下不下发这个选项 */
-const COUNT_SQL = `SELECT
-  SUM(CASE WHEN server_jp = 1 AND bsc IS NOT NULL THEN 1 ELSE 0 END) AS jp_bsc,
-  SUM(CASE WHEN server_jp = 1 AND adv IS NOT NULL THEN 1 ELSE 0 END) AS jp_adv,
-  SUM(CASE WHEN server_jp = 1 AND ext IS NOT NULL THEN 1 ELSE 0 END) AS jp_ext,
-  SUM(CASE WHEN server_cn = 1 AND bsc IS NOT NULL THEN 1 ELSE 0 END) AS cn_bsc,
-  SUM(CASE WHEN server_cn = 1 AND adv IS NOT NULL THEN 1 ELSE 0 END) AS cn_adv,
-  SUM(CASE WHEN server_cn = 1 AND ext IS NOT NULL THEN 1 ELSE 0 END) AS cn_ext
-  FROM songs`;
+/** 哪一服有曲：空格服不出选项（顺序按站点习惯，国服在前） */
+const COUNT_SQL = 'SELECT SUM(CASE WHEN server_jp = 1 THEN 1 ELSE 0 END) AS jp, SUM(CASE WHEN server_cn = 1 THEN 1 ELSE 0 END) AS cn FROM songs';
 type CountRow = Record<string, number | null>;
 const counted = await db.prepare(COUNT_SQL).first<CountRow>().catch(() => null);
-const stock: Record<Svr, Record<Diff, number>> = {
-  jp: { bsc: counted?.jp_bsc ?? 0, adv: counted?.jp_adv ?? 0, ext: counted?.jp_ext ?? 0 },
-  cn: { bsc: counted?.cn_bsc ?? 0, adv: counted?.cn_adv ?? 0, ext: counted?.cn_ext ?? 0 },
-};
-/** 服务器顺序按站点习惯（国服在前），空白服不出 */
-const SRVS = (['cn', 'jp'] as const).filter((s) => DIFFS.some((d) => stock[s][d] > 0));
+const SRVS = (['cn', 'jp'] as const).filter((s) => ((s === 'jp' ? counted?.jp : counted?.cn) ?? 0) > 0);
 
 type Pick = PoolSong & { rank: GradeKey; tier: string; diff: Diff; lv: number };
-type Panel = { srv: Svr; diff: Diff; picks: Pick[] };
+type Panel = { srv: Svr; picks: Pick[] };
 
 const panels: Panel[] = [];
-if (ready && SRVS.length) {
+if (ready) {
+  const lines = fortuneOf(seed, visitor);
   for (const srv of SRVS) {
     const pool = await fortunePool(e, srv).catch(() => []);
     if (!pool.length) continue;
-    for (const diff of DIFFS.filter((d) => stock[srv][d] > 0)) {
-      const picks = pickFortune(pool, fortuneOf(seed, visitor + '|' + srv), seed + '|' + visitor + '|' + srv, diff);
-      if (picks.length) panels.push({ srv, diff, picks });
-    }
+    const picks = pickFortune(pool, lines, seed + '|' + visitor + '|' + srv);
+    if (picks.length) panels.push({ srv, picks });
   }
 }
 
-/** 冷启动的新曲推荐：最近上架（两服混排，此分支没有选项） */
+/** 冷启动的新曲推荐：最近上架 */
 const freshPicks = ready ? [] : await (async () => {
   const ids = snap?.entries.slice(0, 3).map((r) => r.songId) ?? [];
   return ids.length ? fallbackByIds(db, ids) : [];
 })();
 
-/** 默认组合：日服优先（站点主数据是日服，热榜块的首选也是日服，两块得一致）；
- *  难度取该服最难的可用项。SRVS 的排序（国服在前）只用于选项卡顺序，不能拿来当默认。 */
-const firstSrv = (panels.find((p) => p.srv === 'jp')?.srv ?? panels[0]?.srv ?? 'jp') as Svr;
-const firstDiff = ([...panels].reverse().find((p) => p.srv === firstSrv)?.diff ?? 'ext') as Diff;
+/** 默认日服（站点主数据是日服，热榜选的代表也是日服那几首） */
+const active = panels.find((p) => p.srv === 'jp') ?? panels[0];
 
 const TIER_LABEL: Record<string, string> = { sediment: '沉淀', balance: '均衡', challenge: '挑战' };
 /** 评级 → 分数中位（只用来算热力条宽度，不参与评级判定） */
 const GRADE_MID: Record<string, number> = { exc: 10, sss: 40, ss: 120, s: 280, a: 480, b: 680, c: 880, d: 960, e: 990 };
-const active = panels.find((p) => p.srv === firstSrv && p.diff === firstDiff) ?? panels[0];
 const heat = active
   ? Math.max(20, Math.round(100 - active.picks.reduce((n, p) => n + (GRADE_MID[p.rank] ?? 500), 0) / active.picks.length / 10))
   : 40;
@@ -83,57 +70,52 @@ const heat = active
 <section class="fh" style={`--fh-heat:${heat}%`} aria-labelledby="fh-fortune">
   <div class="fh-hd">
     <h2 id="fh-fortune">今日运势</h2>
-    {ready && panels.length ? (
+    {ready && panels.length > 1 ? (
       <div class="fh-ctl">
         <div class="fh-seg" role="group" aria-label="切换服务器">
-          {SRVS.map((s) => (
-            <button type="button" class={`fh-seg-b${s === firstSrv ? ' is-on' : ''}`} data-srv={s} aria-pressed={s === firstSrv ? 'true' : 'false'}>
-              {s === 'jp' ? '日服' : '国服'}
-            </button>
-          ))}
-        </div>
-        <div class="fh-seg" role="group" aria-label="指定难度" data-diff-group>
-          {DIFFS.filter((d) => stock[firstSrv][d] > 0).map((d) => (
-            <button type="button" class={`fh-seg-b${d === firstDiff ? ' is-on' : ''}`} data-diff={d} aria-pressed={d === firstDiff ? 'true' : 'false'}>
-              {DIFF_LABEL[d]}
+          {panels.map((p) => (
+            <button type="button" class={`fh-seg-b${p === active ? ' is-on' : ''}`} data-srv={p.srv} aria-pressed={p === active ? 'true' : 'false'}>
+              {p.srv === 'jp' ? '日服' : '国服'}
             </button>
           ))}
         </div>
       </div>
     ) : (
-      <span>新曲推荐</span>
+      <span>{ready ? '三档各一首' : '新曲推荐'}</span>
     )}
   </div>
 
   {ready && panels.length ? (
     <div class="fh-panes">
       {panels.map((p) => (
-        <div class="fh-pane" data-pane={`${p.srv}|${p.diff}`} hidden={!(p === active)}>
+        <div class="fh-pane" data-pane={p.srv} hidden={p !== active}>
           <div class="fh-verdict">
             <img class="fh-grado" src={`/assets/images/grade/${p.picks[0].rank}.webp`} alt="" aria-hidden="true" width="76" height="76" decoding="async" />
             <p class="fh-said">
               今日手气 <b>{p.picks[0].rank.toUpperCase()}</b>
               <br />
-              <small>{p.srv === 'jp' ? '日服' : '国服'} · {DIFF_LABEL[p.diff]} 谱面，这个状态适合打这几首。</small>
+              <small>这个状态适合打这几首，难度按沉淀 / 均衡 / 挑战各给一首。</small>
             </p>
           </div>
           <ul class="fh-picks">
             {p.picks.map((s) => (
               <li class="fh-pick">
+                {/* 整块可点：同热榜，链接层铺满整行，其余内容在层下面 */}
+                <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
                 {/* 难度-定数徽章：结构照曲目页的 lv 徽章，但底色是深色面板，配色单独反解 */}
                 <span class={`fh-lv fh-lv-${s.diff}`}>
                   <u>{DIFF_LABEL[s.diff]}</u>{s.lv}
                 </span>
                 <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
-                <a class="fh-name" href={`/songs/${s.songId}/`}>
+                <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>
-                </a>
+                </span>
                 <img class="fh-seal" src={`/assets/images/grade/${s.rank}.webp`} alt={s.rank.toUpperCase()} width="26" height="26" loading="lazy" decoding="async" />
+                <span class="fh-sr">{TIER_LABEL[s.tier]}</span>
               </li>
             ))}
           </ul>
-          <span class="fh-sr">{TIER_LABEL[p.picks[0].tier]}</span>
         </div>
       ))}
     </div>
@@ -143,12 +125,13 @@ const heat = active
       <ul class="fh-picks">
         {freshPicks.map((s) => (
           <li class="fh-pick">
+            <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
             <span class="fh-tier">新曲</span>
             <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
-            <a class="fh-name" href={`/songs/${s.songId}/`}>
+            <span class="fh-txt">
               <b>{s.title}</b>
               <small>{s.artist}</small>
-            </a>
+            </span>
           </li>
         ))}
       </ul>
@@ -157,50 +140,20 @@ const heat = active
 </section>
 
 <script>
-  // 只切显示，不发请求：面板全在文档里，切换时同步难度行的可选集合
-  const stock: Record<string, string[]> = {};
-  document.querySelectorAll<HTMLElement>('.fh-pane').forEach((p) => {
-    const [srv, diff] = (p.dataset.pane ?? '').split('|');
-    (stock[srv] ??= []).push(diff);
-  });
-
+  // 只切显示，不发请求：面板全在文档里
   const seg = document.querySelector<HTMLElement>('.fh .fh-ctl');
   if (seg) {
-    const sync = () => {
-      const on = seg.querySelector<HTMLElement>('.fh-seg-b.is-on[data-srv]')?.dataset.srv ?? '';
-      const pane = document.querySelector<HTMLElement>(`.fh-pane[data-pane^="${on}|"]:not([hidden])`);
-      const cur = (pane?.dataset.pane ?? '').split('|')[1];
-      seg.querySelectorAll<HTMLElement>('[data-diff]').forEach((b) => {
-        const d = b.dataset.diff ?? '';
-        b.hidden = !(stock[on] ?? []).includes(d);
-        const isOn = d === cur;
-        b.classList.toggle('is-on', isOn);
-        b.setAttribute('aria-pressed', isOn ? 'true' : 'false');
-      });
-    };
     seg.addEventListener('click', (ev) => {
-      const btn = (ev.target as HTMLElement).closest<HTMLElement>('.fh-seg-b');
-      if (!btn) return;
-      let srv = btn.dataset.srv;
-      let diff = btn.dataset.diff;
-      if (srv) {
-        // 换服：难度沿用，该服没有就退到它的第一个可用难度
-        const keep = seg.querySelector<HTMLElement>('.fh-seg-b.is-on[data-diff]')?.dataset.diff ?? '';
-        diff = (stock[srv] ?? []).includes(keep) ? keep : (stock[srv] ?? [])[0];
-      } else if (diff) {
-        srv = seg.querySelector<HTMLElement>('.fh-seg-b.is-on[data-srv]')?.dataset.srv ?? '';
-      }
-      if (!srv || !diff) return;
+      const srv = (ev.target as HTMLElement).closest<HTMLElement>('.fh-seg-b')?.dataset.srv;
+      if (!srv) return;
       document.querySelectorAll<HTMLElement>('.fh-pane').forEach((p) => {
-        p.hidden = p.dataset.pane !== `${srv}|${diff}`;
+        p.hidden = p.dataset.pane !== srv;
       });
-      seg.querySelectorAll<HTMLElement>('[data-srv]').forEach((b) => {
+      seg.querySelectorAll<HTMLElement>('.fh-seg-b').forEach((b) => {
         const isOn = b.dataset.srv === srv;
         b.classList.toggle('is-on', isOn);
         b.setAttribute('aria-pressed', isOn ? 'true' : 'false');
       });
-      sync();
     });
-    sync();
   }
 </script>

@@ -158,11 +158,23 @@
 .fh-row { position: relative; }
 
 .fh-pick {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 11px;
   padding: 9px 0;
   border-top: 1px solid var(--fh-edge);
+}
+/* 整块可点：链接层铺满整行（同热榜），文字与徽章都在层下面 */
+.fh-pick .fh-name {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 6px;
+}
+.fh-pick .fh-name:focus-visible {
+  outline: 2px solid var(--fh-cyan);
+  outline-offset: 2px;
 }
 .fh-pick:first-child { border-top: 0; }
 
@@ -186,22 +198,27 @@
   box-shadow: 0 0 0 1px rgb(232 241 247 / 0.12);
 }
 
+/* 曲名链接：两种块（.fh-row / .fh-pick）都把它做成铺满的链接层，
+   所以这里只留最基础的属性，布局在各自块里给 */
 .fh-name {
-  min-width: 0;
   display: block;
   text-decoration: none;
   color: inherit;
 }
-.fh-name b,
-.fh-name small {
+/* 文字块（曲名 + 艺人）：两块共用，宽度吃掉剩下的空间 */
+.fh-txt { flex: 1; min-width: 0; }
+.fh-txt b,
+.fh-txt small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fh-name b { font-size: 14px; font-weight: 600; }
-.fh-name small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
-.fh-name:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.fh-txt b { font-size: 14px; font-weight: 600; }
+.fh-txt small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
+/* 悬停时给曲名加下划线（整行可点，但要点明"点的是这首"） */
+.fh-pick:hover .fh-txt b,
+.fh-row:hover .fh-txt b { text-decoration: underline; text-underline-offset: 3px; }
 
 /* 每首自己的评级图，行尾当印章 */
 .fh-seal {
@@ -214,40 +231,72 @@
 
 /* ---------------- 榜 ---------------- */
 
-/* 视窗：一屏五条（5 × 52 = 260），超出裁掉，靠 transform 匀速上移。
-   写成三条时面板下半截会空出一大块，看着像榜断在半途；260 与左栏齐平，
-   顺带露出第六条的上缘，成了"下面还有"的提示。
-   步长与视窗必须相等：不等就会在顶部露出第二份副本——
-   所以行高一改，这里的数必须跟着改（步长、视窗、keyframes 是同一个数）。 */
+/* 视窗：一屏正好五条（5 × 52 = 260），与左栏齐平，也正好是滚动的一屏。
+   下缘 16px 渐隐是给滚动的（内容进出边界不硬切），静止时最后一行只被压掉一点。
+   注意 260 是 5 × 52 算出来的，改行高要一起改。 */
 .fh-hot .fh-view {
   --fh-step: 260px;
-  --fh-dur: 40s;
   height: var(--fh-step);
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 22px, #000 calc(100% - 22px), transparent);
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
 }
-/* 视窗下方补 30px：右栏（表头 + 260 视窗）比左栏矮一截，
-   补齐让两块面板同高；回卷距离仍是 260，不受这段留白影响。 */
-.fh-hot .fh-board { padding-bottom: 30px; }
+/* 视窗下方补 30px：右栏（表头 + 视窗）比左栏矮一截，补齐让两块面板同高。 */
+.fh-hot .fh-board { min-height: 290px; padding-bottom: 30px; }
 
-.fh-list { animation: fh-roll var(--fh-dur) linear infinite; }
+/* 行数不足六行时推到底会露空，就干脆不滚（.is-static 由组件按行数加）。 */
+.fh-view.is-static { height: auto; min-height: var(--fh-step); mask-image: none; -webkit-mask-image: none; }
+
+/* 轮转（2026-11-03 主人：滚到第 10 名后停一会儿，再消失-出现回第 1 名）。
+   核心是不让人同时看见"10"和"1"：停住时视窗里只停 6–10 名，
+   **淡出时不带位移**，等 opacity 到 0 的那一刻才把位移跳回 0、再淡入。
+   早先那版把"回顶部"和"淡出"写成同一条曲线，位移是连续的，
+   于是底部会露出第 1 名、看着像"10 后面跟着 1"。
+   --fh-end 是组件按行数算好的总位移（-(行数-5)*52），一屏一屏往下挪，
+   每挪一屏停一下。25 行时是 5 屏：1–5 / 6–10 / 11–15 / 16–20 / 21–25。
+   走到末屏停最久，再淡出、跳回顶部淡入。**列表不用补副本**：
+   位移都是整屏，任何一屏都刚好填满视窗。
+   @keyframes 里只有百分比。66s 一轮偏快（主人 2026-11-03「有些快了，稍微慢一点」），
+   改按 100s 铺：每屏走 14s、停 3–8s、淡出淡入各 5s。 */
+@keyframes fh-roll {
+  0%, 3% { transform: translateY(0); opacity: 1; }
+  17% { transform: translateY(calc(var(--fh-end) * 0.25)); opacity: 1; }
+  21%, 24% { transform: translateY(calc(var(--fh-end) * 0.25)); opacity: 1; }
+  38% { transform: translateY(calc(var(--fh-end) * 0.5)); opacity: 1; }
+  42%, 45% { transform: translateY(calc(var(--fh-end) * 0.5)); opacity: 1; }
+  59% { transform: translateY(calc(var(--fh-end) * 0.75)); opacity: 1; }
+  63%, 66% { transform: translateY(calc(var(--fh-end) * 0.75)); opacity: 1; }
+  80% { transform: translateY(var(--fh-end)); opacity: 1; }
+  85%, 88% { transform: translateY(var(--fh-end)); opacity: 1; }
+  90.5% { transform: translateY(var(--fh-end)); opacity: 0; }
+  90.501% { transform: translateY(0); opacity: 0; }
+  95%, 100% { transform: translateY(0); opacity: 1; }
+}
+/* 位移由组件按行数算（-(行数-5) × 52）：视窗固定五条，桌面窄屏同构 */
+.fh-view.is-rolling .fh-list { animation: fh-roll 100s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
+/* 悬停与键盘聚焦时停在当前帧（含末段：正好把 1–5 名放开看） */
 .fh-view:hover .fh-list,
 .fh-view:focus-within .fh-list { animation-play-state: paused; }
 
-/* 滚完前 5 条（5 × 52 = 260）即回到起点：列表渲染两遍，第 6 行就是第 1 行
-   的副本，走满视窗高度正好重合，接缝看不见。 */
-@keyframes fh-roll {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(var(--fh-step) * -1)); }
-}
-
+/* 行本身要 relative：整块可点的链接层按它铺 */
 .fh-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 9px;
   height: 52px;
 }
+/* 悬停整行给底衬（原先只给曲名下划线，点在空白处没有反馈） */
+.fh-row::before {
+  content: '';
+  position: absolute;
+  inset: 0 -8px;
+  border-radius: 8px;
+  background: rgb(232 241 247 / 0);
+  transition: background 0.15s ease;
+  pointer-events: none;
+}
+.fh-row:hover::before { background: rgb(232 241 247 / 0.05); }
 
 .fh-rank {
   flex: none;
@@ -262,7 +311,8 @@
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 16px rgb(255 122 77 / 0.35);
 }
-.fh-row:nth-child(n + 4) .fh-rank { color: rgb(255 122 77 / 0.6); text-shadow: none; }
+/* 第 4 名以后弱化。按名次值打类，不用 nth-child——列表末尾补了五行副本，nth-child 会把副本里的第 1 名也当成靠后的行。 */
+.fh-row.is-low .fh-rank { color: rgb(255 122 77 / 0.6); text-shadow: none; }
 
 /* ② 升降用三格刻度，不用箭头 */
 .fh-delta {
@@ -303,34 +353,20 @@
   border: 1px solid rgb(46 230 214 / 0.45);
 }
 
-/* 整块可点：链接层铺满整行 */
+/* 整块可点：链接层绝对定位铺满整行，文字与曲绘在它下面（pointer-events 交给层）。
+   只有层可聚焦、也只有一个读屏名，比让整段文字各自成链接更干净。 */
 .fh-row .fh-name {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-  padding: 4px 0;
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
   text-decoration: none;
   color: inherit;
+  z-index: 1;
 }
 .fh-row .fh-name:focus-visible {
   outline: 2px solid var(--fh-cyan);
-  outline-offset: 3px;
-  border-radius: 6px;
+  outline-offset: 2px;
 }
-.fh-txt { min-width: 0; }
-.fh-txt b,
-.fh-txt small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.fh-txt b { font-size: 14px; font-weight: 600; }
-.fh-txt small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
-.fh-row:hover .fh-txt b { text-decoration: underline; text-underline-offset: 3px; }
-
 /* 升降的文字版只给读屏 */
 .fh-sr {
   position: absolute;
@@ -361,14 +397,20 @@
 
 /* 尊重减少动效：停掉循环，交给用户自己滚 */
 @media (prefers-reduced-motion: reduce) {
-  .fh-list { animation: none; }
+  .fh-view.is-rolling .fh-list { animation: none; }
   .fh-view { height: auto; max-height: 336px; overflow-y: auto; }
   .fh::before { transition: none; }
 }
 
-/* 窄屏一屏三条（3 × 52 = 156）：步长与时长同步缩到 0.6 倍，匀速感不变 */
+/* 窄屏**也是五条一屏**（2026-11-03 改成多屏滚动后，屏高必须与位移整除，
+   缩成三条会与 @keyframes 里的四段位移对不上）；只是整轮更慢，120s。 */
 @media (max-width: 900px) {
-  .fh-hot .fh-view { --fh-step: 156px; --fh-dur: 24s; }
+  .fh-view.is-rolling .fh-list { animation-duration: 120s; }
+}
+/* 窄屏行高不变（52），所以桌面那两个数（视窗 260 / 面板 290）照用 */
+@media (max-width: 900px) {
+  .fh-hot .fh-view { --fh-step: 260px; }
+  .fh-hot .fh-board { min-height: 290px; }
 }
 /* ---------------- 选项与面板（2026-11-03 拆分后新增） ---------------- */
 

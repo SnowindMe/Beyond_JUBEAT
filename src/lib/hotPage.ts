@@ -6,7 +6,7 @@
 
 import {
   addDays, compareWith, dayOf, fortuneOf, futureWindow, poolOf, rankOf, windowEndingYesterday, WINDOW,
-  SRV_COL, TIERS, unit, type Diff, type FortuneLine, type GradeKey, type Svr,
+  TIERS, TOP, unit, type Diff, type FortuneLine, type GradeKey,
 } from './hot';
 import { countIpToday, dbOf, hasSnapshot, pruneBefore, readSnapshot, recordHit, saveSnapshot, votesIn, type Env, type Snapshot } from './hotStore';
 
@@ -21,8 +21,8 @@ export type HotQuery = Env & { now?: number };
 
 /* ---------------------------- 封存 ---------------------------- */
 
-/** 服务器口径：运势推荐要能按服挑（主人 2026-11-03「要分日服和国服两个选项」）。
- *  榜是全局的，不传就是两服合起来。 */
+/** 服务器口径：运势按服分池（2026-11-03 主人「要分日服和国服两个选项」…
+ *  当日下午砍掉又加回来）。热榜是全局的，不传就是两服合排。 */
 export type Ssrv = 'jp' | 'cn';
 const srvCol = (srv?: Ssrv) => (srv === 'jp' ? 'server_jp' : srv === 'cn' ? 'server_cn' : null);
 
@@ -57,13 +57,13 @@ export async function sealToday(env: Env): Promise<Snapshot> {
     const seeded = rows.length < MIN_ROWS;
     let entries;
     if (seeded) {
-      entries = await fallbackPool(db, 10).then((ids) =>
+      entries = await fallbackPool(db, TOP).then((ids) =>
         ids.map((songId, i) => ({ songId, rank: i + 1, delta: 0, isNew: false })),
       );
     } else {
       // 上一窗口 = 本窗口再往前推一个窗口长，两段等长且紧邻、不重叠
       const prev = rankOf(await votesIn(db, addDays(from, -WINDOW), addDays(from, -1)));
-      entries = compareWith(current, prev, 10).slice(0, 10);
+      entries = compareWith(current, prev, TOP).slice(0, TOP);
     }
 
     const snap: Snapshot = { date: today, from, to, entries, seeded, createdAt: new Date().toISOString() };
@@ -98,18 +98,18 @@ export type PoolSong = {
   artist: string;
   cover: string;
   hasHold: boolean;
-  /** 这首歌在哪个服有谱。榜是全局快照，靠它按服拆开 */
+  /** 这首歌在哪个服有谱。运势按服分池，靠它过滤 */
   jp: boolean;
   cn: boolean;
-  /** 三难度的定数（缺的为 null）。运势的"指定难度"要从这里挑一个有值的 */
+  /** 三难度的定数（缺的为 null）。挑选时用对应的档区间过滤 */
   lv: { bsc: number | null; adv: number | null; ext: number | null };
 };
 
 
 
 /** 候选池：未来窗口热度前 40；冷启动退回最新上架 60 首。
- *  按服过滤放在 byIds 的 SQL 里而不是取完再滤——热度是全站口径，
- *  但不能把「在日服热、国服没有谱」的曲推进国服的口袋。 */
+ *  按服过滤放在 SQL 里而不是取完再滤——热度是全站口径，
+ *  但不能把「在日服热、国服没有谱」的曲塞进国服的推荐里。 */
 export async function fortunePool(env: Env, srv?: Ssrv): Promise<PoolSong[]> {
   const db = dbOf(env);
   const { from, to } = futureWindow();
@@ -120,21 +120,13 @@ export async function fortunePool(env: Env, srv?: Ssrv): Promise<PoolSong[]> {
   if (!ids.length) return [];
 
   const songs = await byIds(db, ids, srv);
-  // 过滤后可能不够三档各一首（小服尤其），补一次最新上架
+  // 过滤后可能不够三档各一首，补一次最新上架
   if (songs.length < 12) {
     const extra = await fallbackPool(db, 40, srv);
     const have = new Set(songs.map((s) => s.songId));
-    const more = await byIds(db, extra.filter((id) => !have.has(id)), srv);
-    songs.push(...more);
+    songs.push(...(await byIds(db, extra.filter((id) => !have.has(id)), srv)));
   }
   return songs;
-}
-
-/** 只留某服有谱的曲。榜的排名是全局的，切服时按这个裁行——
- *  不能重排，否则同一首歌在两服的名次会不一样。 */
-export function poolForSrv(songs: PoolSong[], srv?: Svr): PoolSong[] {
-  if (!srv) return songs;
-  return songs.filter((s) => (srv === 'jp' ? s.jp : s.cn));
 }
 
 /** 一批 songId → 展示字段。榜单与运势都用它，所以单独抽出来 */
@@ -178,7 +170,7 @@ export async function byIds(db: D1Database, ids: string[], srv?: Ssrv): Promise<
  * 池子是按票数排的，票最高的那首会天天被挑中，三档就固定成了同几首。
  * 这一档没候选（库里那个难度没谱）就退回还剩下的任意一首，保证三首不重复。
  */
-/** 只取展示字段、不按服过滤（冷启动的新曲推荐要原样取回快照里的那几首） */
+/** 冷启动的新曲推荐：只取展示字段，原样取回快照里的那几首 */
 export function fallbackByIds(db: D1Database, ids: string[]): Promise<PoolSong[]> {
   return byIds(db, ids);
 }
@@ -191,16 +183,14 @@ export type FortunePick = PoolSong & { rank: GradeKey; tier: string; diff: Diff;
  * 池子是按票数排的，票最高的那首会天天被挑中。
  * 该档没候选（库里那个难度没谱）就依次退：先退到"同一首的其他难度只要在区间内"，
  * 再退到还剩下的任意一首，保证三首不重复、也不空档。
+ * 三档与难度是绑定的（沉淀→BSC / 均衡→ADV / 挑战→EXT），所以这里不用再传难度；
+ * 难度选项卡 2026-11-03 下午被主人砍掉，难度只作为每首的属性出现。
  */
-export function pickFortune(pool: PoolSong[], lines: FortuneLine[], key: string, pref: Diff): FortunePick[] {
+export function pickFortune(pool: PoolSong[], lines: FortuneLine[], key: string): FortunePick[] {
   const used = new Set<string>();
   const out: FortunePick[] = [];
-  // 指定的难度排最前（排在就是"评级最好的那首"），另两档按评级跟在后面
-  const ordered = [
-    ...lines.filter((l) => TIERS.find((t) => t.key === l.tier)?.diff === pref),
-    ...lines.filter((l) => TIERS.find((t) => t.key === l.tier)?.diff !== pref),
-  ];
-  for (const line of ordered) {
+  // 按评级从好到坏出场：第一首就是"今日手气"的代表（页面拿它的评级定横幅与热力条）
+  for (const line of lines) {
     // 用 tier 查定义而**不是**用循环下标：lines 是按评级好坏排过的，
     // 顺序早就不是 sediment→balance→challenge 了，按下标取会挑错档。
     const t = TIERS.find((x) => x.key === line.tier);

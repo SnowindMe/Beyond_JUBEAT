@@ -15,10 +15,13 @@ const DAY_MS = 86400000;
 const TZ_OFFSET = 8 * 3600000;   // 北京时间固定 +08:00，无夏令时
 export const WINDOW = 7;
 const POOL = 40;                 // 参与名次计算与比对的池子
-const TOP = 10;                  // 对外只出 10 名（主人 2026-11-03 追加）
+export const TOP = 25;           // 对外只出 25 名（2026-11-03 先定 10，同日改 25）
 
-/** 把毫秒时间戳切成北京时间日历日 YYYY-MM-DD */
-export function dayOf(ts = Date.now() + TZ_OFFSET): string {
+/** 把毫秒时间戳（UTC）切成北京时间日历日 YYYY-MM-DD。
+ *  注意偏移只加一次：早先默认参数写成 Date.now() + TZ_OFFSET、函数体里又加一次，
+ *  等于加了 16 小时，北京时间 16:00 之后整天都会算成"明天"
+ *  （2026-11-03 16:50 实撞：dayOf() 返回 11-04，页面去读一个不存在的快照）。 */
+export function dayOf(ts = Date.now()): string {
   return new Date(ts + TZ_OFFSET).toISOString().slice(0, 10);
 }
 
@@ -155,11 +158,14 @@ export function unit(key: string): number {
 
 export type FortuneLine = { tier: string; score: number; grade: GradeKey };
 
-/** 服务器：页面上的两个选项。库里的行以 server_jp / server_cn 标「在哪个服有谱」 */
+/** 服务器：运势块的两个选项（2026-11-03 先加、当日下午砍掉、随后又被主人要求加回来
+ *  「把今日运势的服务器选项卡加回来」）。库里的行以 server_jp / server_cn 标「在哪个服有谱」。
+ *  热榜不分服，所以它只在运势块用。 */
 export type Svr = 'jp' | 'cn';
 export const SRV_COL: Record<Svr, string> = { jp: 'server_jp', cn: 'server_cn' };
 
-/** 难度：运势要"指定难度"，徽章显示的就是这个难度与它的定数（主人 2026-11-03 追加） */
+/** 难度：徽章显示的就是这个难度与它的定数（2026-11-03 起**没有**难度选项卡，
+ *  三档与难度是绑定的，难度是每首的属性而不是筛选项） */
 export type Diff = 'bsc' | 'adv' | 'ext';
 export const DIFFS: readonly Diff[] = ['bsc', 'adv', 'ext'] as const;
 export const DIFF_LABEL: Record<Diff, string> = { bsc: 'BSC', adv: 'ADV', ext: 'EXT' };
