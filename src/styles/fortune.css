@@ -341,8 +341,16 @@
   white-space: nowrap;
 }
 
-/* 冷启动：榜里装的是最近上架，不是热度 */
+/* 冷启动：榜里装的是最近上架，不是热度。
+   此时右栏只剩一行提示，比左侧的新曲推荐矮一大截；把提示块撑高、字居中当整块的空态，
+   两块才收在一条线上（实测左 325 / 右 132，差 193，撑到 229 后两边都是 325）。
+   这个数跟着左栏的新曲推荐三行走，改了那边的行数要回来量一次。 */
 .fh-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 229px;
   margin: 14px 0 0;
   font-size: 12px;
   padding: 8px 10px;
