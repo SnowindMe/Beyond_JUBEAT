@@ -8,7 +8,7 @@ import {
   addDays, compareWith, dayOf, fortuneOf, futureWindow, poolOf, rankOf, windowEndingYesterday, WINDOW,
   TIERS, TOP, unit, type Diff, type FortuneLine, type GradeKey,
 } from './hot';
-import { countIpToday, dbOf, hasSnapshot, pruneBefore, readSnapshot, recordHit, saveSnapshot, votesIn, type Env, type Snapshot } from './hotStore';
+import { dbOf, hasSnapshot, pruneBefore, readSnapshot, recordHit, saveSnapshot, votesIn, type Env, type Snapshot } from './hotStore';
 
 /** 快照保留天数与"数据够了"的门槛 */
 const KEEP_DAYS = 30;
@@ -218,5 +218,5 @@ export function visitorOf(userId: string | undefined, anonId: string): string {
   return userId ? 'u:' + userId : 'a:' + anonId;
 }
 
-export { countIpToday, dbOf, recordHit, hasSnapshot, fortuneOf, dayOf };
+export { dbOf, hasSnapshot, recordHit, fortuneOf, dayOf };
 export type { Snapshot, FortuneLine };

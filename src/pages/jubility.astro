@@ -11,7 +11,7 @@ import Layout from '../layouts/Base.astro';
 import '../styles/server-card.css';
 import '../styles/jubility.css';
 import { pageTitle } from '../lib/title';
-import { getAllSongs } from '../lib/db';
+import { getAllSongs } from '../lib/song-data';
 import {
   chartsOf,
   theoryOf,
@@ -27,7 +27,12 @@ import { env } from 'cloudflare:workers';
 
 export const prerender = false;
 
-const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+const ALL = await getAllSongs(
+  (env as { ASSETS: Fetcher }).ASSETS,
+  Astro.url.origin,
+  (env as { beyond_jubeat?: D1Database })?.beyond_jubeat,
+  Astro.locals.cfContext
+);
 
 // 与曲目页同档缓存策略：曲库变化慢，浏览器 30s / 边缘 300s。
 Astro.response.headers.set(

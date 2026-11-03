@@ -1,0 +1,899 @@
+(node:656) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8900) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Getting diagnostics for Astro files in C:\Users\19457\Desktop\Beyond_JUBEAT...
+[96msrc/components/BootScreen.astro[0m:[93m138[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'pendingEnd' is declared but its value is never read.
+
+[7m138[0m   var pendingEnd = null;
+[7m   [0m [93m      ~~~~~~~~~~[0m
+
+[96msrc/components/Fortune.astro[0m:[93m26[0m:[93m31[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'D1Database'. Did you mean 'IDBDatabase'?
+
+[7m26[0m const db = e.beyond_jubeat as D1Database;
+[7m  [0m [91m                              ~~~~~~~~~~[0m
+[96msrc/components/Fortune.astro[0m:[93m25[0m:[93m58[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'KVNamespace'.
+
+[7m25[0m const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                                         ~~~~~~~~~~~[0m
+[96msrc/components/Fortune.astro[0m:[93m25[0m:[93m36[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'D1Database'. Did you mean 'IDBDatabase'?
+
+[7m25[0m const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                   ~~~~~~~~~~[0m
+[96msrc/components/Fortune.astro[0m:[93m18[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m18[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/components/Hero.astro[0m:[93m13[0m:[93m24[0m - [91merror[0m[90m ts(7053): [0mElement implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+
+[7m13[0m   if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: s.cover, t: s.t, e: s.lv?.ext ?? null }));
+[7m  [0m [91m                       ~~~~~~[0m
+[96msrc/components/Hero.astro[0m:[93m5[0m:[93m17[0m - [91merror[0m[90m ts(7006): [0mParameter 'c' implicitly has an 'any' type.
+
+[7m5[0m const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop();
+[7m [0m [91m                ~[0m
+[96msrc/components/Hero.astro[0m:[93m4[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'LOGOS' is declared but its value is never read.
+
+[7m4[0m const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo','ripples'];
+[7m [0m [93m      ~~~~~[0m
+
+[96msrc/components/HotBoard.astro[0m:[93m20[0m:[93m31[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m20[0m const db = e.beyond_jubeat as D1Database;
+[7m  [0m [91m                              ~~~~~~~~~~[0m
+[96msrc/components/HotBoard.astro[0m:[93m19[0m:[93m58[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'KVNamespace'.
+
+[7m19[0m const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                                         ~~~~~~~~~~~[0m
+[96msrc/components/HotBoard.astro[0m:[93m19[0m:[93m36[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'D1Database'. Did you mean 'IDBDatabase'?
+
+[7m19[0m const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                   ~~~~~~~~~~[0m
+[96msrc/components/HotBoard.astro[0m:[93m13[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m13[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/components/HotBoard.astro[0m:[93m75[0m:[93m26[0m - [93mwarning[0m[90m ts(6133): [0m'i' is declared but its value is never read.
+
+[7m75[0m           {shown.map((s, i) => (
+[7m  [0m [93m                         ~[0m
+
+[96msrc/pages/account.astro[0m:[93m152[0m:[93m14[0m - [91merror[0m[90m ts(7053): [0mElement implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<Role, string>'.
+
+[7m152[0m           你是{ROLE_LABEL[row.role]}，可以进入 <a href="/admin/">管理面板</a>。
+[7m   [0m [91m             ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/account.astro[0m:[93m71[0m:[93m55[0m - [91merror[0m[90m ts(7053): [0mElement implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<Role, string>'.
+
+[7m71[0m         <div><dt>身份</dt><dd><span class={badgeClass}>{ROLE_LABEL[row.role]}</span></dd></div>
+[7m  [0m [91m                                                      ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/account.astro[0m:[93m15[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m15[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/account.astro[0m:[93m7[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m7[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/account.astro[0m:[93m6[0m:[93m21[0m - [93mwarning[0m[90m ts(6133): [0m'AUTH_ERRORS' is declared but its value is never read.
+
+[7m6[0m import { authError, AUTH_ERRORS } from '../lib/auth-messages';
+[7m [0m [93m                    ~~~~~~~~~~~[0m
+
+[96msrc/pages/admin.astro[0m:[93m147[0m:[93m29[0m - [91merror[0m[90m ts(7006): [0mParameter 'd' implicitly has an 'any' type.
+
+[7m147[0m               {decided.map((d) => (
+[7m   [0m [91m                            ~[0m
+[96msrc/pages/admin.astro[0m:[93m107[0m:[93m29[0m - [91merror[0m[90m ts(7006): [0mParameter 'r' implicitly has an 'any' type.
+
+[7m107[0m               {pending.map((r) => (
+[7m   [0m [91m                            ~[0m
+[96msrc/pages/admin.astro[0m:[93m19[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m19[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/admin.astro[0m:[93m8[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m8[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/jubility.astro[0m:[93m30[0m:[93m57[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m30[0m const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+[7m  [0m [91m                                                        ~~~~~~~~~~[0m
+[96msrc/pages/jubility.astro[0m:[93m26[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m26[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/recent.astro[0m:[93m17[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m17[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/recent.astro[0m:[93m13[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m13[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/songs.astro[0m:[93m30[0m:[93m65[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m30[0m const ALL: Song[] = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+[7m  [0m [91m                                                                ~~~~~~~~~~[0m
+[96msrc/pages/songs.astro[0m:[93m25[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m25[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/songs.astro[0m:[93m18[0m:[93m1[0m - [93mwarning[0m[90m ts(6133): [0m'SongCard' is declared but its value is never read.
+
+[7m18[0m import SongCard from '../components/SongCard.astro';
+[7m  [0m [93m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/songs.astro[0m:[93m1861[0m:[93m16[0m - [93mwarning[0m[90m ts(80006): [0mThis may be converted to an async function.
+
+[7m1861[0m       function loadFrag(ph) {
+[7m    [0m [93m               ~~~~~~~~[0m
+[96msrc/pages/songs.astro[0m:[93m1651[0m:[93m52[0m - [93mwarning[0m[90m ts(6133): [0m'e' is declared but its value is never read.
+
+[7m1651[0m         list.addEventListener('keydown', function (e) {});
+[7m    [0m [93m                                                   ~[0m
+
+[96msrc/pages/admin/songs/[songId].astro[0m:[93m46[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m46[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/admin/songs/[songId].astro[0m:[93m12[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m12[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/admin/songs/index.astro[0m:[93m30[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m30[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/admin/songs/index.astro[0m:[93m16[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m16[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/songs/[songId].astro[0m:[93m697[0m:[93m19[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'showToast'.
+
+[7m697[0m           if (ok) showToast();
+[7m   [0m [91m                  ~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m696[0m:[93m35[0m - [91merror[0m[90m ts(7006): [0mParameter 'ok' implicitly has an 'any' type.
+
+[7m696[0m         copy(text).then(function (ok) {
+[7m   [0m [91m                                  ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m696[0m:[93m9[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'copy'.
+
+[7m696[0m         copy(text).then(function (ok) {
+[7m   [0m [91m        ~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m693[0m:[93m18[0m - [91merror[0m[90m ts(2683): [0m'this' implicitly has type 'any' because it does not have a type annotation.
+
+[7m693[0m         var el = this;
+[7m   [0m [91m                 ~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m692[0m:[93m15[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'i'.
+
+[7m692[0m       targets[i].addEventListener('click', function () {
+[7m   [0m [91m              ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m692[0m:[93m7[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'targets'.
+
+[7m692[0m       targets[i].addEventListener('click', function () {
+[7m   [0m [91m      ~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m691[0m:[93m25[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'targets'.
+
+[7m691[0m     for (var i = 0; i < targets.length; i++) {
+[7m   [0m [91m                        ~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m681[0m:[93m26[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'fitTitle'.
+
+[7m681[0m     function fitText() { fitTitle(); fitArtist(); }
+[7m   [0m [91m                         ~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m675[0m:[93m9[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'fs'.
+
+[7m675[0m         fs -= 1;
+[7m   [0m [91m        ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m656[0m:[93m9[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'fs'.
+
+[7m656[0m         fs -= 1;
+[7m   [0m [91m        ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m646[0m:[93m11[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'fs'.
+
+[7m646[0m           fs -= 1;
+[7m   [0m [91m          ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m618[0m:[93m30[0m - [91merror[0m[90m ts(2304): [0mCannot find name 't'.
+
+[7m618[0m         if (!tops[t]) { tops[t] = 1; n++; }
+[7m   [0m [91m                             ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m618[0m:[93m25[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'tops'.
+
+[7m618[0m         if (!tops[t]) { tops[t] = 1; n++; }
+[7m   [0m [91m                        ~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m615[0m:[93m27[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'rects'.
+
+[7m615[0m       for (var i = 0; i < rects.length; i++) {
+[7m   [0m [91m                          ~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m62[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'ok'.
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m                                                             ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m13[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'ok'.
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m            ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m582[0m:[93m45[0m - [91merror[0m[90m ts(2304): [0mCannot find name 't'.
+
+[7m582[0m       toastTimer = setTimeout(function () { t.classList.remove('is-on'); }, 1600);
+[7m   [0m [91m                                            ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m45[0m:[93m19[0m - [91merror[0m[90m ts(2352): [0mConversion of type '{ baseline: { medianPct: number; sample: number; }; stats: { "11000014|bsc": (number | null)[]; "11000014|adv": (number | null)[]; "11000014|ext": (number | null)[]; "11000040|bsc": number[]; "11000040|adv": number[]; ... 3738 more ...; "995000054|ext": (number | null)[]; }; }' to type '{ stats: Record<string, [number | null, number | null]>; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'stats' are incompatible.
+    Type '{ "11000014|bsc": (number | null)[]; "11000014|adv": (number | null)[]; "11000014|ext": (number | null)[]; "11000040|bsc": number[]; "11000040|adv": number[]; "11000040|ext": number[]; "11000083|bsc": (number | null)[]; ... 3736 more ...; "995000054|ext": (number | null)[]; }' is not comparable to type 'Record<string, [number | null, number | null]>'.
+      Property '"11000014|bsc"' is incompatible with index signature.
+        Type '(number | null)[]' is not comparable to type '[number | null, number | null]'.
+          Target requires 2 element(s) but source may have fewer.
+
+[7m45[0m const DIFF_RAW = (diffStatsJson as { stats: Record<string, [number | null, number | null]> }).stats;
+[7m  [0m [91m                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m38[0m:[93m38[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m38[0m const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                     ~~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m19[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m19[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m27[0m - [93mwarning[0m[90m ts(6387): [0mThe signature '(commandId: string, showUI?: boolean | undefined, value?: string | undefined): boolean' of 'document.execCommand' is deprecated.
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [93m                          ~~~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m70[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'genMeta' is declared but its value is never read.
+
+[7m70[0m const genMeta = song ? GEN_ORDER.find((g) => g.k === song.gen) : undefined;
+[7m  [0m [93m      ~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m702[0m:[93m3[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m702[0m   })();
+[7m   [0m [91m  ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m701[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m701[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m700[0m:[93m9[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m700[0m       });
+[7m   [0m [91m        ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m691[0m:[93m39[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m691[0m     for (var i = 0; i < targets.length; i++) {
+[7m   [0m [91m                                      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m688[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m688[0m     });
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m686[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m686[0m       if (fitTimer) clearTimeout(fitTimer);
+[7m   [0m [91m      ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m681[0m:[93m51[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m681[0m     function fitText() { fitTitle(); fitArtist(); }
+[7m   [0m [91m                                                  ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m681[0m:[93m36[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m681[0m     function fitText() { fitTitle(); fitArtist(); }
+[7m   [0m [91m                                   ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m679[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m679[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m678[0m:[93m7[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m678[0m       }
+[7m   [0m [91m      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m675[0m:[93m16[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m675[0m         fs -= 1;
+[7m   [0m [91m               ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m674[0m:[93m75[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m674[0m       while (a.scrollWidth > a.clientWidth + 1 && fs - 1 >= 12 && guard < 40) {
+[7m   [0m [91m                                                                          ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m674[0m:[93m58[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m674[0m       while (a.scrollWidth > a.clientWidth + 1 && fs - 1 >= 12 && guard < 40) {
+[7m   [0m [91m                                                         ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m674[0m:[93m28[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m674[0m       while (a.scrollWidth > a.clientWidth + 1 && fs - 1 >= 12 && guard < 40) {
+[7m   [0m [91m                           ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m671[0m:[93m29[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m671[0m       if (window.innerWidth > 700) return;
+[7m   [0m [91m                            ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m668[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m668[0m       var a = document.querySelector('.sd-artist');
+[7m   [0m [91m      ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m660[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m660[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m659[0m:[93m7[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m659[0m       }
+[7m   [0m [91m      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m656[0m:[93m16[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m656[0m         fs -= 1;
+[7m   [0m [91m               ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m655[0m:[93m70[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m655[0m       while (wrap.scrollWidth > avail + 1 && fs - 1 >= 20 && guard < 80) {
+[7m   [0m [91m                                                                     ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m655[0m:[93m53[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m655[0m       while (wrap.scrollWidth > avail + 1 && fs - 1 >= 20 && guard < 80) {
+[7m   [0m [91m                                                    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m655[0m:[93m31[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m655[0m       while (wrap.scrollWidth > avail + 1 && fs - 1 >= 20 && guard < 80) {
+[7m   [0m [91m                              ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m652[0m:[93m7[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m652[0m       }
+[7m   [0m [91m      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m650[0m:[93m38[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m650[0m         if (inner && countLines(btn) > 2) inner.classList.add('is-clamp');
+[7m   [0m [91m                                     ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m649[0m:[93m9[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m649[0m         }
+[7m   [0m [91m        ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m646[0m:[93m18[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m646[0m           fs -= 1;
+[7m   [0m [91m                 ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m645[0m:[93m64[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m645[0m         while (countLines(btn) > 2 && fs - 1 >= 13 && guardM < 60) {
+[7m   [0m [91m                                                               ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m645[0m:[93m46[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m645[0m         while (countLines(btn) > 2 && fs - 1 >= 13 && guardM < 60) {
+[7m   [0m [91m                                             ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m645[0m:[93m32[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m645[0m         while (countLines(btn) > 2 && fs - 1 >= 13 && guardM < 60) {
+[7m   [0m [91m                               ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m642[0m:[93m35[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m642[0m         /* 【坑·2026-11-02】原来写的是 fs > 13：循环体先减再判断，
+[7m   [0m [91m                                  ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m641[0m:[93m9[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m641[0m         var guardM = 0;
+[7m   [0m [91m        ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m640[0m:[93m30[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m640[0m       if (window.innerWidth <= 700) {
+[7m   [0m [91m                             ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m630[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m630[0m       var wrap = document.querySelector('.sd-title-wrap');
+[7m   [0m [91m      ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m624[0m:[93m11[0m - [91merror[0m[90m ts(1382): [0mUnexpected token. Did you mean `{'>'}` or `&gt;`?
+
+[7m624[0m        桌面（>700px）：一行 + 不溢出右栏，下限 20px。
+[7m   [0m [91m          ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m621[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m621[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m619[0m:[93m7[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m619[0m       }
+[7m   [0m [91m      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m618[0m:[93m43[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m618[0m         if (!tops[t]) { tops[t] = 1; n++; }
+[7m   [0m [91m                                          ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m618[0m:[93m36[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m618[0m         if (!tops[t]) { tops[t] = 1; n++; }
+[7m   [0m [91m                                   ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m616[0m:[93m31[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m616[0m         if (rects[i].height < 1) continue;
+[7m   [0m [91m                              ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m616[0m:[93m9[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m616[0m         if (rects[i].height < 1) continue;
+[7m   [0m [91m        ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m615[0m:[93m39[0m - [91merror[0m[90m ts(1003): [0mIdentifier expected.
+
+[7m615[0m       for (var i = 0; i < rects.length; i++) {
+[7m   [0m [91m                                      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m610[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m610[0m       var rg = document.createRange();
+[7m   [0m [91m      ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m605[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m605[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m603[0m:[93m7[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m603[0m       }
+[7m   [0m [91m      ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m601[0m:[93m52[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m601[0m           function () { return fallbackCopy(text); }
+[7m   [0m [91m                                                   ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m601[0m:[93m25[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m601[0m           function () { return fallbackCopy(text); }
+[7m   [0m [91m                        ~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m600[0m:[93m38[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m600[0m           function () { return true; },
+[7m   [0m [91m                                     ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m600[0m:[93m25[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m600[0m           function () { return true; },
+[7m   [0m [91m                        ~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m599[0m:[93m9[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m599[0m         return navigator.clipboard.writeText(text).then(
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m598[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m598[0m       if (navigator.clipboard && navigator.clipboard.writeText) {
+[7m   [0m [91m      ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m596[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m596[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m74[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m                                                                         ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m72[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m                                                                       ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m48[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m                                               ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m593[0m:[93m46[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m593[0m       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+[7m   [0m [91m                                             ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m585[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m585[0m       var ta = document.createElement('textarea');
+[7m   [0m [91m      ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m583[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m583[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m582[0m:[93m74[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m582[0m       toastTimer = setTimeout(function () { t.classList.remove('is-on'); }, 1600);
+[7m   [0m [91m                                                                         ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m582[0m:[93m72[0m - [91merror[0m[90m ts(1005): [0m'}' expected.
+
+[7m582[0m       toastTimer = setTimeout(function () { t.classList.remove('is-on'); }, 1600);
+[7m   [0m [91m                                                                       ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m576[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m576[0m       var t = ensureToast();
+[7m   [0m [91m      ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m574[0m:[93m5[0m - [91merror[0m[90m ts(1381): [0mUnexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+[7m574[0m     }
+[7m   [0m [91m    ~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m563[0m:[93m7[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m563[0m       if (toastEl) return toastEl;
+[7m   [0m [91m      ~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m560[0m:[93m5[0m - [91merror[0m[90m ts(1109): [0mExpression expected.
+
+[7m560[0m     var toastEl = null;
+[7m   [0m [91m    ~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m705[0m:[93m1[0m - [91merror[0m[90m astro: [0mExpected a closing tag but instead found the end of the file.
+
+[7m705[0m 
+[7m   [0m [91m[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m704[0m:[93m1[0m - [91merror[0m[90m astro: [0mExpected a matching closing tag but instead found '</Layout>'.
+
+[7m704[0m </Layout>
+[7m   [0m [91m~~~~~~~~~[0m
+[96msrc/pages/songs/[songId].astro[0m:[93m281[0m:[93m3[0m - [91merror[0m[90m astro: [0mFound a text expression that doesn't have the closing expression:
+
+[7m281[0m   {!song ? <NotFound /> : (
+[7m   [0m [91m  ~~~~~~~~[0m
+
+[96msrc/pages/songs/frag.astro[0m:[93m28[0m:[93m57[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m28[0m const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+[7m  [0m [91m                                                        ~~~~~~~~~~[0m
+[96msrc/pages/songs/frag.astro[0m:[93m20[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m20[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/middleware.ts[0m:[93m93[0m:[93m36[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m93[0m     db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                   ~~~~~~~~~~[0m
+[96msrc/middleware.ts[0m:[93m92[0m:[93m34[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m92[0m     const { env } = await import('cloudflare:workers');
+[7m  [0m [91m                                 ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/middleware.ts[0m:[93m90[0m:[93m11[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m90[0m   let db: D1Database | undefined;
+[7m  [0m [91m          ~~~~~~~~~~[0m
+
+[96msrc/worker.ts[0m:[93m34[0m:[93m68[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'ExecutionContext'.
+
+[7m34[0m   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+[7m  [0m [91m                                                                   ~~~~~~~~~~~~~~~~[0m
+[96msrc/worker.ts[0m:[93m34[0m:[93m32[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'ScheduledController'.
+
+[7m34[0m   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+[7m  [0m [91m                               ~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/lib/auth.ts[0m:[93m191[0m:[93m42[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m191[0m export async function destroySession(db: D1Database, token: string): Promise<void> {
+[7m   [0m [91m                                         ~~~~~~~~~~[0m
+[96msrc/lib/auth.ts[0m:[93m165[0m:[93m42[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m165[0m export async function getUserByToken(db: D1Database, token: string): Promise<AuthUser | null> {
+[7m   [0m [91m                                         ~~~~~~~~~~[0m
+[96msrc/lib/auth.ts[0m:[93m139[0m:[93m7[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m139[0m   db: D1Database,
+[7m   [0m [91m      ~~~~~~~~~~[0m
+
+[96msrc/lib/db.ts[0m:[93m200[0m:[93m31[0m - [91merror[0m[90m ts(7006): [0mParameter 'r' implicitly has an 'any' type.
+
+[7m200[0m   return (results ?? []).map((r) => ({
+[7m   [0m [91m                              ~[0m
+[96msrc/lib/db.ts[0m:[93m179[0m:[93m44[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m179[0m export async function getRecentChanges(db: D1Database | undefined): Promise<RecentChange[]> {
+[7m   [0m [91m                                           ~~~~~~~~~~[0m
+[96msrc/lib/db.ts[0m:[93m144[0m:[93m7[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m144[0m   db: D1Database | undefined,
+[7m   [0m [91m      ~~~~~~~~~~[0m
+[96msrc/lib/db.ts[0m:[93m130[0m:[93m3[0m - [91merror[0m[90m ts(2322): [0mType 'Song[] | null' is not assignable to type 'Song[]'.
+  Type 'null' is not assignable to type 'Song[]'.
+
+[7m130[0m   return cache;
+[7m   [0m [91m  ~~~~~~[0m
+[96msrc/lib/db.ts[0m:[93m113[0m:[93m39[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m113[0m export async function getAllSongs(db: D1Database | undefined): Promise<Song[]> {
+[7m   [0m [91m                                      ~~~~~~~~~~[0m
+
+[96msrc/lib/hotPage.ts[0m:[93m221[0m:[93m29[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'recordHit'. Did you mean 'Record'?
+
+[7m221[0m export { dbOf, hasSnapshot, recordHit, fortuneOf, dayOf };
+[7m   [0m [91m                            ~~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m211[0m:[93m66[0m - [91merror[0m[90m ts(2322): [0mType 'number' is not assignable to type '{ bsc: number | null; adv: number | null; ext: number | null; } & number'.
+  Type 'number' is not assignable to type '{ bsc: number | null; adv: number | null; ext: number | null; }'.
+
+[7m211[0m     out.push({ ...pick, rank: line.grade, tier: line.tier, diff, lv: pick.lv[diff] ?? 0 });
+[7m   [0m [91m                                                                 ~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m175[0m:[93m35[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'D1Database'. Did you mean 'IDBDatabase'?
+
+[7m175[0m export function fallbackByIds(db: D1Database, ids: string[]): Promise<PoolSong[]> {
+[7m   [0m [91m                                  ~~~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m163[0m:[93m46[0m - [91merror[0m[90m ts(2339): [0mProperty 'ext' does not exist on type '{}'.
+
+[7m163[0m         ext: r.ext == null ? null : Number(r.ext),
+[7m   [0m [91m                                             ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m163[0m:[93m16[0m - [91merror[0m[90m ts(2339): [0mProperty 'ext' does not exist on type '{}'.
+
+[7m163[0m         ext: r.ext == null ? null : Number(r.ext),
+[7m   [0m [91m               ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m162[0m:[93m46[0m - [91merror[0m[90m ts(2339): [0mProperty 'adv' does not exist on type '{}'.
+
+[7m162[0m         adv: r.adv == null ? null : Number(r.adv),
+[7m   [0m [91m                                             ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m162[0m:[93m16[0m - [91merror[0m[90m ts(2339): [0mProperty 'adv' does not exist on type '{}'.
+
+[7m162[0m         adv: r.adv == null ? null : Number(r.adv),
+[7m   [0m [91m               ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m161[0m:[93m46[0m - [91merror[0m[90m ts(2339): [0mProperty 'bsc' does not exist on type '{}'.
+
+[7m161[0m         bsc: r.bsc == null ? null : Number(r.bsc),
+[7m   [0m [91m                                             ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m161[0m:[93m16[0m - [91merror[0m[90m ts(2339): [0mProperty 'bsc' does not exist on type '{}'.
+
+[7m161[0m         bsc: r.bsc == null ? null : Number(r.bsc),
+[7m   [0m [91m               ~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m159[0m:[93m13[0m - [91merror[0m[90m ts(2339): [0mProperty 'server_cn' does not exist on type '{}'.
+
+[7m159[0m       cn: r.server_cn === 1,
+[7m   [0m [91m            ~~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m158[0m:[93m13[0m - [91merror[0m[90m ts(2339): [0mProperty 'server_jp' does not exist on type '{}'.
+
+[7m158[0m       jp: r.server_jp === 1,
+[7m   [0m [91m            ~~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m157[0m:[93m18[0m - [91merror[0m[90m ts(2339): [0mProperty 'has_hold' does not exist on type '{}'.
+
+[7m157[0m       hasHold: r.has_hold === 1,
+[7m   [0m [91m                 ~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m156[0m:[93m16[0m - [91merror[0m[90m ts(2339): [0mProperty 'cover' does not exist on type '{}'.
+
+[7m156[0m       cover: r.cover,
+[7m   [0m [91m               ~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m155[0m:[93m17[0m - [91merror[0m[90m ts(2339): [0mProperty 'artist' does not exist on type '{}'.
+
+[7m155[0m       artist: r.artist,
+[7m   [0m [91m                ~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m154[0m:[93m16[0m - [91merror[0m[90m ts(2339): [0mProperty 'title' does not exist on type '{}'.
+
+[7m154[0m       title: r.title,
+[7m   [0m [91m               ~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m153[0m:[93m17[0m - [91merror[0m[90m ts(2339): [0mProperty 'song_id' does not exist on type '{}'.
+
+[7m153[0m       songId: r.song_id,
+[7m   [0m [91m                ~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m148[0m:[93m45[0m - [91merror[0m[90m ts(7006): [0mParameter 'r' implicitly has an 'any' type.
+
+[7m148[0m   const byId = new Map((results ?? []).map((r) => [r.song_id, r]));
+[7m   [0m [91m                                            ~[0m
+[96msrc/lib/hotPage.ts[0m:[93m134[0m:[93m33[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m134[0m export async function byIds(db: D1Database, ids: string[], srv?: Ssrv): Promise<PoolSong[]> {
+[7m   [0m [91m                                ~~~~~~~~~~[0m
+[96msrc/lib/hotPage.ts[0m:[93m41[0m:[93m31[0m - [91merror[0m[90m ts(7006): [0mParameter 'r' implicitly has an 'any' type.
+
+[7m41[0m   return (results ?? []).map((r) => r.song_id);
+[7m  [0m [91m                              ~[0m
+[96msrc/lib/hotPage.ts[0m:[93m31[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m31[0m export async function fallbackPool(db: D1Database, size: number, srv?: Ssrv): Promise<string[]> {
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+
+[96msrc/lib/hotStore.ts[0m:[93m152[0m:[93m48[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m152[0m export async function pruneExpiredSessions(db: D1Database, nowISO: string): Promise<void> {
+[7m   [0m [91m                                               ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m147[0m:[93m46[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m147[0m export async function pruneRecentChanges(db: D1Database, beforeISO: string): Promise<void> {
+[7m   [0m [91m                                             ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m136[0m:[93m39[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m136[0m export async function pruneBefore(db: D1Database, day: string): Promise<void> {
+[7m   [0m [91m                                      ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m129[0m:[93m39[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m129[0m export async function hasSnapshot(db: D1Database, date: string): Promise<boolean> {
+[7m   [0m [91m                                      ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m82[0m:[93m35[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m82[0m export async function votesIn(db: D1Database, from: string, to: string): Promise<{ song_id: string; visitor: string }[]> {
+[7m  [0m [91m                                  ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m73[0m:[93m42[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m73[0m export async function isGapThrottled(db: D1Database, visitor: string, songId: string, now: number): Promise<boolean> {
+[7m  [0m [91m                                         ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m57[0m:[93m7[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m57[0m   db: D1Database, day: string, ipHash: string, minute: string,
+[7m  [0m [91m      ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m37[0m:[93m7[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m37[0m   db: D1Database,
+[7m  [0m [91m      ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m28[0m:[93m33[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m28[0m export function dbOf(env: Env): D1Database {
+[7m  [0m [91m                                ~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m26[0m:[93m59[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'KVNamespace'.
+
+[7m26[0m export type Env = { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                                          ~~~~~~~~~~~[0m
+[96msrc/lib/hotStore.ts[0m:[93m26[0m:[93m37[0m - [91merror[0m[90m ts(2552): [0mCannot find name 'D1Database'. Did you mean 'IDBDatabase'?
+
+[7m26[0m export type Env = { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
+[7m  [0m [91m                                    ~~~~~~~~~~[0m
+
+[96msrc/lib/song-admin-server.ts[0m:[93m174[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m174[0m         change.after_text
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m173[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m173[0m         change.before_text,
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m172[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m172[0m         change.summary,
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m171[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m171[0m         change.target_href,
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m170[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m170[0m         change.target_label,
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m169[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m169[0m         change.user,
+[7m   [0m [91m        ~~~~~~[0m
+[96msrc/lib/song-admin-server.ts[0m:[93m168[0m:[93m9[0m - [91merror[0m[90m ts(18047): [0m'change' is possibly 'null'.
+
+[7m168[0m         change.changed_at,
+[7m   [0m [91m        ~~~~~~[0m
+
+[96msrc/pages/api/account/apply.ts[0m:[93m21[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m21[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/account/apply.ts[0m:[93m6[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m6[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/account/password.ts[0m:[93m31[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m31[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/account/password.ts[0m:[93m6[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m6[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/api/account/password.ts[0m:[93m13[0m:[93m3[0m - [93mwarning[0m[90m ts(6133): [0m'destroySession' is declared but its value is never read.
+
+[7m13[0m   destroySession,
+[7m  [0m [93m  ~~~~~~~~~~~~~~[0m
+[96msrc/pages/api/account/password.ts[0m:[93m10[0m:[93m3[0m - [93mwarning[0m[90m ts(6133): [0m'readSessionToken' is declared but its value is never read.
+
+[7m10[0m   readSessionToken,
+[7m  [0m [93m  ~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/account/profile.ts[0m:[93m15[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m15[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/account/profile.ts[0m:[93m3[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m3[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/admin/decide.ts[0m:[93m45[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m45[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/admin/decide.ts[0m:[93m6[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m6[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/admin/song-update.ts[0m:[93m21[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m21[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/admin/song-update.ts[0m:[93m10[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m10[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/audio/[songId].ts[0m:[93m213[0m:[93m50[0m - [91merror[0m[90m ts(2339): [0mProperty 'end' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'end' does not exist on type '"invalid"'.
+
+[7m213[0m           'content-range': `bytes ${r.start}-${r.end}/${size}`,
+[7m   [0m [91m                                                 ~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m213[0m:[93m39[0m - [91merror[0m[90m ts(2339): [0mProperty 'start' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'start' does not exist on type '"invalid"'.
+
+[7m213[0m           'content-range': `bytes ${r.start}-${r.end}/${size}`,
+[7m   [0m [91m                                      ~~~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m212[0m:[93m42[0m - [91merror[0m[90m ts(2339): [0mProperty 'start' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'start' does not exist on type '"invalid"'.
+
+[7m212[0m           ...baseHeaders(type, r.end - r.start + 1, true),
+[7m   [0m [91m                                         ~~~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m212[0m:[93m34[0m - [91merror[0m[90m ts(2339): [0mProperty 'end' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'end' does not exist on type '"invalid"'.
+
+[7m212[0m           ...baseHeaders(type, r.end - r.start + 1, true),
+[7m   [0m [91m                                 ~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m209[0m:[93m56[0m - [91merror[0m[90m ts(2339): [0mProperty 'end' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'end' does not exist on type '"invalid"'.
+
+[7m209[0m       return new Response(sliceStream(body, r.start, r.end), {
+[7m   [0m [91m                                                       ~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m209[0m:[93m47[0m - [91merror[0m[90m ts(2339): [0mProperty 'start' does not exist on type '"invalid" | { start: number; end: number; }'.
+  Property 'start' does not exist on type '"invalid"'.
+
+[7m209[0m       return new Response(sliceStream(body, r.start, r.end), {
+[7m   [0m [91m                                              ~~~~~[0m
+[96msrc/pages/api/audio/[songId].ts[0m:[93m145[0m:[93m24[0m - [91merror[0m[90m ts(2339): [0mProperty 'default' does not exist on type 'CacheStorage'.
+
+[7m145[0m   const cache = caches.default;
+[7m   [0m [91m                       ~~~~~~~[0m
+
+[96msrc/pages/api/auth/login.ts[0m:[93m25[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m25[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/auth/login.ts[0m:[93m3[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m3[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/auth/logout.ts[0m:[93m14[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m14[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/auth/logout.ts[0m:[93m4[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m4[0m import { env } from 'cloudflare:workers';
+[7m [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+[96msrc/pages/api/auth/logout.ts[0m:[93m13[0m:[93m49[0m - [93mwarning[0m[90m ts(6133): [0m'redirect' is declared but its value is never read.
+
+[7m13[0m export const POST: APIRoute = async ({ request, redirect }) => {
+[7m  [0m [93m                                                ~~~~~~~~[0m
+
+[96msrc/pages/api/auth/register.ts[0m:[93m37[0m:[93m40[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m37[0m   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
+[7m  [0m [91m                                       ~~~~~~~~~~[0m
+[96msrc/pages/api/auth/register.ts[0m:[93m11[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m11[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96msrc/pages/api/hot/hit.ts[0m:[93m33[0m:[93m30[0m - [91merror[0m[90m ts(2304): [0mCannot find name 'D1Database'.
+
+[7m33[0m type Ctx = { beyond_jubeat?: D1Database; HOT_SALT?: string };
+[7m  [0m [91m                             ~~~~~~~~~~[0m
+[96msrc/pages/api/hot/hit.ts[0m:[93m15[0m:[93m21[0m - [91merror[0m[90m ts(2307): [0mCannot find module 'cloudflare:workers' or its corresponding type declarations.
+
+[7m15[0m import { env } from 'cloudflare:workers';
+[7m  [0m [91m                    ~~~~~~~~~~~~~~~~~~~~[0m
+
+[96mastro.config.mjs[0m:[93m15[0m:[93m5[0m - [91merror[0m[90m ts(2353): [0mObject literal may only specify known properties, and 'platformProxy' does not exist in type 'Options'.
+
+[7m15[0m     platformProxy: { enabled: false },
+[7m  [0m [91m    ~~~~~~~~~~~~~[0m
+
+[96mscripts/ci/check-song-edits.mjs[0m:[93m170[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'res' is declared but its value is never read.
+
+[7m170[0m   const res = await run({ user: { id: 'u1', name: '路人', role: 'player' } });
+[7m   [0m [93m        ~~~[0m
+
+[96mscripts/tmp/audit5.mjs[0m:[93m27[0m:[93m9[0m - [93mwarning[0m[90m ts(6133): [0m'seq' is declared but its value is never read.
+
+[7m27[0m   const seq = [];
+[7m  [0m [93m        ~~~[0m
+
+[96mscripts/yyj/fetch-charts.mjs[0m:[93m133[0m:[93m16[0m - [93mwarning[0m[90m ts(6133): [0m'fetchOne' is declared but its value is never read.
+
+[7m133[0m async function fetchOne(session, songIdNum) {
+[7m   [0m [93m               ~~~~~~~~[0m
+[96mscripts/yyj/fetch-charts.mjs[0m:[93m32[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'CONC' is declared but its value is never read.
+
+[7m32[0m const CONC = Number((argv.find((a) => a.startsWith('--conc=')) || '--conc=8').slice(7));
+[7m  [0m [93m      ~~~~[0m
+
+[96mscripts/yyj/record-detail.mjs[0m:[93m33[0m:[93m7[0m - [93mwarning[0m[90m ts(6133): [0m'origHandleInner' is declared but its value is never read.
+
+[7m33[0m const origHandleInner = proxy.handleInner.bind(proxy);
+[7m  [0m [93m      ~~~~~~~~~~~~~~~[0m
+
+Result (76 files): 
+- 193 errors
+- 0 warnings
+- 17 hints
+

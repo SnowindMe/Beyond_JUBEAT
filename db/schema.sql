@@ -22,7 +22,7 @@ CREATE TABLE songs (
   bsc         REAL,
   adv         REAL,
   ext         REAL,
-  alt         INTEGER NOT NULL DEFAULT 0, -- 1 = 该行是 [ 2 ] 谱面（标题带 [ 2 ]）。**不代表有长押**，见 has_hold
+  alt         INTEGER NOT NULL DEFAULT 0 CHECK (alt IN (0,1)), -- 1 = 该行是 [ 2 ] 谱面（标题带 [ 2 ]）。**不代表有长押**，见 has_hold
   -- 【2026-10-31 主人要求：接入 RemyWiki 的谱面数据（BPM / 是否长押谱 / 总键数 / 长押数）】
   -- 来源 remywiki 的 jubeat 单曲页，判定规则与抓取说明见 data/remy/README.md；
   -- 按 song_id 归并好的入库快照是 data/remy/by-song-id.json（build-db.cjs 回填，不手改库）。
@@ -58,6 +58,20 @@ CREATE TABLE recent_changes (
 );
 
 CREATE INDEX idx_recent_changed_at ON recent_changes(changed_at DESC);
+
+-- 曲目缓存修订号（2026-11-04）。单行表，rev 只增不减。
+-- 曲目已经改由构建期静态快照提供（src/lib/song-data.ts），后台改一条曲目后
+-- 光改库里的 songs 行是不会让线上变样的 —— 必须同时把 rev +1，
+-- 各 PoP 的缓存 key（?v=<内容版本>&r=<rev>）才会一起换，新内容才会被读到。
+-- 用独立行而不是 songs 的 MAX(rowid)：rev 要能在「只是改字段、不加行」时也变。
+CREATE TABLE song_rev (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  rev        INTEGER NOT NULL DEFAULT 0,
+  changed_at TEXT                        -- 最后一次 bump 的时间，排查用
+);
+INSERT OR IGNORE INTO song_rev (id, rev) VALUES (1, 0);
+-- 归档清理（2026-11-04）：按 changed_at 早于 N 个月删，与上面 DESC 的那条不是一回事
+CREATE INDEX idx_recent_changed_at_asc ON recent_changes(changed_at);
 
 -- ---------------------------------------------------------------------------
 -- 用户系统（2026-10-23，v1.14.0 起）
@@ -101,6 +115,7 @@ CREATE TABLE sessions (
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_sessions_user ON sessions(user_id);
+-- 过期会话由每日 cron 的 cleanupExpired() 统一清，走这条索引按 expires_at 扫
 CREATE INDEX idx_sessions_exp  ON sessions(expires_at);
 
 -- 第三方登录（GitHub 等）。二期才接回调，但表先建好：
@@ -147,7 +162,7 @@ CREATE TABLE hot_hits (
   created_at TEXT NOT NULL,
   PRIMARY KEY (day, song_id, visitor)
 );
-CREATE INDEX idx_hot_hits_day_song ON hot_hits(day, song_id);
+-- 不再单独建 (day, song_id) 索引：主键 (day, song_id, visitor) 的最左前缀已经完全覆盖它
 CREATE INDEX idx_hot_hits_day_ip ON hot_hits(day, ip_hash);
 
 -- 每日快照（2026-11-03）。增量脚本是同内容的 db/migrate-hot.sql，线上只跑那个。
@@ -159,3 +174,28 @@ CREATE TABLE hot_snapshots (
   seeded     INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
 );
+
+-- IP 限流计数（2026-11-04）。增量脚本是 db/migrate-p0.sql，线上只跑那个。
+-- 原先每次打点都 SELECT COUNT(*) 扫 hot_hits（每天 400 次那份），并用 KV 计分钟数（每分钟 30 次那份）。
+-- 现在两个计数并在同一行的两个列上：一次 upsert + RETURNING 就能同时拿到分钟数与日计数，
+-- 打点上再没有任何 COUNT 扫描与 KV 往返。min_key 存到分钟的字符串，换分钟就把它当新行重算。
+DROP TABLE IF EXISTS hot_ip_days;
+CREATE TABLE hot_ip_days (
+  day     TEXT NOT NULL,
+  ip_hash TEXT NOT NULL,
+  n       INTEGER NOT NULL DEFAULT 0,   -- 当天总次数
+  min_key TEXT NOT NULL,                -- 最近一次打点所在的分钟（ISO 到分钟）
+  min_n   INTEGER NOT NULL DEFAULT 0,   -- 那一分钟内的次数
+  PRIMARY KEY (day, ip_hash)
+);
+CREATE INDEX idx_hot_ip_days_day ON hot_ip_days(day);
+
+-- 同人同曲 60 秒节流（2026-11-04）。原先存在 KV 的 hot:gap:* 键里。
+DROP TABLE IF EXISTS hot_gaps;
+CREATE TABLE hot_gaps (
+  key     TEXT PRIMARY KEY,
+  minute  TEXT NOT NULL,
+  expires TEXT NOT NULL
+);
+CREATE INDEX idx_hot_gaps_exp ON hot_gaps(expires);
+

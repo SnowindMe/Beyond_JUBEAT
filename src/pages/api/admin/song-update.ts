@@ -8,7 +8,7 @@
 //     handleSongUpdate 里——那份逻辑不依赖 Astro，CI 能直接调用验越权分支。
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { invalidateSongsCache } from '../../../lib/db';
+import { invalidateSongsCache } from '../../../lib/song-data';
 import { handleSongUpdate } from '../../../lib/song-admin-server';
 import { isMachineRequest } from '../../../lib/song-admin';
 
@@ -16,6 +16,23 @@ import { isMachineRequest } from '../../../lib/song-admin';
 // 端点默认会被当静态路由在构建期预渲染——那样它既拿不到请求体，
 // 也会在 Node 预渲染环境里 import cloudflare:workers 直接崩。
 export const prerender = false;
+
+/**
+ * 修订号 +1。用独立行而不是 songs 表的 MAX(rowid)，是因为曲目改成静态快照之后
+ * 表里的行不再直接反映线上内容，需要一个显式的「该换缓存了」信号。
+ * 失败只记日志：曲目已经存进去了，缓存过期（1 年 + 60s 修订号缓存）不该让人以为保存失败。
+ */
+async function bumpSongRev(db: D1Database | undefined) {
+  if (!db) return;
+  try {
+    await db
+      .prepare('UPDATE song_rev SET rev = rev + 1, changed_at = ? WHERE id = 1')
+      .bind(new Date().toISOString())
+      .run();
+  } catch (e) {
+    console.error('song_rev bump failed', e);
+  }
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
@@ -33,9 +50,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     now: new Date().toISOString(),
   });
 
-  // 页面读的是 lib/db.ts 的 isolate 缓存，改完必须清掉，
-  // 否则 /songs/ 会继续显示旧值直到缓存过期（60s）。
+  /* 曲目缓存 eviction —— 两件事，缺一不可：
+     ① song_rev 修订号 +1：缓存 key 里带着它（见 lib/song-data.ts），
+        换了号，所有 PoP 的旧边缘缓存与内存快照同时失效。
+        只清本 isolate 的内存是不够的——别的 PoP 手里仍有 1 年的副本。
+     ② 本 isolate 立刻清内存并删刚写过的那个 key，免得自己白等 60s 修订号缓存。 */
   if (result.status === 303 && result.location?.includes('ok=saved')) {
+    await bumpSongRev(db);
     invalidateSongsCache();
   }
 

@@ -8,7 +8,7 @@ import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import SongAudio from '../../components/SongAudio.astro';
-import { getSongById, type Song } from '../../lib/db';
+import { getSongById, type Song } from '../../lib/song-data';
 import { LEVELS, gauge, dash as dashLv, HOLD_PCT_MAX } from '../../lib/difficulty';
 // 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
 // 【2026-11-01 线上事故，别改回现算】最初写成每次请求调 buildDifficultyStats()，
@@ -36,7 +36,9 @@ export const prerender = false;
 
 const { songId } = Astro.params;
 const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
-const song: Song | null = songId ? await getSongById(db, songId) : null;
+const song: Song | null = songId
+  ? await getSongById((env as { ASSETS: Fetcher }).ASSETS, Astro.url.origin, songId, db, Astro.locals.cfContext)
+  : null;
 
 // 【2026-11-01 键数 / 长押的参照系】分位拿**全站同档谱面**当分母，
 // 由 scripts/build-difficulty-stats.cjs 在构建期算好，这里只做查表。

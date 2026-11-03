@@ -4,8 +4,10 @@
 // 但页面在 SSR 里跑、任务在 scheduled 里跑，两者只差一个"现在几点"的分支——
 // 分支放在调用方（pages/tasks），这里只提供纯数据动作。
 //
-// KV 用现成的 SESSION namespace（新人榜不值得单开一个 namespace，
-// 它的 key 前缀带 hot:，与 Astro Sessions 的键不冲突）。
+// KV 只用来存快照（读多写少，key 前缀 hot:snap: 与 Astro Sessions 的键不冲突）。
+// 【2026-11-04 改】打点路径上的限流/节流原先也走 KV，一次打点写 2 次 KV ——
+// KV 免费版只有 1000 keys written/天，超限直接报错、不排队，500 次打点就撞墙。
+// 现在全部落在 D1 的 hot_ip_days / hot_gaps，KV 在打点路径上零写入。
 
 import type { HotEntry } from './hot';
 
@@ -29,24 +31,51 @@ export function dbOf(env: Env): D1Database {
   return db;
 }
 
-/** 记一次命中。表主键是 (day, song_id, visitor)，重复打点靠 INSERT OR IGNORE 吃掉 */
+/** 记一次命中。表主键是 (day, song_id, visitor)，重复打点靠 INSERT OR IGNORE 吃掉。
+ *  【2026-11-04】节流键与命中行合成一次 db.batch，打点路径只剩一次往返、一次事务。 */
 export async function recordHit(
   db: D1Database,
-  hit: { day: string; songId: string; visitor: string; ipHash: string },
+  hit: { day: string; songId: string; visitor: string; ipHash: string; gapTtlSec: number },
 ): Promise<void> {
-  await db
-    .prepare('INSERT OR IGNORE INTO hot_hits (day, song_id, visitor, ip_hash, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(hit.day, hit.songId, hit.visitor, hit.ipHash, new Date().toISOString())
-    .run();
+  const now = Date.now();
+  await db.batch([
+    db
+      .prepare('INSERT OR IGNORE INTO hot_hits (day, song_id, visitor, ip_hash, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(hit.day, hit.songId, hit.visitor, hit.ipHash, new Date(now).toISOString()),
+    db
+      .prepare(`INSERT INTO hot_gaps (key, minute, expires) VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET minute = excluded.minute, expires = excluded.expires`)
+      .bind(`${hit.visitor}|${hit.songId}`, new Date(now).toISOString().slice(0, 16), new Date(now + hit.gapTtlSec * 1000).toISOString()),
+  ]);
 }
 
-/** 同一 IP 某天的打点次数 —— 限流闸门，命中索引 idx_hot_hits_day_ip，很便宜 */
-export async function countIpToday(db: D1Database, day: string, ipHash: string): Promise<number> {
+/** 打点计数器：一次 upsert 同时累加「当天」与「当前分钟」两个数，并 RETURNING 回来。
+ *  【2026-11-04 改】原先日计数是每次 SELECT COUNT(*) 扫 hot_hits、分钟计数是 KV 读改写两跳。
+ *  现在一行两列、一次往返：调用方拿到 n 与 minN 自己跟上限比。
+ *  min_key 换了分钟就把 min_n 从 1 重算（CASE 里判），不再需要 KV 的 TTL 过期。 */
+export async function bumpIp(
+  db: D1Database, day: string, ipHash: string, minute: string,
+): Promise<{ n: number; minN: number }> {
   const row = await db
-    .prepare('SELECT COUNT(*) AS n FROM hot_hits WHERE day = ? AND ip_hash = ?')
-    .bind(day, ipHash)
-    .first<{ n: number }>();
-  return row?.n ?? 0;
+    .prepare(`INSERT INTO hot_ip_days (day, ip_hash, n, min_key, min_n) VALUES (?, ?, 1, ?, 1)
+              ON CONFLICT(day, ip_hash) DO UPDATE SET
+                n     = n + 1,
+                min_n = CASE WHEN min_key = excluded.min_key THEN min_n + 1 ELSE 1 END,
+                min_key = excluded.min_key
+              RETURNING n, min_n AS minN`)
+    .bind(day, ipHash, minute)
+    .first<{ n: number; minN: number }>();
+  return { n: row?.n ?? 1, minN: row?.minN ?? 1 };
+}
+
+/** 同人同曲节流闸门：键还在有效期内就返回 true（本次打点丢掉）。
+ *  【2026-11-04 改】原先读 KV 的 hot:gap:* 键。 */
+export async function isGapThrottled(db: D1Database, visitor: string, songId: string, now: number): Promise<boolean> {
+  const row = await db
+    .prepare('SELECT expires FROM hot_gaps WHERE key = ?')
+    .bind(`${visitor}|${songId}`)
+    .first<{ expires: string }>();
+  return !!row && Date.parse(row.expires) > now;
 }
 
 /** 窗口内的全部命中行（只取算名次要用的两列，够用了） */
@@ -102,8 +131,24 @@ export async function hasSnapshot(db: D1Database, date: string): Promise<boolean
   return !!row;
 }
 
-/** 清理：埋点行与快照都只留最近 KEEP 天 */
+/** 清理：埋点行、IP 计数、快照都只留最近 KEEP 天；节流键按到期时间清。
+ *  【2026-11-04】计数表与节流表是新增的，不一起清就是一换存储换一换垃圾。 */
 export async function pruneBefore(db: D1Database, day: string): Promise<void> {
-  await db.prepare('DELETE FROM hot_hits WHERE day < ?').bind(day).run();
-  await db.prepare('DELETE FROM hot_snapshots WHERE date < ?').bind(day).run();
+  await db.batch([
+    db.prepare('DELETE FROM hot_hits WHERE day < ?').bind(day),
+    db.prepare('DELETE FROM hot_ip_days WHERE day < ?').bind(day),
+    db.prepare('DELETE FROM hot_gaps WHERE expires < ?').bind(new Date().toISOString()),
+    db.prepare('DELETE FROM hot_snapshots WHERE date < ?').bind(day),
+  ]);
+}
+
+/** 归档清理（2026-11-04）：recent_changes 从来没有上限，按 KEEP 时间删旧行。
+ *  与 pruneBefore 分开是因为它的时间列是 ISO 时间戳、不按日历日切。 */
+export async function pruneRecentChanges(db: D1Database, beforeISO: string): Promise<void> {
+  await db.prepare('DELETE FROM recent_changes WHERE changed_at < ?').bind(beforeISO).run();
+}
+
+/** 清掉所有过期会话（2026-11-04）。原先挂在每次登录上，白多一次 DELETE 扫。 */
+export async function pruneExpiredSessions(db: D1Database, nowISO: string): Promise<void> {
+  await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(nowISO).run();
 }

@@ -14,7 +14,7 @@
 // 缓存：走 src/middleware.ts 的边缘缓存（key 含查询串，见那里的说明）。
 // 注意 prrerender=false：这里要读 D1，不能构建期生成。
 import GenBlock from '../../components/GenBlock.astro';
-import { getAllSongs } from '../../lib/db';
+import { getAllSongs } from '../../lib/song-data';
 import { viewRows, groupByGen, type Srv } from '../../lib/song-view';
 import { GEN_ORDER } from '../../lib/gens';
 import { env } from 'cloudflare:workers';
@@ -25,7 +25,12 @@ const url = new URL(Astro.request.url);
 const srv: Srv = url.searchParams.get('srv') === 'cn' ? 'cn' : 'jp';
 const gen = url.searchParams.get('gen') ?? '';
 
-const ALL = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+const ALL = await getAllSongs(
+  (env as { ASSETS: Fetcher }).ASSETS,
+  url.origin,
+  (env as { beyond_jubeat?: D1Database })?.beyond_jubeat,
+  Astro.locals.cfContext
+);
 const list = groupByGen(viewRows(ALL, srv))[gen] ?? [];
 
 // 世代 key 必须存在（防任意查询串把缓存撑爆 / 让 Worker 白跑一遍渲染）

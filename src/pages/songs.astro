@@ -20,14 +20,20 @@ import GenBlock from '../components/GenBlock.astro';
 import GenSkeleton from '../components/GenSkeleton.astro';
 import { pageTitle } from '../lib/title';
 import { GEN_ORDER, GEN_JP, GEN_CN } from '../lib/gens';
-import { getAllSongs, type Song } from '../lib/db';
+import { getAllSongs, type Song } from '../lib/song-data';
 import { CATS, catOf, countedIn, isPickUp, pickGen, todayISO, viewRows, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
 export const prerender = false;
 
-const ALL: Song[] = await getAllSongs((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
+// 曲目走静态资产（不再每请求扫 D1 的 1248 行），曲绘/片段同理见 song-data.ts 的说明。
+const ALL: Song[] = await getAllSongs(
+  (env as { ASSETS: Fetcher }).ASSETS,
+  Astro.url.origin,
+  (env as { beyond_jubeat?: D1Database })?.beyond_jubeat,
+  Astro.locals.cfContext
+);
 
 // 数据变化很慢：允许浏览器短缓存，边缘可缓存更久（stale-while-revalidate 兜底）
 Astro.response.headers.set(

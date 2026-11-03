@@ -15,13 +15,13 @@
     "opt": "node scripts/optimize-images.cjs"
   },
   "devDependencies": {
-    "astro": "^7.4.0",
+    "astro": "^7.4.1",
     "kuroshiro": "^1.2.1",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "sharp": "^0.35.5",
-    "wrangler": "^4.42.0"
+    "wrangler": "^4.156.2"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.4.1"
+    "@astrojs/cloudflare": "^14.4.4"
   }
 }

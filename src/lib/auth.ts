@@ -156,11 +156,8 @@ export async function createSession(
       uaHash
     )
     .run();
-  // 顺手清掉这个用户的过期会话，避免表无限增长（无 cron 的小站够用）
-  await db
-    .prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at < ?')
-    .bind(userId, new Date(now).toISOString())
-    .run();
+  // 过期会话的清理 2026-11-04 搬去了每日 cron（worker.ts 的 cleanup），
+  // 这里不再顺手 DELETE —— 每次登录都扫一遍比每天扫一次贵，且与封榜任务本就同频。
   return token;
 }
 

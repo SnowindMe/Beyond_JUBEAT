@@ -9,6 +9,9 @@ const ROOT = path.join(__dirname, '..');
 const DB = path.join(ROOT, 'data/jubeat.db');
 const OUTDIR = path.join(ROOT, 'src/data');
 const JDEST = path.join(ROOT, 'public/assets/images/jackets');
+// 曲目全量数据走资源层（请求期不碰 D1，见 src/lib/song-data.ts）。
+// 产物同时放两处：public/ 下供运行时 fetch，src/data 下留一份让本地脚本 / 类型检查可 import。
+const PUBLIC_DATA = path.join(ROOT, 'public/data');
 
 // 两服的曲绘是两套体系，源头不同、产物格式统一成 webp：
 //   日服  cover 是官方曲绘本名 id<N>.gif，源文件在 data/beyond-the-ave/jackets/
@@ -127,7 +130,12 @@ const gensJp = GEN.filter((g) => g.s === 'jp').length;
 const gensCn = GEN.filter((g) => g.s === 'cn').length;
 
 const out = {
-  stat: { songs: rows.length, charts, gens: GEN.length, gensJp, gensCn },
+  // srv：哪一服真有曲。运势页要拿它决定给不给那一服的选项，
+  // 原先是在请求里对 songs 表跑一遍全表 SUM(CASE...)，纯属把静态事实天天重算。
+  stat: {
+    songs: rows.length, charts, gens: GEN.length, gensJp, gensCn,
+    srv: { jp: rows.filter((s) => s.server_jp).length, cn: rows.filter((s) => s.server_cn).length },
+  },
   top: TOP,
   latest: LATEST,
   gen: GEN,
@@ -140,9 +148,26 @@ const out = {
 out.pad = rows.slice().sort(byExtDesc).slice(0, 16).map(pick);
 
 fs.mkdirSync(OUTDIR, { recursive: true });
+fs.mkdirSync(PUBLIC_DATA, { recursive: true });
 fs.writeFileSync(path.join(OUTDIR, 'data.json'), JSON.stringify(out));
 // 曲目页的全量曲目：一首一行，按服务器 / 世代 / EXT 降序（世代顺序由页面按 GEN_ORDER 排）
-fs.writeFileSync(path.join(OUTDIR, 'songs.json'), JSON.stringify(SONGS));
+// 【2026-11-04 搬出 Worker 包】原来只有 src/data/songs.json，靠 db.ts 的 dev 分支动态 import，
+// 生产环境根本不用它。现在页面运行时 fetch 这份静态文件，所以必须落在 public/ 里。
+const songsJson = JSON.stringify(SONGS);
+fs.writeFileSync(path.join(PUBLIC_DATA, 'songs.json'), songsJson);
+fs.writeFileSync(path.join(OUTDIR, 'songs.json'), songsJson);
+// 内容版本号：缓存 key 的一部分。只在曲目内容真的变了时才换，
+// 否则每次构建都会把全 PoP 的边缘缓存与浏览器缓存一起作废。
+const versionFile = path.join(OUTDIR, 'songs-version.json');
+let version = '';
+try { version = JSON.parse(fs.readFileSync(versionFile, 'utf8')).v || ''; } catch { /* 首次生成 */ }
+const digest = require('node:crypto').createHash('sha256').update(songsJson).digest('hex').slice(0, 16);
+if (version !== digest) {
+  fs.writeFileSync(versionFile, JSON.stringify({ _comment: '曲目数据版本号，由 scripts/build-data.cjs 按内容哈希生成，勿手改。缓存 key 用。', v: digest }) + '\n');
+  console.log('曲目数据内容变了 -> 版本号 ' + digest);
+} else {
+  console.log('曲目数据未变，版本号保持 ' + digest);
+}
 
 // 曲目页要用全量曲绘，这里不再只转 data.json 引用的那几十张。
 fs.mkdirSync(JDEST, { recursive: true });
