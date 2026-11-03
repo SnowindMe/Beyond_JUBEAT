@@ -28,7 +28,22 @@
 /assets/fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
+# 谱面密度（/assets/diff/*，1185 个 JSON，5.1MB）：同上，构建期产物、运行时不变，
+# 1 年 immutable。主人 2026-11-03 原话「要记得谱面 json 文件也要击中 cf cdn」——
+# 实测线上 CF-Cache-Status: HIT，Worker 的静态资源层不被回源。
 /assets/diff/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 整个 /assets 兜底（2026-11-03 补）：下面/前面几条是点名目录，以后新增的素材目录
+# （如 11-03 的 grade/、jubility/）不改本文件也会自动拿到长缓存，不会再漏一次。
+# 兜底与点名条目**写的是同一个值**，所以不依赖 CF 的匹配先后顺序——
+# 就算哪天某条要点名改短（如某个目录要 must-revalidate），记得把它挪到本行之后，
+# 并实测一次响应头，别只靠「越具体越优先」的假设。
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Jubility 档位图标（/assets/jubility/tier-NN.webp）：构建期静态图标，1 年 immutable。
+/assets/jubility/*
   Cache-Control: public, max-age=31536000, immutable
 
 /index.html

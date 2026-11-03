@@ -197,11 +197,15 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 两个实现要点，改之前先读：
 
 1. **用 `ASSETS` 绑定读，不要 `fetch` 同源 URL**。后者是真实 HTTP 请求，在 Worker 里对本 zone 发 fetch 可能走成外网回环、额外消耗子请求配额；`ASSETS` 直接读静态资源层，不发网络。开发期没有该绑定（`astro dev` 不起 workerd），退回 fetch 本地文件。
-2. **`/assets/*` 不在 `run_worker_first` 里**，所以浏览器直接请求这些文件时由 CF 静态资源层返回，**根本不进 Worker**。配合 `public/_headers` 里 `/assets/diff/*` 的 `public, max-age=31536000, immutable`，边缘与浏览器都长缓存。
+2. **`/assets/*` 不在 `run_worker_first` 里**，所以浏览器直接请求这些文件时由 CF 静态资源层返回，**根本不进 Worker**。配合 `public/_headers` 的长缓存，边缘与浏览器都缓存。
 
 > 缓存实测证据（2026-11-01 线上）：连续两次请求 `/assets/diff/11000120.json`，均返回 `cf-cache-status: HIT` 与 `cache-control: public, max-age=31536000, immutable`。
 >
+> 复核（2026-11-03 12:21，同一 URL 连打 3 次）：3/3 均 `CF-Cache-Status: HIT`；首个未命中请求是 `MISS` + 同一条 `Cache-Control: public, max-age=31536000, immutable`，即缺副本时也是先落边缘、之后命中。
+>
 > **上游不承担本站读取流量**：这份数据是构建期快照，运行时完全不碰 ub.thregren.world。重跑抓取脚本 `scripts/ub/build-ub-charts.cjs` 才会联网（曲库更新后手动跑一次并提交产物）。
+
+`public/_headers` 里除点名目录外还有一条 **`/assets/*` 兜底**（2026-11-03 补）：以后新增素材目录（如当天的 `assets/images/grade/`）不改该文件也自动长缓存，不会再漏一次。CF 按「越具体越优先」匹配，点名条目仍覆盖兜底。
 
 **用户系统**（v1.14.0 起）：四层身份——**游客**（不登录，只能看）/ **玩家**（注册即得）/ **维护者**（玩家自荐 + 站长审批）/ **站长**（只有主人，在 D1 里直接改 `role`，站点不提供提权入口）。邮箱 + 密码注册，不发送验证邮件（主人 2026-10-23 定：先不做邮件，邮箱只作登录名）。GitHub 等第三方登录二期再接，`oauth_accounts` 表已建好。
 
