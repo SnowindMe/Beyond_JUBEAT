@@ -5,13 +5,17 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
 
 # ── 长缓存区（2026-11-03 合并）─────────────────────────────────
-# 【为什么合并成一条不再分目录写】CF 的 _headers 是**逐条命中、同名头累加**，
+# 【为什么合并成一条、且用单星号】CF 的 _headers 是**逐条命中、同名头累加**，
 # 不是后写覆盖：/assets/images/x 同时命中 /assets/* 与 /assets/images/*，
 # 于是回两个 Cache-Control（实测 2026-11-03 线上：
 # "public, max-age=31536000, immutable, public, max-age=31536000, immutable"）。
 # 值相同不致命，但没人能保证哪天有人只改其中一条，所以这里统一一条。
 #
-# 本节覆盖 content-hash 资源与构建期产物：/assets/** 全部、/_astro/**（vite 出口，名字带 hash）。
+# 通配符用 `*` 不用 `**`（2026-11-03 实撞）：写成 /assets/** 时线上三类资源
+# 全部回 max-age=0（多星号跨目录没有命中，规则整条失效），改成单星号后立即恢复 1 年。
+# `/assets/*` 在 CF 里就跨子目录（与 /assets/images/* 同样命中 /assets/images/grade/x.webp）。
+#
+# 本节覆盖 content-hash 资源与构建期产物：/assets/* 全部、/_astro/*（vite 出口，名字带 hash）。
 # 它们的共同前提是「内容只在部署时变」：
 #   · /assets/diff/<songId>.json（1185 个、约 1KB/个）：谱面密度，构建期从快照拆分，
 #     运行时不碰 ub.thregren.world（主人 2026-11-01「要记得谱面 json 文件也要击中 cf cdn，
@@ -24,10 +28,10 @@
 #
 # 反例（别照抄）：本文件开头 /* 那条只放安全头，不写 Cache-Control——
 # 写了会让 /index.html、/404.html 这些也要长缓存，而它们必须重新验证（见文末）。
-/assets/**
+/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-/_astro/**
+/_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
 /index.html
