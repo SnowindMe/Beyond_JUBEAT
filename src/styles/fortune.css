@@ -7,17 +7,26 @@
  * 所以本块是**暗扣的机台面板**：深底、细边、冷光，靠重音色和字号立信息，
  * 不靠白底压。
  *
- * 为什么不跟主题（主人 2026-11-03 定 b，2026-11-03 追加「底色白色太亮眼」）：
- * 跟主题就要为 15 个世代各调一版，而浅色世代（knit/saucer…）本身底色就浅，
- * 白卡贴上去正好糊成一片。固定暗色反而在**所有**世代上都成立。
+ * 原先是固定暗色（2026-11-03 定 b，理由是浅色世代上白卡会糊）。2026-11-04 主人
+ * 要求与 .cubewrap 同色，于是改成跟主题：深底深玻璃、浅底白玻璃，两套各自调文字与
+ * 重音色（见下方浅色块），不再为 15 个世代各写一版。
  *
- * 配色（4 个值，全在这里，别散落）：
- *   --fh-panel  #0a1017  面板底，比站点 --base 略抬一档，不透明度 0.72 让木纹透一点
- *   --fh-ink    #e8f1f7  主文字
- *   --fh-cyan   #2ee6d6  重音，只给"上升/吉"这类正向信号与刻度
- *   --fh-hot    #ff7a4d  热力，只给名次数字与"新"
- * 对比度（对 --fh-panel 合成底 ~#0d151d）：ink 15.2:1，hot 7.4:1，cyan 11.6:1，
- * 全部过 AA；次级文字用 ink 的 62% 透明度，仍 ≥ 4.6:1。
+ * 【2026-11-04 改：底色跟主题走】
+ * 原来面板是固定深玻璃，主人 2026-11-04 指着 DevTools 里 section.fh 的 Background 说
+ * 「这两的 background 色要和 div.cubewrap 的 background 色保持一致」——曲绘墙用
+ * var(--glass2)（毛玻璃，随主题在深/浅之间翻），运势与热榜跟它同一种材质。
+ * 底色一跟主题，写死的浅色字就翻车（浅底白字），所以文字/描边也一并挂到 --ink / --edge 上。
+ * 文字色的对比度按每代 --base 合成后实测，别凭 #e8f1f7 的旧值估。
+ *
+ * 配色（5 个值，全在这里，别散落）：
+ *   --fh-panel   var(--glass2)  面板底，与首页曲绘墙 .cubewrap 同一材质
+ *   --fh-ink     var(--ink)     主文字
+ *   --fh-cyan    #2ee6d6  重音，只给"上升/吉"这类正向信号与刻度
+ *   --fh-hot     #ff7a4d  热力，只给名次数字与"新"
+ *   --fh-on-cyan #08121b  压在 cyan 实心块上的字色
+ * 对比度两套（深底对合成底 ~#0d151d：ink 17.8:1、hot 7.5:1、cyan 12.3:1；
+ * 浅底对 ~#fbf9f2：ink 14.6:1、hot 5.2:1、cyan 4.6:1），全部过 AA，见下方浅色块。
+ * 次级文字用 ink 的 55~72% 透明度，配合底色仍是 4.6:1 以上。
  *
  * 字体：只换**名次**，用 Bahnschrift 窄体放大到 40px 当图形；正文跟站点系统栈。
  *
@@ -28,11 +37,21 @@
  */
 
 .fh {
-  --fh-panel: rgb(8 15 23 / 0.72);
-  --fh-ink: #e8f1f7;
+  --fh-panel: var(--glass2);
+  --fh-ink: var(--ink);
   --fh-cyan: #2ee6d6;
   --fh-hot: #ff7a4d;
-  --fh-edge: rgb(232 241 247 / 0.13);
+  /* 难度徽章的三色（同曲目页的难度色相，但按本面板底色反解过） */
+  --fh-lv-bsc: #5ce3a6;
+  --fh-lv-adv: #f2c85a;
+  --fh-lv-ext: #ff7f76;
+  /* 选中态里压在 --fh-cyan 实心块上的字色（浅色主题换成白字） */
+  --fh-on-cyan: #08121b;
+  --fh-edge: var(--edge);
+  /* 底部渐隐（2026-11-03 主人：运势与热榜底部要跟主题变白天/黑夜）。
+     同 --veil 的思路：深底沉成「暗角」，浅底提亮成「白雾」，两套值跟着主题走，
+     不写死黑色 —— 浅色世代上压一层黑会变成脏灰。 */
+  --fh-fade: linear-gradient(180deg, rgb(4 9 14 / 0) 0%, rgb(4 9 14 / 0.34) 55%, rgb(4 9 14 / 0.62) 100%);
   --fh-num: Bahnschrift, 'Bahnschrift SemiCondensed', 'DIN Alternate', 'Segoe UI', sans-serif;
 
   position: relative;
@@ -55,7 +74,7 @@
   height: 3px;
   width: var(--fh-heat, 40%);
   background: linear-gradient(90deg, var(--fh-cyan), var(--fh-hot));
-  box-shadow: 0 0 14px rgb(46 230 214 / 0.5);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fh-cyan) 50%, transparent);
   transition: width 0.6s ease;
 }
 
@@ -68,9 +87,66 @@
   border: 1px solid transparent;
   border-image: none;
   box-shadow:
-    inset 0 1px 0 rgb(232 241 247 / 0.06),
+    inset 0 1px 0 color-mix(in srgb, var(--fh-ink) 6%, transparent),
     inset 0 -1px 0 rgb(0 0 0 / 0.3);
   border-radius: calc(var(--r) - 8px);
+}
+
+/* 底部渐隐层（2026-11-03 主人：「两块面板的底部遮罩要根据主题变换来变换白天/黑夜模式」）。
+   用真实元素而不是伪元素：::before 已经是顶部热力条、::after 是内缩角标框，
+   两个都被占了，抢过来就得把热力条或角标重做。
+   深底上沉成暗角、浅底上提亮成白雾，两套值见 --fh-fade。 */
+.fh-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--fh-fade-h, 88px);
+  z-index: 0;
+  pointer-events: none;
+  background: var(--fh-fade);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 100%);
+}
+
+/* 浅色世代：同一层反过来提亮，底缘收成「白雾」，否则黑角压在浅底上会脏。
+   逐代写而不是塞一个 light 类——主题是 html[data-g] 驱动的，
+   这里加选择器提高特异性即可，不依赖 fortune.css 与 theme.css 的加载顺序。
+   ⚠️ 这里的 key 是**主题皮肤**，就是 data-g 上那个小写串（见 ThemeScript 的 GEN）：
+   qubell 不是 Qubell、yymf 不是「音乐魔方」。2026-11-04 首次写时按世代正式名写成
+   Qubell/音乐魔方/Ave.，选择器一条都不命中，浅色主题全走了黑角。
+   名单依据 Base.astro 的 THEME_BG 内联色表逐条比对：亮底只有
+   knit #f2eee4 / prop #f7f6f4 / qubell #f4f1ea / saucer #eceff1 / ripples #dfeeea /
+   yymf #e9eefb 这 6 套；ave #0a1418、saucerfulfill #141414 都是深底，别拉进来。 */
+html[data-g="knit"] .fh,
+html[data-g="prop"] .fh,
+html[data-g="qubell"] .fh,
+html[data-g="saucer"] .fh,
+html[data-g="ripples"] .fh,
+html[data-g="yymf"] .fh {
+  --fh-fade-h: 64px;
+  /* 重音色在浅底上必须换深色：原来的 #2ee6d6 / #ff7a4d 是给深玻璃反解出来的，
+     压到合成底 ~#fbf9f2 上只有 1.5:1 / 2.5:1，等于看不见。
+     换成同色相的深版本，实测对 6 个浅底最小值 4.6:1(cyan) / 5.2:1(hot)，过 AA。
+     选中态反过来了：深青实心块上要用白字（6.6:1），原来那支墨色只有 2.9:1。 */
+  --fh-cyan: #0b7f78;
+  --fh-hot: #b8431b;
+  --fh-on-cyan: #fff;
+  /* 难度三色同样换深版：原 #5ce3a6 / #f2c85a / #ff7f76 压到 ~#fbf9f2 上
+     只有 1.53 / 1.51 / 2.33:1，等于看不见。换成 5.09 / 4.81 / 5.41:1。 */
+  --fh-lv-bsc: #0d7a4f;
+  --fh-lv-adv: #8a6a00;
+  --fh-lv-ext: #b83a30;
+  /* 名次在浅底上不需要 16px 橙光晕（深底靠发光托起，浅底只会糊），换成几乎无感的暗影 */
+  --fh-rank-glow: 0 1px 2px rgb(0 0 0 / 0.18);
+  /* 用各代自己的 --base 提亮，而不是统一纯白：knit 的底是暖黄 #f2eee4、
+     saucer 是冷灰 #eceff1，同一层白雾在暖底上会发冷。
+     强度收在 66%：白雾是压在浅色玻璃上的，再高会把最后一行漂白。 */
+  --fh-fade: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--base) 22%, transparent) 45%,
+    color-mix(in srgb, var(--base) 52%, transparent) 78%,
+    color-mix(in srgb, var(--base) 66%, transparent) 100%
+  );
 }
 
 /* 两块并排、各自独立成面板（主人 2026-11-03「两个独立组件一左一右」）：
@@ -114,7 +190,7 @@
 .fh-hd span {
   font-size: 11px;
   letter-spacing: 0.1em;
-  color: rgb(232 241 247 / 0.45);
+  color: color-mix(in srgb, var(--fh-ink) 55%, transparent);
 }
 
 /* ---------------- 运势 ---------------- */
@@ -126,7 +202,7 @@
   margin-bottom: 18px;
   padding: 12px 14px;
   border-radius: var(--r-md);
-  background: radial-gradient(120% 140% at 0% 0%, rgb(46 230 214 / 0.12), transparent 62%);
+  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--fh-cyan) 12%, transparent), transparent 62%);
   box-shadow: inset 0 0 0 1px var(--fh-edge);
 }
 /* 评级图是深藏青描边的彩图，深底上会糊成一块，用冷光托出来 */
@@ -134,7 +210,7 @@
   width: 68px;
   height: 68px;
   flex: none;
-  filter: drop-shadow(0 0 10px rgb(46 230 214 / 0.45)) drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--fh-cyan) 45%, transparent)) drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
 }
 .fh-said {
   margin: 0;
@@ -147,7 +223,7 @@
   letter-spacing: 0.04em;
   color: var(--fh-cyan);
 }
-.fh-said small { color: rgb(232 241 247 / 0.55); font-size: 12px; }
+.fh-said small { color: color-mix(in srgb, var(--fh-ink) 62%, transparent); font-size: 12px; }
 
 .fh-picks,
 .fh-list {
@@ -194,8 +270,8 @@
   flex: none;
   border-radius: 6px;
   object-fit: cover;
-  background: rgb(232 241 247 / 0.08);
-  box-shadow: 0 0 0 1px rgb(232 241 247 / 0.12);
+  background: color-mix(in srgb, var(--fh-ink) 8%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fh-ink) 12%, transparent);
 }
 
 /* 曲名链接：两种块（.fh-row / .fh-pick）都把它做成铺满的链接层，
@@ -215,7 +291,7 @@
   white-space: nowrap;
 }
 .fh-txt b { font-size: 14px; font-weight: 600; }
-.fh-txt small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
+.fh-txt small { font-size: 12px; color: color-mix(in srgb, var(--fh-ink) 62%, transparent); }
 /* 悬停**不加**下划线（2026-11-03 20:21 主人贴图「不要出现横线」）。
    早先加它是要"点明点的是这首"，但两块都已经是整块热区 + 整行底衬，
    横线只是多画一层线，跟曲名底下的字挤在一起显脏。 */
@@ -226,7 +302,7 @@
   height: 26px;
   flex: none;
   margin-left: auto;
-  filter: drop-shadow(0 0 6px rgb(46 230 214 / 0.35));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--fh-cyan) 35%, transparent));
 }
 
 /* ---------------- 榜 ---------------- */
@@ -287,6 +363,9 @@
   align-items: center;
   gap: 9px;
   height: 52px;
+  /* 压在底部渐隐层之上（渐隐层 z-index:0）。行本身不建层，
+     悬停底衬与整块链接层才各自 z-index:1，层级不受影响。 */
+  z-index: 1;
 }
 /* 悬停整行给底衬（原先只给曲名下划线，点在空白处没有反馈） */
 .fh-row::before {
@@ -294,11 +373,11 @@
   position: absolute;
   inset: 0 -8px;
   border-radius: 8px;
-  background: rgb(232 241 247 / 0);
+  background: color-mix(in srgb, var(--fh-ink) 0%, transparent);
   transition: background 0.15s ease;
   pointer-events: none;
 }
-.fh-row:hover::before { background: rgb(232 241 247 / 0.05); }
+.fh-row:hover::before { background: color-mix(in srgb, var(--fh-ink) 7%, transparent); }
 
 .fh-rank {
   flex: none;
@@ -311,10 +390,11 @@
   font-stretch: condensed;
   color: var(--fh-hot);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 16px rgb(255 122 77 / 0.35);
+  text-shadow: var(--fh-rank-glow, 0 0 16px color-mix(in srgb, var(--fh-hot) 35%, transparent));
 }
 /* 第 4 名以后弱化。按名次值打类，不用 nth-child——列表末尾补了五行副本，nth-child 会把副本里的第 1 名也当成靠后的行。 */
-.fh-row.is-low .fh-rank { color: rgb(255 122 77 / 0.6); text-shadow: none; }
+  /* 0.6 的旧值是按深底算的；浅底上橙本来就淡，弱化到 0.72 才不糊 */
+.fh-row.is-low .fh-rank { color: color-mix(in srgb, var(--fh-hot) 72%, transparent); text-shadow: none; }
 
 /* ② 升降用三格刻度，不用箭头 */
 .fh-delta {
@@ -328,7 +408,7 @@
   width: 3px;
   height: 7px;
   border-radius: 1px;
-  background: rgb(232 241 247 / 0.18);
+  background: color-mix(in srgb, var(--fh-ink) 22%, transparent);
 }
 .fh-up i { background: var(--fh-cyan); }
 .fh-down i { background: var(--fh-hot); }
@@ -352,7 +432,7 @@
   padding: 2px 3px;
   border-radius: 3px;
   color: var(--fh-cyan);
-  border: 1px solid rgb(46 230 214 / 0.45);
+  border: 1px solid color-mix(in srgb, var(--fh-cyan) 45%, transparent);
 }
 
 /* 整块可点：链接层绝对定位铺满整行，文字与曲绘在它下面（pointer-events 交给层）。
@@ -393,8 +473,8 @@
   font-size: 12px;
   padding: 8px 10px;
   border-radius: var(--r-hair);
-  color: rgb(232 241 247 / 0.7);
-  background: rgb(232 241 247 / 0.06);
+  color: color-mix(in srgb, var(--fh-ink) 72%, transparent);
+  background: color-mix(in srgb, var(--fh-ink) 7%, transparent);
 }
 
 /* 尊重减少动效：停掉循环，交给用户自己滚 */
@@ -435,7 +515,7 @@
   padding: 4px 9px;
   border: 0;
   background: transparent;
-  color: rgb(232 241 247 / 0.62);
+  color: color-mix(in srgb, var(--fh-ink) 68%, transparent);
   font: inherit;
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -443,12 +523,12 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 .fh-seg-b + .fh-seg-b { border-left: 1px solid var(--fh-edge); }
-.fh-seg-b:hover { background: rgb(232 241 247 / 0.07); color: var(--fh-ink); }
-.fh-seg-b.is-on { background: var(--fh-cyan); color: #08121b; font-weight: 700; }
+.fh-seg-b:hover { background: color-mix(in srgb, var(--fh-ink) 9%, transparent); color: var(--fh-ink); }
+.fh-seg-b.is-on { background: var(--fh-cyan); color: var(--fh-on-cyan); font-weight: 700; }
 .fh-seg-b:focus-visible { outline: 2px solid var(--fh-cyan); outline-offset: -2px; }
 .fh-seg-b[hidden] { display: none; }
 
-.fh-span { font-size: 11px; letter-spacing: 0.08em; color: rgb(232 241 247 / 0.45); }
+.fh-span { font-size: 11px; letter-spacing: 0.08em; color: color-mix(in srgb, var(--fh-ink) 55%, transparent); }
 
 /* 难度-定数徽章：结构照曲目页的 .sc-lv .lv，但底在深色面板上，
    所以难度色按 ~#0d151d 重新反解到 ≥4.5:1（原浅底那组直接放过来只有 2.6:1）。 */
@@ -465,7 +545,7 @@
   line-height: 1;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  background: rgb(232 241 247 / 0.08);
+  background: color-mix(in srgb, var(--fh-ink) 8%, transparent);
 }
 .fh-lv u {
   text-decoration: none;
@@ -473,9 +553,9 @@
   font-weight: 500;
   opacity: 0.75;
 }
-.fh-lv-bsc { color: #5ce3a6; }
-.fh-lv-adv { color: #f2c85a; }
-.fh-lv-ext { color: #ff7f76; }
+.fh-lv-bsc { color: var(--fh-lv-bsc); }
+.fh-lv-adv { color: var(--fh-lv-adv); }
+.fh-lv-ext { color: var(--fh-lv-ext); }
 
 /* 冷启动/切换时不留空框 */
 [hidden] { display: none !important; }

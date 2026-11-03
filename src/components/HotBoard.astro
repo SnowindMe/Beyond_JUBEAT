@@ -61,6 +61,8 @@ const end = -(list.length - 5) * 52;
 ---
 
 <section class="fh fh-hot" aria-labelledby="fh-hot">
+  {/* 底部渐隐层：随主题在「暗角 / 白雾」之间切换，见 fortune.css 的 --fh-fade */}
+  <div class="fh-fade" aria-hidden="true"></div>
   <div class="fh-hd">
     <h2 id="fh-hot">热门歌曲</h2>
     {ready && list.length ? <span class="fh-span">最近 7 天 · 前 25 名</span> : <span>{ready ? '暂无' : '待统计'}</span>}

@@ -68,6 +68,7 @@ const heat = active
 ---
 
 <section class="fh" style={`--fh-heat:${heat}%`} aria-labelledby="fh-fortune">
+  <div class="fh-fade" aria-hidden="true"></div>
   <div class="fh-hd">
     <h2 id="fh-fortune">今日运势</h2>
     {ready && panels.length > 1 ? (
