@@ -216,9 +216,9 @@
 }
 .fh-txt b { font-size: 14px; font-weight: 600; }
 .fh-txt small { font-size: 12px; color: rgb(232 241 247 / 0.55); }
-/* 悬停时给曲名加下划线（整行可点，但要点明"点的是这首"） */
-.fh-pick:hover .fh-txt b,
-.fh-row:hover .fh-txt b { text-decoration: underline; text-underline-offset: 3px; }
+/* 悬停**不加**下划线（2026-11-03 20:21 主人贴图「不要出现横线」）。
+   早先加它是要"点明点的是这首"，但两块都已经是整块热区 + 整行底衬，
+   横线只是多画一层线，跟曲名底下的字挤在一起显脏。 */
 
 /* 每首自己的评级图，行尾当印章 */
 .fh-seal {
@@ -257,7 +257,9 @@
    走到末屏停最久，再淡出、跳回顶部淡入。**列表不用补副本**：
    位移都是整屏，任何一屏都刚好填满视窗。
    @keyframes 里只有百分比。66s 一轮偏快（主人 2026-11-03「有些快了，稍微慢一点」），
-   改按 100s 铺：每屏走 14s、停 3–8s、淡出淡入各 5s。 */
+   改按 100s 铺：每屏走 14s、停 3–8s、淡出淡入各 5s；
+   20:10 主人再要「滚动25条，调整滚动时长」——按比例放到 125s（窄屏 150s），
+   每屏走 17.5s，仍保留 0.25 的「停住占比」让末屏有的看。 */
 @keyframes fh-roll {
   0%, 3% { transform: translateY(0); opacity: 1; }
   17% { transform: translateY(calc(var(--fh-end) * 0.25)); opacity: 1; }
@@ -273,7 +275,7 @@
   95%, 100% { transform: translateY(0); opacity: 1; }
 }
 /* 位移由组件按行数算（-(行数-5) × 52）：视窗固定五条，桌面窄屏同构 */
-.fh-view.is-rolling .fh-list { animation: fh-roll 100s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
+.fh-view.is-rolling .fh-list { animation: fh-roll 125s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite; }
 /* 悬停与键盘聚焦时停在当前帧（含末段：正好把 1–5 名放开看） */
 .fh-view:hover .fh-list,
 .fh-view:focus-within .fh-list { animation-play-state: paused; }
@@ -405,7 +407,7 @@
 /* 窄屏**也是五条一屏**（2026-11-03 改成多屏滚动后，屏高必须与位移整除，
    缩成三条会与 @keyframes 里的四段位移对不上）；只是整轮更慢，120s。 */
 @media (max-width: 900px) {
-  .fh-view.is-rolling .fh-list { animation-duration: 120s; }
+  .fh-view.is-rolling .fh-list { animation-duration: 150s; }
 }
 /* 窄屏行高不变（52），所以桌面那两个数（视窗 260 / 面板 290）照用 */
 @media (max-width: 900px) {

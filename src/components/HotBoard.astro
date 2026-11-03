@@ -12,7 +12,7 @@
 import '../styles/fortune.css';
 import { env } from 'cloudflare:workers';
 import { TOP } from '../lib/hot';
-import { byIds, todaySnapshot, type PoolSong } from '../lib/hotPage';
+import { byIds, fallbackPool, todaySnapshot, type PoolSong } from '../lib/hotPage';
 
 export const prerender = false;
 
@@ -31,6 +31,25 @@ const list: Row[] = rows
     return s ? { ...s, rank: meta.rank, delta: meta.delta, isNew: meta.isNew } : null;
   })
   .filter((r): r is Row => !!r);
+
+/* 【补足 25 名】2026-11-03 20:10 主人「热门歌曲滚动25条」。
+   以前榜多长取决于当天有多少曲被真听过（样本门槛只管「够不够 30 行」，
+   过了门槛也可能只有 10 首不同的曲），于是滚动永远只有两屏、25 名白设。
+   现在热度排完仍不足 TOP 时，用「最近上架」按原顺序补到 25：
+   已上榜的不重复，补进来的 delta=0、isNew=false、名次接着往后排。
+   真热度涨上来后这一段自然会被挤掉，不需要什么时候回头删。 */
+if (ready && list.length && list.length < TOP) {
+  const have = new Set(list.map((s) => s.songId));
+  const extra = await fallbackPool(db, TOP).catch(() => []);
+  const rest = extra.filter((id) => !have.has(id)).slice(0, TOP - list.length);
+  const fill = await byIds(db, rest).catch(() => []);
+  const byId = new Map(fill.map((s) => [s.songId, s]));
+  for (const id of rest) {
+    const s = byId.get(id);
+    if (!s) continue;
+    list.push({ ...s, rank: list.length + 1, delta: 0, isNew: false });
+  }
+}
 
 /** 一屏五行；不足六行时推到底会露空，所以那时不滚、也不补副本 */
 const scrolls = list.length > 5;

@@ -170,6 +170,11 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 
 > **本地坑**：`src/middleware.ts` 的边缘缓存会把首页缓存 5 分钟（白名单 `/^/($|songs(\/|$)|recent(\/|$))/`），改完本地数据不清缓存就还是旧页面（`x-jb-cache: HIT`）——看到「只出 12 行」别急着改代码，先重启 dev。dev 本身在带 `HTTP_PROXY/ALL_PROXY` 的环境里启动会 `read ECONNRESET`：`fetchWorkerExportTypes` 要 fetch `http://localhost/__vite_plugin_cloudflare_get_export_types__`，被 undici 的 EnvHttpProxyAgent 塞进代理了，用 `env -u ALL_PROXY -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy -u NODE_USE_ENV_PROXY` 启动才稳（ready 从超时失败变成 176–238s 成功）。
 
+> **2026-11-03 20:10 三条收尾（v1.64.1）**：主人「不要以链接形式，要求一个歌曲块都能点到 / 热门歌曲滚动25条，调整滚动时长」，随后贴图一句「不要出现横线」。
+> ①**榜其实从来凑不满 25**：线上 7 天窗内只有 60 条命中、14 首不同的曲，而 `MIN_ROWS` 只判「够不够 30 行」——过了门槛就只出这 14 首，滚动永远两屏、25 名白设（实测线上 `rows: 10`）。现加热度不足时的兜底：用「最近上架」按原顺序补到 TOP，已上榜的不重复，补进来的 `delta=0 / isNew=false`、名次接着往后排；真热度涨起来会自然挤掉，不需要回头删。
+> ②滚动 100s → **125s**（窄屏 120s → 150s），每屏 17.5s，保留 0.25 停顿占比。
+> ③悬停的曲名下划线去掉：两块都已是整块热区 + 整行底衬，`text-decoration` 只是多画一条线，与曲名挤在一起显脏。
+
 > **基础设施**：`wrangler.jsonc` 的 `main` 改成本地 `src/worker.ts`（适配器入口只导出 fetch，挂不了 cron；我们的文件把 fetch 原样转发，旁边只多一个 scheduled）；`/` 同时进 `run_worker_first` 与中间件缓存白名单——首页从此是 SSR，游客态必须能被缓存，否则每次请求都真打 D1 + KV。
 > **上线前必须先跑 `db/migrate-hot.sql`**（建 `hot_hits` / `hot_snapshots`），否则 `/api/hot/hit` 会 500；cron 由 `wrangler.jsonc` 的 `triggers` 注册，部署后第一次自动执行要等次日 00:05，当天页面会自己补一份 seeded 快照。
 

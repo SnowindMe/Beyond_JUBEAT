@@ -26,8 +26,9 @@ export type HotQuery = Env & { now?: number };
 export type Ssrv = 'jp' | 'cn';
 const srvCol = (srv?: Ssrv) => (srv === 'jp' ? 'server_jp' : srv === 'cn' ? 'server_cn' : null);
 
-/** 冷启动兜底：最近上架的曲目（有上架日的优先，其次仍是新加的） */
-async function fallbackPool(db: D1Database, size: number, srv?: Ssrv): Promise<string[]> {
+/** 冷启动兜底：最近上架的曲目（有上架日的优先，其次仍是新加的）。
+ *  榜单也用它把不足 TOP 的部分补齐——真人流量涨得慢，只靠真命中几天都凑不满 25。 */
+export async function fallbackPool(db: D1Database, size: number, srv?: Ssrv): Promise<string[]> {
   const col = srvCol(srv);
   const where = col ? `${col} = 1` : 'server_jp = 1 OR server_cn = 1';
   const { results } = await db
