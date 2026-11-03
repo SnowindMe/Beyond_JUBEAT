@@ -15,7 +15,9 @@
     "opt": "node scripts/optimize-images.cjs"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "beta",
     "astro": "^7.4.1",
+    "cf": "^1.0.0-beta.27",
     "kuroshiro": "^1.2.1",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "sharp": "^0.35.5",
