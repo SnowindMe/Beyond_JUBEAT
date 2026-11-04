@@ -112,12 +112,12 @@ const heat = active
                 <span class={`fh-lv fh-lv-${s.diff}`}>
                   <u>{DIFF_LABEL[s.diff]}</u>{s.lv}
                 </span>
-                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
+                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
                 <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>
                 </span>
-                <img class="fh-seal" src={`/assets/images/grade/${s.rank}.webp`} alt={s.rank.toUpperCase()} width="26" height="26" loading="lazy" decoding="async" />
+                <img class="fh-seal" src={`/assets/images/grade/${s.rank}.webp`} alt={s.rank.toUpperCase()} width="26" height="26" decoding="async" />
                 <span class="fh-sr">{TIER_LABEL[s.tier]}</span>
               </li>
             ))}
@@ -133,7 +133,7 @@ const heat = active
           <li class="fh-pick">
             <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
             <span class="fh-tier">新曲</span>
-            <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
+            <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
             <span class="fh-txt">
               <b>{s.title}</b>
               <small>{s.artist}</small>

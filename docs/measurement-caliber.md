@@ -258,7 +258,18 @@ DNS（CF API 记录 + 1.1.1.1 DoH 双向核对）：
 
 1. **按 URL 后缀挑**：被改写的全是图片扩展名（`.webp`/`.png`/`.ico`），非图片一律原样 —— 所以「音频那条路不被改写」不是因为我们做了什么，只是 `.ogg` 不在名单里。
 2. **只在 wiki-cn 这一跳**：同一文件走直连 CF 的域名回原值 → **改写方是 EdgeOne，不是 CF**。
-3. **不是 CF 的 Browser Cache TTL**：zone 设置 `browser_cache_ttl = 14400`，且它只在响应本身没带 `Cache-Control` 时才补（404 实测回 `max-age=14400`，不是 3600）。
+3. **不是 CF 的 Browser Cache TTL**：zone 当时设的是 `browser_cache_ttl = 14400`，且它只在响应本身没带 `Cache-Control` 时才补（404 实测回 `max-age=14400`，不是 3600）。
+
+> **2026-11-04 补：这个 4 小时的默认值把首页压住了。**
+> 首页一类的 Worker 响应命中 Worker 侧缓存后带的是 `max-age=300`（`src/middleware.ts` 的 FRESH_TTL），
+> 但实测浏览器拿到的是 `max-age=14400`——说明返回链路上有一环把「有 Cache-Control、只是值短」
+> 当成了「用默认值」，而不是「跟随源站」。后果是**日更内容被浏览器按 4 小时钉住**：
+> 首页的今日运势与热榜都按北京 00:00 换天（`dayOf()`），零点后打开的浏览器仍可能展示昨天的榜。
+> 处理：zone 的 `browser_cache_ttl` 由 `14400` 改为 `0`（= Respect Existing Headers，控制台在
+> Caching → Configuration → Browser Cache TTL）。改完实测首页回 `max-age=300`（= FRESH_TTL），
+> 与 `s-maxage` 持平，日更内容最多落后一个新鲜期（5 分钟）。
+> **顺带更正上面第 3 条的隐含推论**：「它只在响应没带 Cache-Control 时才补」这句话对 404 成立，
+> 但对**带短 TTL 的 200 响应不成立**——那才是这次踩到的真实行为，别再照第 3 条推。
 
 > 结论写法定为判据：**看到图片 `max-age=3600`，先查 `wiki-cn` 的 EdgeOne 那一跳，别先动 CF。**
 > 附带事实：曲绘在 CF 侧本来就是命中态（冷门文件首次 `MISS`、第二次起 `HIT`，两域皆然），
