@@ -84,9 +84,10 @@ probe-*.out
 run-dev*.ps1
 # 提权跑 dev / 探组的一次性 PowerShell（_dev.ps1 里还写着旧的桌面路径，别当配置用）
 _*.ps1
-# cf CLI 的工作目录（空目录，git 本身也不收，写着免得以后有产物漏进来）
-.alchemy/
-.cf/
+# cf CLI / alchemy 的工作产物。**不带尾斜杠**：本机这两个目前是 0 字节的普通文件，
+# 带斜杠的规则匹配不到文件，git status 会一直挂着两个 ??（2026-11-04 实测 check-ignore 不命中）
+.alchemy
+.cf
 seed-local.ps1
 seed-local.out
 step.log
