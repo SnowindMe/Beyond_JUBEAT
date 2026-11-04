@@ -353,8 +353,10 @@ html[data-lum="light"] .fh {
    每屏走 17.5s，仍保留 0.25 的「停住占比」让末屏有的看。
    【2026-11-04 改：中间不再停】主人报「每五首会停一下」，那不是加载卡顿，
    就是上面那 3–8s 的 hold 段——一屏走完停住、再起步，读起来像卡住了。
-   现在四屏位移一路匀速走完（占 0–84%，约 105s），只在末屏停 7.5s 让人看完 21–25，
-   然后淡出、跳回顶部淡入（各 2.5s / 5s）。想看某一行把鼠标放上去仍然会定住。 */
+   现在四屏位移一路匀速走完（占 0–84%，约 70s = 每屏 17.6s，与改之前一屏的行走时长
+   持平），只在末屏停 5s 让人看完 21–25，然后淡出、跳回顶部淡入（各 2.1s / 3.8s）。
+   速度按「每屏 17.5s」定周期：125s 那个数是含停顿的，去掉停顿还留着它就成了每屏
+   26s，反而更慢。想看某一行把鼠标放上去仍然会定住。 */
 @keyframes fh-roll {
   0% { transform: translateY(0); opacity: 1; }
   /* 84% 走完 --fh-end（= 四屏位移），中途没有停点 */
@@ -367,7 +369,7 @@ html[data-lum="light"] .fh {
 /* 位移由组件按行数算（-(行数-5) × 52）：视窗固定五条，桌面窄屏同构 */
 /* linear 而不是 cubic-bezier：0%–84% 之间只有两个关键帧，任何缓动都会让这一整段
    先慢后快再慢，等于又造出「走一屏停一下」的错觉。匀速滚动才像滚动带。 */
-.fh-view.is-rolling .fh-list { animation: fh-roll 125s linear infinite; }
+.fh-view.is-rolling .fh-list { animation: fh-roll 84s linear infinite; }
 /* 悬停与键盘聚焦时停在当前帧（含末段：正好把 1–5 名放开看） */
 .fh-view:hover .fh-list,
 .fh-view:focus-within .fh-list { animation-play-state: paused; }
@@ -497,9 +499,10 @@ html[data-lum="light"] .fh {
 }
 
 /* 窄屏**也是五条一屏**（2026-11-03 改成多屏滚动后，屏高必须与位移整除，
-   缩成三条会与 @keyframes 里的四段位移对不上）；只是整轮更慢，120s。 */
+   缩成三条会与 @keyframes 里的四段位移对不上）；只是整轮更慢：桌面 84s、窄屏 100s，
+   对应每屏 21s（窄屏行更高、视觉上速度差不多）。 */
 @media (max-width: 900px) {
-  .fh-view.is-rolling .fh-list { animation-duration: 150s; }
+  .fh-view.is-rolling .fh-list { animation-duration: 100s; }
 }
 /* 窄屏行高不变，所以桌面那两个数（视窗 5 × --fh-row / 面板 290）照用。
    视窗高度已由 --fh-row 推出，不需要再覆写 --fh-step。 */
