@@ -199,3 +199,45 @@ CREATE TABLE hot_gaps (
 );
 CREATE INDEX idx_hot_gaps_exp ON hot_gaps(expires);
 
+-- 鉴权限流计数（2026-11-04，安全审查 T4）。增量脚本是 db/migrate-auth.sql，线上只跑那个。
+-- 三个鉴权端点（登录 / 注册 / 改密）原先零限流，而每次请求都要跑一遍 PBKDF2 十万轮。
+-- 每张表 key 唯一，一行 = 一个键的当前窗口状态；计数靠 upsert 换窗 + RETURNING 回读，
+-- 一次往返，不做 COUNT 扫描。键里不带端点，所以三个端点共用同一份配额。
+-- 闸门口径（login.ts 文件头有完整取舍）：每 IP 每分钟 10 / 每小时 200 / 每片每小时 1000，
+-- 另加登录专用的邮箱维度（邮箱+IP 每小时 20、每天 200；邮箱不分 IP 每小时 20）。
+-- 超限一律 429 + Retry-After，前端按 ?e= 的码表给中文提示。
+DROP TABLE IF EXISTS auth_ip_minutes;
+CREATE TABLE auth_ip_minutes (
+  key    TEXT PRIMARY KEY,             -- IP
+  minute TEXT NOT NULL,                -- 窗口所在的分钟（ISO 到分钟）
+  n      INTEGER NOT NULL DEFAULT 1
+);
+
+DROP TABLE IF EXISTS auth_ip_hours;
+CREATE TABLE auth_ip_hours (
+  key  TEXT PRIMARY KEY,               -- IP，或并表基址（形如 8323072*）
+  hour TEXT NOT NULL,                  -- 窗口所在的小时（ISO 到小时）
+  n    INTEGER NOT NULL DEFAULT 1
+);
+
+DROP TABLE IF EXISTS auth_email_ip_hours;
+CREATE TABLE auth_email_ip_hours (
+  key  TEXT PRIMARY KEY,               -- 邮箱|IP
+  hour TEXT NOT NULL,
+  n    INTEGER NOT NULL DEFAULT 1
+);
+
+DROP TABLE IF EXISTS auth_email_ip_days;
+CREATE TABLE auth_email_ip_days (
+  key TEXT PRIMARY KEY,                -- IP|邮箱
+  day TEXT NOT NULL,                   -- 北京时间日历日 YYYY-MM-DD
+  n   INTEGER NOT NULL DEFAULT 1
+);
+
+DROP TABLE IF EXISTS auth_email_hours;
+CREATE TABLE auth_email_hours (
+  key  TEXT PRIMARY KEY,               -- 邮箱
+  hour TEXT NOT NULL,
+  n    INTEGER NOT NULL DEFAULT 1
+);
+

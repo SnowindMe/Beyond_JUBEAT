@@ -10,7 +10,8 @@
 //   1. 未登录（user=null）→ 401，且**完全没有**读表单、没有碰数据库
 //   2. role=player → 403，同上
 //   3. role=maintainer / owner → 放行并成功写入
-//   4. 参数校验：定数 0–11、最多一位小数、空=NUL  L；标题/艺人长度上限；songId 必须存在
+//   4. 参数校验：定数 0–11、最多一位小数、空=NULL；标题/艺人长度上限；songId 必须存在
+//   4b. 长押谱 has_hold 三态：1 / 0 / NULL 各自原样落库，NULL 不会被写成 0
 //   5. recent_changes 的列名与顺序跟 db/schema.sql 完全一致
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
@@ -90,6 +91,7 @@ const base = {
   ext: '10',
   unlock: '日服解禁池 #3',
   cover: 'id71588407.webp',
+  has_hold: '1',
 };
 
 const run = (opts) =>
@@ -206,7 +208,7 @@ console.log('[放行路径]');
 const resetSong = () =>
   db.prepare(
     `UPDATE songs SET title = ?, artist = ?, bpm = ?, bsc = ?, adv = ?, ext = ?,
-       unlock_note = ?, cover = ? WHERE song_id = ?`
+       unlock_note = ?, cover = ?, has_hold = 1 WHERE song_id = ?`
   ).run(base.title, base.artist, base.bpm, 3, 7, 10, base.unlock, base.cover, '80001015');
 {
   resetSong();
@@ -267,6 +269,42 @@ for (const [name, patch, code] of badCases) {
   const row = db.prepare('SELECT bsc, ext FROM songs WHERE song_id = ?').get('80001015');
   ok('定数边界 0 与 11 可写入', res.status === 303 && row.bsc === 0 && row.ext === 11,
     JSON.stringify(row) + ' ' + res.location);
+}
+
+// ---------- 4b. 长押谱三态（alt 与它无关，别混） ----------
+console.log('[长押谱三态]');
+{
+  const setHold = (v) => db.prepare('UPDATE songs SET has_hold = ? WHERE song_id = ?').run(v, '80001015');
+  const holdOf = () => db.prepare('SELECT has_hold FROM songs WHERE song_id = ?').get('80001015').has_hold;
+  const owner = { id: 'u3', name: '站长', role: 'owner' };
+
+  setHold(1);
+  await run({ user: owner, form: { ...base, has_hold: '0' } });
+  ok('选「否」→ 落库 0（不是 NULL）', holdOf() === 0, String(holdOf()));
+
+  // 从 0 改回未知：这是最容易丢的那条路径——如果解析用 Boolean/String，
+  // 空值会被当成 0，于是「改成不知道」静默失败。
+  setHold(0);
+  await run({ user: owner, form: { ...base, has_hold: '' } });
+  ok('选「未知」→ 落库 NULL（不是 0）', holdOf() === null, String(holdOf()));
+
+  setHold(null);
+  await run({ user: owner, form: { ...base, has_hold: '1' } });
+  ok('选「是」→ 落库 1', holdOf() === 1, String(holdOf()));
+
+  // 认不出的值要挡下来，不能让库收一个 2
+  setHold(1);
+  const res = await run({ user: owner, form: { ...base, has_hold: '2' } });
+  ok('取值不是 0/1/空 → bad-hold', (res.location ?? '').includes('e=bad-hold'), res.location);
+  ok('坏值没写库', holdOf() === 1, String(holdOf()));
+
+  // 长押改动必须进最近更改，否则等于悄悄改数据
+  const rows = db.prepare('SELECT summary, before_text, after_text FROM recent_changes ORDER BY change_id DESC').all();
+  ok('长押改动写进最近更改（摘要含字段名）', /长押谱/.test(String(rows[0]?.summary ?? '')), String(rows[0]?.summary));
+  // 未知 ↔ 是 的改前改后要读得出差别：两者都写成 0/1 或都写成「—」就白记了
+  ok('改前改后带得出三态文案', /长押谱：未知/.test(String(rows[0]?.before_text ?? '')), String(rows[0]?.before_text));
+  ok('改后文案是「是」', /长押谱：是/.test(String(rows[0]?.after_text ?? '')), String(rows[0]?.after_text));
+  setHold(1);
 }
 
 // ---------- 5. 表单模板的防护不能当防线 ----------

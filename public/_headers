@@ -1,8 +1,78 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# CSP（2026-11-04 加，对应 docs/audit-2026-11-04.md 第 6 条的 CSP 部分）
+#
+# 先上 Content-Security-Policy-**Report-Only**：只报告、不拦，线上不会白屏。
+# 等攒够真实违规、把内联脚本收口完，再去掉头名里的 -Report-Only（见文末）。
+#
+# 【为什么写在这一条 /* 里、不另起一条】_headers 是「逐条命中、同名头累加」
+# （见文件里「长缓存区」那段的踩坑注释）。再写一条会回两个 CSP 头，浏览器把两条策略
+# 取交集同时执行，将来调试分不清是哪一条在拦。
+#
+# 【逐项放行理由——收口时逐行对着删】
+#   script-src 'self'
+#     本站 /_astro/*.js 与内联引导脚本所在页；站点没有 CDN 脚本。
+#   script-src https://challenges.cloudflare.com
+#     Turnstile 从该域拉 api.js（src/components/Turnstile.astro:60，注册/登录页用）。
+#   script-src 里**故意不放 'unsafe-inline'**
+#     全站 37 处 <script is:inline>（集中在 songs.astro、Base.astro、ThemeScript.astro、
+#     Hero.astro、BootScreen.astro、Turnstile.astro、Header.astro，另有 SongAudio/
+#     BackTop/InstallPrompt/jubility/[songId] 各 1；数量会随开发变动，以报告为准）。
+#     不放 unsafe-inline 才能测出真实面——报告里的每一条都是将来要迁走或加哈希的清单。
+#   script-src-attr 'none'
+#     全站 0 处 on*=（grep 过）。写死 'none' 是为了让「有人手写 onclick」直接报出来。
+#   style-src 'self' https://challenges.cloudflare.com
+#     本站 CSS；Turnstile 会往宿主页注入 <style>。
+#     ⚠ 默认没放 'unsafe-inline'，所以内联 <style> 也会报（生产里只有 BootScreen.astro:37
+#       的 <style is:inline>，404 页用到；dev 里 Vite 还会额外注入一堆，别把 dev 的数当清单）。
+#   style-src-attr 'unsafe-inline'
+#     写死的 style= 有 6 处（admin.astro ×2、jubility.astro ×2、account.astro、
+#     InstallPrompt.astro:192），另有 12 处模板变量 style={...}（Fortune/HotBoard/
+#     [songId]/jubility，用来下发 CSS 变量）。只有写 style 属性才受管；JS 里
+#     element.style.x 走 CSSOM，CSP 不管，不必处理。
+#   img-src 'self' data: https://img.shields.io
+#     /assets/images/**（曲绘、评级、logo）。shields.io 是页脚徽章
+#     （Base.astro:265），是全站唯一的外链图片。data: 现在 0 处，留给内联 SVG。
+#   font-src 'self'
+#     字体全部自托管在 /assets/fonts（2026-11-02），没有 Google Fonts。
+#   media-src 'self'
+#     BGM 走本站 /api/audio/<songId> 反代（SongAudio.astro:4-5），不直连 ub.thregren.world。
+#   connect-src 'self' https://challenges.cloudflare.com
+#     本站 fetch 只有 /api/hot/hit 这类内部调用；Turnstile 往回校验自己域。
+#   frame-src https://challenges.cloudflare.com
+#     Turnstile 的 widget 是第三方 iframe。
+#   manifest-src 'self' / worker-src 'self'
+#     PWA：/manifest.webmanifest 与 /sw.js（Base.astro:257 注册）。
+#   object-src 'none'
+#     全站没有 <object>/<embed>（grep 过）。
+#   base-uri 'self' / form-action 'self'
+#     没有 <base> 标签；10 个表单全指向站内（1 个 GET /admin/songs/，9 个 POST /api/*）。
+#   frame-ancestors 'self'
+#     与同一块里那条 X-Frame-Options: SAMEORIGIN 口径一致（XFO 只留给老浏览器）。
+#   upgrade-insecure-requests
+#     站内外链与资源都已是 https，留作兜底（Report-Only 下不生效）。
+#   report-uri /api/csp-report
+#     走的是 kebab-case 的 report-uri 老格式（浏览器发 application/csp-report 的
+#     {"csp-report":{...}}）。不用新的 report-to：它要多配一个 Report-To 头做组名映射，
+#     而 Chrome 已经照样认 report-uri，多一个头只是多一处会写错的地方。
+#     端点已实现（src/pages/api/csp-report.ts），只收集不落库：报告进 Worker 日志
+#     （wrangler tail 可见），攒够再决定要不要建表。
+#
+# 【改成强制之前必须处理的】上面那些内联脚本全部无哈希（要么迁成 .ts，要么用 Astro 的
+# CSP 出哈希——它只支持脚本/样式元素，上面的 style= 属性仍需 'unsafe-inline'）。
+#
+# 【怎么判读报告、什么时候才上强制】上线后连开几天 wrangler tail 看 "[csp] {...}"
+# （Console 只是浏览器本地视角，跨设备、真实用户的违规根本收不到）：
+#   · 只剩 script-src-elem / style-src-elem 的内联报告 —— 已知面，按上一条处理即可；
+#   · 出现 img-src / font-src / media-src / connect-src / frame-src 的跨源报告
+#     —— 说明放行清单漏了源，先补源再看。
+# 跨源这一类清零后，才把下行的头名去掉 -Report-Only。
+# ══════════════════════════════════════════════════════════════════════════════
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' https://challenges.cloudflare.com; style-src-attr 'unsafe-inline'; img-src 'self' data: https://img.shields.io; font-src 'self'; media-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests; report-uri /api/csp-report
 
 # ── 长缓存区（2026-11-03 合并）─────────────────────────────────
 # 【为什么合并成一条、且用单星号】CF 的 _headers 是**逐条命中、同名头累加**，

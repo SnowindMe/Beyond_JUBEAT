@@ -12,6 +12,9 @@ import cloudflare from '@astrojs/cloudflare';
 export default defineConfig({
   output: 'static',
   adapter: cloudflare({
+	persistState: {
+      path: "E:/tmp/astro-cf-state" // 指向一个你有完全控制权限的路径
+    },
     platformProxy: { enabled: false },
     prerenderEnvironment: 'node',
   }),

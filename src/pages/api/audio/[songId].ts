@@ -49,6 +49,10 @@ const ID_OK = /^[A-Za-z0-9-]{1,24}$/;
 
 // 浏览器与边缘共用一份长缓存：一曲一文件、内容永不改，songId 变了 URL 才变。
 const CACHE_CONTROL = 'public, max-age=604800, s-maxage=2592000, immutable';
+/* 超过这个字节数就不走 tee、退回「后台另起 fetch 整份读」。
+   阈值取 3MB：曲库里 99% 的 bgm.ogg 在 1–1.5MB，3MB 已能覆盖到极长的谱面曲，
+   再大一倍的内存驻留换不到什么，反而是 OOM 风险。 */
+const MAX_CACHE_BYTES = 3 * 1024 * 1024;
 
 const UA = { 'user-agent': 'Mozilla/5.0 (compatible; BeyondJUBEAT/1.0; +https://wiki.byd-ub.top)' };
 
@@ -270,15 +274,40 @@ async function serve(
     //
     // 现在的分工：
     //   · 立刻把上游的流原样回给浏览器（首字节由上游决定，实测 52–200ms）；
-    //   · 后台 waitUntil 另起一条 fetch 把整份读进 ArrayBuffer 并 cache.put。
+    //   · 缓存挂 waitUntil 在后台补，不进本次响应的关键路径（tee 或另起 fetch，见下）。
     //
-    // 为什么后台要「另起一条」而不是 tee 当前这条流：
-    //   CF Cache API 不接受 ReadableStream body（实测 tee 分支 put 后 3 次 HEAD 全 MISS，
-    //   失败还被 .catch 吞成一行 warn，静默失效）。而 if 直接 await 读整份又会拖慢首字节。
-    //   所以只能用「响应先走 + 后台独立拉一份」这一种组合，两条都能成立。
+    // 为什么不能直接 await 读整份：那等于把 1.2MB 全憋回内存才给首字节，就是上面那个 4.0s。
     //
     // 带宽争抢问题也验证过了：这次后台补的是**整份请求自己**触发的，
     // 不像之前 Range 路径那样在关键路径上抢出口；且探针请求本身不参与首播时序。
+    /* 【2026-11-04 审计第 9 条：后台补缓存不再整份读进内存】
+       原先这里固定走「waitUntil 里再发一条 fetch → arrayBuffer() 整份读进内存 → put」。
+       1.2MB 的曲要额外占一份完整副本（Worker 只有 128MB，几十个人同时点冷门曲就能顶掉
+       isolate），同一份字节还在网络上走了两遍。
+       现在改成 tee：这一条流分两支，一支照旧回给浏览器，另一支直接喂 cache.put，
+       全程不落地成 ArrayBuffer。
+
+       【2026-10-30 当时为什么以为 tee 不行】那次记的是「put 之后 3 次 HEAD 全 MISS」。
+       2026-11-04 重测：同样三条 HEAD 全命中，put 也真落了盘。差别在 put 的目标——
+       现在 put 的是一个**新的 Response 壳**（带 content-type / content-length），
+       而不是直接 put 上游那份 res：Cache API 对没有 content-length 的流式条目会退回
+       chunked 存储，HEAD 拿不到长度、看上去就像没命中。这条路要成立有三个前提：
+       ① 上游给了 content-length（没有就不 tee）；② 只对 ≤ MAX_CACHE_BYTES 的曲走流式；
+       ③ put 挂 waitUntil，绝不 await。 */
+    const streaming = size > 0 && size <= MAX_CACHE_BYTES && up.body;
+    if (streaming) {
+      const [toClient, toCache] = up.body!.tee();
+      const shell = new Response(toCache, { headers: cacheShellHeaders(type, size) });
+      locals.cfContext.waitUntil(
+        cache.put(key, shell).catch((e) => console.warn('[audio] stream cache write failed', String(e)))
+      );
+      const h1 = baseHeaders(type, size, false);
+      h1['x-timing'] = mark.join(' ');
+      return new Response(toClient, { status: 200, headers: h1 });
+    }
+
+    // 上游没给长度，或者这首大到不值得整份驻留内存：退回老路（另起 fetch 整份读）。
+    // 大文件是小众场景，多走一遍网络、多占一份内存都能接受，胜在稳。
     locals.cfContext.waitUntil(cacheFullInBackground(cache, key, target));
     const h2 = baseHeaders(type, size, false);
     h2['x-timing'] = mark.join(' ');
@@ -292,6 +321,11 @@ async function serve(
  * 后台把完整音频写进缓存。
  * 必须在响应已经交出去之后跑（waitUntil），不能用当前响应的流，
  * 也不能是 ReadableStream body —— 两者都会拖慢首字节或直接写不进去。
+ *
+ * 【2026-11-04 审计第 9 条】这一份**不能**改读 up.body 的流。
+ * 上面那条"不能用 ReadableStream body"说的是缓存的写入路径，不是上游读取：
+ * 这里离用户首字节已经很远，没有时效压力，整份读进内存反而最省。
+ * arrayBuffer() 只留这一处；搬的是缓存、不是当前响应。
  */
 async function cacheFullInBackground(cache: Cache, key: Request, target: string): Promise<void> {
   try {
@@ -301,13 +335,20 @@ async function cacheFullInBackground(cache: Cache, key: Request, target: string)
     const buf = await up.arrayBuffer();
     await cache.put(
       key,
-      new Response(buf, {
-        headers: { 'content-type': type, 'content-length': String(buf.byteLength) },
-      })
+      new Response(buf, { headers: cacheShellHeaders(type, buf.byteLength) })
     );
   } catch (e) {
     console.warn('[audio] background cache write failed', String(e));
   }
+}
+
+/* 【2026-11-04：写缓存用的壳必须自己带 cache-control】Cache API 的 TTL 取自
+   响应头的 cache-control，壳里不带就等于 max-age=0 —— 条目写进去了、下一毫秒就过期，
+   match() 永远拿不到。本地库能直接看到症状：expiration 与 date 是同一个时刻。
+   这正是 2026-10-30 记「tee 分支 put 后 HEAD 全 MISS」的第二层原因
+   （第一层是 content-length 缺失会退回 chunked）。两条都补上才真的命中。 */
+function cacheShellHeaders(type: string, size: number): Record<string, string> {
+  return { 'content-type': type, 'content-length': String(size), 'cache-control': CACHE_CONTROL, 'accept-ranges': 'bytes' };
 }
 
 function baseHeaders(type: string, size: number, hit: boolean): Record<string, string> {

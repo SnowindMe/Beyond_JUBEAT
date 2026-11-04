@@ -542,8 +542,7 @@ picture.sd-hold > img {
 /* 【2026-10-28】浅色世代这组色按「徽章不透明 --base 底」反解过，
    保持原色相、只压暗到 6 套主题都 >=4.5:1（原 #0f8a55/#9a6d12 在 knit 上只有 3.79/3.97）。
    改底色时这三个值必须重算，否则会重新掉回 4.5 以下。 */
-html[data-g="knit"] .sc-lv, html[data-g="prop"] .sc-lv, html[data-g="qubell"] .sc-lv,
-html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"] .sc-lv {
+html[data-lum="light"] .sc-lv {
     /* 留了约 0.15 的余量：ripples 上 #0d7a4b 正好卡在 4.50，浮点边界会被判失败 */
     --d-bsc: #0b6f44;
     --d-adv: #7d580e;
@@ -600,7 +599,7 @@ html[data-g="ripples"] .sc-lv, html[data-g="saucer"] .sc-lv, html[data-g="yymf"]
    【位置 2026-10-30 主人改】：从「曲绘下、曲名上」的独立一行，改成**曲绘左上角角标**。
    理由：①不打断看图→读名的视线，曲名紧贴曲绘；②不再撑高卡片
    （原版让有徽章的卡高 279px、没有的 255px，同页两种卡高）。
-   右上角是 [2] 长押谱徽章，所以角标放左上，两者互不干扰。
+   右上角是长押角标（判定读 has_hold，不是 [2]），所以角标放左上，两者互不干扰。
    形态：星标 + PICK UP 小字，贴角的小胶囊 + 半透明暗底（压在曲绘上必须自带底衬，
    否则浅色曲绘上白字读不出来）。
    配色：强调色字 + 自带深色底衬（不是实心强调色块）。
@@ -1394,8 +1393,7 @@ html[data-bgm="playing"] .sd-disc-spin {
        这里不再覆盖 border-top / padding-top，只保留把定数条推离曲绘的上间距。 */
 }
 /* 浅色世代（白底）：三色整组压深保对比度，和曲目卡的规则保持一致 */
-html[data-g="knit"] .sd-gauge, html[data-g="prop"] .sd-gauge, html[data-g="qubell"] .sd-gauge,
-html[data-g="ripples"] .sd-gauge, html[data-g="saucer"] .sd-gauge, html[data-g="yymf"] .sd-gauge {
+html[data-lum="light"] .sd-gauge {
     --d-bsc: #0f8a55;
     --d-adv: #9a6d12;
     --d-ext: #cc2f26;
@@ -2988,6 +2986,36 @@ html.sc-js .sc-panel[hidden] {
     .sc-ph-img {
         animation: none;
     }
+}
+/* 后台编辑页的长押谱三选一（/admin/songs/[songId]/，页面里带 ae-hold）。
+   外观照 auth.css:46-63 的 .au-f 输入框（那套基线只管 input/textarea，
+   select 两个都不匹配，所以在这里按同一组值补上，别让这一个控件裸奔）。
+   选择器挂 .ae-form 而不是 .ae-f：编辑页的字段壳用的是 .au-f，
+   .ae-f 是列表页筛选条那一套，挂错了这条规则一条都命中不了。
+   原生 select 在 Safari/Firefox 会按系统默认画下拉箭头，所以自带一个：
+   背景用两层，第一层是描边箭头（currentColor 取自文字色，浅色主题自动跟着反）。 */
+.ae-form select.ae-hold {
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--edge2);
+    border-radius: var(--r-md);
+    padding: 11px 13px;
+    width: 100%;
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position: calc(100% - 18px) calc(50% + 1px), calc(100% - 13px) calc(50% + 1px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    transition: border-color 0.18s, background-color 0.18s, box-shadow 0.18s;
+}
+.ae-form select.ae-hold:focus {
+    outline: none;
+    border-color: var(--acc);
+    background-color: color-mix(in srgb, var(--acc) 8%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 22%, transparent);
 }
 
 

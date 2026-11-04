@@ -13,7 +13,7 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │
 ├─ ✅ 首页 /
 │   ├─ Hero 主视觉（站标 / 4 张统计卡 / 15 宫格曲绘方块）
-│   ├─ 世代主题切换（顶栏 #tswBtn → 16 套主题弹层）
+│   ├─ 世代主题切换（顶栏 #tswBtn → 主题弹层，套数取 THEMES.length，2026-11-04 为 17）
 │   └─ 施工中占位（index.astro:15-21）
 │
 ├─ ✅ 曲目 /songs/（2026-10-21 上线，v1.6.0；v1.7.0 起改 SSR 读 D1）
@@ -41,11 +41,14 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │   │   ├─ 💭 Jubility 理论值
 │   │   └─ 💭 上一首 / 下一首
 │   │   ⤷ 谱面预览：v1.12.0 曾内嵌 ub.thregren.world 播放器（经 /ub-proxy 代理），v1.13.0 已整体下线
-│   └─ ✅ 世代筛选 /songs/gen/<slug>/（2026-10-23 上线，波次一 t7；SSR 查 D1，与 /songs/ 共用 SongCard.astro）
-│       ├─ ✅ 13 个世代各一页，slug 定在 src/lib/gens.ts 的 GEN_ORDER（jubeat / saucer-fulfill / qubell / ave / beyond-the-ave / yinyue-mofang …）
-│       ├─ ✅ 每页独立 title · description · canonical；面包屑回 /songs/；页尾「同服务器其他世代」内链
-│       ├─ ✅ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
-│       └─ ✅ /songs/ 的世代分组标题链到对应页（点世代名进，不是整条吸顶标题）
+│   └─ ⛔ 世代筛选 /songs/gen/<slug>/（2026-10-23 上线，**2026-10-28 主人「这个页面不要」，已删**）
+│       └─ 现在：世代只是 /songs/ 页内的分组块（GenBlock.astro），世代名是页内按钮、
+│          点了滚到下一世代并循环，不改 URL。GEN_ORDER 的 slug 字段仍留着但无人读取。
+│          （下面四条是删页前的形态，留作将来若要做世代页的参照）
+│           ├─ 13 个世代各一页，slug 定在 src/lib/gens.ts 的 GEN_ORDER
+│           ├─ 每页独立 title · description · canonical；面包屑回 /songs/；页尾「同服务器其他世代」内链
+│           ├─ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
+│           └─ /songs/ 的世代分组标题链到对应页
 │
 ├─ ✅ Jubility 层级 /jubility/（2026-10-26 上线 v1.21.0、v1.22.0 加 PEACH；SSR 读 D1，与 /songs/ 同一套视图口径）
 │   ├─ ✅ 服务器选项卡（日服 / 国服，按钮内直接显示该服理论值）
@@ -168,9 +171,9 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 **v2 有、新站导航没列的**：版本沿革 / 玩法与判定 / 隐藏曲充能 / 新手上路 / 段位图鉴 / 更新情报 —— 共 6 个页面在历史项目里存在，新站顶栏没有对应入口。是保留还是砍掉，需要主人拍板。
 
-**新站有、v2 没有的**：世代主题切换（15 套）、开屏 LOADING、最近更改、曲目库三卡切换、曲目页 SSR 读 D1。
+**新站有、v2 没有的**：世代主题切换（现 17 套，见 `src/lib/themes.ts`）、开屏 LOADING、最近更改、曲目库三卡切换、曲目页 SSR 读 D1。
 
-**渲染架构（v1.7.0 起，v1.15.0 扩到多页）**：`output: 'static'` + `@astrojs/cloudflare` 适配器的混合渲染——没标 `prerender = false` 的页面照旧在构建期预渲染，产物进 `dist/client` 由 Workers Assets 直出；`/songs/`、`/songs/[songId]/`、`/songs/gen/[gen]/`、`/recent/` 与登录/账户/管理页进 Worker 脚本，请求时查 D1 再渲染。所以 `dist/client/songs/index.html` 与 `dist/client/recent/index.html` 都不存在，这是有意为之。
+**渲染架构（v1.7.0 起，v1.15.0 扩到多页）**：`output: 'static'` + `@astrojs/cloudflare` 适配器的混合渲染——没标 `prerender = false` 的页面照旧在构建期预渲染，产物进 `dist/client` 由 Workers Assets 直出；`/songs/`、`/songs/frag`、`/songs/[songId]/`、`/recent/` 与登录/账户/管理页进 Worker 脚本，请求时查 D1 再渲染。所以 `dist/client/songs/index.html` 与 `dist/client/recent/index.html` 都不存在，这是有意为之。
 
 数据权威源分两份：曲库是 `data/jubeat.db`（本地 SQLite）→ `db/seed.sql` 重放进 D1；用户系统（users / sessions / oauth_accounts / role_requests）在 `db/migrate-users.sql`。**上线顺序必须先 `migrate-users.sql` 再 `seed.sql`**——seed 只含数据表的幂等 DDL，反序不会清空账号，但先建用户表才能让登录功能立刻可用；旧版 seed 曾内嵌 `DROP TABLE users`，重放会清账号，已在 t6 剥离。
 

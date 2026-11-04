@@ -1,6 +1,8 @@
 ---
-// 曲目卡：/songs/ 与 /songs/gen/[gen]/ 共用的唯一一份卡片。
-// 抽出来的原因：两页要长得完全一样，复制一份等于以后改样式要改两遍（必然漏一边）。
+// 曲目卡：曲目列表里的唯一一份卡片结构，/songs/（含它的 /songs/frag 分段端点）在用。
+// 抽出来的原因：分页与分世代两处都要长得完全一样，复制一份等于以后改样式要改两遍
+//   （必然漏一边）。【2026-11-04 更正】独立世代页 /songs/gen/<slug>/ 已于 2026-10-28 删除，
+//   世代块现在是 /songs/ 页内的分组（GenBlock），不再有第二个页面路由。
 // 样式仍走 src/styles/songs.css 的 .sc-*（这里是纯结构，没有自己的 CSS）。
 //
 // data-* 承载匹配字段（2026-10-23，t9 搜索/筛选/排序）：
@@ -25,8 +27,9 @@ interface Props {
   eager?: boolean;
   /** 当前视图服务器：决定该卡属于哪个分区、算不算 PICK UP（口径都在 lib/song-view.ts） */
   srv?: 'jp' | 'cn';
-  /** 是否画 PICK UP 标记。/songs/ 传 true；世代页不传——那页没有服务器上下文，
-      整页同标或全不标都会误导。范围值本身仍写进 data-scope，筛选逻辑不受影响。 */
+  /** 是否画 PICK UP 标记。/songs/ 及其 frag 端点传 true。默认 false 是给
+      「拿不到服务器上下文」的调用方留的口子：整页同标或全不标都会误导。
+      范围值本身仍写进 data-scope，筛不筛是另一回事，不受这里影响。 */
   markPick?: boolean;
 }
 
@@ -105,7 +108,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
         左上角（PICK UP）与右上角（长押标识）分处两侧，互不遮挡。
         窄屏（≤768px）曲绘只有 94px 宽，整条角标会占 59%，所以 CSS 里只留星标、
         隐藏「PICK UP」文字——aria-label 保证读屏仍能读到含义。
-        仍然只画在需要标记的页（markPick），世代页不画但 data-scope 照写。 */}
+        仍然只画在 markPick 为真的调用方，data-scope 则一律照写。 */}
     {markPick && pick ? (
       <b class="sc-pick" title="PICK UP 曲目" aria-label="PICK UP 曲目">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.6 6.1.7-4.6 4.1 1.3 6-5.4-3.2-5.4 3.2 1.3-6L3.3 9.9l6.1-.7z"/></svg>

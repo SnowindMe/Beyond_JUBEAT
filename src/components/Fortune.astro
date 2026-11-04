@@ -16,7 +16,7 @@
 // 那时留着运势，会把没人听过的歌当"吉"推荐。
 import '../styles/fortune.css';
 import { env } from 'cloudflare:workers';
-import { DIFF_LABEL, fortuneOf, type Diff, type GradeKey, type Svr } from '../lib/hot';
+import { DIFF_LABEL, dayOf, fortuneOf, type Diff, type GradeKey, type Svr } from '../lib/hot';
 import { fallbackByIds, pickFortune, todaySnapshot, fortunePool, type PoolSong } from '../lib/hotPage';
 import data from '../data/data.json';
 
@@ -25,15 +25,20 @@ export const prerender = false;
 const e = env as { beyond_jubeat?: D1Database; SESSION?: KVNamespace };
 const db = e.beyond_jubeat as D1Database;
 
-const seed = new Date().toISOString().slice(0, 10);
+/** 当日种子。必须跟热榜同一个切日口径：两者都用 dayOf() 按 +08:00 切，
+ *  否则北京时间 00:00–08:00 这八小时，运势还算"昨天"、热榜已经读"今天"。 */
+const seed = dayOf();
 const visitor = Astro.locals.user?.id ? 'u:' + Astro.locals.user.id : 'guest';
 
 const snap = await todaySnapshot(e).catch(() => null);
 const ready = !!snap && !snap.seeded;
 
-/** 哪一服有曲：空格服不出选项（顺序按站点习惯，国服在前）。
- *  【2026-11-04 改】原先每个请求都对 songs 表跑 SUM(CASE...) 全表扫，
- *  而这是构建期就定死的静态事实 —— 改用 data.json 里构建期算好的 stat.srv。 */
+/** 哪一服有曲：曲数为 0 的服不出选项卡（顺序按站点习惯，国服在前）。
+ *
+ *  【2026-11-04 改】两个数都是**构建期静态事实**，不再每请求查库：
+ *  - stat.srv 由 scripts/build-data.cjs:137 按 server_jp / server_cn 逐条数出来，
+ *    沉淀在 src/data/data.json；原先这里对 songs 表跑 SUM(CASE...) 全表扫，纯属白算。
+ *  - 判空用 `> 0`：先兜 0 再判，字段缺失时按"这服没曲"处理，不会把空选项卡渲染出来。 */
 const SRVS = (['cn', 'jp'] as const).filter((s) => (data.stat.srv?.[s] ?? 0) > 0);
 
 type Pick = PoolSong & { rank: GradeKey; tier: string; diff: Diff; lv: number };

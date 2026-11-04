@@ -352,14 +352,10 @@ img {
     opacity: 0.72;
     padding-left: 1px;
 }
-/* 浅色世代（ripples / knit）的 --acc 是中等绿，做小符号时在浅底上直接糊掉：
-   符号改用更深的 --ink，并去掉 ~ 的透明度。 */
-html[data-g="ripples"] .mark b .sym,
-html[data-g="ripples"] .mark b .til,
-html[data-g="yymf"] .mark b .sym,
-html[data-g="yymf"] .mark b .til,
-html[data-g="knit"] .mark b .sym,
-html[data-g="knit"] .mark b .til {
+/* 浅色世代的 --acc 通常偏中等亮度，做小符号时在浅底上直接糊掉：
+   符号改用更深的 --ink，并去掉 ~ 的透明度。判据是 data-lum。 */
+html[data-lum="light"] .mark b .sym,
+html[data-lum="light"] .mark b .til {
     color: var(--ink);
     opacity: 0.86;
 }
@@ -803,13 +799,7 @@ html[data-g="knit"] .mark b .til {
    这两套的 --wl-acc 压暗一档（实测 4.66 / 4.62，大字 3:1 门槛之上），
    直接写在各自主题块里——不要另起 html[data-g=...] 块，
    scripts/ci/check-contrast.mjs 的 blockOf() 只认每个主题的第一个颜色块。 */
-html[data-g="knit"] .wl-pre,
-html[data-g="saucer"] .wl-pre,
-html[data-g="saucerfulfill"] .wl-pre,
-html[data-g="qubell"] .wl-pre,
-html[data-g="prop"] .wl-pre,
-html[data-g="ripples"] .wl-pre,
-html[data-g="yymf"] .wl-pre {
+html[data-lum="light"] .wl-pre {
     text-shadow: none;
 }
 @keyframes welcomeIn {
@@ -837,6 +827,13 @@ html[data-g="yymf"] .wl-pre {
     color: var(--title, var(--ink));
     text-shadow: var(--tshadow, 0 4px 26px rgba(0, 0, 0, 0.45));
 }
+/* 字标图本身已含「jubate / 音乐魔方」字样，标题行的文字层（.word-t）和下方副题（.sub）一律藏起来，
+   只用 #wordLogo。原先这两句在 16 个主题块里各写一遍 display: none，
+   而 16 套主题全都隐藏 —— 没有例外，所以提到基础规则，主题块里的 16 份副本一并删掉。 */
+.word-t,
+.sub {
+    display: none;
+}
 /* 字标视框（2026-10-26 定稿：整图完整显示，字身带对上文字中线）。
    演进：最初锁 285px 宽 → 拼进标题行后各代大小不一；
    中途试过裁成只剩字身带，但主人要求「logo 图标要完整显示」，
@@ -846,7 +843,7 @@ html[data-g="yymf"] .wl-pre {
    于是「jubeat」这几个字和 WELCOME TO 天然同高、同基线，
    装饰按原比例完整保留，悬在字身上下。 */
 .word-l {
-    display: none;
+    display: flex;
     flex: 0 0 auto;
     /* 宽度由内部 img 撑开：img 不定位、按比例缩放，视框自动跟随，
        写死宽度会因四舍五入把最右一个字母裁掉（实测 jubeat 的 t、qubell 尾部都缺角）。 */
@@ -895,120 +892,6 @@ html[data-g="clan_blue"],
 html[data-g="clan_green"],
 html[data-g="clan_purple"],
 html[data-g="clan_red"][data-g] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; }
-/* 所有字标都已裁掉透明留白并左对齐到 WELCOME 行 / 统计卡的同一条竖线，
-   视框随图自身尺寸撑开，不再有 object-position / align-self 的人工补偿。 */
-html[data-g="ave"] .word-l {
-    display: flex;
-}
-html[data-g="bta"] .word-l {
-    display: flex;
-}
-html[data-g="knit"] .word-l {
-    display: flex;
-}
-html[data-g="copious"] .word-l {
-    display: flex;
-}
-html[data-g="saucer"] .word-l {
-    display: flex;
-}
-html[data-g="saucerfulfill"] .word-l {
-    display: flex;
-}
-html[data-g="prop"] .word-l {
-    display: flex;
-}
-html[data-g="qubell"] .word-l {
-    display: flex;
-}
-html[data-g="clan_blue"] .word-l {
-    display: flex;
-}
-html[data-g="clan_green"] .word-l {
-    display: flex;
-}
-html[data-g="clan_purple"] .word-l {
-    display: flex;
-}
-html[data-g="clan_red"] .word-l {
-    display: flex;
-}
-html[data-g="festo"] .word-l {
-    display: flex;
-}
-html[data-g="jubeat"] .word-l {
-    display: flex;
-}
-html[data-g="ripples"] .word-l {
-    display: flex;
-}
-html[data-g="yymf"] .word-l {
-    display: flex;
-}
-html[data-g="ave"] .word-t,
-html[data-g="ave"] .sub {
-    display: none;
-}
-html[data-g="bta"] .word-t,
-html[data-g="bta"] .sub {
-    display: none;
-}
-html[data-g="knit"] .word-t,
-html[data-g="knit"] .sub {
-    display: none;
-}
-html[data-g="copious"] .word-t,
-html[data-g="copious"] .sub {
-    display: none;
-}
-html[data-g="saucer"] .word-t,
-html[data-g="saucer"] .sub {
-    display: none;
-}
-html[data-g="saucerfulfill"] .word-t,
-html[data-g="saucerfulfill"] .sub {
-    display: none;
-}
-html[data-g="prop"] .word-t,
-html[data-g="prop"] .sub {
-    display: none;
-}
-html[data-g="qubell"] .word-t,
-html[data-g="qubell"] .sub {
-    display: none;
-}
-html[data-g="clan_blue"] .word-t,
-html[data-g="clan_blue"] .sub {
-    display: none;
-}
-html[data-g="clan_green"] .word-t,
-html[data-g="clan_green"] .sub {
-    display: none;
-}
-html[data-g="clan_purple"] .word-t,
-html[data-g="clan_purple"] .sub {
-    display: none;
-}
-html[data-g="clan_red"] .word-t,
-html[data-g="clan_red"] .sub {
-    display: none;
-}
-html[data-g="festo"] .word-t,
-html[data-g="festo"] .sub {
-    display: none;
-}
-html[data-g="jubeat"] .word-t,
-html[data-g="jubeat"] .sub {
-    display: none;
-}
-html[data-g="ripples"] .word-t,
-html[data-g="ripples"] .sub {
-    display: none;
-}
-html[data-g="yymf"] .word-t,
-html[data-g="yymf"] .sub {
-    display: none;
-}
 /* 字标占位比例按世代写死：13 张 logo 的宽高比差 4 倍多（ave 1.35、knit 3.46、
    ripples 3.33、yymf 1.99），img 的 width/height 属性只能给一个兜底比例。
    在字标图解码完成之前按各自真实比例占位，图到货时高度不再跳一下。
@@ -1070,13 +953,7 @@ html[data-g="knit"] #wordLogo {
     filter: brightness(0.78) saturate(1.25);
 }
 
-/* saucer 字标本身已含「音乐魔方」小字，去掉下方重复副题 */
-html[data-g="saucer"] .sub,
-html[data-g="saucerfulfill"] .sub {
-    display: none;
-}
 .sub {
-    display: flex;
     align-items: center;
     gap: 13px;
     margin-top: clamp(15px, 1.8vw, 20px);
@@ -2093,12 +1970,7 @@ html[data-g="yymf"] {
 
 /* 浅色世代：卡片玻璃偏白、背后是亮底彩图，弹层若只用 --glass2 会和底图糊在一起，
    选项文字看不清，这里给弹层一层更实的底。 */
-html[data-g="knit"],
-html[data-g="prop"],
-html[data-g="qubell"],
-html[data-g="ripples"],
-html[data-g="saucer"],
-html[data-g="yymf"] {
+html[data-lum="light"] {
     --pop-bg: rgba(255, 255, 255, 0.94);
     /* 账户菜单的实色底（不能用上面那个 0.94 的玻璃，声明 → 透出曲绘）。
        比 --base 亮一档，浅色主题下才像一张独立卡片。 */
@@ -2108,9 +1980,24 @@ html[data-g="yymf"] {
     /* 危险色（账户菜单的「退出登录」）：浅底上要压深才有 4.5 以上。
        深色主题不定义这个令牌，回落成亮一点的 #e5484d。 */
     --danger: #a8312f;
+    /* 软色同理：浅底上原样的 #ff6b6b 只有 2.9:1，文字与描边都要压深；
+       深色主题不定义 these，回落成上面 :root 的亮值。 */
+    --danger-soft: #d8443f;
+    --danger-text: #b7302c;
+    --ok-soft: #12855e;
+    --ok-text: #0c6b4a;
 }
 :root {
     --danger: #e5484d;
+    /* 失败态的软色：红，但压到"当背景/描边仍不刺眼"的强度。
+       auth.css 的校验红字/错误条用它，别再散写 #ff6b6b / #ff9b9b / #ffb4b4。 */
+    --danger-soft: #ff6b6b;
+    --danger-text: #ff9b9b;
+    /* 成功态（改密成功、保存成功）：绿松石，与失败色同为软色档。 */
+    --ok-soft: #3ddc97;
+    --ok-text: #a8f0d0;
+    /* 实心强调色按钮上的前景字（深青）。--acc 逐主题变，这个恒定够暗。 */
+    --on-acc: #04222b;
 }
 
 /* 背景图不再走 body::after，改由 .bgv 的 A/B 两条板交叉淡入（见文件上方 .bgv 注释）。

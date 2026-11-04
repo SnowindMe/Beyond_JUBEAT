@@ -25,6 +25,10 @@ export const AUTH_ERRORS: Record<string, string> = {
   'not-pending': '这条申请已经被处理过了。',
   'not-found': '没有找到这条记录。',
   'last-owner': '不能停用/降级站长自己。',
+  // 限流两条：分钟闸等一分钟就好，小时闸要让用户知道「不是网坏了，是手太快」。
+  // 都不提具体上限数字——上限会调，写在文案里迟早对不上。
+  'too-many': '操作太频繁了，等一分钟再试。',
+  'too-many-long': '这个网络的尝试次数太多了，先歇一会儿再回来。',
 };
 
 export function authError(code: string | null | undefined): string | null {

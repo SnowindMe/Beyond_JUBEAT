@@ -110,8 +110,19 @@ Turso 的定位是「另一个同样要积分额的免费档」，它的优势�
 
 1. **notecounts / holds 存 JSON 列**（schema.sql:31-32）：SQLite 里既不能索引也不能聚合，以后想「按键数排序」得全表拉回来在 JS 里排。要支持就拆成六列（bsc_notes / adv_notes / ext_notes / holds_*）。现在不改，列在这里备查。
 2. **server_jp / server_cn 双列**（schema.sql:19-20）让 1248 行里塞了两份同曲记录，两服都有的还要 (1,1)。理论上能并成一列 srv TEXT，但会把几十处 WHERE server_jp = 1 全部改掉，收益不抵改动量。
-3. **alt 只有 DEFAULT 0 没有 CHECK**（schema.sql:25），而同表的 has_hold 有 CHECK (has_hold IN (0,1))（schema.sql:30）。补一句就行。
-4. **recent_changes 无 created_at 之外的时间索引策略**，靠 LIMIT 200 掩盖增长，见 P1-7。
+3. ~~**alt 只有 DEFAULT 0 没有 CHECK**（schema.sql:25）~~ ——【2026-11-04 已补】现在 schema.sql:25 是 `alt INTEGER NOT NULL DEFAULT 0 CHECK (alt IN (0,1))`，与 has_hold 口径一致。
+4. ~~**recent_changes 无 created_at 之外的时间索引策略**，靠 LIMIT 200 掩盖增长~~ ——【2026-11-04 已改】cron 每日 00:05 调 pruneRecentChanges（src/worker.ts:29，保留期常量在同文件 :17），见 P1-7。
+
+---
+
+> **2026-11-04 逐条复查（本文件写完之后，工作区又动了）**
+> - P0-1 曲目静态化 **已完成**：src/lib/song-data.ts 走 ASSETS 绑定读 /data/songs.json（带 ?v= 内容哈希），src/data/songs-version.json 记录版本，public/_headers:34-40 给 /data/* 一年 immutable。songs 表的请求期读已归零。
+> - P0-2 打点 KV 归零 **已完成**：db/schema.sql:178-200 新建 hot_ip_days 与 hot_gaps，src/lib/hotStore.ts:52-69 的 bumpIp 一次 upsert + RETURNING 同时拿 n 与 minN，src/pages/api/hot/hit.ts 三层闸门全落 D1，KV 只剩快照。KV 写入从 2 次/点降到 0。
+> - P0-3 cron 清理 **已完成**：src/worker.ts:34-46 的 scheduled 同时调 sealToday + pruneExpiredSessions + pruneRecentChanges，登录路径已不再扫会话表。
+> - P0-4 冗余索引 **已删一半**：idx_hot_hits_day_song 已删（schema.sql:165 注释写明主键前缀已覆盖）。idx_songs_jp_gen / idx_songs_cn_cat 仍保留（:41-42），曲目转静态后收益确实归零，但删表改动的连带面比收益大，留作后置。
+> - P0-5 运势计数 **已完成**：Fortune.astro 不再跑 COUNT_SQL，改读 data.stat.srv（:39 注释注明由 build-data.cjs:137 数出来，:42 消费）。
+> - P1-6 迁 Analytics Engine、P1-8 迁 R2 **未做**（主人 2026-11-04 明确「R2 除非必要就不用」，audio 的整份读内存改由 tee + 3MB 阈值解决，见 audit 第 9 条）。
+> - P2 换库：结论不变——按现额度不必换。
 
 ---
 

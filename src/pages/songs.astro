@@ -41,7 +41,7 @@ Astro.response.headers.set(
   'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
 );
 
-// 世代 → 元信息（年份 + 稳定 slug）。
+// 世代 → 元信息（取上线日；slug 字段随世代页一起作废了，这里用不到）。
 const genMetaOf = (gen: string) => GEN_ORDER.find((g) => g.k === gen);
 const dateOf = (gen: string) => genMetaOf(gen)?.date ?? '';
 

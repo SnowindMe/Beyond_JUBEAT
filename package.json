@@ -15,7 +15,7 @@
     "opt": "node scripts/optimize-images.cjs"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "beta",
+    "@cloudflare/vite-plugin": "^1.67.0",
     "astro": "^7.4.1",
     "cf": "^1.0.0-beta.27",
     "kuroshiro": "^1.2.1",
@@ -24,6 +24,7 @@
     "wrangler": "^4.156.2"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.4.4"
+    "@astrojs/cloudflare": "^14.4.4",
+    "miniflare": "^4.20260730.0"
   }
 }

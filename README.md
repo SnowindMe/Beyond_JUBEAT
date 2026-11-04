@@ -272,7 +272,7 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 
 **兜底与 bfcache**：沿用旧版两道保险。①看门狗——条一旦可见最多挂 8 秒，到点无条件收（一条永远在爬的进度条等于在骗人，让用户看到内容比继续假装加载有价值）；②`pagehide`（persisted）时先把条摘干净再进 bfcache，`pageshow` 的 persisted 分支再无条件复位一次——旧版踩过「点进详情后按 back 有概率卡 loading」，根因是遮罩亮着被冻进快照，而「有概率」正来自导航快于 160ms 时遮罩没亮、快照干净。点击监听仍挂在 document capture 阶段，被 JS 接管、点击后不导航的 `<a>` 必须带 `data-boot-skip`（见 Header.astro 账户菜单那段），否则会被当成「要走了」而亮条。设了 `prefers-reduced-motion: reduce` 的用户整站不启动（`data-boot="off"`，`jbBoot` 退化成空实现）。样式与脚本都是 `is:inline`，必须在首帧前生效。
 
-页面支持 **16 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」，2026-10-26 新增初代「jubeat」——排在 ripples 之前，背景与白色字标取自官方 PROFILE 卡），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
+页面支持 **17 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」，2026-10-26 新增初代「jubeat」——排在 ripples 之前，背景与白色字标取自官方 PROFILE 卡），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
 
 **首屏标题行是「WELCOME TO + 字标」拼成的一句**（v1.24.0 起；`~` 已于 v1.25.0 按主人要求去掉；字标换图抖动已于 v1.28.1 修掉）：世代字标图直接充当 jubeat 这个词，前缀与字身带锚在同一个 `--wl-em` 上，因此两者天然同高。WELCOME TO 用主题色 `--wl-acc`（默认取 `--acc`；knit/ripples 的 `--acc` 在浅底上只有 1.83/2.23，各自压暗到 4.66/4.62）。难点是 13 张字标构图完全不同（字身带有的压图顶、有的居中，还各带圆弧/菱形/色条/副标题），所以按世代量了对照表写进 `theme.css`：`--bh`（「jubeat」字身带占图高比例，把字身缩成统一 1em）、`--bc`（字身带中心位置，对齐到行中线）、`--bt`（字身带上缘，留档核对）。**换字标图必须重算这三值**，否则标题行会错位。量法：以最干净的 `logo/jubeat.webp` 为模板，对各字标做归一化互相关扫描（缩放 0.5–2.6×、全纵向偏移），取得分最高的窗口；外围圆弧会让「段数+跨度」这类判据误判，实测过 `--bh` 被带到 0.4857 导致 ave 字标缩成一半。
 
@@ -287,7 +287,7 @@ BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
 >
 > **墨迹高度校准（`--wl-ink`）**：14 款字体的 cap-height 不同，实测墨迹比 0.70–0.89，同字号下肉眼差 22%。每款按 `0.74 / 实测墨迹比` 归一，16 个世代切过去「WELCOME TO」一样大。换字体必须重算该值（用 canvas 的 `actualBoundingBoxAscent` 量）。
 >
-> ⚠️ **这些表必须写成 `html[data-g="x"][data-g]`**：`scripts/ci/check-contrast.mjs` 的 `blockOf()` 取每个主题**第一个** `html[data-g="x"]{` 块。若把字体/字身带表写成同形选择器且位置靠前，CI 会取到只有一两个变量的空块、令牌全回退 `:root`，于是 16 套主题都按深色默认值算、浅色断言根本没跑——**这是假绿灯，比红灯危险**。`[data-g]` 是重复同一属性，特异性与语义都不变，但不再被抢先命中。
+> ⚠️ **这些表必须写成 `html[data-g="x"][data-g]`**：`scripts/ci/check-contrast.mjs` 的 `blockOf()` 取每个主题**第一个** `html[data-g="x"]{` 块。若把字体/字身带表写成同形选择器且位置靠前，CI 会取到只有一两个变量的空块、令牌全回退 `:root`，于是 17 套主题都按深色默认值算、浅色断言根本没跑——**这是假绿灯，比红灯危险**。`[data-g]` 是重复同一属性，特异性与语义都不变，但不再被抢先命中。
 
 **品牌标识（v1.27.0）**：主人 2026-10-27 交付两张同稿不同底的 PNG——**白底版**用于 PWA 图标与浏览器标签页图标，**透明版**用于顶栏品牌字左边与首页标识区（替换原来的 9×9 色点 `.mark i`）。母版归档在 `archive/materials/brand/`，产物统一由 `scripts/gen-brand-logo.cjs` 生成，**换标识只改母版再跑这个脚本**，不要手改 `public/` 下的图。两个必须记住的量化口径：
 
@@ -340,7 +340,7 @@ Beyond_JUBEAT/
 │  │  ├─ index.astro          首页（Hero + 站点标识区 .brandblock）
 │  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，双服切换 + 分区筛选 + 搜索/四维筛选/5 种排序）
 │  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
-│  │  ├─ songs/gen/           世代筛选页（SSR：13 个世代各一页，slug 在 lib/gens.ts）
+│  │  ├─ songs/frag.astro     曲目分段端点（SSR：按 srv+gen 出片段，供 /songs/ 懒加载）
 │  │  ├─ admin/songs/         维护者曲目编辑（列表 + 单曲编辑，服务端复核 role）
 │  │  ├─ login.astro          登录（SSR）
 │  │  ├─ register.astro       注册（SSR）
@@ -353,7 +353,7 @@ Beyond_JUBEAT/
 │  │  ├─ Header.astro         顶部导航 + 主题切换按钮
 │  │  ├─ BootScreen.astro     开屏 LOADING 遮罩（每会话一次，is:inline）
 │  │  ├─ Hero.astro           主视觉（站标 / 曲绘方块：桌面 4×4，窄屏双行反向滚动）
-│  │  ├─ SongCard.astro       曲目卡（/songs/ 与 /songs/gen/ 共用的唯一一份）
+│  │  ├─ SongCard.astro       曲目卡（唯一一份，由 GenBlock 在 /songs/ 内渲染）
 │  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
 │  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
 │  ├─ middleware.ts           全站中间件：会话 cookie → Astro.locals.user
@@ -403,6 +403,7 @@ Beyond_JUBEAT/
 ├─ db/
 │  ├─ schema.sql              本地建库全量 DDL（含 DROP，勿对线上跑）
 │  ├─ migrate-users.sql       用户系统增量迁移（IF NOT EXISTS，给线上 D1 用）
+│  ├─ migrate-auth.sql        鉴权限流五张表（IF NOT EXISTS，上线前必跑，否则鉴权全 500）
 │  ├─ seed.sql                生成物：幂等数据 DDL + 清空 songs + INSERT + ANALYZE（全量，含 DELETE）
 │  └─ patch.sql               生成物：diff-seed.cjs 产出的增量补丁（日常灌线上用这个）
 ├─ scripts/                   工具脚本（不部署）
@@ -411,7 +412,7 @@ Beyond_JUBEAT/
 │  ├─ db/parse-xlsx.cjs       xlsx 解析（自带 ZIP 解包，读 data/xlsx/source.xlsx）
 │  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
 │  ├─ ci/check-song-edits.mjs 曲目编辑越权/参数校验（node:sqlite 内存库冒充 D1，调真实 handleSongUpdate）
-│  ├─ ci/check-contrast.mjs   对比度自检（16 套主题 × 三条组合取 min；输出公式理论值，不含背景图）
+│  ├─ ci/check-contrast.mjs   对比度自检（17 套主题 × 多条组合取 min；输出公式理论值，不含背景图）
 │  ├─ ci/check-schema-doc.cjs 文档数字自检（docs/database-schema.md 的计数 vs 真实库，不符即 FAIL）
 │  ├─ scrape-beyond-ave.cjs   上游曲目抓取（beyond the Ave. 站点 → data/upstream/*.json）
 │  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
@@ -453,13 +454,16 @@ Beyond_JUBEAT/
 
 ```bash
 npm install              # astro + wrangler
-npm run dev              # 本地开发服务器（本机起不来，见「本机 workerd 的两个坑」）
+npm run dev              # 本地开发服务器（起站前先灌本地 D1，见「本机 workerd 的两个坑」）
 npm run db               # 一条命令重建曲库：xlsx → sheet JSON → data/jubeat.db + db/seed.sql → 站点 JSON
 npm run patch            # 对比 git HEAD 的 seed 与当前 seed，只把受影响的行写进 db/patch.sql（灌线上用）
 npm run data             # 只重新生成 src/data/data.json 与 songs.json 并同步曲绘
 npm run build            # 构建到 dist/
-npm run check            # 四段：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验 → 对比度自检(16 套主题)
-                         # 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），
+npm run check            # 七段，顺序固定：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验
+                         # → 对比度自检(17 套主题) → 库表与文档的列一致 → 搜索键上限 → 技法覆盖。
+                         # 任何一段红都不能放行。CI（.github/workflows/build-check.yml）在每次 push / PR
+                         # 上跑构建 + 这整条 check，不必再靠人记。
+                         # 对比度脚本输出的是公式理论值（不含背景图），
                          # 验收仍以实机渲染为准，脚本只作回归护栏。
                          #
                          # 【2026-10-28 实测校准】这个偏差远比原先写的「0.5–1.0」大：文字直接押在
@@ -484,7 +488,7 @@ npm run opt              # 压缩 public/assets/images 下的图片
 
 资源引用一律写站点绝对路径（`/assets/...`）：Astro 会把 CSS 打到 `/_astro/*.css`，相对路径会失效。
 
-`npm run dev` / `npm run preview` **在本机起不来**（workerd 环境问题，见下「本机 workerd 的两个坑」）。改完只能 `npm run build` 后看产物：`dist/client` 是预渲染出来的静态文件（可用任意静态服务器打开），`dist/server` 是 Worker 侧代码；`/songs/` 走 SSR，本地静态服务器里看不到，要验就 push 后看线上。
+`npm run dev` 在本机已经能起（2026-11-04 起，配了 `persistState` 绕过 workerd 建临时目录的权限问题，前置步骤见下「本机 workerd 的两个坑」），SSR 页（`/songs/`、`/recent/`、登录/账户/管理）在 dev 里直接可看，不用再 push 到线上验。`npm run preview` / `npx wrangler dev` 走的是真实 workerd 运行时，本机仍可能踩同一个崩溃，需要验 Workers 侧行为时再试。
 
 ## 部署
 
@@ -495,7 +499,7 @@ npm run opt              # 压缩 public/assets/images 下的图片
 用的是 **Cloudflare Workers（混合渲染）**：`dist/client` 走 Workers Assets 静态资源层（零运行时开销），`/songs/`、`/recent/`、登录/账户/管理页等落进 Worker 脚本在边缘 SSR 时查 D1。哪些路径进 Worker 由 `wrangler.jsonc` 的 `assets.run_worker_first` 决定。
 
 - Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
-- `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "@astrojs/cloudflare/entrypoints/server"`。
+- `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "src/worker.ts"`（2026-11-03 起是我们自己的入口，它把 fetch 转发给适配器的 handle，只额外导出 `scheduled` 供每日封榜的 cron；原来写的是 `@astrojs/cloudflare/entrypoints/server`）。
 - 两个绑定必须和 Cloudflare 侧一致，漏了会部署失败：`SESSION`（KV；适配器给 Astro Sessions 自动挂的，暂时没用也得写 id）、`beyond_jubeat`（D1）。
 - **Turnstile（人机验证）**：widget 已建好（Managed 模式，域名 `byd-ub.top` 覆盖 `wiki.byd-ub.top`）：
   1. **secret** 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat`（已写入，值不进仓库）；
@@ -503,6 +507,7 @@ npm run opt              # 压缩 public/assets/images 下的图片
   少了 secret 时，生产环境注册/登录 fail-closed 拒绝（本地 DEV 放行）。
   换 widget 时改这两处即可；模式/域名在 Cloudflare 控制台改。
 - 线上 D1 加表：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql`（幂等，`IF NOT EXISTS`）。**不要拿 `db/schema.sql` 对线上跑**——它开头有 `DROP TABLE songs`。
+- 鉴权限流表（2026-11-04 新增，**上线前必须先跑，否则线上登录/注册/改密全 500**——代码会 upsert 这五张表，表不存在直接报 `no such table`）：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-auth.sql`（幂等）。
 - Astro 以 `output: "static"` 构建：没标 `prerender = false` 的页面照旧预渲染成 HTML，只有曲目页进 Worker。所以 `dist/client/songs/index.html` 不存在，这是正常的。
 - `dist/server/wrangler.json` 才是带绑定的那份配置，`wrangler deploy` 通过 `.wrangler/deploy/config.json` 指过去。
 - 曲目页的 HTTP 缓存自己设：`cache-control: public, max-age=30, s-maxage=300, stale-while-revalidate=60`；Worker 内还有 60s 的 isolate 级内存缓存（`src/lib/db.ts`）。
@@ -532,9 +537,31 @@ Fatal uncaught kj::Exception: kj/filesystem-disk-win32.c++:773: failed: CreateDi
 
 **坑 1 · 构建期预渲染**：适配器默认用 workerd 跑预渲染，上面这条直接让 `npm run build` 挂掉。解法是 `astro.config.mjs` 里写 `prerenderEnvironment: 'node'`，改用 Node 跑预渲染，产物完全一致，云端（Linux）也不受影响。
 
-**坑 2 · 本地 dev server 起不来**：同一个崩溃发生在 `npm run dev`、`npm run preview`、`npx wrangler dev` 的**启动阶段**——miniflare 在 `os.tmpdir()` 下建临时目录，然后 workerd 自己要在里面建 Durable Object 存储目录，被本机权限拒绝（设 `TEMP`/`TMP`/`TMPDIR`、手动建同名空目录都无效）。所以本机没有可用的 dev server，改动一律靠 `npm run build` + 线上验证；CI 与 Cloudflare 的构建都在 Linux 上跑，不受影响。
+**坑 2 · 本地 dev server（2026-11-04 起已能起，别再照着旧结论走）**：未配 `persistState` 时，同一个崩溃发生在 `npm run dev`、`npm run preview`、`npx wrangler dev` 的**启动阶段**——miniflare 在 `os.tmpdir()` 下建临时目录，然后 workerd 自己要在里面建 Durable Object 存储目录，被本机权限拒绝（设 `TEMP`/`TMP`/`TMPDIR`、手动建同名空目录都无效）。
 
-同理，`platformProxy: { enabled: false }` 也是为了避免 dev 时连本地 D1 代理；没有 D1 绑定时代码会退回读 `src/data/songs.json`（仅 DEV，构建期会被摇掉，不进 Worker 包）。
+现在 `astro.config.mjs` 的适配器选项里写了 `persistState: { path: "E:/tmp/astro-cf-state" }`，把 miniflare 的存储从 `os.tmpdir()` 挪到一个自己有完全控制权的盘，坑就绕过去了：`npx astro dev` 实测能正常起在 4321（首次编译约 2 分钟，之后热更新）。**代价是这个持久化目录里的本地 D1 是空的，或者只有很久以前灌过的用户表**——不灌数据就直接访问 `/recent`、`/songs` 会 500：
+
+```
+D1_ERROR: no such table: recent_changes: SQLITE_ERROR
+    at getRecentChanges (src/lib/db.ts:31)
+    at src/pages/recent.astro:18
+```
+
+本地起站前先按顺序灌一遍（`--persist-to` 必须和上面那个路径一致）：
+
+```bash
+npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/schema.sql
+npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/seed.sql
+npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/migrate-users.sql
+```
+
+`db/schema.sql` 里其实已经含了鉴权限流那五张表，所以本地灌完 `schema.sql` 就够，不用单独跑 `migrate-auth.sql`（那是给线上用的增量）。
+
+`schema.sql` 开头是 `DROP TABLE songs`，本地库重灌没有副作用，可以放心重复跑。`E:/tmp/astro-cf-state` 是临时状态不是数据源，删掉重建只需再灌一次，别把它当权威库、也别提交。
+
+**`curl` 验本地站要带 `--noproxy '*'`**：本机环境变量里有代理，不加的话 `127.0.0.1:4321` 会被甩去代理、回 `000`，看着像服务没起（其实在 `netstat` 里正常 LISTENING）。
+
+同理，`platformProxy: { enabled: false }` 也是为了避免 dev 时连本地 D1 代理——所以 dev 里 D1 走的是上面这份本地 miniflare 库，**不是**线上库，改数据要看真实效果请用 `npm run patch` 灌线上；没有 D1 绑定时代码会退回读 `src/data/songs.json`（仅 DEV，构建期会被摇掉，不进 Worker 包）。
 
 ### 自定义域名
 

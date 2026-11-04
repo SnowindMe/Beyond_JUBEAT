@@ -1,6 +1,12 @@
 name: build-check
 
-# 校验构建可复现：clean build 后产物与提交内容无关（Astro 产物不入库），只跑构建 + 引用完整性
+# 校验构建可复现：clean build 后产物与提交内容无关（Astro 产物不入库），只跑构建 + 全部自检。
+#
+# 【2026-11-04 审计第 18 条】原先只跑 check-refs（还跑了两次，一次源码一次产物），
+# 等于六个自检脚本里只有引用检查被自动化——写得不敷衍的 check-song-edits / check-contrast
+# 全押在「作者记得住」上。现在整条 npm run check 都跑（含 check-refs 的两次），
+# 之后在 README 里也不必再嘱咐「提交前记得跑」。
+# 注意：check 与 build 都不能调换顺序——check-refs 的第二次正是要扫 dist。
 on:
   push:
     branches: [main]
@@ -22,8 +28,5 @@ jobs:
       - name: 构建
         run: npm run build
 
-      - name: 源码引用完整性
-        run: node scripts/ci/check-refs.cjs
-
-      - name: 产物引用完整性
-        run: node scripts/ci/check-refs.cjs dist
+      - name: 全部自检
+        run: npm run check

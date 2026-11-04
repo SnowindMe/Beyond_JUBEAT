@@ -22,7 +22,7 @@ const db = e.beyond_jubeat as D1Database;
 const snap = await todaySnapshot(e).catch(() => null);
 const ready = !!snap && !snap.seeded;
 
-type Row = PoolSong & { rank: number; delta: number; isNew: boolean };
+type Row = PoolSong & { rank: number; delta: number; isNew: boolean; filled?: boolean };
 const rows = snap?.entries.slice(0, TOP) ?? [];
 const songs = rows.length ? await byIds(db, rows.map((r) => r.songId)).catch(() => []) : [];
 const list: Row[] = rows
@@ -36,8 +36,14 @@ const list: Row[] = rows
    以前榜多长取决于当天有多少曲被真听过（样本门槛只管「够不够 30 行」，
    过了门槛也可能只有 10 首不同的曲），于是滚动永远只有两屏、25 名白设。
    现在热度排完仍不足 TOP 时，用「最近上架」按原顺序补到 25：
-   已上榜的不重复，补进来的 delta=0、isNew=false、名次接着往后排。
-   真热度涨上来后这一段自然会被挤掉，不需要什么时候回头删。 */
+   已上榜的不重复，名次接着往后排。
+   真热度涨上来后这一段自然会被挤掉，不需要什么时候回头删。
+
+   【补位行要看得出来（审计第 12 条）】2026-11-04。
+   原先补位写死 delta:0 / isNew:false，界面上正好落在「名次不变」的三根暗柱上，
+   读者分不出这几行是真上榜还是凑数的——「名次不变」和「还没数据」是两件事。
+   现在补位另打 filled:true，槽位整格留白（不放柱也不放「新」），读屏写「新上架」。
+   槽宽 22px 是固定的，留白不会让曲名左沿跳动。 */
 if (ready && list.length && list.length < TOP) {
   const have = new Set(list.map((s) => s.songId));
   const extra = await fallbackPool(db, TOP).catch(() => []);
@@ -47,7 +53,7 @@ if (ready && list.length && list.length < TOP) {
   for (const id of rest) {
     const s = byId.get(id);
     if (!s) continue;
-    list.push({ ...s, rank: list.length + 1, delta: 0, isNew: false });
+    list.push({ ...s, rank: list.length + 1, delta: 0, isNew: false, filled: true });
   }
 }
 
@@ -55,9 +61,10 @@ if (ready && list.length && list.length < TOP) {
 const scrolls = list.length > 5;
 /** 位移都是整屏（一屏 5 行），所以也不补副本：每一屏正好填满视窗，
  *  补了只会停在视窗之外，还让人误以为榜后面还有内容。
- *  总位移 = 最后一屏的起点，末屏（21–25 名）停止时视窗同样填满。 */
+ *  总位移 = 最后一屏的起点，末屏（21–25 名）停止时视窗同样填满。
+ *  【2026-11-04】这里只给行数，像素位移交给 CSS 的 --fh-end（按 --fh-row 算），
+ *  行高不再在 JS 里写死一份。 */
 const shown = list;
-const end = -(list.length - 5) * 52;
 ---
 
 <section class="fh fh-hot" aria-labelledby="fh-hot">
@@ -70,7 +77,7 @@ const end = -(list.length - 5) * 52;
 
   {ready && list.length ? (
     <div class="fh-board">
-      <div class={`fh-view ${scrolls ? 'is-rolling' : 'is-static'}`} style={scrolls ? `--fh-end:${end}px` : undefined}>
+      <div class={`fh-view ${scrolls ? 'is-rolling' : 'is-static'}`} style={`--fh-n:${list.length}`}>
         <ul class="fh-list">
           {shown.map((s, i) => (
               <li class={`fh-row${s.rank >= 4 ? ' is-low' : ''}`}>
@@ -79,14 +86,14 @@ const end = -(list.length - 5) * 52;
                 <span class="fh-slot" aria-hidden="true">
                   {s.isNew ? (
                     <span class="fh-new">新</span>
-                  ) : (
+                  ) : s.filled ? null : (
                     <span class={`fh-delta ${s.delta > 0 ? 'fh-up' : s.delta < 0 ? 'fh-down' : 'fh-flat'}`}>
                       <i /><i /><i />
                     </span>
                   )}
                 </span>
                 <span class="fh-sr">
-                  {s.isNew ? '新进榜' : s.delta > 0 ? `上升 ${s.delta} 位` : s.delta < 0 ? `下降 ${-s.delta} 位` : '名次不变'}
+                  {s.isNew ? '新进榜' : s.filled ? '新上架' : s.delta > 0 ? `上升 ${s.delta} 位` : s.delta < 0 ? `下降 ${-s.delta} 位` : '名次不变'}
                 </span>
                 {/* 整块可点：链接层绝对定位铺满整行（只有它可聚焦、也只有一个读屏名），
                     曲名/曲绘都在层下面，不嵌套、不用给文字加下划线来暗示可点 */}

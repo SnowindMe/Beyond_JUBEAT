@@ -68,3 +68,31 @@ shot-*.png
 cm.txt
 commit-msg.txt
 pastes/
+
+# 【2026-11-04 审计清理】把被 git add -A 带进仓库的一次性产物挡在外面：
+#   · 根目录的 .ps1/.out、dev 日志、探针脚本、capnp、被跟踪过的截图
+#   · archive/ 整体（683 MB 素材库与旧版本，本地留副本即可）
+#   · 构建生成物：曲目 JSON 与版本号由 scripts/build-data.cjs 产出，不进版本库
+#   · miniflare 的 email-store 临时目录
+archive/
+wk-mini/
+wk-*.capnp
+probe-*.cjs
+probe-*.mjs
+probe-*.ps1
+probe-*.out
+run-dev*.ps1
+# 提权跑 dev / 探组的一次性 PowerShell（_dev.ps1 里还写着旧的桌面路径，别当配置用）
+_*.ps1
+# cf CLI 的工作目录（空目录，git 本身也不收，写着免得以后有产物漏进来）
+.alchemy/
+.cf/
+seed-local.ps1
+seed-local.out
+step.log
+*.log
+check-out*.txt
+cloudflare.config.ts.bak
+public/data/songs.json
+src/data/songs-version.json
+miniflare-email-store/

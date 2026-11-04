@@ -112,13 +112,13 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
     // 所以整块重写最省事，也不用维护 diff 逻辑。
     //
     // 【切代主题（clan Red/Blue/Green/Purple）都映射到 clan 这一批曲】
-    // 主题 key 是 15 套，世代 slug 是 13 个，clan 的四个主题共用 clan 世代。
+    // 主题 key 多于世代，clan 的四个主题共用 clan 世代。
     (function () {
       // 【关键：主题 key ≠ 世代名，必须整张表映射】
-      // ThemeScript 的 key 是「主题皮肤」层（bta / qubell / yymf / clan_red… 共 15 套），
-      // 而 data.json 的 gen.k 是「世代」层（beyond the Ave. / Qubell / 音乐魔方 / clan… 共 13 个）。
+      // 主题表（lib/themes.ts 的 k：bta / qubell / yymf / clan_red…）是「主题皮肤」层，
+      // 而 data.json 的 gen.k 是「世代」层（beyond the Ave. / Qubell / 音乐魔方 / clan…）。
       // 两层名字几乎都不同，只写 clan 的别名会取不到数据 → 网格被清空（本轮实测 cells:0）。
-      // 15 条映射一一对应，已用脚本核对全部命中。
+      // 映射必须与 lib/themes.ts 的 THEMES 条数、顺序一一对应，加主题时这里跟着加。
       var THEME2GEN = {
         jubeat: 'jubeat', ripples: 'ripples', knit: 'knit', copious: 'copious', saucer: 'saucer',
         saucerfulfill: 'saucer fulfill', prop: 'prop', qubell: 'Qubell',

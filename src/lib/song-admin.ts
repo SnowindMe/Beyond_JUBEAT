@@ -18,6 +18,13 @@ export type SongEditFields = {
   ext: number | null;
   unlock: string | null;
   cover: string | null;
+  /**
+   * 长押谱三态（与 alt 无关，alt 只表示 [ 2 ] 谱面）：
+   * 1 = 至少一个难度有长押；0 = 三难度都没有；null = 未知。
+   * 表单里是「是 / 否 / 未知」三选一，空值必须落成 NULL——
+   * 未知与 0 不是一回事（db/schema.sql:30：不要用 0 冒充未知）。
+   */
+  hasHold: number | null;
 };
 
 /**
@@ -45,6 +52,7 @@ export const FIELD_LABELS: Record<Exclude<keyof SongEditFields, 'id'>, string> =
   ext: 'EXT 定数',
   unlock: '解禁注',
   cover: '曲绘文件名',
+  hasHold: '长押谱',
 };
 
 // ---------- 校验 ----------
@@ -87,6 +95,19 @@ function readText(form: FormLike, key: string): { ok: true; value: string } | { 
   return { ok: true, value: v };
 }
 
+/**
+ * 长押谱三态：只认 '1' / '0' / ''（空 = 未知 → NULL）。
+ * 用 values 而不是 Boolean/String，是因为 '0' 是假值但它是**确定没有长押**。
+ */
+export function parseHasHold(
+  raw: string
+): { ok: true; value: number | null } | { ok: false } {
+  if (raw === '') return { ok: true, value: null };
+  if (raw === '1') return { ok: true, value: 1 };
+  if (raw === '0') return { ok: true, value: 0 };
+  return { ok: false };
+}
+
 export type ParseFormResult =
   | { ok: true; value: SongEditFields }
   | { ok: false; code: string };
@@ -122,6 +143,9 @@ export function parseSongForm(form: FormLike): ParseFormResult {
   const cover = parseCover(String(form.get('cover') ?? '').trim());
   if (!cover.ok) return { ok: false, code: 'bad-cover' };
 
+  const hasHold = parseHasHold(String(form.get('has_hold') ?? '').trim());
+  if (!hasHold.ok) return { ok: false, code: 'bad-hold' };
+
   return {
     ok: true,
     value: {
@@ -134,6 +158,7 @@ export function parseSongForm(form: FormLike): ParseFormResult {
       ext: diffs.ext,
       unlock: unlock.value || null,
       cover: cover.value,
+      hasHold: hasHold.value,
     },
   };
 }
@@ -149,6 +174,8 @@ export type FieldDiff = {
 
 const textOf = (v: string | null) => (v == null || v === '' ? '—' : v);
 const numOf = (v: number | null) => (v == null ? '—' : String(v));
+/** 三态文案：未知与「否」写法不同，才会在最近更改里留下可读的差异 */
+const hasHoldOf = (v: number | null) => (v === 1 ? '是' : v === 0 ? '否' : '未知');
 
 /** 逐字段比对，只返回真正变了的项（空值 ↔ NULL 视为没变） */
 export function diffSong(before: SongEditFields, after: SongEditFields): FieldDiff[] {
@@ -165,6 +192,9 @@ export function diffSong(before: SongEditFields, after: SongEditFields): FieldDi
   push('ext', numOf(before.ext), numOf(after.ext));
   push('unlock', textOf(before.unlock), textOf(after.unlock));
   push('cover', textOf(before.cover), textOf(after.cover));
+  // 长押三态按「是 / 否 / 未知」比，相对 hard 比：null 与 0 必须算不同，
+  // 否则「确认没有长押」改成「还不知道」时不会落库。
+  push('hasHold', hasHoldOf(before.hasHold), hasHoldOf(after.hasHold));
   return out;
 }
 
@@ -309,11 +339,12 @@ export function buildSongListQuery(input: SongListInput): {
 
 /** 编辑页读单行：直接读原始列（不经 lib/db.ts 的 60s 缓存，改完马上回看要是新值） */
 export const SQL_EDIT_ROW = `SELECT song_id, title, artist, bpm, gen_name, server_jp, server_cn, category,
-            bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind
+            bsc, adv, ext, alt, has_hold, cover, added_at, unlock_note, id_kind
        FROM songs WHERE song_id = ?`;
 
 export const SQL_UPDATE = `UPDATE songs
-   SET title = ?, artist = ?, bpm = ?, bsc = ?, adv = ?, ext = ?, unlock_note = ?, cover = ?
+   SET title = ?, artist = ?, bpm = ?, bsc = ?, adv = ?, ext = ?, unlock_note = ?, cover = ?,
+       has_hold = ?
  WHERE song_id = ?`;
 
 export const SQL_RECENT_INSERT = `INSERT INTO recent_changes
@@ -331,6 +362,7 @@ export const SONG_EDIT_ERRORS: Record<string, string> = {
   'bad-diff': `定数要填 0–${DIFF_MAX} 之间的数字，最多一位小数；不确定就留空。`,
   'bad-unlock': `解禁注不超过 ${LIMITS.unlock} 个字。`,
   'bad-cover': '曲绘文件名只能是文件名（不含路径），扩展名 .webp/.gif/.png/.jpg。',
+  'bad-hold': '长押谱只能是「是 / 否 / 未知」三选一，重新选一次。',
   'bad-form': '提交的数据有问题，请重试。',
   'not-found': '没有找到这个 songId。',
   'no-permission': '当前身份没有编辑曲目的权限。',

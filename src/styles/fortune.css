@@ -108,20 +108,11 @@
 }
 
 /* 浅色世代：同一层反过来提亮，底缘收成「白雾」，否则黑角压在浅底上会脏。
-   逐代写而不是塞一个 light 类——主题是 html[data-g] 驱动的，
-   这里加选择器提高特异性即可，不依赖 fortune.css 与 theme.css 的加载顺序。
-   ⚠️ 这里的 key 是**主题皮肤**，就是 data-g 上那个小写串（见 ThemeScript 的 GEN）：
-   qubell 不是 Qubell、yymf 不是「音乐魔方」。2026-11-04 首次写时按世代正式名写成
-   Qubell/音乐魔方/Ave.，选择器一条都不命中，浅色主题全走了黑角。
-   名单依据 Base.astro 的 THEME_BG 内联色表逐条比对：亮底只有
-   knit #f2eee4 / prop #f7f6f4 / qubell #f4f1ea / saucer #eceff1 / ripples #dfeeea /
-   yymf #e9eefb 这 6 套；ave #0a1418、saucerfulfill #141414 都是深底，别拉进来。 */
-html[data-g="knit"] .fh,
-html[data-g="prop"] .fh,
-html[data-g="qubell"] .fh,
-html[data-g="saucer"] .fh,
-html[data-g="ripples"] .fh,
-html[data-g="yymf"] .fh {
+   判据只用 html[data-lum]——2026-11-04 前这里是六条 html[data-g="knit"] 之类的名单，
+   每加一套浅色主题都要回来补，还得记住 key 是主题皮肤（qubell 不是 Qubell、
+   yymf 不是「音乐魔方」；首次写时按正式名写错过一次，浅色主题全走了黑角）。
+   现在明暗由 Base.astro 按主题表映射到 data-lum，CSS 侧不再认识主题名。 */
+html[data-lum="light"] .fh {
   --fh-fade-h: 64px;
   /* 重音色在浅底上必须换深色：原来的 #2ee6d6 / #ff7a4d 是给深玻璃反解出来的，
      压到合成底 ~#fbf9f2 上只有 1.5:1 / 2.5:1，等于看不见。
@@ -307,11 +298,19 @@ html[data-g="yymf"] .fh {
 
 /* ---------------- 榜 ---------------- */
 
-/* 视窗：一屏正好五条（5 × 52 = 260），与左栏齐平，也正好是滚动的一屏。
+/* 视窗：一屏正好五条，与左栏齐平，也正好是滚动的一屏。
    下缘 16px 渐隐是给滚动的（内容进出边界不硬切），静止时最后一行只被压掉一点。
-   注意 260 是 5 × 52 算出来的，改行高要一起改。 */
+
+   【2026-11-04 行高单一来源】原先行高 52px 写在 .fh-row，视窗高度则是手算的
+   260px（5 × 52），另有一条 JS 里的 (list.length - 5) * 52 也在算同一个数——
+   三处各写一份，改一处就错位。现在 --fh-row 是唯一定义，--fh-step 由它乘 5 得出，
+   JS 侧读 .fh-row 的 computed height（见 HotBoard.astro），改行高只动 --fh-row。 */
 .fh-hot .fh-view {
-  --fh-step: 260px;
+  --fh-row: 52px;
+  --fh-step: calc(var(--fh-row) * 5);
+  /* 总位移 = 视窗能容的行数（5）减掉实际行数，再乘行高，取负。
+     组件只把行数写进 --fh-n，行高变了这里自动跟着变。 */
+  --fh-end: calc((5 - var(--fh-n, 5)) * var(--fh-row));
   height: var(--fh-step);
   overflow: hidden;
   -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
@@ -328,7 +327,7 @@ html[data-g="yymf"] .fh {
    **淡出时不带位移**，等 opacity 到 0 的那一刻才把位移跳回 0、再淡入。
    早先那版把"回顶部"和"淡出"写成同一条曲线，位移是连续的，
    于是底部会露出第 1 名、看着像"10 后面跟着 1"。
-   --fh-end 是组件按行数算好的总位移（-(行数-5)*52），一屏一屏往下挪，
+   --fh-end 是总位移：组件只给行数（--fh-n），总位移在这里按 --fh-row 算——
    每挪一屏停一下。25 行时是 5 屏：1–5 / 6–10 / 11–15 / 16–20 / 21–25。
    走到末屏停最久，再淡出、跳回顶部淡入。**列表不用补副本**：
    位移都是整屏，任何一屏都刚好填满视窗。
@@ -362,7 +361,7 @@ html[data-g="yymf"] .fh {
   display: flex;
   align-items: center;
   gap: 9px;
-  height: 52px;
+  height: var(--fh-row);
   /* 压在底部渐隐层之上（渐隐层 z-index:0）。行本身不建层，
      悬停底衬与整块链接层才各自 z-index:1，层级不受影响。 */
   z-index: 1;
@@ -489,9 +488,9 @@ html[data-g="yymf"] .fh {
 @media (max-width: 900px) {
   .fh-view.is-rolling .fh-list { animation-duration: 150s; }
 }
-/* 窄屏行高不变（52），所以桌面那两个数（视窗 260 / 面板 290）照用 */
+/* 窄屏行高不变，所以桌面那两个数（视窗 5 × --fh-row / 面板 290）照用。
+   视窗高度已由 --fh-row 推出，不需要再覆写 --fh-step。 */
 @media (max-width: 900px) {
-  .fh-hot .fh-view { --fh-step: 260px; }
   .fh-hot .fh-board { min-height: 290px; }
 }
 /* ---------------- 选项与面板（2026-11-03 拆分后新增） ---------------- */

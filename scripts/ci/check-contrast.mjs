@@ -119,20 +119,33 @@ const colorBlockLines = (selector) => {
 };
 
 const ROOT_BLOCK = blockOf(':root');
-/* 主题 key 不再手写一份清单：手写会与 ThemeScript 的 GEN 数组悄悄脱钩——
+/* 主题 key 不再手写一份清单：手写会与主题表悄悄脱钩——
    2026-10-26 加 jubeat 主题时实测，手写表里漏了它，脚本仍然打印「16 套」（默认 + 15），
    数字看起来对得上、其实新主题一天都没被检查过。
-   这里直接从 ThemeScript 的 GEN 数组读，那才是唯一权威（它同时决定切换器顺序）。 */
-const THEME_SCRIPT = readFileSync(path.join(ROOT, 'src/components/ThemeScript.astro'), 'utf8');
+   主题表只有一个来源：src/lib/themes.ts 的 THEMES（顺序同时就是切换器顺序）。
+   2026-11-04 起 ThemeScript 的 GEN 改成 JSON 读取、不再有字面量数组，
+   所以这里改为解析 themes.ts；表搬了家，检查器跟着搬家，别让它静默跳过。 */
+const THEME_TABLE = readFileSync(path.join(ROOT, 'src/lib/themes.ts'), 'utf8');
 const GEN_KEYS = (() => {
-  const m = /var\s+GEN\s*=\s*\[([\s\S]*?)\];/.exec(THEME_SCRIPT);
-  if (!m) {
-    console.error('无法从 ThemeScript.astro 解析 GEN 数组；配色自检不能静默跳过主题。');
+  /* 只认「同一行里 k: '...' 出现在最前面的 { 之后」的那种条目。
+     原来那条正则 [\s\S]*? 到 \n\]; 取整段再抓 k ，2026-11-04 把表挪进 themes.ts
+     （不再是 ThemeScript 里的字面量数组）后仍然能用，但整段抓取会把文件后面
+     任何 { k: '...' 的片段都卷进来。改成逐行匹配数组体，越界即止。 */
+  const start = THEME_TABLE.indexOf('export const THEMES');
+  if (start < 0) {
+    console.error('无法从 src/lib/themes.ts 定位 THEMES 表；配色自检不能静默跳过主题。');
     process.exit(1);
   }
-  const keys = [...m[1].matchAll(/\{\s*k:\s*'([^']+)'/g)].map((x) => x[1]);
+  const open = THEME_TABLE.indexOf('[', start);
+  const close = THEME_TABLE.indexOf('\n];', open);
+  if (open < 0 || close < 0) {
+    console.error('themes.ts 的 THEMES 数组没有闭合；配色自检不能静默跳过主题。');
+    process.exit(1);
+  }
+  const body = THEME_TABLE.slice(open, close);
+  const keys = [...body.matchAll(/\{\s*k:\s*'([^']+)'/g)].map((x) => x[1]);
   if (!keys.length) {
-    console.error('ThemeScript 的 GEN 数组解析出 0 个主题 key。');
+    console.error('themes.ts 的 THEMES 解析出 0 个主题 key。');
     process.exit(1);
   }
   return keys;

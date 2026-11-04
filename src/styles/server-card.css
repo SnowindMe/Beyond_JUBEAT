@@ -91,8 +91,9 @@
     letter-spacing: 0.04em;
 }
 
-/* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样 */
-html:not([data-g="knit"]):not([data-g="prop"]):not([data-g="qubell"]):not([data-g="ripples"]):not([data-g="saucer"]):not([data-g="yymf"]) .sc-line {
+/* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样。
+   判据只认 data-lum——原先六层 :not([data-g=...]) 每加一套浅色主题都得补一层。 */
+html[data-lum="dark"] .sc-line {
     filter: invert(1);
 }
 

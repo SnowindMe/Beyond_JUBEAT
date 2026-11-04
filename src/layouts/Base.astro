@@ -9,6 +9,8 @@ import BackTop from '../components/BackTop.astro';
 import data from '../data/data.json';
 import site from '../data/site.json';
 import { pageTitle, SITE_NAME } from '../lib/title';
+import { GEN_JP, GEN_CN } from '../lib/gens';
+import { THEMES } from '../lib/themes';
 
 interface Props {
   title?: string;
@@ -25,12 +27,16 @@ interface Props {
 
 const SITE = 'https://wiki.byd-ub.top';
 
+// 世代（曲库归属，lib/gens.ts 的 GEN_ORDER）与主题（视觉皮肤，lib/themes.ts 的 THEMES）是两套口径：
+// clan 一个世代在主题表里拆成 4 套皮肤，两个数本来就不相等，所以都按各自的数组算，别写死。
+const THEME_COUNT = THEMES.length;
+/** 主题表里首帧要用的字段：整个表塞进 <head> 太重，只发 k/f/b/l 四个 */
+const THEMES_JSON = JSON.stringify(THEMES.map((t) => [t.k, t.f, t.b, t.l]));
+
 const {
   title = pageTitle('首页'),
-  // 「13 个世代 / 15 套主题」是两套口径：世代是曲库归属（lib/gens.ts），
-  // 主题是视觉皮肤（ThemeScript 的 GEN 数组，clan 一个世代拆 4 套）。
   // 原来同一句里并列「15 个世代」和「14 套主题」，读者会以为自相矛盾（审计第 19 条）。
-  description = `jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 15 套世代主题可切换。`,
+  description = `jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`,
   gen = 'ave',
   font = 'F',
   canonicalPath = '/',
@@ -39,6 +45,17 @@ const {
 } = Astro.props;
 
 const canonical = canonicalPath ? SITE + canonicalPath : null;
+
+/* ---------- 明暗判据（审计第 10 条） ----------
+   画面层（反相、压深、白雾、去光晕……）原先按六套浅色主题名逐条硬编码，
+   散在 theme / jubility / fortune / songs / server-card 五个文件共 105 行。
+   加一套浅色主题要回头改六处，漏一处就是「新主题下某块图反了或没反」。
+   现在收成 <html> 上的 data-lum="light|dark"，CSS 侧一律只认它。
+
+   判据取值只有一处：lib/themes.ts 每条主题的 l 字段。它必须与 theme.css 里该主题声明的
+   color-scheme 一致——color-scheme 是权威（还能顺带让浏览器把原生控件、滚动条画对），
+   l 是它给脚本和对比度自检用的副本。改主题明暗时两处同改，别只改一处。 */
+const lum = THEMES.find((t) => t.k === gen)?.l ?? 'dark';
 
 // 页脚「最后一次编辑」：读构建期写死的常量，**不再每次 new Date()**。
 //
@@ -56,7 +73,7 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
 ---
 
 <!doctype html>
-<html lang="zh-CN" data-g={gen} data-font={font}>
+<html lang="zh-CN" data-g={gen} data-lum={lum} data-font={font}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -125,21 +142,34 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
       } catch (e) {}
     })();
   </script>
-  {/* 首屏主题预热：在 CSS 应用前就把世代写回 <html>，避免老用户刷新时先闪一下 ave；
-      同时提前 preload 该世代背景图（背景由 JS 设 background-image，浏览器发现得晚）。 */}
+  {/* 主题表里跟首帧有关的两个字段（字形组 f、底色 b）在这里也发给浏览器：
+      下面那段预热脚本要用，而 is:inline 脚本不打包、import 不进来。
+      ThemeScript.astro 里还有同一份 JSON，它负责撑起整个切换器——
+      两份都来自 lib/themes.ts，加主题只改那一个文件。 */}
+  <script is:inline id="jbThemes" type="application/json" set:html={THEMES_JSON}></script>
   <script is:inline>
     (function () {
-      var FONT = { ave: 'F', bta: 'F', clan_blue: 'C', clan_green: 'C', clan_purple: 'C', clan_red: 'C', copious: 'F', festo: 'G', jubeat: 'F', knit: 'D', prop: 'E', qubell: 'D', saucer: 'F', saucerfulfill: 'F', ripples: 'F', yymf: 'F' };
-      var g = 'ave';
-      try { g = localStorage.getItem('jubeat-gen') || 'ave'; } catch (e) {}
-      if (!FONT[g]) g = 'ave';
+      var FONT = {}, THEME_BG = {}, THEME_LUM = {};
+      JSON.parse(document.getElementById('jbThemes').textContent).forEach(function (t) {
+        FONT[t[0]] = t[1];
+        THEME_BG[t[0]] = t[2];
+        THEME_LUM[t[0]] = t[3];
+      });
+      var DEF = 'ave';
+      var g = DEF;
+      try { g = localStorage.getItem('jubeat-gen') || DEF; } catch (e) {}
+      if (!FONT[g]) g = DEF;
       var el = document.documentElement;
       el.setAttribute('data-g', g);
       el.setAttribute('data-font', FONT[g]);
+      /* 明暗跟着世代一起落：老用户刷新时先闪浅色底、再被深色主题盖住，就是这里缺一步。
+         服务端只能按默认世代猜到初值，localStorage 里的真实世代要到这里才知道。
+         data-lum 与 color-scheme 同源（见 lib/themes.ts 的 l 与 theme.css 的 color-scheme），
+         下一行开始 theme-color / 主题切换都按这张表走，CSS 侧只认 data-lum。 */
+      el.setAttribute('data-lum', THEME_LUM[g] || 'dark');
       /* theme-color 先给一个与世代相符的值：CSS 尚未应用时 getComputedStyle 读不到
-         --base，所以这里用内联色表兜住首帧；ThemeScript 的 commit() 之后会按
+         --base，所以这里用主题表里的底色调子兜住首帧；ThemeScript 的 commit() 之后会按
          解析后的 --base 再校一次（那里是唯一权威）。 */
-      var THEME_BG = { ave: '#0a1418', bta: '#190f08', clan_blue: '#0a1424', clan_green: '#08160f', clan_purple: '#120b1c', clan_red: '#1a0a0c', copious: '#080d22', festo: '#12100c', jubeat: '#050e22', knit: '#f2eee4', prop: '#f7f6f4', qubell: '#f4f1ea', saucer: '#eceff1', saucerfulfill: '#141414', ripples: '#dfeeea', yymf: '#e9eefb' };
       var mt = document.querySelector('meta[name="theme-color"]');
       if (mt && THEME_BG[g]) mt.setAttribute('content', THEME_BG[g]);
       /* 换过图的世代在这里登记版本号：背景 URL 会拼成 <k>.webp?v=N。
@@ -172,6 +202,7 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         clan_purple: 'oswald-700',
         yymf: 'zcool-kuaile-400'
       };
+      // 字体文件名仍按世代逐条列（theme.css 的 @font-face 一一对应，换字体两处同改）
       function pre(href, as, type) {
         var l = document.createElement('link');
         l.rel = 'preload';

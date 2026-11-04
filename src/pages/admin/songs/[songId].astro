@@ -1,5 +1,7 @@
 ---
-// 曲目编辑 /admin/songs/[songId]/：改曲名/艺人/BPM/三档定数/解禁注/曲绘文件名。
+// 曲目编辑 /admin/songs/[songId]/：改曲名/艺人/BPM/三档定数/解禁注/曲绘文件名/长押谱。
+// 只读区另显示 alt（是不是 [ 2 ] 谱面变体）——它与长押（has_hold）是两件事，
+// 见 db/schema.sql:25 与 :30 的注释，别把 [ 2 ] 当成「有长押」。
 //
 // 权限：这里只在服务端确认身份后**渲染表单**，真正的写防线在
 // /api/admin/song-update.ts 里对 role 的复核（页面藏按钮不算防线）。
@@ -37,6 +39,12 @@ type Row = {
   adv: number | null;
   ext: number | null;
   alt: number;
+  /**
+   * 长押谱三态：1 = 至少一个难度有长押；0 = 三难度都没有；null = 未知。
+   * **与 alt 无关**，alt=1 只表示「这行是 [ 2 ] 谱面」（db/schema.sql:30 已定口径，
+   * 主人 2026-10-31 纠正过）。表单里用三选一 select，空值存 NULL，不要用 0 冒充未知。
+   */
+  has_hold: number | null;
   cover: string | null;
   added_at: string | null;
   unlock_note: string | null;
@@ -61,6 +69,10 @@ const servers = song
 // 定数回填：库里是 REAL（10.6），表单要的是「10.6」而不是「10.600000」
 const diffVal = (v: number | null) => (v == null ? '' : String(v));
 const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
+// 长押三态的显示文案就是「是 / 否 / 未知」：未知不能显示成「否」，
+// 否则「没抓到」会被读成「确定没有长押」（db/schema.sql:30）。
+const hasHoldText = (v: number | null) => (v === 1 ? '是' : v === 0 ? '否' : '未知');
+const hasHoldVal = (v: number | null) => (v === 1 ? '1' : v === 0 ? '0' : '');
 ---
 
 <Layout title={pageTitle(song ? '编辑 · ' + song.title : '曲目编辑')} canonicalPath="" description="维护者曲目编辑。" noindex>
@@ -102,7 +114,8 @@ const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
             <div><dt>分区</dt><dd>{song.category}</dd></div>
             <div><dt>服务器</dt><dd>{servers || '—'}</dd></div>
             <div><dt>上线</dt><dd>{fmt(song.added_at)}</dd></div>
-            <div><dt>长押谱</dt><dd>{song.alt ? '是（标题带 [ 2 ]）' : '否'}</dd></div>
+            <div><dt>[ 2 ] 谱面</dt><dd>{song.alt ? '是（标题带 [ 2 ]）' : '否'}</dd></div>
+            <div><dt>长押谱</dt><dd>{hasHoldText(song.has_hold)}</dd></div>
           </dl>
 
           <form class="au-form ae-form" method="post" action="/api/admin/song-update" novalidate>
@@ -111,7 +124,7 @@ const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
             <div class="au-f">
               <label for="ae-title">曲名</label>
               <input id="ae-title" name="title" type="text" value={song.title} required maxlength={LIMITS.title} />
-              <p class="au-hint">必填，最多 {LIMITS.title} 个字。长押谱的标题末尾带 [ 2 ]，改的时候别丢。</p>
+              <p class="au-hint">必填，最多 {LIMITS.title} 个字。[ 2 ] 谱面的标题末尾带 [ 2 ]，改的时候别丢（[ 2 ] 只表示谱面变体，不代表有长押）。</p>
             </div>
 
             <div class="au-f">
@@ -141,6 +154,19 @@ const fmt = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
               </div>
             </div>
             <p class="au-hint ae-diffhint">定数填 0–{DIFF_MAX} 之间、最多一位小数；这个档位没有谱面就留空（存 NULL）。</p>
+
+            {/* 长押谱是独立事实，与上面标题里的 [ 2 ] 无关。
+                用 select 而不是勾选框：「没有长押」与「还不知道」是两种状态，
+                一个 checkbox 只能表达两态，NULL 会被写死成 0。 */}
+            <div class="au-f">
+              <label for="ae-hold">长押谱</label>
+              <select id="ae-hold" class="ae-hold" name="has_hold">
+                <option value="" selected={hasHoldVal(song.has_hold) === ''}>未知（没抓到）</option>
+                <option value="1" selected={hasHoldVal(song.has_hold) === '1'}>是（至少一个难度有长押）</option>
+                <option value="0" selected={hasHoldVal(song.has_hold) === '0'}>否（三难度都没有）</option>
+              </select>
+              <p class="au-hint">来自 remywiki 的谱面表。不确定就选「未知」，存 NULL——未知写成「否」等于凭空宣称这曲没有长押。</p>
+            </div>
 
             <div class="au-f">
               <label for="ae-unlock">解禁注</label>

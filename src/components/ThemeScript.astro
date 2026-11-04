@@ -1,30 +1,27 @@
 ---
-// 世代主题切换：15 套配色（clan 一个世代拆 4 套）+ 背景交叉淡入，选择记在 localStorage
+// 世代主题切换：主题表在 lib/themes.ts（clan 一个世代拆成 4 套皮肤）+ 背景交叉淡入，选择记在 localStorage
 // 换图需要现下时才亮 LOADING（由 BootScreen.astro 暴露的 window.jbBoot 控制）
 // 用 is:inline 保持原样（不打包、在解析到此处时立即执行）
+//
+// 【主题表为什么搬去模块】is:inline 脚本不参与打包，表写在这里页面就 import 不到，
+// 只好在别处再抄一个数——那份抄出来的数果然与这里对不上了（审计第 11 条）。
+// 现在组件先把 THEMES 序列化成一段 JSON 放进 DOM，下面这段脚本读回来用；
+// 要数字的地方照常 import THEMES，两边同一份数据，加主题不会再漏改。
+//
+// 【为什么页面里有两段同源 JSON】Base.astro 的 #jbThemes 只为 <head> 首帧预热发
+// k/f/b/l 四列（越早越省），这里是切换器要的完整表（还带 n 与 c）；两段都从 THEMES 生成，
+// 形状不同所以各发一段，别把它当成两份数据。
+// 顺序 = 世代上线先后（旧→新，主人 2026-10-20 指定），加条目往对应位置插。
+import { THEMES } from '../lib/themes';
+
+const themesJson = JSON.stringify(THEMES);
 ---
-<script is:inline>
+<script is:inline id="jbThemeList" type="application/json" set:html={themesJson}></script>
+<script is:inline data-jb-theme-script>
 (function(){
-  // 顺序 = 游戏世代新→旧（主人 2026-10-20 指定）。n 是切换器里显示的正式写法，
-  // k 是内部 key，同时决定 /assets/images/bg/<k>.webp 与 logo/<k>.webp 的文件名。
-  var GEN=[
-    {k:'jubeat',n:'jubeat',f:'F',c:'#3b8fe8'},
-    {k:'ripples',n:'ripples',f:'F',c:'#70c5b7'},
-    {k:'knit',n:'knit',f:'D',c:'#e0a92e'},
-    {k:'copious',n:'copious',f:'F',c:'#8fa6ff'},
-    {k:'saucer',n:'saucer',f:'F',c:'#37474F'},
-    {k:'saucerfulfill',n:'saucer fulfill',f:'F',c:'#c9d2d6'},
-    {k:'prop',n:'prop',f:'E',c:'#e0338f'},
-    {k:'qubell',n:'Qubell',f:'D',c:'#3E8FBF'},
-    {k:'clan_red',n:'clan Red',f:'C',c:'#ff6b6b'},
-    {k:'clan_blue',n:'clan Blue',f:'C',c:'#5c8dff'},
-    {k:'clan_green',n:'clan Green',f:'C',c:'#57d98a'},
-    {k:'clan_purple',n:'clan Purple',f:'C',c:'#b07dff'},
-    {k:'festo',n:'festo',f:'G',c:'#ffd166'},
-    {k:'ave',n:'Ave.',f:'F',c:'#2ee8e8'},
-    {k:'bta',n:'Beyond the Ave.',f:'F',c:'#ffa23c'},
-    {k:'yymf',n:'音乐魔方',f:'F',c:'#8fd0ff'}
-  ];
+  // n 是切换器里显示的正式写法，k 是内部 key，同时决定 /assets/images/bg/<k>.webp
+  // 与 logo/<k>.webp 的文件名（clan_* 四个共用 clan.webp）。
+  var GEN=JSON.parse(document.getElementById('jbThemeList').textContent);
   var BG='/assets/images/bg/';
   /* 背景图版本号（单一来源在 Base.astro 的 JB_BGVER）：图换了但文件名不变，
      而 /assets/images/* 是 immutable 一年缓存，老访客会一直看旧图。
@@ -32,10 +29,11 @@
   var BGVER=window.JB_BGVER||{};
   // 字标：首屏只加载当前世代那一张，切主题时才换 src（原先 10 张一起下载，浪费 ~150KB）
   var LOGO='/assets/images/logo/';
+  // 按钮容器由 Header.astro 提供；is:inline 的脚本体不参与编译，所以这里运行时查，不用插值
   var root=document.documentElement, dock=document.getElementById('genDock');
   var wordLogo=document.getElementById('wordLogo');
   var btns={}, cur=null;
-  GEN.forEach(function(g){
+  if(dock) GEN.forEach(function(g){
     var b=document.createElement('button');
     b.type='button'; b.title=g.n;
     b.style.setProperty('--sw',g.c);
@@ -101,7 +99,7 @@
     }, 2600);
   }
 
-  /* theme-color：手机浏览器地址栏/状态栏的颜色。原来写死 #0b1a22，15 套主题里 0 套对。
+  /* theme-color：手机浏览器地址栏/状态栏的颜色。原来写死 #0b1a22，所有主题里 0 套对。
      现在跟着当前世代的 --base 走：读的是 <html> 上解析后的 --base，
      所以换世代只要在 commit() 里同步一次，不用在 JS 里再维护一份色表。 */
   var metaTheme=document.querySelector('meta[name="theme-color"]');
@@ -114,6 +112,9 @@
     var prev=cur; cur=g;
     root.setAttribute('data-g',g.k);
     root.setAttribute('data-font',g.f);
+    /* 明暗判据跟着世代一起换：画面层（反相、压深、白雾、去光晕）只认 data-lum，
+       不再按主题名硬编码。l 与 theme.css 的 color-scheme 同源，改一处即可。 */
+    root.setAttribute('data-lum',g.l);
     syncThemeColor();
     if(wordLogo){
       // 四个 clan_* 世代共用同一张 clan 字标

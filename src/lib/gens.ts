@@ -5,9 +5,13 @@
 // slug（2026-10-23 加）是 /songs/gen/<slug>/ 的稳定网址段：
 //   * 不用中文、空格和点号——URL 里出现 %20 / 编码串既难看也容易被复制坏；
 //   * 定下就不要改：改了等于把已经发出去的链接变成 404（要做别名也要走跳转，别偷偷换）；
-//   * 与主题 key（ThemeScript 的 k：bta / yymf / saucerfulfill…）是两回事：
+//   * 与主题 key（lib/themes.ts 的 k：bta / yymf / saucerfulfill…）是两回事：
 //     主题是视觉皮肤（clan 一个世代拆 4 套），slug 只指世代本身，和曲目数据一一对应。
 //     所以这里用「能读懂的短横线写法」，不套主题文件名。
+//
+// 【两张表别混】GEN_ORDER 是世代（13 条，曲库归属，等于 build-db.cjs 的口径），
+// themes.ts 的 THEMES 是主题皮肤（clan 拆成四色，条数多于世代）。
+// 想要世代数就取 GEN_ORDER.length / GEN_JP.length / GEN_CN.length，想要主题套数取 THEMES.length。
 // 【2026-10-31 主人要求】世代标题里的年份从「2008」改成完整「年-月-日」，
 // 数据源 https://arcade-songs.zetaraku.dev/jubeat/timeline/（他给的时间轴截图逐条抄下来）。
 // 该时间轴上还有 ripples / knit / copious 的 **APPEND 子代**（2010-03-18 / 2011-03-23 / 2012-03-14）——
@@ -42,4 +46,10 @@ export const SRV_LABEL: Record<GenMeta['s'], string> = { jp: '日服', cn: '国�
    世代筛选页。主人要求「/songs/gen/jubeat/ 这个页面不要」，该页已删除、世代名改为纯文字，
    两个函数再无调用方，一并删掉。
    GEN_ORDER 里的 slug 字段暂时保留：它是世代网址段的既有口径，将来若要做世代页或
-   外部深链可复用；但当前**没有任何页面在读它**，别误以为它还在生效。 */
+   外部深链可复用；但当前**没有任何页面在读它**，别误以为它还在生效。
+
+   【2026-11-04 审计第 16 条复查，结论仍是保留】又全仓 grep 了一遍（src + scripts
+   加两份 docs 与 README），除本文件自己的定义与注释外，没有任何 .slug 取值：
+   文档里写「世代筛选 /songs/gen/<slug>/」的是过时段落，属文档层，单独修；
+   代码层就是一条没人读的数据。删它要连带把 13 条目的字面量对照一起删，量不小、
+   收益是零字节（字段不进运行期），所以这次只把话说死，不动数据结构。 */

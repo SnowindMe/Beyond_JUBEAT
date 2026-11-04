@@ -46,6 +46,7 @@ export type SongRow = {
   ext: number | null;
   unlock_note: string | null;
   cover: string | null;
+  has_hold: number | null;
 };
 
 /** 处理结果：路由按 status 直接回；location 是 303 时的跳转目标 */
@@ -136,6 +137,7 @@ export async function handleSongUpdate(input: UpdateInput): Promise<UpdateResult
     ext: row.ext,
     unlock: row.unlock_note,
     cover: row.cover,
+    hasHold: row.has_hold,
   };
 
   const diffs = diffSong(before, next);
@@ -160,6 +162,8 @@ export async function handleSongUpdate(input: UpdateInput): Promise<UpdateResult
         next.ext,
         next.unlock,
         next.cover,
+        // 三态原样落库：未知是 null，不 bind 成 0（schema 明说不要用 0 冒充未知）
+        next.hasHold,
         row.song_id
       ),
     db

@@ -6,11 +6,12 @@ import Fortune from '../components/Fortune.astro';
 import HotBoard from '../components/HotBoard.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
-// 主题套数（theme.css 里 html[data-g] 的组数），与世代数不是一回事：
-// 15 个世代 → 15 套主题，其中 clan 一个世代拆成 4 套皮肤（clan Red/Blue/Green/Purple），
-// 所以世代数（src/lib/gens.ts 的 GEN_ORDER，13 条）与主题数（14 条可切换 + 音乐魔方 = 15）不同。
-// 实测 ThemeScript 的 GEN 数组就是 15 条。别再把这两个数写成打架的两个值。
-const THEME_COUNT = 15;
+import { GEN_JP, GEN_CN } from '../lib/gens';
+import { THEMES } from '../lib/themes';
+// 主题套数（theme.css 里 html[data-g] 的皮肤套数）与世代数不是一回事：
+// 主题表在 lib/themes.ts，clan 一个世代在那里拆成 4 套皮肤，所以主题数不等于世代数。
+// 两个数都读各自的数组长度，别在页面里另写死——这两个数都写死过，然后就与表打架了。
+const THEME_COUNT = THEMES.length;
 
 // 【2026-11-03 起首页是 SSR】「今日运势 / 热门歌曲」要读 D1 的每日快照，
 // 构建期没有那一天的数据，静态页会永远停在发版那天。
@@ -22,7 +23,7 @@ export const prerender = false;
 <Layout
   title={pageTitle('首页')}
   canonicalPath="/"
-  description={`jubeat 音乐魔方中文资料站：日服 ${data.stat.gensJp} 个世代、国服 ${data.stat.gensCn} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
+  description={`jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
   <Hero />
 
