@@ -1,656 +1,261 @@
 # Beyond_JUBEAT
 
-jubeat（音乐魔方）中文资料站。用 **Astro 7** 构建的多页站点：绝大多数页面构建期预渲染成静态 HTML，只有曲目页在边缘 SSR 时读 Cloudflare D1。线上托管在 Cloudflare Workers。
+jubeat（音乐魔方）中文资料站。收录日服 12 个世代与国服 1 个世代的曲库、谱面定数、Jubility 理论值与世代沿革。
 
 ![deploy](https://img.shields.io/badge/Cloudflare_Workers-live-F38020) ![astro](https://img.shields.io/badge/Astro-7.4-ff5d01) ![repo](https://img.shields.io/badge/GitHub-Beyond__JUBEAT-181717)
 
-线上地址：<https://wiki.byd-ub.top>（自定义域名） · <https://jubeat-wiki-home.1945743455.workers.dev>（workers.dev）
+线上：<https://wiki.byd-ub.top> · 备用：<https://beyond-jubeat.1945743455.workers.dev>
 
 ---
 
 ## 这是什么
 
-把 jubeat 从 2008 年（jubeat）到 2023 年（jubeat 音乐魔方）**13 个世代（日服/国际服 12 + 国服 1）/ 1241 首曲目 / 3723 张谱面**整理成一个可浏览的资料站。
+一个资料查询站，不是游戏本体。主要内容：
 
-> 当前版本：四个数据区块（世代的层 / 定数顶格 / 定数分布 / 最近收录）已下线，正文换成一句「正在施工中，前面的区域以后再来探索吧......」的占位告示。数据仍在 `src/data/data.json` 里，随时可以接回来。
->
-> 导航里的「曲目」已是真实页面（`src/pages/songs.astro`，日服/国服两卡切换 + 分区筛选 + 搜索 + 四维筛选 + **七种排序**，**默认 songId 升序**）。⚑ 服务端建桶的排序必须与前端默认排序（`DEFAULT_SORT = 'id-asc'`）**同构**：前端只写 CSS `order`、不重排 DOM，两者不一致就会出现「刷新先看到定数降序、脚本跑完又跳成 songId 升序」的闪烁（v1.19.2 修的）。它标了 `prerender = false`：曲库放在 Cloudflare D1，请求时在边缘查库渲染（见「数据来源」与「部署」）。`/recent/`、`/songs/[songId]/`、`/songs/gen/[gen]/` 与登录/账户/管理页同样是 SSR。
->
-> **导航只列真实存在的页面，没有死链**（v1.9.1 起）。当前顶栏文字链是 **曲目 / Jubility / 最近更改**（v1.21.0 起 Jubility 排在曲目后面）。「Emblem / 伙伴 / 成就 / 关于 / 登录」五个二级页还没做，此前挂在顶栏、访问落进自定义 404，现已撤下；等页面开做时补 `src/pages/*.astro`，再到 `Header.astro` 的 `.nav-txt`（宽屏文字链）和 `.nav-drawer`（窄屏抽屉）**两处同步加回**，图标类入口还要加 `.nav-ico`。
+| 页面                                         | 做什么                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/`                                          | 首页。世代主题 Hero、今日运势、热门歌曲（前 25 名滚动榜）、站点链接                                        |
+| `/songs/`                                    | 曲目库。日服/国服切换、分区与世代分组、搜索、难度档 / 定数区间 / 谱面类型 / 世代筛选、限时曲开关、六种排序 |
+| `/songs/[songId]/`                           | 曲目详情。曲绘、定数与难度参照系、谱面密度条、BGM 试听                                                     |
+| `/jubility/`                                 | Jubility 层级页。理论值、12 档阶梯、公式与口径                                                             |
+| `/recent/`                                   | 最近更改。维护者编辑记录与前后差异                                                                         |
+| `/login/` `/register/` `/account/` `/admin/` | 用户系统与维护者面板                                                                                       |
 
+站点用 **16 套世代主题**（配色 + 字体 + 背景图，随世代切换，选择存 localStorage）。主题挂在世代名下，但两者不是一回事：**世代 13 个是数据口径**（曲库归属），主题 16 套是视觉口径（`clan` 一个世代拆成红蓝绿紫 4 套）——要数就取各自的 `length`（`src/lib/gens.ts` / `src/lib/themes.ts`），别手抄。
 
-**PWA「添加到屏幕」**（v1.23.0 起）：顶栏右侧有安装入口，手机/桌面浏览器可把站点装成独立窗口应用。
+规模：**1248 首曲目 / 3744 张谱面**，其中日服 1151 首、国服 534 首（同一首可双服上线）。数据截至国服 2026-10 更新表。
 
-| 文件 | 作用 |
-| --- | --- |
-| `public/manifest.webmanifest` | 名称、图标（192/512/maskable）、start_url、三个快捷方式（曲目 / Jubility / 最近更改） |
-| `public/sw.js` | Service Worker：**只缓存静态资源**，HTML 与 `/api/` 一律走网络 |
-| `public/icon-192.png` / `icon-512.png` / `icon-maskable-512.png` / `favicon.ico` / `favicon-16/32.png` / `apple-touch-icon.png` | 全部由 `scripts/gen-brand-logo.cjs` 从品牌母版（`archive/materials/brand/`）生成；maskable 版按安全圆缩放；`favicon.ico` 是脚本手写的 ICO 容器（16/32/48 三帧），**引用时都要带 `?v=N` 破 CF 边缘缓存**，见下方「品牌资源版本」 |
-| `src/components/InstallPrompt.astro` | 安装按钮 + iOS 手动说明弹层 |
+## 技术栈与运行形态
 
-**为什么 SW 不缓存 HTML**：本站 `/songs/`、`/jubility/`、`/recent/` 等都是 SSR 查 D1，曲库和登录态随时会变。缓存 HTML 会让用户看到过期数据或别人的登录态——这比「离线可用」严重得多。所以 fetch 处理器只接管 `/_astro/`、`/assets/` 与带 hash 的静态文件，`mode === 'navigate'` 直接 return 放行。实测缓存 23 项、全是静态资源。
+Astro 7，`output: 'static'` + `@astrojs/cloudflare` 适配器，部署在 Cloudflare Workers。
 
-**安装入口分三支**：① Chrome/Edge/安卓有 `beforeinstallprompt`，记下事件后点按钮调 `prompt()`；② iOS Safari 没有这个事件，只能教用户「分享 → 添加到主屏幕」；③已是独立窗口（`display-mode: standalone`）时完全不显示。不做成「一律显示的按钮」，否则在不能装的环境里就是死按钮。
+**绝大多数页面在构建期预渲染成静态 HTML**，由 Workers Assets 静态资源层零开销直出。只有需要运行时数据的路径走 Worker 边缘 SSR：
 
-**`sw.js` 的缓存头必须是 `max-age=0, must-revalidate`**（见 `public/_headers`）：浏览器更新 SW 时会对同一 URL 重新取，长缓存会让旧 SW 一直留着、新版本永远不生效。
+- 曲目库与详情、Jubility、最近更改、首页（读 D1）
+- 登录/注册/账户/管理（读会话）
+- `/api/*` 全部端点
 
-**Jubility 层级 /jubility/**（v1.21.0 上线、v1.22.0 加 PEACH 档，与 `/songs/` 同为 `prerender = false` 的 SSR 页）：服务器选项卡（日服 / 国服，按钮里直接带该服理论值）→ 理论值概览 → 12 档层级阶梯（官方十档 + PEACH + PRIME GOLD）→ 公式与口径说明。
+哪些路径进 Worker 由 `wrangler.jsonc` 的 `assets.run_worker_first` 决定。**漏写的表现是「本地 build 成功、线上访问却回 404」**——资源层会按 `not_found_handling = "404-page"` 直接截成 404.html，根本进不了 Worker。新增 SSR 页时必须同步加进那张表。
 
-| 概念 | 口径 |
-| --- | --- |
-| 单曲 jubility | `ROUNDDOWN(定数 × 12.5 × MUSIC RATE ÷ 99, 1)`；MUSIC RATE 上限 100%（NORMAL）/ 120%（HARD EXC）；定数 8 以下按 8.0 计 |
-| TOTAL 理论值 | COMMON 上位 30 谱面 + PICK UP 上位 30 谱面，**谱面为单位**（BSC/ADV/EXT 与 `[2]` 各自独立参评） |
-| COMMON / PICK UP | 直接复用 `lib/song-view.ts` 的 `isPickUp()`——与 `/songs/` 的「范围」筛选同一个函数，两页不会打架 |
-| 视图去重 | 与 `/songs/` 的 `rowsIn` 同判据：国服视图里双服同曲只留国服行 |
+Worker 入口是仓库自己的 `src/worker.ts`（2026-11-03 起）。它把 `fetch` 原样转发给适配器，只在旁边多导出一个 `scheduled` 供每日封榜的 cron 使用；适配器自带的入口只导出 `fetch`，挂不了定时任务。
 
-十档分数线是官方的（BEMANIWiki 的「ネームカラー」表，festo 起沿用至今）：NORMAL 0 / YELLOW GREEN 250 / GREEN 750 / LIGHT BLUE 1500 / BLUE 2500 / VIOLET 4000 / PURPLE 5500 / PINK 7000 / ORANGE 8500 / GOLD 9500。**两个档位是本站自创**（游戏内都没有）：
+> 中间件里**不能顶层 `import { env } from 'cloudflare:workers'`**：本机预渲染走 Node（`prerenderEnvironment: 'node'`），Node 的 ESM loader 不认识 `cloudflare:` 协议，会在预渲染 `/404` 这一步崩 `ERR_UNSUPPORTED_ESM_URL_SCHEME`。改成在 SSR 分支里动态 `await import()`。同理，所有 API 端点都要标 `export const prerender = false`。
 
-- **PEACH**（v1.22.0 起）：要求 TOTAL ≥ **NORMAL 模式**理论值的 96.5%，阈值低于 7000 时不设此档。日服 8064.3 × 96.5% = **7782.0**、国服 8034.7 × 96.5% = **7753.4**，都落在 PINK(7000) 与 ORANGE(8500) 之间，所以**按分数排**在两者中间（阶梯序号 #08），但图标是站长做的第 11 张（`/assets/jubility/tier-11.webp`）——**图标编号与分数顺序在这里故意不一致**，靠 `Tier.icon` 显式指定。
-- **PRIME GOLD**：要求 TOTAL ≥ 理论值的 99.5%，阈值低于 9500 时不设此档——否则曲库小的服务器会轻易白拿最高档。图标是金黄色棒棒糖（`/assets/jubility/tier-10.webp`）。
+## 本地开发
 
-> 图标编号是**素材固定**的：tier-00…07 = NORMAL…PINK，tier-08 = ORANGE，tier-09 = GOLD，tier-10 = PRIME GOLD，tier-11 = PEACH。往 `TIERS` 中间插一档会让后面所有档的数组下标 +1，所以 ORANGE / GOLD / PRIME GOLD 三档的 `icon` 都是显式写死的；新增档位时同样要核对每档取到的图对不对。
-
-阶梯每行四组数字各有含义，别混：「区间」= 分数线跨度，写成**闭区间**（上界取下一档起点 − 0.1，因为分数精度是 0.1，如 ORANGE 显示 8500 – 9499.9，实际覆盖到 9499.9）；「占理论值」= 该档在 0 → 理论值刻度尺上的位置（顶两档只有 1–2% 宽，是数据事实不是画错）；「均分」= 分数线 ÷ 60，即每张谱面平均要打出多少；「可填」= 本服曲库里单曲理论值够得着该均分的谱面能凑出几个槽（COMMON 30 + PICK UP 30 上限），**只有 60/60 才是这一档真正可达**。日服实测 GOLD 52/60、PRIME GOLD 45/60（理论值本身达不到这两档），国服 55/60 与 44/60。PEACH 阈值低于 GOLD 门槛，两服都是 60/60 可达。
-
-两处独立校验（改动公式或去重口径后要重跑）：①国服现算 4832.8 + 4809.1 = **9641.9**，与源表 `data/xlsx/sheet4.json` 表头 MAX 完全吻合；②日服现算 4879.5 + 4797.0 = **9676.5**，与 BEMANIWiki 记载的 COMMON / PICK UP / TOTAL 理论值逐项吻合。**注意源表 sheet4 的 60 首是按「国服曲池」挑的，拿日服曲库对会对不上**（表里 少年は空を辿る / 此岸の戯事 是 COMMON 池、海神 是 PICK UP 池，且 DIAMOND CROSSING 记 10.4 而库里是 10.6）——那是源表口径差异，不是数据错。
-
-该页必须列进 `wrangler.jsonc` 的 `run_worker_first`（`/jubility` 与 `/jubility/*` 两条），否则会被资源层按 `not_found_handling` 截成 404.html 进不了 Worker——这一步漏了的表现就是「本地 build 成功、访问仍是 404」。
-
-页面标题统一是「XXX · Beyond ↑ JUBEAT ♪~」，由 `src/lib/title.ts` 的 `pageTitle(name)` 生成（首页 =「首页 · Beyond ↑ JUBEAT ♪~」），别再手写整串。
-
-**曲目详情 /songs/[songId]/**（v1.10.0 上线，与曲目页同为 `prerender = false` 的 SSR 页，按 `song_id` 查 D1 单行）：两栏唱片内页式版面——左窄栏曲绘封套 + 识别信息（songId / 世代 / 分区 / 服务器），右栏曲名与艺人，三档定数做成 0–11 刻度的横条，底部横铺 BPM / 上线 / 解禁 / 备注。不存在的 id 在原 URL 返回真正的 404 状态（不 302 跳 /404，否则复制出去的链接会丢 songId）同时 `noindex`。曲目卡整卡可点，实现是卡内一层绝对定位铺满的 `.sc-link`，而不是把整卡包成 `<a>`——点击覆盖全卡，读屏链接名也只有曲名。
-
-> 详情页曾内嵌 ub.thregren.world 的「谱面确认」播放器（v1.12.0–1.12.2，靠 `/ub-proxy` 前缀代理剥掉对方的 X-Frame-Options 才能嵌进同源 iframe）。**该功能已于 v1.13.0 整体下线**：`src/pages/ub-proxy/`、`src/data/ub-index.json`、`scripts/ub/build-ub-index.mjs` 与 `wrangler.jsonc` 的 `/ub-proxy` 运行时路由一并移除。保留的两样东西：①详情页右下角的「在谱面确认中打开」外链去掉后，页面上不再有任何 ub 入口；②`ub-index.json` 映射表（1169 条 songId → ub 曲目 id）与生成脚本留在 `archive/materials/ub/` 备用。以后要重启，把文件搬回原位、恢复 `run_worker_first` 那条路由即可。
-
-**BGM 试听**（v1.33.0 起）：曲目详情页定数条下方多一条试听条——播放键 / 进度条 / 时长，自绘控件（不用原生 `<audio controls>`，那套皮肤在深色世代里是一块灰白、高度也不可控）。音源取自 ub.thregren.world，但**浏览器从不直连**：
-
-| 环节 | 位置 | 说明 |
-| --- | --- | --- |
-| 映射表 | `src/data/ub-audio.json` | `{ "<songId>": "songs/<世代目录>/<分类>/<id>/bgm.ogg" }`，由 `node scripts/ub/build-ub-audio.cjs` 生成（需联网，不进 build 流程；曲库更新后手动重跑并提交产物）。**1248 首里命中 1185 首（95.0%）**，未命中的 63 首是 2 首 BTA 占位 + 61 首国服原创——上游本就没有，详情页对它们不渲染试听条 |
-| 反代 | `src/pages/api/audio/[songId].ts` | 只代理 ub.thregren.world 一个主机，路径由服务端从映射表拼、<songId> 走白名单正则；只放行 GET/HEAD；不透传查询参数 |
-| 缓存 | 同上 | 音频进 `caches.default`，回 `immutable` 长缓存；**只缓存完整 200**，Range 请求由缓存好的字节本地切 206（否则每次拖动进度条都回源）。响应头 `x-audio-source` 标音源、`x-cache: HIT/MISS` 供验收 |
-| 组件 | `src/components/SongAudio.astro` | 首次点击才创建 `Audio` 并拉流（1241 首若都预载，流量与首屏都不划算）；进度条可拖、支持 ←/→ 与 Home/End 键 |
-
-映射口径四层（顺序即优先级）：①数字 id 精确 + 优先取属于本站世代的目录；②数字 id 精确；③规范化标题唯一命中；④**人工覆盖层** `data/audio-overrides.json`（key = 本站 songId，value = `{ path, note }`），自动匹配解决不了的歧义在这里钉死，优先级最高。**同一 id 在 ub 常有「首次收录 / 谱面变化」两条**（如 70000110），取首次收录。
-
-覆盖层自带三条自检，任一不符直接非零退出（不静默跳过）：key 必须是本站真实 songId、path 必须命中原生上游曲目、path 不得为空。之所以要这层：`GEN_DIRS` 里「音乐魔方」的目录白名单**包含** `jubeat-beyond-ave`（国服少数曲沿用日服目录），于是 Big Daddy 的两条上游记录（`jubeat-beyond-ave/首次收录/arcade_11000228` 与 `音乐魔方/C033 Big Daddy`）都落在白名单内，标题唯一性判据失效被跳过。现在日服 11000228 走 beyond-ave、国服 991000007 走 音乐魔方/C033，各归其位。
-
-BTA- 占位 id 记得先查 `data/id-fixes.json` 换成官方 id 再对撞。
-
-> 验收要点：本地 `wrangler dev` 的 `caches.default` 不跨请求持久化，连打三次都是 `x-cache: MISS` 属正常，别拿它当「缓存没生效」的证据；真实命中率上线后看响应头。
-
-**难度区与谱面密度条**（v1.52.0 起）：详情页的定数展示从「三行横条」换成三行**带参照系**的读数 + 一行谱面密度条。
-
-| 元素 | 说什么 | 数据来源 |
-| --- | --- | --- |
-| 定数条 | 三档同起点、同一 0–11 比例，横向比得出「EXT 离上限还差多少」；条上 11 段细线就是刻度 | D1 `bsc/adv/ext` |
-| `Notes XXX` | 总键数徽章，后面跟 10 格小尺，亮到第 N 格 = 超过同「难度×整级」约 N 成谱面 | 由全库现算，见 `buildDifficultyStats()` |
-| `Holds XXX` | 长押数徽章，**只在 >0 时渲染**（为 0 不印「Holds 0」——全库 852 首都是同一个值，占版面不给信息），后面跟占全谱键数百分比与小条，竖线是基准（有长押谱面的中位 6.0%）；短于线 = 偏疏 | D1 `holds` / `notecounts` |
-| 谱面密度条 | **固定 115 列**等分时间轴，柱高封顶 **8 层**，画**绝对颗数**（不按本曲峰值归一化）；宽度上限 **560px**、从 `Notes` 左缘起排，高度随宽度等比 | ub 谱面文件现算 |
-| 定数 | 右栏 24px 大数字，三档竖向对齐——**它和上面的条是同一件事的两种读法**，都保留 | D1 `bsc/adv/ext` |
-
-> 2026-11-02 微调（主人三条）：①顶部那把只标「5」「10」的刻度尺整块删除——数字去掉后它不承载信息，0–11 的刻度由条上的 11 段细线表达；②键数/长押统一成「标签 + 数字」的徽章（原来「282键 / 34长押 / 无长押」是三种句式混排）；③谱面密度条从「占满整行 951×72」收成 **560×43**、左缘与 `Notes` 对齐，成为副行下面的附图。**定数与 bar 的尺寸/位置都没动**——主人点名纠正过一次：「我说让你把 bar 行缩小，没让你改变 bar」。
-
-> **2026-11-02 设计审计后的一轮收口（v1.60.0）**，改动分三类：
-> 1. **响应式倒挂修正**：`@media (max-width:380px)` 原先把曲绘从 108 放大到 120，屏幕越小右栏越窄（375 实测右栏只剩 166px，长曲名折 4 行）。现在方向倒过来（96px），`--sd-aside-w` 同步跟改，否则定数条左扩的负 margin 会与曲绘错开 12px。同一条媒体查询里那条写在 flex 容器上的 `grid-template-columns` 是死规则，一并删除。
-> 2. **字号阶统一到 11/13/16/24**（原来 9.5/10/10.5/11.5/12.5/19/24 七种混杂）：`BSC/ADV/EXT` 10.5→11、徽章标签 9.5→10.5、徽章数字 11.5→12.5、分位值 10→11、底签 dt 11.5→11 / dd 14→13.5。窄屏徽章 8.5/10.5→9.5/11.5（8.5px 已到「看不清还占位」的程度）。
-> 3. **窄屏可读性**：`≤480px` 不画谱面密度条（115 列挤进 188px 只有 1.6px/列，读不出形态只剩噪点，却仍占 3×14px）；曲名最多两行、曲师一行，**都用降字号达成**（曲名下限 13px、曲师下限 12px，见页面末尾 `fitTitle`/`fitArtist`），只有缩到下限仍超行数时才给 `.sd-title-t.is-clamp` 截断兜底。行数用 `Range.getClientRects()` 数，不拿「高度÷行高」算——行内元素的高度是按字体上下伸出来的。
-> 4. **触达范围**：「曲目库」返回 52×26→约 52×46、songId 复制按钮 66×15→约 66×29，都用「加大内边距 + 等量负 margin」实现，排版位置不变。播放进度条原本就有 `::before inset:-10px` 的 28px 命中区，**审计时误判过**——量命中区要看伪元素，不能只量元素盒子。
-
-> **2026-11-02 登录/注册收口（v1.60.1）**——补掉审计里剩下的两条 P3：
-> 1. **表单居中**：login/register 的 `<section class="band">` 加 `is-auth`，`auth.css` 里 `@media (min-width:721px)` 里页头与面板都 `margin-inline:auto`；页头 `max-width:460px` 与表单同宽同左缘，面板 `max-width:calc(460px + 2 * clamp(16px,2vw,24px))`——`.panel` 的 padding 是随视口变的 clamp，写死一个数（先写 520）会让表单右侧留一条 12px 的缝，改成从表单宽度加回内边距就不会。窄屏不受影响（本来就是满宽堆叠）。实测 1440 视口：面板 466–974、表单 490.8–949.2，主栏中心 720。
-> 2. **Turnstile 跟随站点主题**：原来用 `data-theme="auto"`，那是跟**系统**深浅色走，而本站主题是用户在世代的 16 个主题里选的，两者经常不一致（深色主题里嵌一块白卡片）。改成 `render=explicit` 手动渲染：读 `getComputedStyle(document.documentElement).colorScheme` → 传 `theme: light|dark`；`MutationObserver` 盯 `html[data-g]`（切世代）变了就 `turnstile.remove()` 后按新主题重渲染。`color-scheme` 是本站明暗的唯一权威（见 `theme.css`），不要另立判断依据。
->
-> 附带说明：本机 `wrangler dev` 起不来（workerd 在临时目录建目录被拒），这两条只能 push 后线上实测。
-
-> **2026-11-02 首屏字标被曲绘墙压住（v1.60.4）**——主人截图报「有个设计bug」：769~900px 这一档，`WELCOME TO` + 世代字标的右端被右侧曲绘墙盖住。
-> 根因：`.hero` 的栅格是 `minmax(0, 1fr) minmax(268px, 384px)`，左栏允许被压到 0；而标题行内容是 nowrap 的定宽（最宽的 jubeat / qubell 在 `--wl-em:26px` 下需要 406px，ave 363px）。800px 视口实测左栏只分到 306px，`.word-line` 自身宽 306 但子元素 `flex:none` 撑到 390px，溢出部分直接画到曲绘墙上（曲绘墙左缘 374）。
-> 修法：左栏改 `minmax(min-content, 1fr)`——按标题行真正需要的宽度兜底，让右栏（曲绘墙）先收缩到 268px 下限，再窄就交给 768px 堆叠断点。
-> 实测（修后，各世代 × 770/800/860）：左栏 363~406，曲绘墙 268~384，字标右缘距曲绘墙左缘始终 ≥38px，无横向溢出；≥900px 与 1440 布局与改前完全一致。
-
-> **2026-11-02 相关站点折两栏难看（v1.60.5）**——主人截图：「缩放到一定程度，【相关站点】变成两列，观感不是很好」。
-> 根因：`@media (max-width:900px)` 把三组折成 2 栏，三组必然剩下一个空位（友链(1,1)、数据来源(1,2)、设计参考(2,1)），第 2 行右半边整块空着。
-> 实测三栏真正撑不住是在 780px 以下（780px 三列各 225px，所有链接仍单行；741px、列宽 213px 才开始折行），中间那档折两栏反而最难看。
-> 修法：删掉 2 栏中间档，只留两态——**≥800px 三栏等宽 / <800px 三组各自成行（组内两列）**。
-
-> **2026-11-02 相关站点改成胶囊容器（v1.61.0）**——主人：「相关站点这样设计太占地方了，能否将站点设计成一个个小胶囊放进一个容器里展示（友链胶囊就设置成金色）」，随后又提「【相关站点】之类的小标题字再大一些」。
-> 结构：原先是「三栏 × 每栏一列链接行」（11 条各占 30px 行，整块约 250px，且 2 栏时有半行空位），现在改成**一个容器 + 三行，每行 = 组标签 + 该组的胶囊流**。整块高度 1440 下从 250+ 降到 **200px**，且不再有任何断点空行问题。
-> 胶囊：1px 描边 + 999 圆角 + 30px 高（`≤640px` 34px）、图标 14px；内边距 **11px / 间距 7px** 是实测出来的——12/8 时「数据来源」7 枚在 1440 差一点点放不下会掉一枚到第二行，11/7 恰好一行收得下。无网址的「音游街小程序」用虚线胶囊 `.links-nolink`，仍是纯文本不是死链。
-> 金色：**实心金底 `#e8b64a` + 深褐字 `#2a2110`**（对比度约 8.6:1）。第一版做的是「金色文字 + 12% 金色底」，在 ave 等深色主题下没问题，但在 knit 这类亮黄底主题上几乎看不见——胶囊文字色只能跟 `--ink` 走，而 `--ink` 不知道背后是一张亮黄照片。实心金底不受底图影响，也才真正做出「金色胶囊」。
-> 字号：区块标签 11 → 12.5px（字距 0.16em → 0.13em，字号变大后宽字距会把字拉散）；组标签 11.5 → 13px（窄屏 13.5px），比胶囊文字 12.5px 略大，让「组」这一层压得住条目。
-> 实测：1440 三行各 30px 高、整块 200px；1100/900 有组折到两行；390 三组堆叠、组内胶囊两枚一行，无横向溢出。
-
-> **2026-11-02 相关站点分组与图标规范化（v1.61.1）**——主人给清单：①在「友链」和「数据来源」之间加「Officials」，把 jubeat_staff / Jubeat音乐魔方 / jubeat beyond the Ave. / jubeat（ユビート）移过去；②「设计参考」后加「大白饭中转站」（GINKA、ChooseC）；③「jubeat_staff，Jubeat音乐魔方的图标换为用户小图标（人形），其他站点用网站小图标（地球），wiki 用 wiki 小图标（书本），整理好不要乱」。
-> 现为五组：友链 / Officials / 数据来源 / 设计参考 / 大白饭中转站。
-> 图标改为**按站点性质推导**而不是每条自选：全块只留三种——`user`（两个账号类，显式名单）、`book`（三个 wiki，显式名单）、`globe`（其余一律）。以前每条自己挑 chart/grid/badge/play，同类站点会拿到不同图标。
-> 组标签列 76 → **92px**：「大白饭中转站」13px 下 Range 实测占 82px，76 会溢出到胶囊区。
-> 实测（1440）：五组各 30px 高，无溢出；900 一处组折两行、700 两处、390 全部堆叠且组内两枚一行。`wrangler dev` 本机仍起不来，视觉验收走「本地 `npx serve dist/client` 预览 + push 后线上复测」两条。
-
-> **2026-11-02 分段加载的两个缺陷（v1.61.2）**——主人报：①「现在查询要等一会才出结果」；②「点击世代名进行下一个世代跳转时，遇到没有加载的世代会弹回 jubeat 世代」。
-> ①根因是 `apply()` 里那条「有筛选 + 还有骨架块 → 先补拉，补拉期间直接 `return`」的守卫：14 段 SSR 全补完（实测好网 700ms）之前，用户敲的每一个字都被吞掉，屏幕上只剩「正在加载剩余 N 个世代」，看着就是卡死。改成**补拉只启动一次、但不拦着往下算**——已加载的卡片立刻按条件算一遍出结果，补拉完再算一次补全。代价是补拉期间读数偏小（骨架块无卡片可匹配），比「没反应」好。同时骨架分支在有筛选时不再按 `data-count` 全算（否则会先虚高 1129 首再掉到 1 首，比偏小更 confusing），只在无筛选时出数。
-> ②根因是 `genJump()` 的候选过滤条件写成「可见且块内有 `.sc-card:not([hidden])`」，骨架块里没有卡片 → 整块被排除 → 点 copious 时「下一个」被算成 jubeat（第一个真块），页面从当前位置平滑滚回顶部。改成骨架块也算候选：滚过去正好触达 `IntersectionObserver` 自动换成真卡片，等于「跳过去并加载」；只有 hidden 的筛掉块才跳过。
-> 实测（线上，1440）：搜索「りんとして」从原先整段等待里只有「正在加载」→ 现在约 130ms 内先按已加载部分出一次结果，700ms 补拉完成后收敛到 1 首；从 copious 点世代名跳到 saucer 骨架块并正常替换成卡片，不再回顶。
-
-> **2026-11-03 打字快会带出未筛选结果（v1.61.3）**——主人截图（412 宽）：输入 bass 只命中 1 首，下面却整块挂着 saucer「201 首」等全量卡片。
-> 根因在上一版的副作用：`loadFrag()` 把片段**原样**写进 DOM，而筛选是调用方在它之后才 `apply()` 的，中间那一帧片段里的全量卡片就先画出来了。搜索词在补拉途中到达时尤其明显（打字快 = 片段陆续落地，每落一个闪一屏）。
-> 修法：片段在插入前先按当前条件就地筛一遍——逐张卡调同一个 `matchCard()`，判据不另写一份；同步改块头计数与 `hidden`（0 命中直接藏块）。此后 apply() 再算一次时结果完全一致，不会打架。
-> 实测（412 宽，逐字 60ms 连打 bass）：补拉途中各块计数全部收敛为 0/1（原来 201/121/113 整块都在），补拉结束 ph=0、命中 1 首、块只剩 jubeat 一个。
-
-> **2026-11-03 曲目详情页加容器限制，修曲绘/唱片溢出（v1.61.4）**——主人：「给标记一套上一层容器限制」+「更改分辨率曲绘容易溢出」。
-> 根因：唱片是以 `left:-100px` 绝对定位挂在 `.sd-cover` 上的，而 cover 又坐在 `.sd-body` 的内边距里 —— 唱片**必然**探出面板左缘（1905 宽出 43px、720 宽出 59px）；面板原本 `overflow:visible`，探出的部分直接跑到板外，宽屏靠页面留白兜着，一旦收窄就捅到视口外（720 宽时 disc 左缘到 −35px）。
-> 修法：面板外套一层 `.sd-shell`（head + body 一起装，返回/面包屑才与面板左缘对齐），左侧预留 `--sd-gutter` 把悬出量吃进来，再 `overflow:clip` 兜底；`--sd-gutter = --sd-disc-out − --sd-cover-indent − 面板内边距`（负数取 0）。宽屏用等量负 margin 抵消，面板位置**与改动前逐像素一致**；只有确实没余量的窄屏才真的往右推。
-> 唱片悬出量随宽度分档收：100 → 74(≤1420) → 53(≤1260) → 40(≤1080) → 30(≤930) → 22(≤800)，≤700 唱片本就隐藏、gutter 归零。`.sd-disc` 的 `left` 与 gutter 读同一个变量，不写两份数字。
-> 实测（注入构建产物 CSS 后的线上页）：disc 左缘 1905→318 / 1450→90 / 1400→91 / 1260→44 / 1200→40 / 1080→46 / 1000→41 / 930→36 / 860→42 / 800→46 / 760→45 / 720→43 / ≤700→隐藏，全部 ≥0（改前 720 是 −35）；各宽度 `scrollWidth = clientWidth`，无横向滚动；1905 下 disc 318 / body 361 与改前完全一致，宽屏零位移。
-
-> **2026-11-03 难度区与曲绘重叠（v1.61.5）**——主人贴 DevTools 浮层截图「div.sd-gauge 698.05 × 386.76 / Margin 16.32px 0px 0px -239.008px」并说「是这两个重叠」。
-> 根因：`.sd-gauge` 是 `.sd-main`（右栏 flex column）的最后一个子项，靠 `margin-left: calc(-1 * var(--sd-main-offset))` 负 margin 横向扩到曲绘下方；横向扩张没问题，**纵向位置却由右栏内容决定**——右栏比曲绘矮时，被拉过去的左半截就直接压在图上（816 宽实测曲绘底 378、定数区顶 361，重叠 17px）。1919 宽不重叠只是碰巧右栏更高。
-> 修法：`.sd-body` 的 grid-template-areas 增加独立行 `"gauge gauge"`，定数区改 `grid-area: gauge`，横跨两栏、纵向由网格决定，结构上不可能再回贴；因横向扩张已经由整行承担，负 margin 与 `is-solo` 的 84–116px 兜底间距一并删除，分隔线也改成整行铺满。
-> 实测（移除线上旧 CSS 后注入构建产物，15 档宽度）：曲绘底边 → 定数区顶 1920:22 / 1600:22 / 1400:22 / 1260:22 / 1200:22 / 1080:21 / 1000:20 / 900:18 / 816:16 / 760:16，全部 ≥16，不再重叠；≤700 定数区落到两栏之下（与播放条仍隔一个行间距 14px）；各宽度 `scrollWidth = clientWidth`。
-
-> **2026-11-03 首页加「今日运势 / 热门歌曲」（v1.62.0 起，v1.63.0 完成并排与分服）**——主人当日四条：①运势的推荐要分日服/国服并指定难度（显示「难度-定数」徽章）；②两块各自独立、一左一右（DOM 里运势在前，窄屏转单栏时它自然在上）；③评级用图片素材 `public/assets/images/grade/*.webp`（132×132，9 档）；④冷启动降级取 **a（换成「最新上架」而不是硬推没人听过的歌）**。
-
-> **热度口径**：独立听众数，一人一曲一天只算一次，靠表主键 `(day, song_id, visitor)` 的 `INSERT OR IGNORE` 去重；visitor 优先 user_id、游客用 HttpOnly 的 `jb_aid` cookie。埋点在 `SongAudio.astro`：**真出声满 8 秒**才 POST `/api/hot/hit`，暂停即作废计时。接口另有同曲节流 + 每 IP 30/分、400/天闸门，全部静默失败（埋点挂掉不影响播放）。节流窗口取 **60 秒**而不是 30：KV 的 expirationTtl 下限就是 60，写 30 会被拒（`KV PUT failed: 400 Invalid expiration_ttl of 30`）并让整个接口 500——而接口一 500，命中前三层闸门之外的入库就全断了。
-
-> **窗口是游标**：每天 00:05（UTC `5 16 * * *`）把「昨天为末日的前 7 天」封成快照，当天全天读这一份——今天在看的人不会把自己的播放算进此刻的名次，榜也就天然滞后一小时，刷量当场刷不动。快照先落 D1 再刷 KV（反过来会出现库里查不到的快照）。`seeded=1` 表示样本不足 30 行、装的是最近上架，页面据此标「热度统计中」并降级成新曲推荐。
-
-> **冷启动的空态是「空态」，不是「坏掉」**（v1.63.2）：右栏这时只剩一行提示，比左侧的新曲推荐矮 193px，两块看着像断的。修法不是给面板补 padding（`.fh-hot:has(.fh-note){padding-bottom}` 会被 `.fh` 的简写 `padding` 整条盖掉，实测不生效），而是把提示块本身撑高并居中当整块的空态，两边才收在一条线上（325 / 325）。
-
-> **运势**：种子 = 日期 + 访客（游客恒为 `guest`，所以游客看到的是同一份，可被边缘缓存）。三档（沉淀/均衡/挑战）各自绑一个难度（BSC/ADV/EXT）与定数区间，分数走 0–1000、与评级共用同一把尺。三档各挑一首、不重复，用 `seed|visitor|档` 摊下标挑，避免票最高的那首天天被选中。默认组合两块都取日服（站点主数据是日服），选项卡排序仍是国服在前；运势的默认难度取该服**可用的最难档**（有 EXT 就落 EXT，没有退到最高的那个），否则默认会停在最好糊弄的 BSC。
-
-> **修掉的三处静默失败（v1.63.0）**：①`hotPage.ts` 漏了 `poolForSrv` 的定义却仍被组件 import——ESM 解构导入不存在的导出拿到 undefined，调用即抛，而 SSR 是流式的，异常把**整段热门榜连同其后内容**吞掉，页面只剩一个孤零零的标题（不是组件没渲染，是渲染到一半断了）；②`byIds` 的 SELECT 少了 `bsc/adv/ext/server_jp/server_cn` 五列，取回来全是 `undefined`，榜因此永远走「待统计」兜底；③KV TTL 见上。教训：行内缺列不会报错，只会让 `r.x === 1` 恒为 false。
-
-> **2026-11-03 热榜扩到 25 名 + 整块可点（v1.64.0）**——主人三条：「热门歌曲改为前25名」（m01983）、「滚动的有些快了，稍微慢一点」（m01996）、「不要以链接形式，要求一个歌曲块都能点到」（m02034，附 XENOViA 截图）。
-
-> **25 名让滚动必须重写**。原来只有 10 名、靠补 5 行副本凑第二屏，滚到底接缝正好露出副本里的第 1 名——主人一眼看到「你这10之后怎么还跟着1啊」（m01955）。新做法是**不补副本**：一屏固定 5 行、位移一屏一屏走，25 行 = 5 屏（1–5 / 6–10 / 11–15 / 16–20 / 21–25），任何一屏都刚好填满视窗，副本本来也没地方露。总位移 `--fh-end = -(行数-5) × 52`（25 行时 -1040px）由组件算好写成内联 style，`@keyframes` 里只留百分比。末屏停最久，淡出时**不带位移**，等 `opacity` 到 0 的那一帧才把位移跳回 0 再淡入——早先那版把「回顶部」和「淡出」写成同一条曲线，位移连续，底部就会露出第 1 名。一轮 100s：每屏走 14s、停 3–8s、淡出淡入各 5s（窄屏 120s）。悬停与 `focus-within` 暂停。
-> 逐帧实测（WAAPI 把 `currentTime` 定到各百分比）：0% y=0 → 17%/22% −260 → 38%/45% −520 → 59%/66% −780 → 80%/86% −1040；90.4% `op=0.01` 且 y 仍是 −1040，90.6% 才 y=0 / `op=0`，接缝不露第 1 名；97% 回 `op=1`。
-
-> **整块可点**：`.fh-name` 改成空标签绝对定位层（`position:absolute; inset:0; z-index:1`）+ `aria-label="曲名 - 艺人"`，曲绘与文字移到层下；`.fh-txt{flex:1;min-width:0}` 撑宽，`.fh-row::before` 做整行悬停底衬。实测链接层与行同尺寸 516×52，行内左/中/右三点 `elementFromPoint` 全部命中链接层。
-
-> **同日修掉的真 bug**：`hot.ts` 的 `dayOf(ts = Date.now() + TZ_OFFSET)` 默认参数已经加过一次 8 小时，函数体里又加一次（等于 +16h），北京时间 16:00 之后整天都算成「明天」，页面去读一份不存在的次日快照。改成默认 `ts = Date.now()`。
-
-> **本地坑**：`src/middleware.ts` 的边缘缓存会把首页缓存 5 分钟（白名单 `/^/($|songs(\/|$)|recent(\/|$))/`），改完本地数据不清缓存就还是旧页面（`x-jb-cache: HIT`）——看到「只出 12 行」别急着改代码，先重启 dev。dev 本身在带 `HTTP_PROXY/ALL_PROXY` 的环境里启动会 `read ECONNRESET`：`fetchWorkerExportTypes` 要 fetch `http://localhost/__vite_plugin_cloudflare_get_export_types__`，被 undici 的 EnvHttpProxyAgent 塞进代理了，用 `env -u ALL_PROXY -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy -u NODE_USE_ENV_PROXY` 启动才稳（ready 从超时失败变成 176–238s 成功）。
-
-> **2026-11-03 20:10 三条收尾（v1.64.1）**：主人「不要以链接形式，要求一个歌曲块都能点到 / 热门歌曲滚动25条，调整滚动时长」，随后贴图一句「不要出现横线」。
-> ①**榜其实从来凑不满 25**：线上 7 天窗内只有 60 条命中、14 首不同的曲，而 `MIN_ROWS` 只判「够不够 30 行」——过了门槛就只出这 14 首，滚动永远两屏、25 名白设（实测线上 `rows: 10`）。现加热度不足时的兜底：用「最近上架」按原顺序补到 TOP，已上榜的不重复，补进来的 `delta=0 / isNew=false`、名次接着往后排；真热度涨起来会自然挤掉，不需要回头删。
-> ②滚动 100s → **125s**（窄屏 120s → 150s），每屏 17.5s，保留 0.25 停顿占比。
-> ③悬停的曲名下划线去掉：两块都已是整块热区 + 整行底衬，`text-decoration` 只是多画一条线，与曲名挤在一起显脏。
-
-> **2026-11-04 面板随主题改材质（v1.64.2）**——主人指着 DevTools 里 `section.fh` 的 Background 说「这两的 background 色要和 `div.cubewrap` 的 background 色保持一致」。底色于是从写死的深玻璃换成 `var(--glass2)`（与首页曲绘墙同一材质），脉后缀也一并换成 `--ink` / `--edge`，两块从此随主题在深/浅之间翻。
-> 底色一跟主题，所有写死的浅色就翻车，所以做了三件事：
-> ①**重音色分两套**。`--fh-cyan` / `--fh-hot` 与难度徽章三色原来都是给深玻璃反解的，压到浅合成底 ~#fbf9f2 上只有 1.5–2.5:1，等于看不见。浅色世代换成同色相深版（`#0b7f78` / `#b8431b` / `#0d7a4f` / `#8a6a00` / `#b83a30`），对 6 个浅底最小 4.6:1，过 AA；选中态反过来用白字压在深青实心块上（6.6:1，原来那支墨色只有 2.85:1）。
-> ②**光晕换成按主题取**。名次的 16px 橙色文字光晕是深底用的，浅底只会糊，浅色世代换成 1px 暗影（`--fh-rank-glow`）；裁决区的青色径向底纹、评级图的冷光、顶条阴影全部改挂 `--fh-cyan`。
-> ③**底部渐隐也分两套**：深底沉暗角、浅底用各代自己的 `--base` 提亮成白雾（强度收到 66%，再高会把最后一行漂白），渐隐层高度也只留一半（88 → 64px）。
-> 逐主题实测（清 SW 后，8 键）：`.fh` 与 `.cubewrap` 的 background 逐键完全相同（深底 rgba(6,14,21,.8)；浅底 knit 255,253,247,.72 … ripples/yymf 255,255,255,.8）；对比度深底 ink 17.8 / hot 7.5 / cyan 12.3，浅底 14.6 / 5.2 / 4.6。整块热区在深浅两档下左/中/右三点 `elementFromPoint` 仍全部命中链接层。
-
-> **基础设施**：`wrangler.jsonc` 的 `main` 改成本地 `src/worker.ts`（适配器入口只导出 fetch，挂不了 cron；我们的文件把 fetch 原样转发，旁边只多一个 scheduled）；`/` 同时进 `run_worker_first` 与中间件缓存白名单——首页从此是 SSR，游客态必须能被缓存，否则每次请求都真打 D1 + KV。
-> **上线前必须先跑 `db/migrate-hot.sql`**（建 `hot_hits` / `hot_snapshots`），否则 `/api/hot/hit` 会 500；cron 由 `wrangler.jsonc` 的 `triggers` 注册，部署后第一次自动执行要等次日 00:05，当天页面会自己补一份 seeded 快照。
-
-
-裸数字之所以要配参照系：全库 25.9% 的谱面根本没有长押，「长押 34」单独看既不知大小、也不知「没有长押」才是多数；「1,111 键」也是同理——落在 EXT 10 级同档的 P99，才看得出这是超长谱。分位按「难度 × **整数定数**」分桶，不按整档：同档内定数 7 和 10 的键数量级差一倍，混着比会把「10 级谱当然键多」误读成「这首特别长」。桶内样本 < 8 个时**不显分位**（实测 3744 个谱面里只有 7 个落到线下），不拿假分位充数。
-
-密度条数据由 `node scripts/ub/build-ub-charts.cjs` 生成到 `src/data/ub-charts.json`（需联网，**不进 build 流程**，曲库更新后手动重跑并提交产物）。1185 首 × 3 档 = 3493 个谱面成功，输出 0.85 MB。
-
-**口径照抄 jubeat 官方**（主人 2026-11-01 给定，对齐 jujube/Stepland 的 `Drawables::DensityGraph`，1121 首 / 3101 谱面逐张核过）：
-
-| 项 | 官方口径 | 为什么 |
-| --- | --- | --- |
-| 物量 | **单点 ×1 + 长押 ×2** —— 长押的**头判和尾判各算一颗**，中间按住的不额外算 | 这也是实机结算画面那条分布图的口径。只数头判会让长押多的谱面少算一半（「袖手旁観」18→36、「iris」35→70） |
-| 时间轴 | `max(音频时长, 最后一颗判定时刻) + 1s` | 末尾那一秒是官方自己留的尾巴 |
-| 分列 | **固定切 115 列**，柱高**封顶 8 层**，画绝对颗数、不按本曲峰值归一化 | 长度与 BPM 各曲不同，固定列数才能横向比较 |
-| 格子 | **正方形**（4px 亮面 + 1px 暗缝），整张图按「屏宽 ÷ 768」等比缩放后水平居中 | —— |
-
-自检：每个谱面的**列合计必须等于物量**（两个独立算法互验）。全库 3493 个谱面全部通过、零例外——`scripts/ub/build-ub-charts.cjs` 跑完可复验。
-
-> 空列（那一段没有音符）**必须占住自己的宽度**，只保持透明、不画方块。省掉空列会让柱子挤在一起、时间轴失真，节奏形态就读不出来了（2026-11-01 实撞）。
-
-> **密度条画之前必须校验，否则会画错谱面**。ub 上有两类不同步：①旧版谱面还挂着（实测 paranoia 的 EXT 在 ub 是 Lv8 老谱、库里已是 Lv9.5，键数 563 vs 965）；②定数改过但谱面没换。实测 3493 个谱面里 **93 个键数与 D1 对不上，其中只有 4 个 level 也不符**——所以只查 level 会漏 89 个。`chartOf()` 因此做双重校验：level 必须一致 **且** 算出的键数必须等于 D1 的值，任一不符整档不画密度条。宁可少一张图，也不给一张和旁边「N 键」自相矛盾的图。
-
-**数据怎么加载**（v1.54.0 起，主人问「能不能不要全量获得谱面，进到详情页才加载」）：
-
-原先整张表（1.07 MB）用 `import` 打进 Worker 包，实测详情页 chunk **3.3 MB**，而每次请求只用到其中一首（中位 961 字节）。三种做法实测对比后选了第三种：
-
-| 做法 | 用户下载 | Worker 内存 | 延迟 | 上游依赖 |
-| --- | --- | --- | --- | --- |
-| ① import 进包 | 0 | 整表 3.3 MB | 无 | 无 |
-| ② 进页面再找 ub 拉 | ~3 KB | 0 | +900 ms（3 次跨站） | **有**，ub 挂了图就没了 |
-| ③ 每首一个同源静态 JSON（现方案） | 0（同源、边缘缓存） | **1 KB** | ~20 ms | 无 |
-
-产物是 `public/assets/diff/<songId>.json`（1185 个，单首约 1 KB），由 `node scripts/ub/split-ub-charts.cjs` 从构建期快照拆分，已挂进 `npm run build`。
-
-两个实现要点，改之前先读：
-
-1. **用 `ASSETS` 绑定读，不要 `fetch` 同源 URL**。后者是真实 HTTP 请求，在 Worker 里对本 zone 发 fetch 可能走成外网回环、额外消耗子请求配额；`ASSETS` 直接读静态资源层，不发网络。开发期没有该绑定（`astro dev` 不起 workerd），退回 fetch 本地文件。
-2. **`/assets/*` 不在 `run_worker_first` 里**，所以浏览器直接请求这些文件时由 CF 静态资源层返回，**根本不进 Worker**。配合 `public/_headers` 的长缓存，边缘与浏览器都缓存。
-
-> 缓存实测证据（2026-11-01 线上）：连续两次请求 `/assets/diff/11000120.json`，均返回 `cf-cache-status: HIT` 与 `cache-control: public, max-age=31536000, immutable`。
->
-> 复核（2026-11-03 12:21，同一 URL 连打 3 次）：3/3 均 `CF-Cache-Status: HIT`；首个未命中请求是 `MISS` + 同一条 `Cache-Control: public, max-age=31536000, immutable`，即缺副本时也是先落边缘、之后命中。
->
-> **上游不承担本站读取流量**：这份数据是构建期快照，运行时完全不碰 ub.thregren.world。重跑抓取脚本 `scripts/ub/build-ub-charts.cjs` 才会联网（曲库更新后手动跑一次并提交产物）。
-
-**缓存头只有一条 `/assets/*`（2026-11-03 合并）**：不再按目录分条写。原因是 CF 的 `_headers` **逐条命中且同名头累加**，不是后写覆盖——`/assets/images/x` 同时命中 `/assets/*` 与 `/assets/images/*` 时实测回的是 `public, max-age=31536000, immutable, public, max-age=31536000, immutable`（两个值拼在一起）。合并成一条后，以后新增素材目录（如当天的 `assets/images/grade/`）不改该文件也自动长缓存，也不会再出现重复头。哪天某类要改成运行时更新，就在它**之后**单独拆一条、值换成 `s-maxage` + SWR，并实测响应头。
-
-通配符写单星号 `*`，不要写 `**`：2026-11-03 实际踩过——`/assets/**` 让三类资源全部回 `max-age=0`（规则整条失效），改回 `*` 立即恢复；`/assets/*` 本身就跨子目录。
-
-**用户系统**（v1.14.0 起）：四层身份——**游客**（不登录，只能看）/ **玩家**（注册即得）/ **维护者**（玩家自荐 + 站长审批）/ **站长**（只有主人，在 D1 里直接改 `role`，站点不提供提权入口）。邮箱 + 密码注册，不发送验证邮件（主人 2026-10-23 定：先不做邮件，邮箱只作登录名）。GitHub 等第三方登录二期再接，`oauth_accounts` 表已建好。
-
-安全实现要点（都不要随手改）：
-
-| 项 | 做法 | 为什么 |
-| --- | --- | --- |
-| 密码 | PBKDF2-SHA256，每用户独立盐，迭代次数写进 hash 串（`pbkdf2$sha256$<iter>$<salt>$<hash>`） | 不存明文/可逆加密；迭代次数随身存，将来提强度老用户下次登录自动重算 |
-| 会话 | cookie 放随机 token，库里只存它的 SHA-256 | 库被拖走也拿不到能直接用的 cookie |
-| cookie | `HttpOnly; SameSite=Lax; Secure` | `HttpOnly` 挡 XSS 窃取，`Lax` 挡跨站 POST 类 CSRF |
-| 登录枚举 | 邮箱不存在也跑一次假 hash 校验 | 响应时间一致，不能靠耗时探测「这个邮箱注册过没有」 |
-| 改密 | 验旧密码 + 清空该用户所有会话再发新 token | 防 cookie 被盗后直接改密锁人，并踢掉其它设备 |
-| 人机验证 | Cloudflare Turnstile（Managed 模式），secret 走 `wrangler secret` | 缺 secret 时对生产 fail-closed，宁可拒绝也不裸奔 |
-| 回跳 | `?next=` 只接受单个 `/` 开头的站内路径 | 不做就是开放重定向漏洞 |
-| 审批 | `/api/admin/decide` 服务端复核 `role === 'owner'` | 页面上藏按钮只是体验，接口才是防线 |
-
-路由与文件：`/login/` `/register/` `/account/` `/admin/` 都是 `prerender = false` 的 SSR 页；接口在 `src/pages/api/{auth,account,admin}/`。中间件 `src/middleware.ts` 把 cookie 解成 `Astro.locals.user`。**这些路由必须列进 `wrangler.jsonc` 的 `run_worker_first`**，否则会被资源层的 404.html 截住。
-
-> 一个必须知道的坑：中间件里**不能顶层 `import { env } from 'cloudflare:workers'`**。本机预渲染走 Node（`prerenderEnvironment: 'node'`），Node 的 ESM loader 不认识 `cloudflare:` 协议，会在「预渲染 /404」这步直接崩 `ERR_UNSUPPORTED_ESM_URL_SCHEME`。改成在 SSR 分支里动态 `await import()`。同理，所有 API 端点都要标 `export const prerender = false`。
-
-> 静态页的登录态：本站绝大多数页面是构建期预渲染的，生成时没有会话，顶栏渲染出来永远是游客态。`/api/auth/me` 接口 + Header 里的内联脚本在客户端把右侧人形图标升级成账户菜单。所以**不要在静态页里写死任何按用户变化的文案**。
-
-> **账户菜单**（v1.19.0）：导航文字区只留「曲目 / 最近更改」，登录、管理、昵称全部收进右侧人形图标的下拉（主人 2026-10-25 两次要求：「标记一可以不要，全部整合进标记二里」「标记1的【登录】也不要」）。菜单结构 = 昵称+身份 → 我的账户 / 管理后台（staff 才有）→ 分隔线 → 红色退出登录。游客看到的人形图标仍是直达 `/login/` 的普通链接，**无 JS 也能登录**；登录后脚本才把它改成点开菜单（href 保留，中键/新标签仍可直达账户页）。退出用 POST 表单提交 `/api/auth/logout`——那个端点只接受 POST，防止爬虫/预取随手 GET 就把人踢下线。菜单底色用 `--acm-bg` 实色，**不能吃 `--pop-bg`**（后者是 rgba 0.94 的玻璃，浅色主题下曲绘会透上来叠字）。
-
-
-> **三个浮层互斥**（v1.23.1）：导航抽屉（.nav-drawer）/ 账户菜单（.acm-pop）/ 主题切换（.tsw-pop）打开时不会重叠——打开任何一个，其余两个自动收起（主人 2026-10-26「展开时不能重叠，一个打开，其他的就要收起」）。实现是 `Header.astro` 里的 `window.jbPop` 协调器：每个浮层把「关闭自己」的函数 register 上去，`closeOthers(self)` 在开新浮层前统一调度。三个浮层分属 Header 两个 script + ThemeScript 一个 script，互相拿不到对方的 setOpen，所以抽一层登记处而不是硬引用。
-
-> **约定：被 JS 接管、点击后不导航的 `<a>` 必须带 `data-boot-skip`**（v1.19.1）。BootScreen 的「点链接先亮 LOADING」监听器挂在 `document` 的 **capture 阶段**，比链接自己的 `preventDefault` 先跑——它看到 href 还在，就当成「要跳走了」而 `begin(160)`。实撞：账户菜单把 `<a href="/account/">` 改成开菜单的触发器后，每次点它都闪一下 LOADING，还得等 3 秒兜底才收。所以这类触发器要打 `data-boot-skip`，遮罩监听器见到就跳过。反向要验：普通站内链接点击仍必须点亮遮罩（实测 `bootRun:true`），别把拦截做成「所有导航都不亮」。
-
-**/recent/ 最近更改**（v1.15.0 起为真实数据页）：记录维护者对站点内容的编辑。该页 `prerender = false`（与 `/songs/` 一样是 SSR），运行时查 D1 的 `recent_changes` 表，每条含 `changed_at` / `user` / `target_label` / `target_href` / `summary` / `before_text` / `after_text`。前后差异用原生 `<details>/<summary>` 折叠，**这一页没有任何脚本**，无 JS 也能展开。写入源是 `/api/admin/song-update`（维护者每次成功编辑曲目写一条）。库里没有记录时显示空态三行说明。该页 `noindex`，宽屏走导航文字链接，窄屏走图标组里的时钟图标。
-
-> 为什么改了 SSR：此前读的是 `src/data/recent-changes.json` 这份构建期快照，编辑记录是运行时数据，构建期永远不知道，列表恒为空。那个文件现在只留作 dev 退路（见 `src/lib/db.ts`）。副作用：`dist/client/recent/` 不再生成，`check-refs` 的 dist 引用基线从 46 变为 42。
->
-> **`run_worker_first` 必须保留独立条目**：`/recent` 与 `/recent/*` 不在任何通配规则里，漏写会被资源层按 `not_found_handling` 直接截成 404.html，进不了 Worker。
-
-**页内 LOADING**：`src/components/BootScreen.astro` 是视口最顶一条 3px 进度条（主题色渐变 + 等待态扫光）。**2026-10-27 主人要求「loading 不想做成遮罩效果了，想做成页内 loading 显示」，由全屏遮罩改版而来**：旧版铺满视口 + 圆孔动画 + `overflow:hidden` 锁滚动，视觉很重、还会让人以为页面卡住。现在它不挡内容、不锁滚动、`pointer-events:none` 不吃点击（进度条只有 3px 高，直接出现完全可接受，可靠性优先于淡入）。三种触发仍保留，且只有「真的要等」时才亮：①首访——每个会话第一次进入才出现（`sessionStorage` 记 `jb-boot`），走 0→92% 的假进度，`load` 后走满淡出，最少停 700ms（太快闪一下像故障）、最多 3s；②点导航去下一页——延迟 160ms 才亮，新页在此之前到达就完全不出现（本地点击到 `pagehide` 约 68ms，正常网速下看不到）；③切世代主题——先查本页是否已经拿到过这两张图（背景 + 字标），拿到就零延迟直换、一点不闪；没拿到才挂 160ms 延迟条，图到齐立刻收（兜底 2.6s）。
-
-**实现要点：不依赖 CSS 动画/过渡时钟**。这是改版时实测出来的教训：进度条最初写成「`html.boot-run .boot { animation: bootIn }` 淡入 + bar 用 `transition: transform` 生长」，结果 `opacity` 一直停 0、条宽不动。两个独立原因：①**过渡在元素首次显示时会被浏览器跳过**（没有「已渲染的前一帧的样式」，`getAnimations()` 里一个过渡都没有），`animation` 才能保证从 0% 播起；②**动画时钟在窗口最小化/标签页后台时被冻结**，过渡与动画都不推进。所以最终方案是 JS 直接写 inline style 点亮（`transition:none; opacity:1; visibility:visible`），条宽由定时器阶梯推进（`creep()`，用量而非时间算，越接近终点涨得越慢、永不到 100%），只有「走满」这个动作代表真的加载完了。另外进场时 `visibility` 必须无延迟立即变 visible——基础规则里写的是 `visibility 0s linear 0.28s`（那是给退场「等淡出跑完再隐藏」用的），不覆盖就会出现 opacity 已亮、元素还 hidden 的 0.28s 空窗。
-
-**兜底与 bfcache**：沿用旧版两道保险。①看门狗——条一旦可见最多挂 8 秒，到点无条件收（一条永远在爬的进度条等于在骗人，让用户看到内容比继续假装加载有价值）；②`pagehide`（persisted）时先把条摘干净再进 bfcache，`pageshow` 的 persisted 分支再无条件复位一次——旧版踩过「点进详情后按 back 有概率卡 loading」，根因是遮罩亮着被冻进快照，而「有概率」正来自导航快于 160ms 时遮罩没亮、快照干净。点击监听仍挂在 document capture 阶段，被 JS 接管、点击后不导航的 `<a>` 必须带 `data-boot-skip`（见 Header.astro 账户菜单那段），否则会被当成「要走了」而亮条。设了 `prefers-reduced-motion: reduce` 的用户整站不启动（`data-boot="off"`，`jbBoot` 退化成空实现）。样式与脚本都是 `is:inline`，必须在首帧前生效。
-
-页面支持 **17 套世代主题**（切换时背景交叉淡入、字体与强调色整套更换；2026-10-21 新增国服「音乐魔方」，2026-10-26 新增初代「jubeat」——排在 ripples 之前，背景与白色字标取自官方 PROFILE 卡），选择存在 localStorage。背景填充为 cover 按视口比例自适应。
-
-**首屏标题行是「WELCOME TO + 字标」拼成的一句**（v1.24.0 起；`~` 已于 v1.25.0 按主人要求去掉；字标换图抖动已于 v1.28.1 修掉）：世代字标图直接充当 jubeat 这个词，前缀与字身带锚在同一个 `--wl-em` 上，因此两者天然同高。WELCOME TO 用主题色 `--wl-acc`（默认取 `--acc`；knit/ripples 的 `--acc` 在浅底上只有 1.83/2.23，各自压暗到 4.66/4.62）。难点是 13 张字标构图完全不同（字身带有的压图顶、有的居中，还各带圆弧/菱形/色条/副标题），所以按世代量了对照表写进 `theme.css`：`--bh`（「jubeat」字身带占图高比例，把字身缩成统一 1em）、`--bc`（字身带中心位置，对齐到行中线）、`--bt`（字身带上缘，留档核对）。**换字标图必须重算这三值**，否则标题行会错位。量法：以最干净的 `logo/jubeat.webp` 为模板，对各字标做归一化互相关扫描（缩放 0.5–2.6×、全纵向偏移），取得分最高的窗口；外围圆弧会让「段数+跨度」这类判据误判，实测过 `--bh` 被带到 0.4857 导致 ave 字标缩成一半。
-
-> **字标宽度必须由 CSS 写死，不能跟着当前图走（2026-10-27，v1.28.1）**：原来 `#wordLogo` 是 `height:calc(--wl-em / --bh) + width:auto`，宽度由**当前那张图**的固有比例决定。切世代时 `data-g` 先换 → 高度立刻按新世代变，可宽度还在用旧图的旧比例算，旧图被整体缩放一档；等新图解码完固有比例一换，宽度又重排一次 —— 肉眼就是「先变大小、然后才换 logo」。现在每个世代的 `aspect-ratio` 都按 logo 原图尺寸写死在 `theme.css`（14 张图的实测值：jubeat 486/136、ripples 570/171、knit 360/104、copious 360/128、saucer 360/145、saucerfulfill 360/164、prop 360/140、qubell 360/162、clan 360/163、festo 287/210、ave 284/210、bta 285/210、yymf 1180/593），**换字标图要同步这张表**。
-> 顺带去掉字标淡入动画：淡入必须靠 opacity 动画（from 0），而动画在后台标签页会冻结在起始帧，冻结在 `opacity 0` 就等于整张 logo 消失。字标是首屏识别物，宁可硬切也不能有「可能隐身」的状态。
-
-> **字体已改站内自托管（2026-11-02，v1.58.1）**：文件在 `public/assets/fonts/`，命名 `<pkg>-<weight>.woff2`（保留 fontsource 原名便于溯源），缓存头在 `public/_headers`（一年 immutable）。
-> 原来是 2026-10-25 改成「走 fontsource CDN（cdn.jsdmirror）」，理由是不往仓库塞二进制；11-02 的全站审计（`docs/audit-2026-11-02.md` P1）推翻了这笔账：字体参与首屏文本绘制，跨域那次往返直接压在 FCP 上，实测 montserrat/raleway 单次要 **1.0–1.4s**；更要命的是 preload 映射还停在 10-27 换字体之前，预载的 jost/rye/shrikhand 当时已经没有任何 `@font-face` 在用——等于白预载、真正要用的那款反倒没被预载。改回自托管后首屏只请求 1 个同源字体（5–22KB），实测 FCP 见下方性能一节。
-> 现存 10 款（其余 6 条已删的死 `@font-face`：Dancing Script / Roboto Slab / Bangers / Anton / Great Vibes / Poppins Light）。两个易错点：①改字体时 `theme.css` 的 `@font-face` 与 `Base.astro` 的 `FONTFILE` **必须同改**（地址不一致会被下载两次）；②`Base.astro` 的预载映射按**世代 key**（`jubeat/ave/ripples/…`）而不是旧的 A–G 字母，加世代时记得补一行。
->
-> **世代 → 字体**（`theme.css` 的 `html[data-g="…"][data-g] { --font-label: … }`）：jubeat Montserrat Bold / ripples Quicksand Medium / knit Playfair Display / copious Raleway Light / saucer Raleway Light / saucerfulfill Raleway Light / prop Caveat / qubell Lora / clan 四色统一 Oswald Bold / festo Pacifico / ave Montserrat Medium / bta Quicksand Medium / yymf ZCOOL KuaiLe。CSV 里的 `clan_resd` = `clan_red`、`音乐魔方` = `yymf`；prop 原指定 Great Vibes，按要求换成 Caveat。
->
-> **墨迹高度校准（`--wl-ink`）**：14 款字体的 cap-height 不同，实测墨迹比 0.70–0.89，同字号下肉眼差 22%。每款按 `0.74 / 实测墨迹比` 归一，16 个世代切过去「WELCOME TO」一样大。换字体必须重算该值（用 canvas 的 `actualBoundingBoxAscent` 量）。
->
-> ⚠️ **这些表必须写成 `html[data-g="x"][data-g]`**：`scripts/ci/check-contrast.mjs` 的 `blockOf()` 取每个主题**第一个** `html[data-g="x"]{` 块。若把字体/字身带表写成同形选择器且位置靠前，CI 会取到只有一两个变量的空块、令牌全回退 `:root`，于是 17 套主题都按深色默认值算、浅色断言根本没跑——**这是假绿灯，比红灯危险**。`[data-g]` 是重复同一属性，特异性与语义都不变，但不再被抢先命中。
-
-**品牌标识（v1.27.0）**：主人 2026-10-27 交付两张同稿不同底的 PNG——**白底版**用于 PWA 图标与浏览器标签页图标，**透明版**用于顶栏品牌字左边与首页标识区（替换原来的 9×9 色点 `.mark i`）。母版归档在 `archive/materials/brand/`，产物统一由 `scripts/gen-brand-logo.cjs` 生成，**换标识只改母版再跑这个脚本**，不要手改 `public/` 下的图。两个必须记住的量化口径：
-
-> 1. **maskable 图标要按安全圆缩放**。规范要求关键内容落在直径 80% 的圆内（半径 = 0.4 × 边长）。本图内容四角半径 241.5px（512 画布下）> 安全半径 204.8，直接用会在圆形/圆角裁切时切掉角，所以脚本先整体缩到 0.848 再居中补白；产出后用「非白像素到中心的最大半径」复核（实测 175.9 ≤ 204.8 通过）。
-> 2. **内容 bbox 是 1542×1163（长宽比 1.326），占画布 75.3% × 56.8%**。顶栏标识按**高度**定尺寸、宽度按比例走（桌面 26px / ≤768px 20px；页脚 18px / 16px），改尺寸只改高度，别锁宽。
-
-**品牌资源版本（`?v=N`，v1.27.2 踩坑定稿）**：**图片扩展名**的 `max-age` 曾被 `wiki-cn` 那一跳（腾讯 EdgeOne）统一压成 `Cache-Control: max-age=3600`（实测 `/icon-192.png` 回 3600，我们写的是 604800；favicon、曲绘 `.webp` 同样回 3600）。**2026-11-01 已修复**：根因是 EdgeOne 站点里那条「网站加速」模板规则的 `IF 文件后缀 ∈ {jpg,png,gif,bmp,svg,webp} → Browser Cache TTL：自定义 1 小时`，已改成「Follow origin server Cache-Control」并 Deploy；实测曲绘回 `31536000, immutable`、icon 回 `604800`、favicon 回 `86400`，与直连 CF 一致（详见 [docs/measurement-caliber.md](docs/measurement-caliber.md) §6.4）。顺带更正归因：**这不是 CF 的锅**——CF 的 Browser Cache TTL（zone=14400）只在响应本身没有 Cache-Control 时才补（404 实测 14400）。而且已被缓存的旧图**不随部署失效**——实测源站已是新图、边缘仍回旧图标，这就是「明明换了 favicon 却看不到」的真凶（PWA 安装弹窗里一直是旧图标）。因此**换图标只能靠 URL 变化**：品牌资源一律带 `?v=N`，改图标时四处同改、并把 N +1：
-
-1. `src/layouts/Base.astro` 头部四个图标链接（favicon.ico / favicon-32 / favicon-16 / apple-touch-icon）；
-2. `src/components/Header.astro`（顶栏）与 `src/pages/index.astro`（首页标识区）的 `brand.webp`；
-3. `public/manifest.webmanifest` 的三个 icons；
-4. `public/sw.js` 的 `ASSET_V` 常量（预缓存用同一套 URL；这处忘了同步只会多存一份旧 key 的副本，不会坏）。
-
-`public/manifest.webmanifest` 自身也必须**每次回源**（`_headers` 写 `max-age=0, must-revalidate`，与 `sw.js` 同理）：它里面列着三个 icons 的 `?v=N`，一旦被缓存住，「换图标」就会在最长 1 小时内不生效——2026-10-27 实测部署后 HTML 立刻是新链接，但边缘仍回旧 manifest（`Age: 1090`、旧的 `max-age=3600`）。同理 `public/sw.js` 不把 manifest 放进预缓存、也不对它走 cache-first：`fetch` 里 `url.pathname === '/manifest.webmanifest'` 直接放行。`Base.astro` 的 `\u003clink rel="manifest"\u003e` 上那个 `?v=2` 是**一次性**的破缓存（绕开部署前已躺在边缘的旧 3600 缓存），以后不必再动它。
-
-反例：**不要**为了「让浏览器认新图标」把 PNG 再包一层 SVG——源图是位图，SVG 套壳只影响矢量缩放，对缓存零作用。
-
-页脚两列：左边是「最后一次编辑 日期 + 版本号」，版本号是**网页自己的迭代版本**，读 `src/data/site.json` 的 `version`（从 `1.0.0` 起，改功能时手动 +1，与 npm 包版本无关），右边是 `powered by dsh` 徽章（窄屏靠右对齐）。**页脚原先右栏的「logo + 品牌字 + Enjoy Yourself」已于 v1.29.0 按主人要求移到首页**（见下方「首页标识区」）。日期取构建当天（北京时间），云端每次 push 自动构建，所以等价于最后上线时间。
-
-## 品牌字主题色（v1.29.1）
-
-主人 2026-10-27 要求「把大字标上主题色」并延伸到顶栏。**品牌字（顶栏 `.mark b` 与首页 `.brandblock .mark-bk b`）用 `--acc-ink`，品牌字里的 `↑ ♪ ~` 符号用 `--acc2-ink`**。
-
-关键点：`--acc` 在 6 套浅色世代底色上只有 1.83~4.04:1（knit 1.83、ripples 2.23 最差），直接拿来当字色等于看不清。所以新增两个「可读版主题色」令牌，套路与已有的 `--wl-acc` 一致：
-
-- `:root`：`--acc-ink: var(--acc)`、`--acc2-ink: var(--acc2)` —— 深色世代不覆写，自动跟随。
-- 浅色世代各自覆写为**同色相、压暗**的值：knit `#86651c`(4.66) / `#ac810d`(3.07)、prop `#d42080`(4.50) / `#ff3f9b`(3.02)、qubell `#32749a`(4.54) / `#3493c5`(3.04)、saucer `#37474F`(8.35) / `#748d9a`(3.02)、ripples `#357469`(4.56) / `#e75172`(3.02)、yymf `#3265d5`(4.57) / `#db5a9b`(3.04)。
-- 字身按 4.5:1 判（小号顶栏字也是正文级），符号按 3:1 判（装饰性大字符）。
-
-另有一处易漏：浅色世代里 `html[data-g="knit"] .mark b .sym` 这类规则的优先级高于 `.brandblock .mark-bk b .sym`，会把首页大字标的符号压成 `--ink`（顶栏本来就该如此，字小；首页是 22~30px 大字标，符号要跟字身一起走主题色）。已加 `html[data-g] .brandblock .mark-bk b .sym/.til` 覆盖回来。
-
-## 首页标识区（v1.29.0）
-
-页脚右栏原先的「logo + 品牌字 + Enjoy Yourself」按主人要求移到首页，做成**居中放大的一个 div**（`src/pages/index.astro` 的 `.brandblock`）：
-
-- 结构：横排一行 = 标识图（56px）+ 品牌字（`clamp(22px,2.6vw,30px)`）+ 品牌字下方的副标；整体在页面中居中。
-- 标识图沿用顶栏 `.mark-logo` 的写法（按高度定尺寸、宽度按比例走），只是放大到 56px 并加了投影。
-- 品牌字沿用顶栏 `.mark` 的世代字体与 `↑ ♪ ~` 符号处理，落在 `.mark-bk` 上；**它是纯展示（<span>）不是链接**，所以显式 `cursor: default`。
-- 副标文案：品牌字下方是 `Enjoy JUBEAT, Enjoy Life, Enjoy Friend, And Enjoy Yourself`；**顶栏标识下的副标是 `Jubeat further, explore MORE`，两处不同，别抄串**。
-- `html[data-font] .brandblock .mark-bk b` 覆盖顶栏那条 `html[data-font] .mark b`（窄屏 14px + nowrap），否则首页这枚会被压到 14px。
-
-同批改动：首页「正在施工中，前面的区域以后再来探索吧……」整块移除（`.wip` 样式保留，404 页与「最近更改」页仍在用）；窄屏页脚改成「最后一次编辑 + 版本号」与 dsh 徽章**同一行**（徽章靠右）。
-
-## 项目清单
-
-```
-Beyond_JUBEAT/
-├─ src/                       Astro 源码
-│  ├─ pages/
-│  │  ├─ index.astro          首页（Hero + 站点标识区 .brandblock）
-│  │  ├─ songs.astro          曲目页（SSR：运行时查 D1，双服切换 + 分区筛选 + 搜索/四维筛选/5 种排序）
-│  │  ├─ songs/[songId].astro 曲目详情（SSR：按 song_id 查 D1 单行）
-│  │  ├─ songs/frag.astro     曲目分段端点（SSR：按 srv+gen 出片段，供 /songs/ 懒加载）
-│  │  ├─ admin/songs/         维护者曲目编辑（列表 + 单曲编辑，服务端复核 role）
-│  │  ├─ login.astro          登录（SSR）
-│  │  ├─ register.astro       注册（SSR）
-│  │  ├─ account.astro        我的账户：改昵称/改密/自荐维护者（SSR）
-│  │  ├─ admin.astro          管理面板：站长审批维护者自荐（SSR）
-│  │  ├─ api/                 auth(register/login/logout/me) · account(profile/password/apply) · admin(decide/song-update)
-│  │  ├─ recent.astro         最近更改（SSR：查 D1 recent_changes，原生 details 折叠前后差异）
-│  │  └─ 404.astro            404 页
-│  ├─ components/
-│  │  ├─ Header.astro         顶部导航 + 主题切换按钮
-│  │  ├─ BootScreen.astro     开屏 LOADING 遮罩（每会话一次，is:inline）
-│  │  ├─ Hero.astro           主视觉（站标 / 曲绘方块：桌面 4×4，窄屏双行反向滚动）
-│  │  ├─ SongCard.astro       曲目卡（唯一一份，由 GenBlock 在 /songs/ 内渲染）
-│  │  └─ ThemeScript.astro    世代主题切换脚本（内联进页面）
-│  ├─ layouts/Base.astro      全站骨架（head / 背景板 / footer）
-│  ├─ middleware.ts           全站中间件：会话 cookie → Astro.locals.user
-│  ├─ styles/theme.css        全站样式（源码 60 KB → 产物 31 KB → gzip 7 KB）
-│  ├─ styles/auth.css         用户系统样式（登录/注册/账户/管理）
-│  ├─ styles/songs.css        曲目页样式（卡片 / 工具条 / 世代页 / 搜索筛选排序）
-│  ├─ lib/
-│  │  ├─ title.ts             页面标题格式「XXX · Beyond ↑ JUBEAT ♪~」
-│  │  ├─ db.ts                D1 数据访问层（getAllSongs 全量查询 + isolate 缓存）
-│  │  ├─ auth.ts              认证底层：PBKDF2 / 会话 / Turnstile / 角色
-│  │  ├─ auth-messages.ts     认证错误码 → 中文文案
-│  │  ├─ gens.ts              世代顺序表（13 条，含日服 / 国服归属 + 稳定 url slug）
-│  │  └─ song-view.ts         视图口径：哪些行进哪个服务器视图、算哪个分区（两页共用）
-│  └─ data/
-│     ├─ data.json            页面聚合数据（约 11 KB）
-│     ├─ songs.json           构建期曲目快照（1241 条，本地无 D1 时的兜底）
-│     ├─ site.json            站点自有版本号（页脚 v X.X.X）
-│     └─ recent-changes.json  最近更改的记录（现为空数组，待接后端）
-│
-├─ public/                    原样拷进 dist 根的内容
-│  ├─ assets/
-│  │  ├─ images/bg/           15 张世代主题背景 webp（397 KB，1440 宽）
-│  │  ├─ images/jackets/      1305 张曲绘 webp（11 MB，144px）
-│  │  ├─ images/logo/         12 张世代站标 webp（244 KB，570 宽 DPR2）
-│  │  ├─ images/og/           og:image 分享图（1200x630 png）
-│  │  ├─ fonts/               世代字标字体（2026-11-02 起自托管，10 款 woff2，见下方「字体」）
-│  │  └─ data/ docs/ media/   预留空目录
-│  ├─ _headers                Cloudflare 静态资源响应头
-│  ├─ apple-touch-icon.png    iOS 主屏图标（180x180）
-│  ├─ favicon.ico                       多尺寸站点图标（16/32/48，兜底 /favicon.ico 请求）
-│  ├─ favicon-16.png   favicon-32.png   浏览器标签页图标（两档尺寸）
-│  ├─ robots.txt  sitemap.xml SEO（构建时由 scripts/gen-seo.cjs 生成）
-│  └─ icon-192/512/maskable-512.png     PWA 图标
-│
-├─ docs/                      设计与验收文档
-│  ├─ measurement-caliber.md  **统计口径（做任何计数前先读）**：data-cat 三处 / 世代块 12 vs 13 / grep 单行陷阱 / Tab 分视口 / 断言数看运行时
-│  ├─ database-schema.md      **数据库表结构**：6 张表逐列说明 / 服务器分布 / 空值原因 / 索引用途 / 加列改几处
-│  ├─ data-pipeline.md        数据管线（xlsx → db → seed，含 D1 上线顺序）
-│  ├─ site-structure.md       站点层级结构（页面 / 数据来源 / 导航）
-│  └─ audit-status-2026-10-23.md  22 条审计问题的现状与复测记录
-│
-├─ data/                      管线输入与本地产物（详见 docs/data-pipeline.md）
-│  ├─ xlsx/source.xlsx        国服更新表原件（7 表，2 隐藏）
-│  ├─ xlsx/sheet*.json        xlsx 解析产物（parse-xlsx 生成，受版本控制）
-│  ├─ upstream/               日服 1150 首 + 旧站 513 首冻结快照
-│  └─ jubeat.db               权威曲库（SQLite 392 KB / 1241 曲 / 3723 谱面，不部署）
-├─ db/
-│  ├─ schema.sql              本地建库全量 DDL（含 DROP，勿对线上跑）
-│  ├─ migrate-users.sql       用户系统增量迁移（IF NOT EXISTS，给线上 D1 用）
-│  ├─ migrate-auth.sql        鉴权限流五张表（IF NOT EXISTS，上线前必跑，否则鉴权全 500）
-│  ├─ seed.sql                生成物：幂等数据 DDL + 清空 songs + INSERT + ANALYZE（全量，含 DELETE）
-│  └─ patch.sql               生成物：diff-seed.cjs 产出的增量补丁（日常灌线上用这个）
-├─ scripts/                   工具脚本（不部署）
-│  ├─ build-data.cjs          data/jubeat.db → src/data/data.json + songs.json + 同步曲绘
-│  ├─ db/build-db.cjs         建库导入（上游快照 / xlsx 产物 → data/jubeat.db，末尾 ANALYZE）
-│  ├─ db/parse-xlsx.cjs       xlsx 解析（自带 ZIP 解包，读 data/xlsx/source.xlsx）
-│  ├─ ci/check-refs.cjs       引用完整性检查（源码 / dist 两用）
-│  ├─ ci/check-song-edits.mjs 曲目编辑越权/参数校验（node:sqlite 内存库冒充 D1，调真实 handleSongUpdate）
-│  ├─ ci/check-contrast.mjs   对比度自检（17 套主题 × 多条组合取 min；输出公式理论值，不含背景图）
-│  ├─ ci/check-schema-doc.cjs 文档数字自检（docs/database-schema.md 的计数 vs 真实库，不符即 FAIL）
-│  ├─ scrape-beyond-ave.cjs   上游曲目抓取（beyond the Ave. 站点 → data/upstream/*.json）
-│  ├─ gen-seo.cjs            生成 robots.txt / sitemap.xml（build 前自动跑）
-│  ├─ gen-brand-assets.cjs   生成 og 分享图（图标另由 gen-brand-logo.cjs 产出）
-│  ├─ gen-brand-logo.cjs     从品牌母版生成 favicon / PWA 图标 / 顶栏标识（换标识时跑）
-│  ├─ optimize-images.cjs     图片压缩（logo / bg / 曲绘）
-│  ├─ subset-fonts.py         历史脚本：字体子集化（现字体走 CDN，已不再需要）
-│  ├─ probe/                  历史探测脚本（Playwright 时代留下的）
-│  ├─ screenshots/ logs/ tmp/ 过程产物
-│  └─ README.md
-│
-├─ archive/                   暂不使用的素材与旧项目（不部署，已 gitignore）
-│  ├─ materials/              候选素材：曲绘原图、更新情报、版本资料
-│  └─ legacy/                 jubeat-wiki / -v2 / -v3 / -v4 四代旧项目
-│
-├─ .github/workflows/        build-check.yml（push/PR 校验构建与引用完整性）
-├─ astro.config.mjs          Astro 配置（output: static + @astrojs/cloudflare 适配器）
-├─ tsconfig.json
-├─ wrangler.jsonc            Cloudflare Workers 配置（Worker 入口 + ./dist/client 静态资源 + D1 / KV 绑定）
-├─ package.json              依赖：astro、@astrojs/cloudflare、wrangler、sharp
-├─ dist/                     构建产物，gitignore，部署时上传的就是它
-├─ .dsh-meow/  .dsh-ops/      本地工具数据（已 gitignore，勿提交）
-├─ .gitignore  .gitattributes
-└─ README.md
-```
-
-## 数据来源
-
-| 字段 | 来源 |
-| --- | --- |
-| 曲名 / 谱师 / 三档定数 / 曲绘 | `data/jubeat.db`（SQLite 392 KB，1241 曲 / 3723 谱面；`npm run db` 从 `data/xlsx` + `data/upstream` 重建，细节见 [docs/data-pipeline.md](docs/data-pipeline.md)） |
-| **线上实际读的曲库** | Cloudflare D1 数据库 `beyond-jubeat`（id `91a48a18-62b2-4933-9214-788205926744`），内容与上面那份 SQLite 一致。**日常改数据用 `npm run patch` 生成增量补丁 `db/patch.sql` 去灌，不要重放整份 `db/seed.sql`**（后者会 `DELETE FROM songs`；虽然已不再清 `recent_changes`，但全量灌表本身是「除非必要不做」的动作）。用户表另跑 `db/migrate-users.sql` |
-| 世代归属与年份 | `src/lib/gens.ts` 的 `GEN_ORDER`（13 条：日服 12 + 国服 1），`scripts/build-data.cjs` 里有同源的一张表 |
-| 收录日期 | `songs.added_at`（D1 列名），缺失则为 `null` |
-
-`src/data/data.json` 是上面数据的**聚合快照**，字段：`stat`（总数）、`top`（定数顶格）、`gen`（世代层）、`dist`（定数分布）、`latest`（最近收录）、`dots` / `pad`（散点与填充）、`gen10` / `gen105`（定数 ≥10 / ≥10.5 计数）。
-
-## 开发
+需要 Node 22+ 与本机可用的 `wrangler` 授权（改线上数据时要登录）。
 
 ```bash
-npm install              # astro + wrangler
-npm run dev              # 本地开发服务器（起站前先灌本地 D1，见「本机 workerd 的两个坑」）
-npm run db               # 一条命令重建曲库：xlsx → sheet JSON → data/jubeat.db + db/seed.sql → 站点 JSON
-npm run patch            # 对比 git HEAD 的 seed 与当前 seed，只把受影响的行写进 db/patch.sql（灌线上用）
-npm run data             # 只重新生成 src/data/data.json 与 songs.json 并同步曲绘
-npm run build            # 构建到 dist/
-npm run check            # 七段，顺序固定：引用完整性(源码) → 引用完整性(dist) → 曲目编辑越权/参数校验
-                         # → 对比度自检(17 套主题) → 库表与文档的列一致 → 搜索键上限 → 技法覆盖。
-                         # 任何一段红都不能放行。CI（.github/workflows/build-check.yml）在每次 push / PR
-                         # 上跑构建 + 这整条 check，不必再靠人记。
-                         # 对比度脚本输出的是公式理论值（不含背景图），
-                         # 验收仍以实机渲染为准，脚本只作回归护栏。
-                         #
-                         # 【2026-10-28 实测校准】这个偏差远比原先写的「0.5–1.0」大：文字直接押在
-                         # 世代底图上的元素（顶栏选中态 / 难度徽章 / 段落小字），公式值 3.7~4.1 实际只有
-                         # 1.0~2.6。真实渲染链是四层：--base → .bgv(--bgop 的底图) → body::before(--veil)
-                         # → body::after(顶部 148px 的 --scrim，注意该层 opacity 也是 --bgop)。
-                         # 只读 getComputedStyle 的 backgroundColor 会漏掉底图，必须按上图取像素或用 canvas 合成。
-npm run opt              # 压缩 public/assets/images 下的图片
-# 字体已改为站内自托管（public/assets/fonts/），不需要本地子集化
+npm ci                   # 装依赖
+npm run db               # 重建本地曲库（首次必须，或从别人那里拿一份 data/jubeat.db）
+npx astro dev --port 4321
 ```
 
-构建耗时（2026-10-27 实测，本机 Windows）：**约 1m24s**，从 2m10s 压下来的两处开关：
+### 本地 D1 必须先灌
 
-| 开关 | 做法 | 效果 |
-| --- | --- | --- |
-| Astro 遥测 | `npx astro telemetry disable`（写入全局配置，一次性） | −25s：上报请求在代理环境下会长时间阻塞构建 |
-| server sourcemap | `astro.config.mjs` 里 `vite.build.sourcemap: false` | server 打包 34.6s→13.4s，产物 3.4M→1.2M、少了 41 个 `.map` |
-
-剩下的固定开销拆不开：`import('astro')` 9s + `import('@astrojs/cloudflare')` 10s 是框架自身的模块加载，vite 三段打包约 26s。`scripts/gen-seo.cjs` 只占 1s，不是瓶颈；`NODE_COMPILE_CACHE` 在这台机器上实测反而更慢（27s vs 19s），不要开。
-
-改版式改 `src/pages` 与 `src/components`，改主题色改 `src/styles/theme.css`（**一处主题色是七件东西**：`--acc` 强调色、`--focus` 焦点环、`--acc2` 次级强调、`--ink2`/`--ink3` 次要文字、`--edge`/`--edge2` 描边、`--glass`/`--glass2` 玻璃板，再加 `ThemeScript.astro` 里 `GEN` 的色点 `c`——只改 `--acc` 会留下半套旧色系；改完必须跑 `node scripts/ci/check-contrast.mjs`，它是唯一会拦住「强调色对比度不足 3:1」的关口，2026-10-24 的 saucer/Qubell 修正就是这么发现旧值只有 2.39:1 / 2.59:1 的）。改曲库不要手改 `data/jubeat.db`：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json` 后跑 `npm run db`，再跑 `npm run patch` 把生成的 `db/patch.sql`（只含改动行）灌进 D1。
-
-资源引用一律写站点绝对路径（`/assets/...`）：Astro 会把 CSS 打到 `/_astro/*.css`，相对路径会失效。
-
-`npm run dev` 在本机已经能起（2026-11-04 起，配了 `persistState` 绕过 workerd 建临时目录的权限问题，前置步骤见下「本机 workerd 的两个坑」），SSR 页（`/songs/`、`/recent/`、登录/账户/管理）在 dev 里直接可看，不用再 push 到线上验。`npm run preview` / `npx wrangler dev` 走的是真实 workerd 运行时，本机仍可能踩同一个崩溃，需要验 Workers 侧行为时再试。
-
-## 部署
-
-仓库：<https://github.com/SnowindMe/Beyond_JUBEAT>（main 分支）
-线上：<https://wiki.byd-ub.top>（自定义域名，绑在 `byd-ub.top` zone 下）
-备用：<https://beyond-jubeat.1945743455.workers.dev>
-
-用的是 **Cloudflare Workers（混合渲染）**：`dist/client` 走 Workers Assets 静态资源层（零运行时开销），`/songs/`、`/recent/`、登录/账户/管理页等落进 Worker 脚本在边缘 SSR 时查 D1。哪些路径进 Worker 由 `wrangler.jsonc` 的 `assets.run_worker_first` 决定。
-
-- Worker 名 `beyond-jubeat`，由 **Cloudflare 的 Git 集成（Workers Builds）在 push 到 main 后自动构建 + 部署**。
-- `wrangler.jsonc`：`assets.directory = "./dist/client"`、`not_found_handling = "404-page"`、`main = "src/worker.ts"`（2026-11-03 起是我们自己的入口，它把 fetch 转发给适配器的 handle，只额外导出 `scheduled` 供每日封榜的 cron；原来写的是 `@astrojs/cloudflare/entrypoints/server`）。
-- 两个绑定必须和 Cloudflare 侧一致，漏了会部署失败：`SESSION`（KV；适配器给 Astro Sessions 自动挂的，暂时没用也得写 id）、`beyond_jubeat`（D1）。
-- **Turnstile（人机验证）**：widget 已建好（Managed 模式，域名 `byd-ub.top` 覆盖 `wiki.byd-ub.top`）：
-  1. **secret** 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat`（已写入，值不进仓库）；
-  2. **site key** 是公开值，写在 `src/lib/turnstile-config.ts` 的 `TURNSTILE_SITE_KEY` 常量里——不走构建期环境变量，省掉「控制台忘配 → widget 不渲染 → 注册静默失败」这类坑。
-  少了 secret 时，生产环境注册/登录 fail-closed 拒绝（本地 DEV 放行）。
-  换 widget 时改这两处即可；模式/域名在 Cloudflare 控制台改。
-- 线上 D1 加表：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql`（幂等，`IF NOT EXISTS`）。**不要拿 `db/schema.sql` 对线上跑**——它开头有 `DROP TABLE songs`。
-- 鉴权限流表（2026-11-04 新增，**上线前必须先跑，否则线上登录/注册/改密全 500**——代码会 upsert 这五张表，表不存在直接报 `no such table`）：`npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-auth.sql`（幂等）。
-- Astro 以 `output: "static"` 构建：没标 `prerender = false` 的页面照旧预渲染成 HTML，只有曲目页进 Worker。所以 `dist/client/songs/index.html` 不存在，这是正常的。
-- `dist/server/wrangler.json` 才是带绑定的那份配置，`wrangler deploy` 通过 `.wrangler/deploy/config.json` 指过去。
-- 曲目页的 HTTP 缓存自己设：`cache-control: public, max-age=30, s-maxage=300, stale-while-revalidate=60`；Worker 内还有 60s 的 isolate 级内存缓存（`src/lib/db.ts`）。
-- `dist/` 与 `node_modules/`、`.astro/`、`.wrangler/` 都在 `.gitignore`，产物由云端构建生成。
-
-也就是说：**只需要 push，剩下的云端自己干**。
+`npm run dev` 用的是本地持久化 D1，**空库会让 `/songs`、`/recent` 直接 500**（`D1_ERROR: no such table`）。第一次起站前跑：
 
 ```bash
-git push                 # Cloudflare 自动构建 + 部署
+npx wrangler d1 execute beyond-jubeat --local --file=db/schema.sql
+npx wrangler d1 execute beyond-jubeat --local --file=db/seed.sql
 ```
 
-本地手动部署（一般用不到，等价于云端做的事）：
+⚠️ 别跟着 `astro.config.mjs` 的 `persistState` 路径加 `--persist-to E:/tmp/...`：那是 miniflare 的缓存与 DO 存储，dev server 的 D1 实际落在 `.wrangler/state/v3/d1/`，灌到别处等于没灌。不加 `--persist-to` 才是同一个位置。
+
+`db/schema.sql` 开头有 `DROP TABLE songs`，重灌无副作用。它已含用户系统、热度计数与鉴权限流的全部表，不需要再单独跑迁移文件。
+
+查本地库用 `node:sqlite`，比 `wrangler d1 execute` 快得多（后者每次启动 workerd，动辄十几秒）：
 
 ```bash
-npm run deploy           # build + wrangler deploy
+node -e "const D=require('node:sqlite');const db=new D.DatabaseSync('<库文件>',{readOnly:true});console.log(db.prepare('SELECT count(*) FROM songs').get())"
 ```
 
-> 旧的 `jubeat-wiki-home` worker 已删除；GitHub Actions 的 `deploy.yml` 也已移除，避免和 Cloudflare 的自动构建重复部署。
+### 本机 workerd 的两个坑
 
-### 本机 workerd 的两个坑（适配器为什么这么配）
-
-接 D1 必须装回 `@astrojs/cloudflare`，但它自带的 miniflare/workerd 在这台 Windows 上会崩：
+适配器自带的 miniflare/workerd 在这台 Windows 上会在启动阶段崩：
 
 ```
 Fatal uncaught kj::Exception: kj/filesystem-disk-win32.c++:773: failed: CreateDirectory: #5 拒绝访问。; path = miniflare-email-store
 ```
 
-**坑 1 · 构建期预渲染**：适配器默认用 workerd 跑预渲染，上面这条直接让 `npm run build` 挂掉。解法是 `astro.config.mjs` 里写 `prerenderEnvironment: 'node'`，改用 Node 跑预渲染，产物完全一致，云端（Linux）也不受影响。
+1. **构建期预渲染**：默认用 workerd 跑预渲染，上面这条直接让 `npm run build` 挂掉。解法是 `astro.config.mjs` 的 `prerenderEnvironment: 'node'`，改用 Node 跑，产物完全一致，云端（Linux）不受影响。
+2. **dev server 启动**：未配 `persistState` 时同一崩溃落在 `npm run dev` / `npm run preview` / `npx wrangler dev` 的启动阶段——miniflare 在 `os.tmpdir()` 建临时目录，workerd 要在里面建 DO 存储目录被权限拒绝（设 `TEMP`/`TMPDIR`、手动建空目录都无效）。现在配置里写了 `persistState.path`，把存储挪到自带完全控制权的盘就绕过去了。
 
-**坑 2 · 本地 dev server（2026-11-04 起已能起，别再照着旧结论走）**：未配 `persistState` 时，同一个崩溃发生在 `npm run dev`、`npm run preview`、`npx wrangler dev` 的**启动阶段**——miniflare 在 `os.tmpdir()` 下建临时目录，然后 workerd 自己要在里面建 Durable Object 存储目录，被本机权限拒绝（设 `TEMP`/`TMP`/`TMPDIR`、手动建同名空目录都无效）。
+### 验本地站的三个约定
 
-现在 `astro.config.mjs` 的适配器选项里写了 `persistState: { path: "E:/tmp/astro-cf-state" }`，把 miniflare 的存储从 `os.tmpdir()` 挪到一个自己有完全控制权的盘，坑就绕过去了：`npx astro dev` 实测能正常起在 4321（首次编译约 2 分钟，之后热更新）。**代价是这个持久化目录里的本地 D1 是空的，或者只有很久以前灌过的用户表**——不灌数据就直接访问 `/recent`、`/songs` 会 500：
+- **`curl` 必须带 `--noproxy '*'`**：本机环境变量里有代理，不加会把 `localhost:4321` 甩去代理回 `000`，看着像服务没起（其实在 `netstat` 里正常 LISTENING）。dev 只监听 `::1`，要用 `localhost` 而不是 `127.0.0.1`。
+- **首页、`/songs/`、`/jubility/`、`/recent/` 走中间件边缘缓存**，看响应头 `x-jb-cache`：`HIT` 是缓存命中、`STALE` 是陈旧兜底、没有这个头才是真渲染。改完模板看不见效果时，带一个 `Cookie: jb_session=x` 绕过缓存，别急着改代码。
+- **`CF-Connecting-IP` 在本机会被拦成 403**（`error code: 1000`）。要冒充来源 IP 验限流，改用 `X-Forwarded-For`——取 IP 的代码本来就是 `cf-connecting-ip ?? x-forwarded-for`。
+
+### dev server 在带代理的环境里
+
+带 `HTTP_PROXY`/`ALL_PROXY` 启动会 `read ECONNRESET`：`fetchWorkerExportTypes` 要 fetch `http://localhost/__vite_plugin_cloudflare_get_export_types__`，被 undici 的 EnvHttpProxyAgent 塞进了代理。用 `env -u ALL_PROXY -u HTTP_PROXY -u HTTPS_PROXY` 启动才稳。
+
+## 项目结构
 
 ```
-D1_ERROR: no such table: recent_changes: SQLITE_ERROR
-    at getRecentChanges (src/lib/db.ts:31)
-    at src/pages/recent.astro:18
+src/
+├─ pages/
+│  ├─ index.astro            首页（SSR：运势 + 热榜读 D1）
+│  ├─ songs.astro            曲目库（SSR：双服切换 / 分区 / 搜索 / 筛选 / 排序）
+│  ├─ songs/frag.astro       曲目分段端点（SSR：供曲目库懒加载）
+│  ├─ songs/[songId].astro   曲目详情（SSR：按 song_id 查单行）
+│  ├─ jubility.astro         Jubility 层级页（SSR：现算理论值）
+│  ├─ recent.astro           最近更改（SSR：查 recent_changes）
+│  ├─ login / register / account / admin / admin/songs/
+│  ├─ api/                   auth · account · admin · audio · hot · csp-report
+│  └─ 404.astro
+├─ components/               Hero / SongCard / GenBlock / Fortune / HotBoard /
+│                            SongAudio / BootScreen / Header / ThemeScript / …
+├─ layouts/Base.astro        全站外壳
+├─ middleware.ts             会话 cookie → locals.user、边缘缓存、限流前置
+├─ worker.ts                 Worker 入口（fetch 转发 + scheduled）
+├─ styles/                   theme · songs · fortune · jubility · auth · server-card
+├─ lib/                      数据访问、认证、缓存、主题/世代表、算法
+└─ data/                     生成物：曲库快照、聚合数据、映射表
+public/                       _headers · manifest · sw.js · assets（背景/曲绘/站标/字体）
+data/                         管线输入（xlsx 源表、上游快照）与本地库
+db/                           schema · seed · 迁移 · 增量补丁
+scripts/                      构建、抓取、CI 自检
+docs/                         统计口径、库表说明、管线、站点结构、审计记录
 ```
 
-本地起站前先按顺序灌一遍（`--persist-to` 必须和上面那个路径一致）：
+## 脚本
+
+| 命令            | 作用                                                             |
+| --------------- | ---------------------------------------------------------------- |
+| `npm run dev`   | 本地开发服务器                                                   |
+| `npm run build` | 生成难度统计、拆分谱面数据、构建戳、SEO 文件，然后 `astro build` |
+| `npm run db`    | 重建曲库：xlsx 解析 → `data/jubeat.db` → 站点 JSON               |
+| `npm run patch` | 对比 HEAD 的 seed 与当前 seed，只把改动行写进 `db/patch.sql`     |
+| `npm run data`  | 只重生成 `src/data/` 的聚合数据与曲绘                            |
+| `npm run check` | 七段自检，任何一段红都不能放行                                   |
+| `npm run opt`   | 压缩 `public/assets/images` 下的图片                             |
+
+**改曲库不要手改 `data/jubeat.db`**：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json`，跑 `npm run db`，再跑 `npm run patch` 把生成的补丁灌进 D1。
+
+**改主题色是一处改七件 `theme.css` 令牌**（`--acc` `--focus` `--acc2` `--ink2` `--ink3` `--edge` `--glass` 一套），外加 `lib/themes.ts` 里的色点 `c`。只改 `--acc` 会留下半套旧色系。改完必须跑 `node scripts/ci/check-contrast.mjs`——它是唯一会拦住「强调色对比度不足 3:1」的关口。
+
+⚠️ 主题相关的表必须写成 `html[data-g="x"][data-g]`。`check-contrast.mjs` 取每个主题**第一个** `html[data-g="x"]{` 块，同形选择器写在前面的会被抢先命中，取到只有一两个变量的空块、令牌全回退 `:root`，17 组断言全按深色算——**这是假绿灯，比红灯危险**。
+
+## 数据管线
+
+```
+data/xlsx/source.xlsx ─parse→ data/xlsx/sheet*.json ─┐
+data/upstream/*.json ──────────────────────────────┼→ data/jubeat.db → src/data/*.json
+                                                    ┘        ↓
+                                                        db/seed.sql（全量）
+                                                        db/patch.sql（增量，灌线上用）
+```
+
+`data/jubeat.db` 是本地权威曲库（约 580 KB，生成物、不入库，`npm run db` 随时重建，不需要网络）。线上真实数据在 Cloudflare D1 库 `beyond-jubeat`，内容与之一致。
+
+**日常改线上数据用 `npm run patch` 生成的增量补丁，不要重放 `db/seed.sql`**——后者会 `DELETE FROM songs` 再整表插入。细节见 [docs/data-pipeline.md](docs/data-pipeline.md)。
+
+抓取类脚本需要联网，**不进 build 流程**，曲库更新后手动重跑并提交产物：
+
+- `scripts/ub/build-ub-audio.cjs` → `src/data/ub-audio.json`（BGM 映射，1248 首命中 1185 首）
+- `scripts/ub/build-ub-charts.cjs` → 谱面密度数据，再由 `split-ub-charts.cjs` 拆成每首一个静态 JSON；**密度条画之前必须校验键数**（算出的键数要与库里的官方物量相等，否则不画——实测 3744 个档位里有 251 档上游根本没有谱面文件，宁可少一张图也不给自相矛盾的图。定数不作为判据，库里的定数是官方的，ub 那栏标签会滞后）
+
+## 用户系统
+
+四层身份：**游客**（只读）/ **玩家**（注册即得）/ **维护者**（自荐 + 站长审批）/ **站长**（在 D1 里直接改 `role`，站点不提供提权入口）。邮箱 + 密码注册，不发验证邮件，邮箱只作登录名。
+
+| 项       | 做法                                                                     | 为什么                                                         |
+| -------- | ------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| 密码     | PBKDF2-SHA256，每用户独立盐，迭代次数写进 hash 串                        | 不存明文；将来提强度时老用户下次登录自动重算                   |
+| 会话     | cookie 放随机 token，库里只存 SHA-256                                    | 库被拖走也拿不到能直接用的 cookie                              |
+| cookie   | `HttpOnly; SameSite=Lax; Secure`                                         | 挡 XSS 窃取与跨站 POST 类 CSRF                                 |
+| 登录枚举 | 邮箱不存在也跑一次假 hash                                                | 响应时间一致，不能靠耗时探测注册与否                           |
+| 改密     | 验旧密码 + 清空该用户全部会话                                            | 防 cookie 被盗后直接改密锁人                                   |
+| 人机验证 | Turnstile，secret 走 `wrangler secret`，缺 secret 时生产 fail-closed     | 宁可拒绝也不裸奔                                               |
+| 回跳     | `?next=` 只接受单个 `/` 开头的站内路径                                   | 不做就是开放重定向                                             |
+| 限流     | 每 IP 10/分、200/时、IPv4 前三段 1000/时；登录另加邮箱维度 20/时、200/天 | 单行 upsert + `CASE WHEN` 换窗 + `RETURNING`，一次往返完成计数 |
+
+限流排在 Turnstile **之前**：Turnstile token 是一次性的，先验人机再被 429 挡掉，用户要重新过一遍挑战。超限回 429 + `retry-after`，文案走 `auth-messages.ts`。
+
+静态页没有会话（构建期生成时无人登录），所以**不要在静态页里写死按用户变化的文案**。登录态由 `/api/auth/me` + Header 内联脚本在客户端升级成账户菜单。
+
+> 约定：被 JS 接管、点击后不导航的 `<a>` 必须带 `data-boot-skip`。BootScreen 的监听器挂在 `document` 的 capture 阶段，看到 href 还在就当「要跳走了」而亮进度条。
+
+## 首页的两块运行时内容
+
+**今日运势**：种子 = 日期 + 访客（游客恒为 `guest`，所以可被边缘缓存）。三档各绑一个难度与定数区间，分数 0–1000 与评级共用一把尺，评级图是 `public/assets/images/grade/*.webp`。默认取该服可用的最难档。
+
+**热门歌曲**：前 25 名滚动榜，整块可点（行内绝对定位的链接层，读屏名只有曲名）。热度口径是**独立听众数**，一人一曲一天只算一次（主键 `(day, song_id, visitor)` + `INSERT OR IGNORE`），埋点在 `SongAudio.astro`：真出声满 8 秒才打点，暂停即作废。
+
+窗口是**游标不是实时**：每天 00:05（UTC `5 16 * * *`）把「昨天为末日的前 7 天」封成快照，当天全天读这一份，所以榜天然滞后一小时，当场刷量刷不动。样本不足 30 行时快照标记 `seeded=1`，页面降级成新曲推荐。名次按行序重排，不直接信快照里的绝对名次（曲库删除会留下孤儿 id、名次跳号）。
+
+冷启动的空态是**空态不是坏掉**：右栏这时只剩一行提示，比左侧矮 193px。修法是把提示块本身撑高居中当整块的空态，不是给面板补 padding（`.fh-hot:has(.fh-note){padding-bottom}` 会被 `.fh` 的 `padding` 简写整条盖掉）。
+
+## 缓存与响应头
+
+**站点自己设的缓存分三层**：
+
+1. Worker 内 isolate 级内存缓存：`src/lib/song-data.ts` 的曲库快照 + 60s 的 `song_rev` 修订号（后台改曲会把修订号 +1，快照随即失效），`src/lib/db.ts` 的最近更改则故意不缓存——改一条要立刻看见
+2. 中间件边缘缓存，只对白名单路径、只对 GET、**带 `Set-Cookie` 的绝不入库**（`src/middleware.ts`）。首页与 `/songs/frag` 还要看登录态（运势用 `user.id` 当种子），行长时绕过
+3. BGM 反代进 `caches.default`，只缓存完整 200，Range 由缓存字节本地切 206
+
+> 流式响应要进 `caches.default`，壳里**必须同时带 `content-length` 与 `cache-control`**。缺 `content-length` 会退回 chunked 存储、HEAD 拿不到长度；缺 `cache-control` 则 TTL 取 0，写进去下一毫秒就过期——两层都要有，否则表现为「在库里但永远 MISS」。
+
+`public/_headers` 管静态资源头，**但 CF 的 `_headers` 不作用于 Worker 生成的响应**，所以 SSR 页与 API 的头由 `src/lib/csp.ts` 在中间件里补，两份值必须逐字一致、同时改。
+
+`_headers` 是**逐条命中、同名头累加**，不是后写覆盖：`/assets/images/x` 同时命中 `/assets/*` 与 `/assets/images/*` 会回两个 `Cache-Control`。所以长缓存只留一条 `/assets/*`。通配符写单星号，`/assets/**` 会让整条规则失效。
+
+CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`，只摘六个字段打 `console.log('[csp]')`，不落库——违规量是「改一次内联脚本冒几条」级别，先看 `wrangler tail`。**跨源类违规清零后**才去掉头名里的 `-Report-Only`。逐项放行理由写在 `_headers` 顶部注释里，收口时逐行对着删。
+
+### 品牌资源版本
+
+图片扩展名的 `Cache-Control` 曾被上一跳（腾讯 EdgeOne）统一压成 3600，已于 2026-11-01 改为遵循源站。但**已被缓存的旧图不随部署失效**——这就是「明明换了 favicon 却看不到」的真凶。所以换图标只能靠 URL 变化：品牌资源一律带 `?v=N`，改图时 `Base.astro` 四处图标链接、`Header.astro` 与 `index.astro` 的品牌图、`manifest.webmanifest` 三个 icons、`sw.js` 的 `ASSET_V` 四处同改并把 N 加一。
+
+`manifest.webmanifest` 自身与 `sw.js` 都必须 `max-age=0, must-revalidate`（前者列着带 `?v=N` 的 icons，缓存住会让换图标不生效；后者长缓存会让旧 SW 永远不更新）。
+
+zone 的 `browser_cache_ttl` 已设为 **0**（Respect Existing Headers）。原值是 14400，会把源站的 `max-age=300` 顶成 4 小时，日更的运势与热榜零点后还被压住。
+
+## 检查与 CI
+
+`npm run check` 七段，顺序固定：引用完整性（源码）→ 引用完整性（dist）→ 曲目编辑越权/参数校验 → 对比度自检（脚本报 17 套：16 条主题表 + `:root` 默认）→ 库表与文档的列一致 → 搜索键上限 → 技法覆盖。
+
+任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），验收仍以实机渲染为准——它只作回归护栏。真实渲染链有四层（`--base` → 背景底图 → `--veil` → 顶部 `--scrim`），只读 `getComputedStyle` 的 `backgroundColor` 会漏掉底图。
+
+`.github/workflows/build-check.yml` 在每次 push / PR 上跑 `npm ci` → 重建本地曲库 → `npm run build` → `npm run check`。**check 与 build 顺序不能换**（第二次 check-refs 正是要扫 dist）。干净 clone 里没有 `data/jubeat.db`（它被 `data/.gitignore` 挡在版本库外），所以 CI 里按管线重建，约 3 秒、不需要网络。
+
+## 部署
+
+push 到 main，Cloudflare 的 Git 集成自动构建 + 部署（`wrangler.jsonc` 的 `main` 是 `src/worker.ts`，`assets.directory` 是 `./dist/client`）。
+
+**上线前必须先跑的迁移**（都是幂等的 `IF NOT EXISTS` / `IF EXISTS`，与 `db/schema.sql` 里对应的建表段逐字同源）：
 
 ```bash
-npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/schema.sql
-npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/seed.sql
-npx wrangler d1 execute beyond-jubeat --local --persist-to E:/tmp/astro-cf-state --file=db/migrate-users.sql
+npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-users.sql  # 用户系统
+npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-hot.sql    # 热度打点：漏跑则 /api/hot/hit 500
+npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-auth.sql   # 鉴权限流：漏跑则登录/注册/改密全 500
+npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-p0.sql     # 限流计数表 + 删冗余索引
 ```
 
-`db/schema.sql` 里其实已经含了鉴权限流那五张表，所以本地灌完 `schema.sql` 就够，不用单独跑 `migrate-auth.sql`（那是给线上用的增量）。
+新开一份迁移要同时改 `db/schema.sql` 的对应段落，两份别分叉——本地靠 schema 一次建全，线上只能一条条跑迁移。
 
-`schema.sql` 开头是 `DROP TABLE songs`，本地库重灌没有副作用，可以放心重复跑。`E:/tmp/astro-cf-state` 是临时状态不是数据源，删掉重建只需再灌一次，别把它当权威库、也别提交。
+**不要拿 `db/schema.sql` 对线上跑**，它开头有 `DROP TABLE songs`。
 
-**`curl` 验本地站要带 `--noproxy '*'`**：本机环境变量里有代理，不加的话 `127.0.0.1:4321` 会被甩去代理、回 `000`，看着像服务没起（其实在 `netstat` 里正常 LISTENING）。
+Turnstile secret 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat`；site key 是公开值，写在 `src/lib/turnstile-config.ts`（不走构建期环境变量，省掉「控制台忘配 → widget 不渲染 → 注册静默失败」）。
 
-同理，`platformProxy: { enabled: false }` 也是为了避免 dev 时连本地 D1 代理——所以 dev 里 D1 走的是上面这份本地 miniflare 库，**不是**线上库，改数据要看真实效果请用 `npm run patch` 灌线上；没有 D1 绑定时代码会退回读 `src/data/songs.json`（仅 DEV，构建期会被摇掉，不进 Worker 包）。
-
-### 自定义域名
-
-已把 `wiki.byd-ub.top` 挂到 worker（Workers Custom Domain，证书与 DNS 记录自动生成；当前 `service` 已指向 `beyond-jubeat`）：
-
-```bash
-PUT /accounts/{account_id}/workers/domains
-{"environment":"production","hostname":"wiki.byd-ub.top","service":"beyond-jubeat","zone_id":"..."}
-```
-
-注意：这个 zone 开着 Browser Integrity Check，用 curl 裸请求（不带 UA）访问自定义域名会被 CF 拦成 403 `Cf-Mitigated: challenge`；带浏览器 UA 就是正常 200。浏览器访问不受影响。
-
-### 响应头（`public/_headers`）
-
-Cloudflare 静态资源会自动读取 dist 根下的 `_headers`：
-
-| 路径 | 策略 |
-| --- | --- |
-| `/*` | nosniff、SAMEORIGIN、strict-origin-when-cross-origin、收紧 Permissions-Policy |
-| `/assets/fonts/*`、`/assets/images/*` | `max-age=31536000, immutable`（内容不变，长缓存） |
-| `/_astro/*` | `max-age=31536000, immutable`（文件名带内容 hash，天然不可变） |
-| `/index.html`、`/404.html`、`/manifest.webmanifest`、服务器 `/sw.js` | `max-age=0, must-revalidate`（每次都回源确认；manifest 里列着 icons 的 `?v=N`，缓存住会让换图标不生效） |
-| `/favicon.ico`、`/favicon-16.png`、`/favicon-32.png`、`/apple-touch-icon.png` | `max-age=86400` |
-
-> ⚠️ **用户实际访问的 `wiki-cn.byd-ub.top` 前面还有一跳腾讯 EdgeOne**：它在 2026-11-01 之前把**所有图片扩展名**的 `Cache-Control` 统一改写成 `max-age=3600`（曲绘/png 图标/favicon 全中；`/_astro/*.css`、`/sw.js`、`/api/audio/*.ogg` 不受影响、原样透传）。该行为来自 EdgeOne 的「网站加速」模板规则，**已于 2026-11-01 改为遵循源站**，现在两个域名回的值一致。排查响应头被改写时先看这一跳，别急着改 CF（详见 [docs/measurement-caliber.md](docs/measurement-caliber.md) §6.4）。
-
-### SEO 与站点图标
-
-| 项 | 位置 | 说明 |
-| --- | --- | --- |
-| `robots.txt` / `sitemap.xml` | `public/`（构建时生成） | `npm run build` 先跑 `scripts/gen-seo.cjs`，lastmod 是当天；只收录首页，施工中的二级页不进 sitemap |
-| og:image | `public/assets/images/og/cover.png` | 1200x630，字标反相后压在 ave 背景上；`scripts/gen-brand-assets.cjs` 生成 |
-| apple-touch-icon | `public/apple-touch-icon.png` | 180x180，由 `scripts/gen-brand-logo.cjs` 从品牌母版生成 |
-| canonical / og / twitter | `src/layouts/Base.astro` | 默认拼 `https://wiki.byd-ub.top` + `canonicalPath`；404 页传 `canonicalPath=""` 且 `noindex`，不输出 canonical |
-
-素材（背景/站标/字体）换了之后跑一次 `node scripts/gen-brand-assets.cjs` 重生成分享图。
-
-### CI（GitHub Actions）
-
-| 工作流 | 触发 | 做什么 |
-| --- | --- | --- |
-| `build-check.yml` | push / PR | `npm ci` → `npm run build` → 校验源码与 dist 的引用完整性 |
-
-部署不再走 GitHub Actions，交给 Cloudflare Workers Builds。
+这个 zone 开着 Browser Integrity Check，`curl` 裸请求自定义域名（不带 UA）会被拦成 403 `Cf-Mitigated: challenge`，带浏览器 UA 才正常。浏览器访问不受影响。
 
 ## 性能
 
-实测（本机 `dist/` 静态服务器 + ego 浏览器，1280x800，冷加载跑 3 次取中位数）：
+实测（本机 `dist/` 静态服务器，1280×800，冷加载 3 次取中位数）：20 个请求、160 KB、TTFB 20ms、FCP 440ms、load 470ms。首屏只取当前世代的 1 张背景 + 1 张站标 + 16 张曲绘，曲绘全部 `loading="lazy"`……**除了首页的榜单与运势**：那两处在 260px 高的滚动视窗里，20 行在遮挡区，懒加载只会让图在滚动时才闪出来，而单张曲绘只有 7 KB。
 
-| 指标 | 值 |
-| --- | --- |
-| 请求数 | 20 |
-| 解码后总字节 | 160 KB |
-| TTFB | 20 ms |
-| FCP | 440 ms |
-| DOMContentLoaded | 208 ms |
-| load | 470 ms |
+做过的事：站标由「全部渲染靠 CSS 隐藏」改成单个 `<img>` 按世代换 src（少下 10 张）；曲绘缩到 144×144；背景缩到 1440 宽 q62；PNG 转 WebP；`/_astro/*` 与 `/assets/*` 长缓存；head 内联预热脚本先读 localStorage 再渲染。
 
-字节构成：图片 11 KB + CSS/字体 6 KB（首屏只取当前世代的 1 张背景 + 1 张站标 + 16 张曲绘；背景 32 KB 与站标 11 KB 走 head 里的 preload，和 CSS 并行）。
+`npm run opt` 与字体子集化都是**原地覆盖**，重复跑会越压越糊，要重压先从 git 历史取原图。字体已于 2026-11-02 改为站内自托管（`public/assets/fonts/`，10 款 woff2）——原来走 CDN，跨域往返直接压在 FCP 上，实测单次要 1.0–1.4s。
 
-做过这几件事：
+## 文档
 
-| 项 | 做法 | 效果 |
-| --- | --- | --- |
-| 字标 | 世代站标原本全部渲染、靠 CSS 隐藏 → 改成单个 `<img id="wordLogo">` 按当前世代设 src | 少下 10 张，约 -160 KB |
-| 曲绘 | 78 张缩到 144x144（显示 84 CSS px，够了） | 1344 → 438 KB |
-| 背景 | 世代背景缩到 1440 宽 q62（festo 2026-10-26 从原始卡面重提取，见下条） | 单张 5–60 KB |
-| 站标 | PNG → WebP，360 宽 q88 | 421 → 179 KB |
-| 字体 | 改走 fontsource CDN（见下方「字体」一节） | 仓库不再存字体二进制 |
-| 缓存 | `_headers` 给 `/_astro/*` 加一年 immutable | 二次访问不再回源取 CSS |
-| 主题 | head 里内联预热脚本，先读 localStorage 再渲染 | 老用户刷新不闪 ave |
-
-压缩用 `npm run opt`（sharp）、子集化用 `npm run fonts`（fonttools）。注意两个脚本都是**原地覆盖**，重复跑会越压越糊；要重压先从 git 历史取原图（`91e698e` 是最后一批原图）。
-
-图片是体积大头；整站素材（15 张背景 + 12 张站标 + 1305 张曲绘 + 7 个字体）约 11.7 MB，但首屏只取当前世代的 1 张站标 + 1 张背景 + 16 张曲绘（4×4 方阵；窄屏拆成上下两行各 8 张反向滚动，接缝靠复制一份 8 张实现），曲目页的曲绘全部 `loading="lazy"`，其余按需。
-
-曲目页在 v1.7.0 前是构建期把 1241 首全量烘进 HTML（`dist/songs/index.html` 592 KB raw / brotli 49.8 KB）；改成 SSR 读 D1 之后这份 HTML 不再存在，首屏字节由浏览器按需索取，代价是 Worker 冷启时多一次 D1 查询（命中 isolate 缓存则省掉）。
-
-## 本地预览构建产物
-
-```bash
-npm run build
-# dist/client 里的静态页：随便起个静态服务器即可
-npx wrangler dev         # 本机起不来（见上），要验 SSR 只能看线上
-```
+`docs/` 下有几份**开工前该读**的：`measurement-caliber.md`（任何计数前先读，含 grep 陷阱与口径判据）、`database-schema.md`（表结构）、`data-pipeline.md`（管线与 D1 上线顺序）、`site-structure.md`（页面层级）。`CONTEXT.md` 是术语表，写代码命名前对一下。`docs/audit-*.md` 与 `docs/database-review-*.md` 是历次审查的台账——每条问题后面都跟着处理结论，接手时按它对齐进度，别重做已收口的条目。
 
 ## 说明
 
-`archive/` 里四代旧项目体积约 1.6 GB，由 `archive/.gitignore` 忽略（内含 `materials/`、`legacy/`），不会进仓库。
+`archive/` 是四代旧项目与候选素材（约 738 MB）：根 `.gitignore:77` 整体忽略该目录，`archive/.gitignore` 再忽略其中的 `materials/` 与 `legacy/`，只有目录说明与一份留档模板仍在版本控制里。本地留副本即可。
 
 ---
 
