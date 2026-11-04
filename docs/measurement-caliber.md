@@ -233,6 +233,18 @@ DNS（CF API 记录 + 1.1.1.1 DoH 双向核对）：
    识别法：`curl -s -o /dev/null -D h.txt -w '%{http_code}' URL`，看 `h.txt` 里有没有 `^HTTP/` 行 ——
    有响应头才谈得上「拿到了什么状态码」。
 
+5. **403 + body 是 17 字节 `error code: 1000`**（本机环境，2026-11-04 撞到）
+   **只要请求带 `CF-Connecting-IP` 头就 403**，与本站代码无关——同一个头打
+   `https://www.cloudflare.com/` 也是 403（各自无头 = 200）。`--http1.1`、走不走代理 7897、
+   换哪个值都一样。本机 DNS 解析到 `198.18.0.x`（fake-ip），判定是本地链路这一层与 CF 边缘
+   重复声明客户端 IP 引发。
+   **判据**：状态是 403、body 恰好 `error code: 1000`、且去掉该头就好。响应体不是本站 HTML。
+   **影响与绕法**：这条让「用这个头冒充不同来源 IP 验证限流」全部打空——那批验证其实都打在
+   403 页上，只有 429 是后面单独补的才算数。**冒充 IP 请改用 `X-Forwarded-For`**，
+   取 IP 的代码（`src/pages/api/auth/login.ts:211` 等）本来就是 `cf-connecting-ip ?? x-forwarded-for`。
+   另注：本机出口是 IPv6（`2406:da18:…`），IPv4 前三段并表那一层（`unitOf`）在纯 IPv6 出口下
+   返回 null、不落行，验它得先 `curl -4` 或者用 `X-Forwarded-For` 造 IPv4。
+
 ### 6.3 不要写进口径文档的三句话
 
 | 不要写 | 为什么 |
