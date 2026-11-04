@@ -1790,8 +1790,13 @@ const TYPES = [
             state.cat = 'all';
             state.gen = 'all';
             state.scope = 'all';
+            // 世代是**服务器专属**维度，归零之后连可见的自定义下拉也一起回「全部世代」。
+            // 2026-11-04 主人实测撞出：只写 select.value 不调 ddRefresh，可见按钮文字与
+            // 弹层的 aria-selected 全停在旧世代，列表却已经是全部世代——筛选项显示 A、
+            // 结果却是 B，看着像数据串了。（归零本身是对的：日服筛着 festo 切国服会 0 命中。）
             var genSel = document.getElementById('scGen');
             if (genSel) genSel.value = 'all';
+            ddRefresh();
             var chipsAll = root.querySelectorAll('.sc-cat-set .sc-chip');
             for (var i = 0; i < chipsAll.length; i++) {
               var isAll = chipsAll[i].getAttribute('data-cat') === 'all';
