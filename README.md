@@ -129,7 +129,7 @@ docs/                         统计口径、库表说明、管线、站点结�
 | `npm run db`    | 重建曲库：xlsx 解析 → `data/jubeat.db` → 站点 JSON               |
 | `npm run patch` | 对比 HEAD 的 seed 与当前 seed，只把改动行写进 `db/patch.sql`     |
 | `npm run data`  | 只重生成 `src/data/` 的聚合数据与曲绘                            |
-| `npm run check` | 七段自检，任何一段红都不能放行                                   |
+| `npm run check` | 八段自检，任何一段红都不能放行                                   |
 | `npm run opt`   | 压缩 `public/assets/images` 下的图片                             |
 
 **改曲库不要手改 `data/jubeat.db`**：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json`，跑 `npm run db`，再跑 `npm run patch` 把生成的补丁灌进 D1。
@@ -180,7 +180,9 @@ data/upstream/*.json ───────────────────�
 
 ## 首页的两块运行时内容
 
-**今日运势**：种子 = 日期 + 访客（游客恒为 `guest`，所以可被边缘缓存）。三档各绑一个难度与定数区间，分数 0–1000 与评级共用一把尺，评级图是 `public/assets/images/grade/*.webp`。默认取该服可用的最难档。
+**今日运势**：种子 = 日期 + 访客（游客恒为 `guest`，所以可被边缘缓存）。一天一个运气值（0–120，页面印在卡上并画成刻度尺），三首由它派生：运气越好越可能抽到挑战难度，三首的评价要求也整体抬高（第 1 首比运气低一级、第 3 首高一级，两端截平）。3 级以下的谱面会把要求再往上抬一格到两格（低等级的谱不难，用高评价补回份量）。候选**从各服自己的曲库里按日哈希摊开抽**，不走热榜；日服与国服除了运气值相同以外，歌曲、难度、达成评价都可以不同。评级图是 `public/assets/images/grade/*.webp`。
+
+手气分布与两条联动判据由 `scripts/ci/check-fortune-dist.mjs` 把守（`npm run check` 末段），改采样、改阈值、改档位权重都要重跑它。
 
 **热门歌曲**：前 25 名滚动榜，整块可点（行内绝对定位的链接层，读屏名只有曲名）。热度口径是**独立听众数**，一人一曲一天只算一次（主键 `(day, song_id, visitor)` + `INSERT OR IGNORE`），埋点在 `SongAudio.astro`：真出声满 8 秒才打点，暂停即作废。
 
@@ -214,7 +216,7 @@ zone 的 `browser_cache_ttl` 已设为 **0**（Respect Existing Headers）。原
 
 ## 检查与 CI
 
-`npm run check` 七段，顺序固定：引用完整性（源码）→ 引用完整性（dist）→ 曲目编辑越权/参数校验 → 对比度自检（脚本报 17 套：16 条主题表 + `:root` 默认）→ 库表与文档的列一致 → 搜索键上限 → 技法覆盖。
+`npm run check` 八段，顺序固定：引用完整性（源码）→ 引用完整性（dist）→ 曲目编辑越权/参数校验 → 对比度自检（脚本报 17 套：16 条主题表 + `:root` 默认）→ 库表与文档的列一致 → 搜索键上限 → 技法覆盖 → 运势分布与两条联动判据。
 
 任何一段红都不能放行。对比度脚本输出的是公式理论值（不含背景图），验收仍以实机渲染为准——它只作回归护栏。真实渲染链有四层（`--base` → 背景底图 → `--veil` → 顶部 `--scrim`），只读 `getComputedStyle` 的 `backgroundColor` 会漏掉底图。
 

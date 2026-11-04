@@ -23,6 +23,7 @@
  *   --fh-ink     var(--ink)     主文字
  *   --fh-cyan    #2ee6d6  重音，只给"上升/吉"这类正向信号与刻度
  *   --fh-hot     #ff7a4d  热力，只给名次数字与"新"
+ *   --fh-need    #ffd166  评价区间（运势卡），与榜单升降无关
  *   --fh-on-cyan #08121b  压在 cyan 实心块上的字色
  * 对比度两套（深底对合成底 ~#0d151d：ink 17.8:1、hot 7.5:1、cyan 12.3:1；
  * 浅底对 ~#fbf9f2：ink 14.6:1、hot 5.2:1、cyan 4.6:1），全部过 AA，见下方浅色块。
@@ -56,6 +57,12 @@
   /* 排名涨跌（2026-11-04）：跟随中文习惯，升红降绿。
      与名次/热力用的橙分开，行尾这一列才不会被误读成名次的一部分。 */
   --fh-up: #ff6b6b;
+  /* 评价区间（运势卡）：从松到紧是一条色阶，与榜单的升降无关 */
+  --fh-need: #ffd166;
+  /* 运气刻度（2026-11-05 看板标注「高亮部分改为主题色」）：
+     指针、填充、运气值数字全跟主题重音走，只在浅色块里换一版压暗的 --acc。 */
+  --fh-luck: var(--acc);
+  --fh-luck-dim: color-mix(in srgb, var(--acc) 26%, transparent);
   --fh-down: #46d98b;
   /* 选中态里压在 --fh-cyan 实心块上的字色（浅色主题换成白字） */
   --fh-on-cyan: #08121b;
@@ -63,8 +70,15 @@
   /* 底部渐隐（2026-11-03 主人：运势与热榜底部要跟主题变白天/黑夜）。
      同 --veil 的思路：深底沉成「暗角」，浅底提亮成「白雾」，两套值跟着主题走，
      不写死黑色 —— 浅色世代上压一层黑会变成脏灰。 */
-  --fh-fade: linear-gradient(180deg, rgb(4 9 14 / 0) 0%, rgb(4 9 14 / 0.34) 55%, rgb(4 9 14 / 0.62) 100%);
-  --fh-num: Bahnschrift, 'Bahnschrift SemiCondensed', 'DIN Alternate', 'Segoe UI', sans-serif;
+  --fh-fade: linear-gradient(
+    180deg,
+    rgb(4 9 14 / 0) 0%,
+    rgb(4 9 14 / 0.34) 55%,
+    rgb(4 9 14 / 0.62) 100%
+  );
+  --fh-num:
+    Bahnschrift, "Bahnschrift SemiCondensed", "DIN Alternate", "Segoe UI",
+    sans-serif;
 
   position: relative;
   margin: 0 0 42px;
@@ -74,25 +88,33 @@
   -webkit-backdrop-filter: blur(18px) saturate(1.1);
   backdrop-filter: blur(18px) saturate(1.1);
   color: var(--fh-ink);
-  box-shadow: 0 0 0 1px var(--fh-edge), 0 24px 60px -30px rgb(0 0 0 / 0.85);
+  box-shadow:
+    0 0 0 1px var(--fh-edge),
+    0 24px 60px -30px rgb(0 0 0 / 0.85);
   overflow: hidden;
 }
 
-/* ① 顶部热力条：宽度 = 当日运势高低，晴雨天一眼可见 */
+/* ① 顶部刻度条：宽度 = 今日运气值，晴雨天一眼可见。整条走主题重音色，
+      右端补一段渐隐，读作"还没走到的部分"而不是另一档颜色。 */
 .fh::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0 0 auto;
   height: 3px;
   width: var(--fh-heat, 40%);
-  background: linear-gradient(90deg, var(--fh-cyan), var(--fh-hot));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--fh-cyan) 50%, transparent);
+  background: linear-gradient(
+    90deg,
+    var(--fh-luck-dim),
+    var(--fh-luck) 82%,
+    color-mix(in srgb, var(--fh-luck) 40%, transparent)
+  );
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fh-luck) 45%, transparent);
   transition: width 0.6s ease;
 }
 
 /* 面板四角各一道极短的角标，是唯一的结构装饰 */
 .fh::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 10px;
   pointer-events: none;
@@ -141,6 +163,10 @@ html[data-lum="light"] .fh {
   /* 涨跌色同样换深版：深红/深绿在 ~#fbf9f2 上才是 5.3:1 / 5.4:1，
      直接压原来的亮红绿只有 2.4:1 左右。 */
   --fh-up: #c02b26;
+  --fh-need: #8a5b00;
+  /* 浅底上用 --acc 直接画刻度只有 1.1–3.9:1，换成同色相压暗版（与 --focus 同思路） */
+  --fh-luck: var(--focus);
+  --fh-luck-dim: color-mix(in srgb, var(--fh-luck) 22%, transparent);
   --fh-down: #0e7a4a;
   /* 名次在浅底上不需要 16px 橙光晕（深底靠发光托起，浅底只会糊），换成几乎无感的暗影 */
   --fh-rank-glow: 0 1px 2px rgb(0 0 0 / 0.18);
@@ -165,18 +191,25 @@ html[data-lum="light"] .fh {
   gap: 24px;
   align-items: start;
 }
-.fh-split > .fh { margin-bottom: 42px; }
+.fh-split > .fh {
+  margin-bottom: 42px;
+}
 
 @media (max-width: 900px) {
-  .fh-split { display: block; }
-  .fh-split > .fh + .fh { margin-top: 22px; }
+  .fh-split {
+    display: block;
+  }
+  .fh-split > .fh + .fh {
+    margin-top: 22px;
+  }
 }
 
 /* 窄屏：运势在前、榜在后，单栏；分界线改成横线 */
 @media (max-width: 900px) {
-  .fh { padding: 20px 18px; }
+  .fh {
+    padding: 20px 18px;
+  }
 }
-
 
 .fh-hd {
   display: flex;
@@ -204,33 +237,110 @@ html[data-lum="light"] .fh {
 
 .fh-verdict {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
+  align-items: stretch;
+  margin-bottom: 16px;
+  padding: 12px 14px 11px;
   border-radius: var(--r-md);
-  background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--fh-cyan) 12%, transparent), transparent 62%);
+  background: radial-gradient(
+    120% 140% at 0% 0%,
+    color-mix(in srgb, var(--fh-luck) 14%, transparent),
+    transparent 62%
+  );
   box-shadow: inset 0 0 0 1px var(--fh-edge);
 }
-/* 评级图是深藏青描边的彩图，深底上会糊成一块，用冷光托出来 */
-.fh-grado {
-  width: 68px;
-  height: 68px;
-  flex: none;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--fh-cyan) 45%, transparent)) drop-shadow(0 6px 10px rgb(0 0 0 / 0.55));
+/* 运气读数（2026-11-05 看板标注「改为今日运气值，区间 0-120」）。
+   判决区只有这一个主体：读数、印章、尺指同一个数，所以整块 100% 宽、
+   数字放到 44px 当图形读。原来并排的「今日手气 B」与那句长说明都下线了。 */
+.fh-luck {
+  flex: 1;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
 }
+.fh-luck-hd {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1;
+  font-family: var(--fh-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--fh-luck);
+}
+.fh-luck-hd b {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.fh-luck-hd i {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.66;
+}
+/* 评级印章：读数的色相注脚，顶到行尾，跟尺的两端同一条基线 */
+.fh-luck-hd .fh-grado {
+  margin-left: auto;
+}
+/* 尺：底槽 + 填充 + 指针。填充与顶条同一个值，视觉上是同一件事的两种尺寸 */
+.fh-luck-r {
+  position: relative;
+  height: 8px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--fh-ink) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fh-ink) 8%, transparent);
+}
+.fh-luck-r::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fh-luck-pct, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--fh-luck-dim), var(--fh-luck));
+}
+/* 指针：压在填充末端，比槽高一点，给读数一个落点 */
+.fh-luck-r::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--fh-luck-pct, 0%);
+  width: 2px;
+  height: 16px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--fh-luck);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--fh-luck) 70%, transparent);
+}
+/* 两端刻字（差 / 好）：11px 小字，靠 55% ink 保证 4.6:1 以上 */
+.fh-luck-e {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--fh-ink) 55%, transparent);
+}
+/* 评级印章：钉在读数行右端当色相刻度，只配光不配底 */
+.fh-grado {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.5));
+}
+/* 只剩降级态还在用它（「热度还在统计」） */
 .fh-said {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.5;
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.45;
   font-weight: 600;
 }
 .fh-said b {
-  font-size: 21px;
+  font-size: 15px;
   letter-spacing: 0.04em;
-  color: var(--fh-cyan);
+  color: var(--fh-luck);
 }
-.fh-said small { color: color-mix(in srgb, var(--fh-ink) 62%, transparent); font-size: 12px; }
+.fh-said small {
+  color: color-mix(in srgb, var(--fh-ink) 62%, transparent);
+  font-size: 12px;
+}
 
 .fh-picks,
 .fh-list {
@@ -238,14 +348,16 @@ html[data-lum="light"] .fh {
   margin: 0;
   padding: 0;
 }
-.fh-row { position: relative; }
+.fh-row {
+  position: relative;
+}
 
 .fh-pick {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 0;
+  gap: 10px;
+  padding: 8px 0;
   border-top: 1px solid var(--fh-edge);
 }
 /* 整块可点：链接层铺满整行（同热榜），文字与徽章都在层下面 */
@@ -259,7 +371,9 @@ html[data-lum="light"] .fh {
   outline: 2px solid var(--fh-cyan);
   outline-offset: 2px;
 }
-.fh-pick:first-child { border-top: 0; }
+.fh-pick:first-child {
+  border-top: 0;
+}
 
 .fh-tier {
   flex: none;
@@ -289,7 +403,10 @@ html[data-lum="light"] .fh {
   color: inherit;
 }
 /* 文字块（曲名 + 艺人）：两块共用，宽度吃掉剩下的空间 */
-.fh-txt { flex: 1; min-width: 0; }
+.fh-txt {
+  flex: 1;
+  min-width: 0;
+}
 .fh-txt b,
 .fh-txt small {
   display: block;
@@ -297,21 +414,44 @@ html[data-lum="light"] .fh {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.fh-txt b { font-size: 14px; font-weight: 600; }
-.fh-txt small { font-size: 12px; color: color-mix(in srgb, var(--fh-ink) 62%, transparent); }
+.fh-txt b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.fh-txt small {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--fh-ink) 62%, transparent);
+}
 /* 悬停**不加**下划线（2026-11-03 20:21 主人贴图「不要出现横线」）。
    早先加它是要"点明点的是这首"，但两块都已经是整块热区 + 整行底衬，
    横线只是多画一层线，跟曲名底下的字挤在一起显脏。 */
 
-/* 每首自己的评级图，行尾当印章 */
-.fh-seal {
-  width: 26px;
-  height: 26px;
+/* 行尾簇（2026-11-05）：难度徽章 → 达成评价。两块贴在一起、整体靠右，
+   读作「打哪个难度、要打到什么评价」。margin-left:auto 在这一行上，
+   徽章才会跟着评价一起靠右，而不是被逐个挤开。 */
+.fh-tail {
   flex: none;
   margin-left: auto;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--fh-cyan) 35%, transparent));
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 
+/* 达成评价：只留一枚印章（2026-11-05 主人「后面的 X…X 可以不要」）。
+   20px 在 366px 宽的窄屏上也不挤，评级图本身认得出来。 */
+.fh-need {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+.fh-seal {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  filter: drop-shadow(
+    0 0 6px color-mix(in srgb, var(--fh-need) 45%, transparent)
+  );
+}
 /* ---------------- 榜 ---------------- */
 
 /* 视窗：一屏正好五条，与左栏齐平，也正好是滚动的一屏。
@@ -329,14 +469,26 @@ html[data-lum="light"] .fh {
   --fh-end: calc((5 - var(--fh-n, 5)) * var(--fh-row));
   height: var(--fh-step);
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 calc(100% - 16px),
+    transparent
+  );
   mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
 }
 /* 视窗下方补 30px：右栏（表头 + 视窗）比左栏矮一截，补齐让两块面板同高。 */
-.fh-hot .fh-board { min-height: 290px; padding-bottom: 30px; }
+.fh-hot .fh-board {
+  min-height: 290px;
+  padding-bottom: 30px;
+}
 
 /* 行数不足六行时推到底会露空，就干脆不滚（.is-static 由组件按行数加）。 */
-.fh-view.is-static { height: auto; min-height: var(--fh-step); mask-image: none; -webkit-mask-image: none; }
+.fh-view.is-static {
+  height: auto;
+  min-height: var(--fh-step);
+  mask-image: none;
+  -webkit-mask-image: none;
+}
 
 /* 轮转（2026-11-03 主人：滚到第 10 名后停一会儿，再消失-出现回第 1 名）。
    核心是不让人同时看见"10"和"1"：停住时视窗里只停 6–10 名，
@@ -358,21 +510,44 @@ html[data-lum="light"] .fh {
    速度按「每屏 17.5s」定周期：125s 那个数是含停顿的，去掉停顿还留着它就成了每屏
    26s，反而更慢。想看某一行把鼠标放上去仍然会定住。 */
 @keyframes fh-roll {
-  0% { transform: translateY(0); opacity: 1; }
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
   /* 84% 走完 --fh-end（= 四屏位移），中途没有停点 */
-  84% { transform: translateY(var(--fh-end)); opacity: 1; }
-  90% { transform: translateY(var(--fh-end)); opacity: 1; }
-  92.5% { transform: translateY(var(--fh-end)); opacity: 0; }
-  92.501% { transform: translateY(0); opacity: 0; }
-  97%, 100% { transform: translateY(0); opacity: 1; }
+  84% {
+    transform: translateY(var(--fh-end));
+    opacity: 1;
+  }
+  90% {
+    transform: translateY(var(--fh-end));
+    opacity: 1;
+  }
+  92.5% {
+    transform: translateY(var(--fh-end));
+    opacity: 0;
+  }
+  92.501% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  97%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 /* 位移由组件按行数算（-(行数-5) × 52）：视窗固定五条，桌面窄屏同构 */
 /* linear 而不是 cubic-bezier：0%–84% 之间只有两个关键帧，任何缓动都会让这一整段
    先慢后快再慢，等于又造出「走一屏停一下」的错觉。匀速滚动才像滚动带。 */
-.fh-view.is-rolling .fh-list { animation: fh-roll 84s linear infinite; }
+.fh-view.is-rolling .fh-list {
+  animation: fh-roll 84s linear infinite;
+}
 /* 悬停与键盘聚焦时停在当前帧（含末段：正好把 1–5 名放开看） */
 .fh-view:hover .fh-list,
-.fh-view:focus-within .fh-list { animation-play-state: paused; }
+.fh-view:focus-within .fh-list {
+  animation-play-state: paused;
+}
 
 /* 行本身要 relative：整块可点的链接层按它铺 */
 .fh-row {
@@ -387,7 +562,7 @@ html[data-lum="light"] .fh {
 }
 /* 悬停整行给底衬（原先只给曲名下划线，点在空白处没有反馈） */
 .fh-row::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0 -8px;
   border-radius: 8px;
@@ -395,7 +570,9 @@ html[data-lum="light"] .fh {
   transition: background 0.15s ease;
   pointer-events: none;
 }
-.fh-row:hover::before { background: color-mix(in srgb, var(--fh-ink) 7%, transparent); }
+.fh-row:hover::before {
+  background: color-mix(in srgb, var(--fh-ink) 7%, transparent);
+}
 
 .fh-rank {
   flex: none;
@@ -408,11 +585,17 @@ html[data-lum="light"] .fh {
   font-stretch: condensed;
   color: var(--fh-hot);
   font-variant-numeric: tabular-nums;
-  text-shadow: var(--fh-rank-glow, 0 0 16px color-mix(in srgb, var(--fh-hot) 35%, transparent));
+  text-shadow: var(
+    --fh-rank-glow,
+    0 0 16px color-mix(in srgb, var(--fh-hot) 35%, transparent)
+  );
 }
 /* 第 4 名以后弱化。按名次值打类，不用 nth-child——列表末尾补了五行副本，nth-child 会把副本里的第 1 名也当成靠后的行。 */
-  /* 0.6 的旧值是按深底算的；浅底上橙本来就淡，弱化到 0.72 才不糊 */
-.fh-row.is-low .fh-rank { color: color-mix(in srgb, var(--fh-hot) 72%, transparent); text-shadow: none; }
+/* 0.6 的旧值是按深底算的；浅底上橙本来就淡，弱化到 0.72 才不糊 */
+.fh-row.is-low .fh-rank {
+  color: color-mix(in srgb, var(--fh-hot) 72%, transparent);
+  text-shadow: none;
+}
 
 /* ③ 行尾通道（2026-11-04）：新 / 升降 / 名次不变，右对齐成固定一列。
    以前这里是 12px 三格刻度，靠数格子知道动了几位；右移到行尾后离名次很远，
@@ -432,11 +615,17 @@ html[data-lum="light"] .fh {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.fh-delta.fh-up { color: var(--fh-up); }
-.fh-delta.fh-down { color: var(--fh-down); }
+.fh-delta.fh-up {
+  color: var(--fh-up);
+}
+.fh-delta.fh-down {
+  color: var(--fh-down);
+}
 /* 名次不变写成「—」而不是空着：空着与补位行的留白撞成同一个样子。
    颜色用 ink 的 55%（与次级文字同档），不用 opacity——opacity 会连字重一起淡掉。 */
-.fh-flat { color: color-mix(in srgb, var(--fh-ink) 55%, transparent); }
+.fh-flat {
+  color: color-mix(in srgb, var(--fh-ink) 55%, transparent);
+}
 
 /* 「新」做成描边小签而不是实心块：它是旁注，实心色会在行尾抢走升降的读数。 */
 .fh-new {
@@ -493,21 +682,33 @@ html[data-lum="light"] .fh {
 
 /* 尊重减少动效：停掉循环，交给用户自己滚 */
 @media (prefers-reduced-motion: reduce) {
-  .fh-view.is-rolling .fh-list { animation: none; }
-  .fh-view { height: auto; max-height: 336px; overflow-y: auto; }
-  .fh::before { transition: none; }
+  .fh-view.is-rolling .fh-list {
+    animation: none;
+  }
+  .fh-view {
+    height: auto;
+    max-height: 336px;
+    overflow-y: auto;
+  }
+  .fh::before {
+    transition: none;
+  }
 }
 
 /* 窄屏**也是五条一屏**（2026-11-03 改成多屏滚动后，屏高必须与位移整除，
    缩成三条会与 @keyframes 里的四段位移对不上）；只是整轮更慢：桌面 84s、窄屏 100s，
    对应每屏 21s（窄屏行更高、视觉上速度差不多）。 */
 @media (max-width: 900px) {
-  .fh-view.is-rolling .fh-list { animation-duration: 100s; }
+  .fh-view.is-rolling .fh-list {
+    animation-duration: 100s;
+  }
 }
 /* 窄屏行高不变，所以桌面那两个数（视窗 5 × --fh-row / 面板 290）照用。
    视窗高度已由 --fh-row 推出，不需要再覆写 --fh-step。 */
 @media (max-width: 900px) {
-  .fh-hot .fh-board { min-height: 290px; }
+  .fh-hot .fh-board {
+    min-height: 290px;
+  }
 }
 /* ---------------- 选项与面板（2026-11-03 拆分后新增） ---------------- */
 
@@ -535,15 +736,35 @@ html[data-lum="light"] .fh {
   font-size: 11px;
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
-.fh-seg-b + .fh-seg-b { border-left: 1px solid var(--fh-edge); }
-.fh-seg-b:hover { background: color-mix(in srgb, var(--fh-ink) 9%, transparent); color: var(--fh-ink); }
-.fh-seg-b.is-on { background: var(--fh-cyan); color: var(--fh-on-cyan); font-weight: 700; }
-.fh-seg-b:focus-visible { outline: 2px solid var(--fh-cyan); outline-offset: -2px; }
-.fh-seg-b[hidden] { display: none; }
+.fh-seg-b + .fh-seg-b {
+  border-left: 1px solid var(--fh-edge);
+}
+.fh-seg-b:hover {
+  background: color-mix(in srgb, var(--fh-ink) 9%, transparent);
+  color: var(--fh-ink);
+}
+.fh-seg-b.is-on {
+  background: var(--fh-cyan);
+  color: var(--fh-on-cyan);
+  font-weight: 700;
+}
+.fh-seg-b:focus-visible {
+  outline: 2px solid var(--fh-cyan);
+  outline-offset: -2px;
+}
+.fh-seg-b[hidden] {
+  display: none;
+}
 
-.fh-span { font-size: 11px; letter-spacing: 0.08em; color: color-mix(in srgb, var(--fh-ink) 55%, transparent); }
+.fh-span {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--fh-ink) 55%, transparent);
+}
 
 /* 难度-定数徽章：结构照曲目页的 .sc-lv .lv，但底在深色面板上，
    所以难度色按 ~#0d151d 重新反解到 ≥4.5:1（原浅底那组直接放过来只有 2.6:1）。 */
@@ -568,9 +789,17 @@ html[data-lum="light"] .fh {
   font-weight: 500;
   opacity: 0.75;
 }
-.fh-lv-bsc { color: var(--fh-lv-bsc); }
-.fh-lv-adv { color: var(--fh-lv-adv); }
-.fh-lv-ext { color: var(--fh-lv-ext); }
+.fh-lv-bsc {
+  color: var(--fh-lv-bsc);
+}
+.fh-lv-adv {
+  color: var(--fh-lv-adv);
+}
+.fh-lv-ext {
+  color: var(--fh-lv-ext);
+}
 
 /* 冷启动/切换时不留空框 */
-[hidden] { display: none !important; }
+[hidden] {
+  display: none !important;
+}

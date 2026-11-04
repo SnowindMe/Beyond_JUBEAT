@@ -6,8 +6,12 @@
 //
 // 选项卡的最终形态（主人当日下午连续三句：先「1框可以去掉」（指难度）、
 // 再「日服和国服运势保持一致」、随后「把今日运势的服务器选项卡加回来」）：
-// **只留服务器一组，没有难度选项卡**。难度是三档自带属性（沉淀→BSC / 均衡→ADV /
+// **只留服务器一组，没有难度选项卡**。难度是每首自带属性（沉淀→BSC / 均衡→ADV /
 // 挑战→EXT），徽章显示每首自己的难度与定数，不让用户再选。
+//
+// 【2026-11-05 改】原先三档固定各一首。现在手气是一份、三首共用，评价区间由手气压出来
+// （主人：「日服和国服可以不同歌曲、不同评价，但今日手气要相同」「越高的运势评价所选择的
+// 难度越高，相对应的评价区间也高」）。所以三首可能同档，档位不再与序号绑定。
 //
 // 做法：服务端把两服都算好并渲染成面板，客户端只切 hidden——
 // 切换不走 HTTP 往返，也不丢滚动位置；同一/不同用户的两服结果各自独立抽样。
@@ -41,17 +45,23 @@ const ready = !!snap && !snap.seeded;
  *  - 判空用 `> 0`：先兜 0 再判，字段缺失时按"这服没曲"处理，不会把空选项卡渲染出来。 */
 const SRVS = (['cn', 'jp'] as const).filter((s) => (data.stat.srv?.[s] ?? 0) > 0);
 
-type Pick = PoolSong & { rank: GradeKey; tier: string; diff: Diff; lv: number };
-type Panel = { srv: Svr; picks: Pick[] };
+type Pick = PoolSong & { need: GradeKey; needFloor: GradeKey; tier: string; diff: Diff; lv: number };
+/** hand = 今日手气（三首共用的那一个评级），区间由每首自己的 need/needFloor 画 */
+type Panel = { srv: Svr; hand: GradeKey; picks: Pick[] };
 
 const panels: Panel[] = [];
 if (ready) {
-  const lines = fortuneOf(seed, visitor);
+  // 运气值一份、两服共用（主人 2026-11-05：「日服和国服可以不同歌曲、不同评价，
+  // 但今日手气要相同」）；难度与要求两服各自抽（同日下午「日服和国服的推荐歌曲，
+  // [难度，等级，达成评价]都可以不一样」）。所以 fortuneOf 带上服名当 salt：
+  // 运气值只吃 seed|visitor，两服一致；salt 只进难度与要求错位的抽样键。
   for (const srv of SRVS) {
+    const lines = fortuneOf(seed, visitor, srv);
     const pool = await fortunePool(e, srv).catch(() => []);
     if (!pool.length) continue;
     const picks = pickFortune(pool, lines, seed + '|' + visitor + '|' + srv);
-    if (picks.length) panels.push({ srv, picks });
+    // 手气取这一服的（两服的运气值相同，取哪一服都一样，但用自己这服的更好读）
+    if (picks.length) panels.push({ srv, hand: lines[0].grade, picks });
   }
 }
 
@@ -65,14 +75,11 @@ const freshPicks = ready ? [] : await (async () => {
 const active = panels.find((p) => p.srv === 'jp') ?? panels[0];
 
 const TIER_LABEL: Record<string, string> = { sediment: '沉淀', balance: '均衡', challenge: '挑战' };
-/** 评级 → 分数中位（只用来算热力条宽度，不参与评级判定） */
-const GRADE_MID: Record<string, number> = { exc: 10, sss: 40, ss: 120, s: 280, a: 480, b: 680, c: 880, d: 960, e: 990 };
-const heat = active
-  ? Math.max(20, Math.round(100 - active.picks.reduce((n, p) => n + (GRADE_MID[p.rank] ?? 500), 0) / active.picks.length / 10))
-  : 40;
+/** 今日运气值 0–120（三首共用）。顶条与刻度尺都读它，所以只算一次 */
+const luck = active ? active.picks[0].luck : 60;
 ---
 
-<section class="fh" style={`--fh-heat:${heat}%`} aria-labelledby="fh-fortune">
+<section class="fh" style={`--fh-heat:${(luck / 120) * 100}%;--fh-luck-pct:${(luck / 120) * 100}%`} aria-labelledby="fh-fortune">
   <div class="fh-fade" aria-hidden="true"></div>
   <div class="fh-hd">
     <h2 id="fh-fortune">今日运势</h2>
@@ -87,7 +94,7 @@ const heat = active
         </div>
       </div>
     ) : (
-      <span>{ready ? '三档各一首' : '新曲推荐'}</span>
+      <span>{ready ? '运气一天一个' : '新曲推荐'}</span>
     )}
   </div>
 
@@ -96,28 +103,42 @@ const heat = active
       {panels.map((p) => (
         <div class="fh-pane" data-pane={p.srv} hidden={p !== active}>
           <div class="fh-verdict">
-            <img class="fh-grado" src={`/assets/images/grade/${p.picks[0].rank}.webp`} alt="" aria-hidden="true" width="76" height="76" decoding="async" />
-            <p class="fh-said">
-              今日手气 <b>{p.picks[0].rank.toUpperCase()}</b>
-              <br />
-              <small>这个状态适合打这几首，难度按沉淀 / 均衡 / 挑战各给一首。</small>
-            </p>
+            {/* 运气值：数字、/120 量纲、尺、两端的差/好刻字，四处是同一个数 */}
+            {/* 运气值是这一块的唯一主体：读数、尺、评级印章都指同一个数。
+                原来那句「今日手气 X」与印章重复，长说明也只在第一次看得懂，
+                都去掉了（主人 2026-11-05 框掉）。印章贴在读数右边当色相刻度。 */}
+            <span class="fh-luck">
+              <span class="fh-luck-hd">
+                <b>{p.picks[0].luck}</b><i>/120</i>
+                <img class="fh-grado" src={`/assets/images/grade/${p.hand}.webp`} alt={`今日手气 ${p.hand.toUpperCase()}`} width="30" height="30" decoding="async" />
+              </span>
+              <span class="fh-luck-r" aria-hidden="true"></span>
+              <span class="fh-luck-e" aria-hidden="true"><span>差</span><span>好</span></span>
+            </span>
           </div>
           <ul class="fh-picks">
             {p.picks.map((s) => (
               <li class="fh-pick">
                 {/* 整块可点：同热榜，链接层铺满整行，其余内容在层下面 */}
                 <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
-                {/* 难度-定数徽章：结构照曲目页的 lv 徽章，但底色是深色面板，配色单独反解 */}
-                <span class={`fh-lv fh-lv-${s.diff}`}>
-                  <u>{DIFF_LABEL[s.diff]}</u>{s.lv}
-                </span>
                 <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
                 <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>
                 </span>
-                <img class="fh-seal" src={`/assets/images/grade/${s.rank}.webp`} alt={s.rank.toUpperCase()} width="26" height="26" decoding="async" />
+                {/* 行尾簇：难度徽章 → 达成评价。徽章在评价左边（主人 2026-11-05
+                    「放在评价前面」），读起来是「打这个难度、要打到这个评价」。 */}
+                <span class="fh-tail">
+                  <span class={`fh-lv fh-lv-${s.diff}`}>
+                    <u>{DIFF_LABEL[s.diff]}</u>{s.lv}
+                  </span>
+                  {/* 达成评价：只留印章，不再跟「D…B」那串区间（主人 2026-11-05
+                      「后面的 X…X 可以不要」）。印章是可读的评级图，所以不再另写字；
+                      读屏用一句人话补全。 */}
+                  <span class="fh-need" role="img" aria-label={`达成评价 ${s.need.toUpperCase()}`}>
+                    <img class="fh-seal" src={`/assets/images/grade/${s.need}.webp`} alt="" aria-hidden="true" width="20" height="20" decoding="async" />
+                  </span>
+                </span>
                 <span class="fh-sr">{TIER_LABEL[s.tier]}</span>
               </li>
             ))}
