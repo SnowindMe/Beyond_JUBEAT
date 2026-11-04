@@ -4,19 +4,23 @@
 > DDL 权威是 [db/schema.sql](../db/schema.sql)（本地建库用，含 DROP，**别对线上跑**）；
 > 线上增量是 [db/migrate-users.sql](../db/migrate-users.sql)；
 > 生成物是 db/seed.sql（全量）与 db/patch.sql（增量，日常灌线上用）。
-> 本文数字实测于 **2026-10-28，v1.31.2**，复算命令写在每节末尾——数据会变，别当定值背。
+> 本文数字实测于 **2026-11-04，v1.64.3**（songs 段仍是 2026-10-28 那批口径），
+> 复算命令写在每节末尾——数据会变，别当定值背。
 
 ## 0. 一句话总览
 
-六张表，分两类，**性质完全不同，绝不能同框清空**：
+十六张表，分三类，**性质完全不同，绝不能同框清空**：
 
 | 类别 | 表 | 数据来源 | 清空后能否重建 |
 | --- | --- | --- | --- |
-| **曲库数据** | songs | npm run db 从 data/ 全量推导 | songs **能**（重跑就有） |
+| **曲库数据** | songs | npm run db 从 data/ 全量推导 | **能**（重跑就有） |
+| **曲库缓存修订** | song_rev（单行） | 后台改曲目时 bump | **能**，从 0 起步即可 |
 | **运行时数据** | recent_changes / users / sessions / oauth_accounts / role_requests | 站点运行中被写入 | **不能**，是真实用户与编辑记录 |
+| **计数缓存** | hot_hits / hot_snapshots / hot_ip_days / hot_gaps / auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / auth_email_hours | 访问与登录时累加 | **能**，但会丢当天的热度与限流窗口 |
 
 这条区分不是洁癖，是 2026-10-28 实际踩出来的：seed.sql 曾带 DELETE FROM recent_changes;
 一次「重灌曲库」会把所有真人编辑记录删光且无法重建（已修）。详见 §6。
+2026-11-04 那批计数表全部**不进 seed.sql**，理由相同：它们是坡上的雪，不是底图。
 
 ---
 
@@ -210,16 +214,64 @@ state = pending / approved / rejected。
 
 ---
 
-## 4. 全部索引清单（**11** 个）
+## 3.6 song_rev —— 曲库缓存修订号（单行表，2026-11-04）
+
+    id INTEGER PRIMARY KEY CHECK (id = 1) / rev INTEGER NOT NULL DEFAULT 0 / changed_at TEXT
+
+曲目已改由构建期快照提供（src/lib/song-data.ts 读 ASSETS 的 /data/songs.json，
+缓存 key 是 ?v=<内容版本>&r=<rev>）。所以**后台改一条曲目，光 UPDATE songs 是不会让线上变样的**，
+必须同时把 rev +1，各 PoP 的缓存 key 才会一起换。
+
+用独立行而不是 songs 的 MAX(rowid)：rev 要能在「只改字段、不加行」时也变。
+初始化靠 schema 里的 INSERT OR IGNORE INTO song_rev (id, rev) VALUES (1, 0)。
+线上增量脚本是 db/migrate-p0.sql 的第 2 段（含本表与 hot_ip_days / hot_gaps）。
+
+---
+
+## 3.7 热度计数（4 张表，2026-11-03 / 11-04）
+
+| 表 | 主键 | 用途 |
+| --- | --- | --- |
+| hot_hits | (day, song_id, visitor) | 原始打点。「一个访客对一首歌一个日历日一行」= 去重即表约束，热度口径是**独立听众数** |
+| hot_ip_days | (day, ip_hash) | 每 IP 当天总次数与最近一分钟次数，n / min_key / min_n 同一行，一次 upsert + RETURNING 全拿到 |
+| hot_gaps | key | 同人同曲 60 秒节流，expires 到期即失效 |
+| hot_snapshots | date | 日榜快照，entries 是 JSON 文本，seeded=1 表示样本不足、按 seed 补位 |
+
+前两张的写入不再有任何 COUNT 扫描：早期每次打点都扫 hot_hits 并用 KV 计分钟数，
+2026-11-04 全并进 D1 的单行 upsert（见 src/lib/hotStore.ts）。
+
+## 3.8 鉴权限流（5 张表，2026-11-04）
+
+auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / auth_email_hours。
+
+粒度是「每 IP 每分钟 10 / 每小时 200 / IPv4 前三段并表每小时 1000」，
+登录另加「邮箱+IP 每小时 20 / 每天 200 / 邮箱不分 IP 每小时 20」。
+表结构统一是 (key, n) 加换窗用的 minute / hour / day 列，写法和 hot_ip_days 一样：
+单行 upsert + CASE WHEN 换窗 + RETURNING，一次往返。计数是近似的（允许边界多放几个）。
+
+限流排在 Turnstile 之前——Turnstile token 一次性，先验再被 429 挡掉就得重新过人机。
+窗口外的旧行由 dropSweep 随请求清掉、挂 waitUntil。线上增量脚本：db/migrate-auth.sql。
+
+---
+
+## 4. 全部索引清单（**15** 个）
 
 | 表 | 索引 |
 | --- | --- |
 | songs | idx_songs_jp_gen / idx_songs_cn_cat / idx_songs_title / idx_songs_order |
-| recent_changes | idx_recent_changed_at |
+| recent_changes | idx_recent_changed_at（倒序）/ idx_recent_changed_at_asc（归档清理用） |
 | users | idx_users_email（UNIQUE） |
 | sessions | idx_sessions_user / idx_sessions_exp |
 | oauth_accounts | idx_oauth_user |
 | role_requests | idx_role_req_pending（UNIQUE 部分索引）/ idx_role_req_state |
+| hot_hits | idx_hot_hits_day_ip（主键已覆盖 day+song，不再另建） |
+| hot_ip_days | idx_hot_ip_days_day |
+| hot_gaps | idx_hot_gaps_exp |
+
+> 【2026-11-04 复查】索引从 11 涨到 15 是热度与限流那批表带来的，不是随手加的。
+> 同一天删掉了 idx_hot_hits_day_song（主键 (day, song_id, visitor) 的最左前缀与它完全重复）；
+> idx_songs_jp_gen / idx_songs_cn_cat 留着——收益确实归零，但连带面大
+> （理由记在 docs/database-review-2026-11-04.md 的 P0-4）。
 
 复算：
 
