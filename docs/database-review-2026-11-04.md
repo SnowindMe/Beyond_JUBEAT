@@ -12,13 +12,13 @@
 
 免费额度换算成人话（全部来自 Cloudflare 官方定价页 / limits 页，2026-11-04 实读）：
 
-| 资源 | 免费额度 | 现在的单次消耗 | 撞墙点 |
-|---|---|---|---|
-| D1 rows read | 5,000,000 / 天 | 1248 行 / 次全表扫 | 约 4,000 次浏览 / 天 |
-| D1 rows written | 100,000 / 天 | 1 行 / 次打点 | 10 万次打点 / 天 |
-| KV keys written | **1,000 / 天** | 2 次 / 次打点 | **约 500 次打点 / 天** |
-| Workers 请求 | 100,000 / 天 | 1 / 次访问 | 10 万 PV / 天 |
-| Workers CPU | **10 ms / 请求** | 全量 SSR | 单请求上限，不是日额度 |
+| 资源            | 免费额度         | 现在的单次消耗     | 撞墙点                 |
+| --------------- | ---------------- | ------------------ | ---------------------- |
+| D1 rows read    | 5,000,000 / 天   | 1248 行 / 次全表扫 | 约 4,000 次浏览 / 天   |
+| D1 rows written | 100,000 / 天     | 1 行 / 次打点      | 10 万次打点 / 天       |
+| KV keys written | **1,000 / 天**   | 2 次 / 次打点      | **约 500 次打点 / 天** |
+| Workers 请求    | 100,000 / 天     | 1 / 次访问         | 10 万 PV / 天          |
+| Workers CPU     | **10 ms / 请求** | 全量 SSR           | 单请求上限，不是日额度 |
 
 **最先撞的是 KV，不是 D1，而且早 8 倍。** hit.ts:36-41 的 bump 每次打点做 1 次 get + 1 次 put，hit.ts:91 再 put 一个节流键——每次有效打点写 2 次 KV。1000 写 ÷ 2 = 500 次。KV 免费版超限是**直接报错**（不是排队），而 hit.ts:90-92 只有一个裸 try，打点会开始静默丢。
 
@@ -68,13 +68,13 @@ Fortune.astro:34-37 每个首页请求跑一次 SELECT SUM(...) FROM songs 全�
 
 现在 6 张表混在一个库里，但它们的读写特征完全不同，不该有同一套存储策略：
 
-| 表 | 行数 | 读写特征 | 该放哪 |
-|---|---|---|---|
-| songs | 1248 | 只读、构建期全量产出 | **静态资产（见 P0-1）** |
-| users / sessions / role_requests | 几十～几百 | 低频写、低频读 | D1 保留 |
-| recent_changes | 无上限 | 只在 /recent 读 200 行 | D1 保留，但要加清理 |
-| hot_hits | 天量写 | 只在封榜时按天聚合 | **Analytics Engine 或 R2** |
-| hot_snapshots | 每天 1 行 | 读多写少 | D1 或 KV |
+| 表                               | 行数       | 读写特征               | 该放哪                     |
+| -------------------------------- | ---------- | ---------------------- | -------------------------- |
+| songs                            | 1248       | 只读、构建期全量产出   | **静态资产（见 P0-1）**    |
+| users / sessions / role_requests | 几十～几百 | 低频写、低频读         | D1 保留                    |
+| recent_changes                   | 无上限     | 只在 /recent 读 200 行 | D1 保留，但要加清理        |
+| hot_hits                         | 天量写     | 只在封榜时按天聚合     | **Analytics Engine 或 R2** |
+| hot_snapshots                    | 每天 1 行  | 读多写少               | D1 或 KV                   |
 
 ### 6. hot_hits 换 Analytics Engine
 
@@ -116,6 +116,7 @@ Turso 的定位是「另一个同样要积分额的免费档」，它的优势�
 ---
 
 > **2026-11-04 逐条复查（本文件写完之后，工作区又动了）**
+>
 > - P0-1 曲目静态化 **已完成**：src/lib/song-data.ts 走 ASSETS 绑定读 /data/songs.json（带 ?v= 内容哈希），src/data/songs-version.json 记录版本，public/_headers:34-40 给 /data/* 一年 immutable。songs 表的请求期读已归零。
 > - P0-2 打点 KV 归零 **已完成**：db/schema.sql:178-200 新建 hot_ip_days 与 hot_gaps，src/lib/hotStore.ts:52-69 的 bumpIp 一次 upsert + RETURNING 同时拿 n 与 minN，src/pages/api/hot/hit.ts 三层闸门全落 D1，KV 只剩快照。KV 写入从 2 次/点降到 0。
 > - P0-3 cron 清理 **已完成**：src/worker.ts:34-46 的 scheduled 同时调 sealToday + pruneExpiredSessions + pruneRecentChanges，登录路径已不再扫会话表。
@@ -133,3 +134,9 @@ Turso 的定位是「另一个同样要积分额的免费档」，它的优势�
 3. P1-6（hot_hits 迁 Analytics Engine，要重写封榜）
 4. P1-7、P1-8、表结构 3
 5. 只有在 P0 做完还撞墙时，才谈换库
+
+> **2026-11-04 23:2x 远程执行记录（wrangler 未登录，改用 Cloudflare MCP 的 D1 query 通道）**
+> 先查线上库：auth_* 五张表**其实早就建好了**（schema 与 db/migrate-auth.sql 一致，推测是 11-04 白天某次远程执行跑过），线上登录/注册并非 500，实测 303 跳 `?e=captcha-missing` 正常。
+> 真正缺的是本文件 P0-2 / P0-4 / P0-3 的对象：`hot_ip_days`、`hot_gaps`、`song_rev`、`idx_recent_changed_at_asc` 全不在，`idx_hot_hits_day_song` 还在。已按 db/migrate-p0.sql 原样执行（去注释、单次 query），song_rev 初始化为 rev=0，旧索引已删。
+> 验收：POST /api/hot/hit 回 204，`hot_ip_days` 落一行（n=1, min_n=1），`hot_gaps` 落一行（60 秒后过期）；连打 30 次鉴权端点，第 11 次起 429 + `location: /login/?e=too-many` + `retry-after: 60` + `cache-control: no-store`，计数行按 key 正确累加（不再有 `no column named n`）。
+> **注意**：远程库与 db/schema.sql 仍然分叉——schema.sql 已含这三张表，说明新库能一次建全，但**已上线的库不会自己补**，所以 migrate-p0.sql 必须留着并在换环境时照跑。

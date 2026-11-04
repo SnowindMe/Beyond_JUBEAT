@@ -237,6 +237,8 @@ npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-p0.sql     # �
 
 **不要拿 `db/schema.sql` 对线上跑**，它开头有 `DROP TABLE songs`。
 
+四份都已于 2026-11-04 在线上跑过（鉴权五表与热度计数三表均已存在，`idx_hot_hits_day_song` 已删）。当时 wrangler 没登录，走的是 Cloudflare MCP 的 D1 query 通道；`wrangler d1 execute --remote` 需要先 `npx wrangler login`。**已上线的库不会因为 schema.sql 改了而自己补表**，换环境或回滚后重跑这四条是常规动作。
+
 Turnstile secret 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jubeat`；site key 是公开值，写在 `src/lib/turnstile-config.ts`（不走构建期环境变量，省掉「控制台忘配 → widget 不渲染 → 注册静默失败」）。
 
 这个 zone 开着 Browser Integrity Check，`curl` 裸请求自定义域名（不带 UA）会被拦成 403 `Cf-Mitigated: challenge`，带浏览器 UA 才正常。浏览器访问不受影响。
