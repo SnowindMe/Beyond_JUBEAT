@@ -53,9 +53,21 @@ if (ready && list.length && list.length < TOP) {
   for (const id of rest) {
     const s = byId.get(id);
     if (!s) continue;
-    list.push({ ...s, rank: list.length + 1, delta: 0, isNew: false, filled: true });
+    list.push({ ...s, delta: 0, isNew: false, filled: true });
   }
 }
+
+/* 【名次按行序重排】2026-11-04 主人「热门歌曲排位错乱」。
+   原先直接显示快照里的 rank，而快照的 rank 是原窗口的绝对名次，
+   中间一旦有曲目取不到（远端 D1 少了那几行），名次就跳号：实测线上出现过
+   1…14 之后接 20、21 —— 15–19 那几首在库里查不到，被下面 filter 掉了。
+   更糟的是补位行用 list.length + 1 起算，17 起头正好压到还没出场的那两个真名次上。
+   名次在版面上就是行的位置，所以这里按最终行序重排 1..N：
+   取不到的曲目让后面的行顶上来，补位行接着往下数，屏幕上的数字永远与位置一致。
+   原快照名次只作排序依据，不再直接上台面。 */
+list.forEach((r, i) => {
+  r.rank = i + 1;
+});
 
 /** 一屏五行；不足六行时推到底会露空，所以那时不滚、也不补副本 */
 const scrolls = list.length > 5;
@@ -82,26 +94,34 @@ const shown = list;
           {shown.map((s, i) => (
               <li class={`fh-row${s.rank >= 4 ? ' is-low' : ''}`}>
                 <span class="fh-rank">{s.rank}</span>
-                {/* 升降刻度与「新」共用一个 22px 槽：谁在都占同样的位，曲名不会跳 */}
-                <span class="fh-slot" aria-hidden="true">
-                  {s.isNew ? (
-                    <span class="fh-new">新</span>
-                  ) : s.filled ? null : (
-                    <span class={`fh-delta ${s.delta > 0 ? 'fh-up' : s.delta < 0 ? 'fh-down' : 'fh-flat'}`}>
-                      <i /><i /><i />
-                    </span>
-                  )}
-                </span>
                 <span class="fh-sr">
                   {s.isNew ? '新进榜' : s.filled ? '新上架' : s.delta > 0 ? `上升 ${s.delta} 位` : s.delta < 0 ? `下降 ${-s.delta} 位` : '名次不变'}
                 </span>
                 {/* 整块可点：链接层绝对定位铺满整行（只有它可聚焦、也只有一个读屏名），
                     曲名/曲绘都在层下面，不嵌套、不用给文字加下划线来暗示可点 */}
                 <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
-                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" loading="lazy" decoding="async" />
+                {/* 不用 loading="lazy"（2026-11-04 主人「未加载图片只有用户对页面有操作了才会加载」）：
+                    视窗只有 260px 高、overflow hidden，25 行里 20 行落在遮挡区，
+                    浏览器判定不可见就一张都不拉；等滚动把它们带进视窗已经是几秒后的事，
+                    观感上就是「先空着，动一下鼠标才冒出来」。曲绘单张约 7KB、25 张不到 200KB，
+                    这里省的不是带宽而是首屏正确性。 */}
+                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
                 <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>
+                </span>
+                {/* 升降与「新」在行尾（2026-11-04 主人「要放在右边，上升下降显示出几名」）：
+                    右对齐成一列，数字带正负号，上升红、下降绿（跟随中文习惯，与名次的橙分开）。 */}
+                <span class="fh-tail" aria-hidden="true">
+                  {s.isNew ? (
+                    <span class="fh-new">新</span>
+                  ) : s.filled ? null : s.delta === 0 ? (
+                    <span class="fh-flat">—</span>
+                  ) : (
+                    <span class={`fh-delta ${s.delta > 0 ? 'fh-up' : 'fh-down'}`}>
+                      {s.delta > 0 ? `↑${s.delta}` : `↓${-s.delta}`}
+                    </span>
+                  )}
                 </span>
               </li>
           ))}
