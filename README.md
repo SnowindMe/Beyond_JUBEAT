@@ -154,7 +154,7 @@ data/upstream/*.json ───────────────────�
 
 抓取类脚本需要联网，**不进 build 流程**，曲库更新后手动重跑并提交产物：
 
-- `scripts/ub/build-ub-audio.cjs` → `src/data/ub-audio.json`（BGM 映射，1248 首命中 1185 首）
+- `scripts/ub/build-ub-audio.cjs` → `src/data/ub-audio.json`（BGM 映射，1248 首命中 1219 首、97.7%；未命中 29 首是上游确实没有的国服独占曲与两首 BTA- 占位曲。上游「音乐魔方」目录的音频改成带内容哈希的文件名 `bgm.<hash>.ogg`，脚本按上游返回的 assets 原样取值，不影响匹配方式）
 - `scripts/ub/build-ub-charts.cjs` → 谱面密度数据，再由 `split-ub-charts.cjs` 拆成每首一个静态 JSON；**密度条画之前必须校验键数**（算出的键数要与库里的官方物量相等，否则不画——实测 3744 个档位里有 251 档上游根本没有谱面文件，宁可少一张图也不给自相矛盾的图。定数不作为判据，库里的定数是官方的，ub 那栏标签会滞后）
 
 ## 用户系统
