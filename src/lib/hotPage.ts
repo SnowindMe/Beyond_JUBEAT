@@ -30,13 +30,28 @@ import {
   recordHit,
   saveSnapshot,
   votesIn,
+  windowSongCount,
   type Env,
   type Snapshot,
 } from "./hotStore";
 
 /** 快照保留天数与"数据够了"的门槛 */
 const KEEP_DAYS = 30;
-const MIN_ROWS = 30;
+
+/* 【2026-11-10 判据从行数改成曲数】原判据是 rows.length < MIN_ROWS(30)，
+   注释写着"曲数会被少量人刷成假饱和，行数才是真量"——那是对大站说的，
+   放到我们这种小站上正好反了：
+
+   行数 = 曲数 × 每曲听众数，而听众数现在几乎恒等于 1（全站每天十几个游园者）。
+   于是"够不够 30 行"的真实含义是"得凑够 30 首不同的曲"，比榜还长（TOP=25）。
+   实测 2026-11-10 前 7 天窗口（11-03~11-09）只有 17 行 / 17 首真实命中，
+   每天都判 seeded、首页两块一起降级成「热度统计中」——功能已经连续多日不可用。
+
+   改成判**曲数 >= MIN_SONGS(12)**：这才是"榜有没有意义"的判据，只有 3-4 首时
+   排前 25 是凑数，12 首起排出来能看，剩下的位置由 fallbackPool 补最近上架。
+   刷的顾虑由表主键 (day, song_id, visitor) 承担，换 IP 换 cookie 也要真打到接口，
+   而且一次刷满 12 首反而让榜更完整，不会坏事。 */
+const MIN_SONGS = 12;
 
 /** 同一 isolate 内并发一天只封一次（首页可能被同时打开好几次） */
 const inflight = new Map<string, Promise<Snapshot>>();
@@ -84,9 +99,9 @@ export async function sealToday(env: Env): Promise<Snapshot> {
     const rows = await votesIn(db, from, to);
     const current = rankOf(rows);
 
-    // 少于门檻就当数据还不够：榜里装最近上架，页面据 seeded 标"热度统计中"。
-    // 判据用行数而不是曲数——曲数会被少量人刷成假饱和，行数才是真量。
-    const seeded = rows.length < MIN_ROWS;
+    // 曲数不足 MIN_SONGS 就当数据还不够：榜里装最近上架，页面据 seeded 标"热度统计中"。
+    // 判据为什么是曲数而不是行数，见文件头 MIN_SONGS 的注释。
+    const seeded = (await windowSongCount(db, from, to).catch(() => 0)) < MIN_SONGS;
     let entries;
     if (seeded) {
       entries = await fallbackPool(db, TOP).then((ids) =>

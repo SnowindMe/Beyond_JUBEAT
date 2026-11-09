@@ -78,6 +78,16 @@ export async function isGapThrottled(db: D1Database, visitor: string, songId: st
   return !!row && Date.parse(row.expires) > now;
 }
 
+/** 窗口里有多少**不同的曲**被听过。
+ *  【2026-11-10】冷启动判据从"行数"改成"曲数"，见 hotPage 的 MIN_SONGS 注释。 */
+export async function windowSongCount(db: D1Database, from: string, to: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(DISTINCT song_id) AS n FROM hot_hits WHERE day BETWEEN ? AND ?')
+    .bind(from, to)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
 /** 窗口内的全部命中行（只取算名次要用的两列，够用了） */
 export async function votesIn(db: D1Database, from: string, to: string): Promise<{ song_id: string; visitor: string }[]> {
   const { results } = await db
