@@ -253,7 +253,9 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         {/* 【2026-11-12 主人「在页脚编辑时间和版本号下面加上版权样式」】
             第三块信息放在两个徽章**下面**一行：flex: 1 0 100% 强制换行，
             免得在窄屏被挤成第三个并排徽章、或把两个数据徽章挤散。 */}
-        <span class="foot-copy">© 2026 Beyond ↑ JUBEAT ♪~</span>
+        {/* 【2026-11-13 主人「页脚的©换成&copy;」】源码里写实体而不是 © 字符，
+            静态文本 Astro 原样写进 HTML，由浏览器解码成 ©（构建产物里应看到 &copy;）。 */}
+        <span class="foot-copy">&copy; 2026 Beyond ↑ JUBEAT ♪~</span>
       </div>
       <div class="foot-r">
         {/* 站点标识（logo + 品牌字 + Enjoy Yourself）已于 2026-10-27 按主人要求
