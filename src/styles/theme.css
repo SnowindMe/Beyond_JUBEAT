@@ -1419,6 +1419,18 @@ html[data-g="knit"] #wordLogo {
 .foot-ver {
     color: var(--ink3);
 }
+/* 【2026-11-12 主人「在页脚编辑时间和版本号下面加上版权样式」】
+   版权行独占一行（flex: 1 0 100%），不与两个徽章争同一行；字号比徽章再小半档、
+   颜色留在 --ink3——它是收尾区的注脚，不是第三块信息。
+   窄屏（≤768px）左栏被右侧 121px 的 dsh 徽章挤窄，允许它换行而不是溢出。 */
+.foot-copy {
+    flex: 1 0 100%;
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0.08em;
+    color: var(--ink3);
+    overflow-wrap: anywhere;
+}
 .foot-slogan {
     font-size: 11px;
     color: var(--ink3);

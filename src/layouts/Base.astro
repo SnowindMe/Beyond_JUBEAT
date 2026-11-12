@@ -247,6 +247,10 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         </span>
         {/* title：页脚只显示 v1.15.0，读者不知道这是站点迭代版本还是 npm 包版本（审计第 21 条） */}
         <span class="foot-badge foot-ver" title="站点迭代版本，与 npm 包版本无关">v{site.version}</span>
+        {/* 【2026-11-12 主人「在页脚编辑时间和版本号下面加上版权样式」】
+            第三块信息放在两个徽章**下面**一行：flex: 1 0 100% 强制换行，
+            免得在窄屏被挤成第三个并排徽章、或把两个数据徽章挤散。 */}
+        <span class="foot-copy">© 2026 Beyond ↑ JUBEAT ♪~</span>
       </div>
       <div class="foot-r">
         {/* 站点标识（logo + 品牌字 + Enjoy Yourself）已于 2026-10-27 按主人要求
