@@ -1430,7 +1430,11 @@ html[data-g="knit"] #wordLogo {
        在日期第一个数字的左沿上（实测未缩进时差 9.8px）。缩进放在 padding 而不是
        margin：满宽 100% 的盒子左移会跟 .foot-l 的 gap 一起把行推歪。 */
     padding-left: 10px;
-    font-size: 10px;
+    /* 【2026-11-12 主人「可以加点字号，然后向下移一些距离」】
+       10px 太小读不清 → 11px；与上方徽章的间距由 .foot-l 的 gap 8px 再加 4px，
+       合计 12px，让注脚跟数据行有明确的分层。字号变大不影响左对齐（© 仍压 10px）。 */
+    margin-top: 4px;
+    font-size: 11px;
     line-height: 1.5;
     letter-spacing: 0.08em;
     color: var(--ink3);
