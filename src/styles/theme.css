@@ -1521,19 +1521,21 @@ html[data-g="knit"] #wordLogo {
    原来这套 logo + 品牌字 + Enjoy Yourself 挤在页脚右下角，尺寸 13~18px 很小。
    主人要求：页脚去掉它，首页做一个居中放大的 div 显示。
    沿用 .mark 的世代字体与 ↑ ♪ ~ 符号处理，只把尺寸放大、整体居中。 */
-/* ---------- 首页 · 相关站点（2026-11-02 改为胶囊容器） ----------
+/* ---------- 首页 · 相关站点 ----------
    位置：Hero 与站点标识区之间（主人 2026-11-01 说的「黄线处」）。
 
-   【2026-11-02 主人第三版】原话：「相关站点这样设计太占地方了，能否将站点设计成
-   一个个小胶囊放进一个容器里展示（友链胶囊就设置成金色）」。
-   此前是「三栏 × 每栏一列链接行」的清单：11 条链接各占一行 30px，
-   整块高度约 250px，且折两栏时还会剩半行空位。
-   现在：一个容器里三行，每行 = 组标签 + 该组的胶囊流式排布。
-     · 胶囊 30px 高、圆角 999、图标 14px + 名字，横向 wrap；
-     · 友链用金色胶囊（本区块唯一的彩色强调，因为它是最主要的出口）；
-     · 数据来源 / 设计参考用中性描边胶囊，视觉让位给友链；
-     · 无网址的条目（音游街小程序）用虚线描边 + 更淡的字色，一眼看出不是链接。
-   高度从约 250px 压到约 150px，且不再有任何断点下的「空半行」问题。 */
+   【2026-11-13 定稿：对齐网格的目录】
+   历史：2026-11-02 三栏清单 → 一个容器里的 30px 胶囊（主人当时要的「小胶囊」）；
+   2026-11-13 主人「链接有点多了，看着有些占地方」→ 先去壳成纯文字，
+   当天又说「感觉有些丑，重新换一种方式」。
+   中间试过三版并排看过截图：
+     · 纯文字 flex 换行：每组的右边缘停在不同地方，像一段没排完的正文；
+     · 24px 小方签：形状问题解决，但 27 个灰底块排成一片，仍是「一堆按钮」；
+     · 对齐网格（本版）：跨组共用同一条列线，名字左缘整列对齐，行高一致 ——
+       读起来是一份目录，不是一段话，也不再有 27 个底色块。
+   友链用一个 22px 的金字底板（半透明浅黑 + 金色字）与其它组区分：
+   金色不能直接当文字色，见 .links-pill.is-gold 的对比度注释。
+   实测高度：1440 326 → 279px；390 908 → 585px。 */
 
 .links {
     /* 【2026-11-01 主人「间隔有点宽，缩小一些」】
@@ -1548,10 +1550,8 @@ html[data-g="knit"] #wordLogo {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin: 0 0 clamp(10px, 1.2vw, 14px);
+    margin: 0 0 clamp(8px, 1vw, 12px);
     font-family: var(--font-label);
-    /* 【2026-11-02 主人「【相关站点】之类的小标题字再大一些」】11 → 12.5px，
-       字距同时从 0.16em 收到 0.13em：字号变大后原来的宽字距会把「相关站点」拉散。 */
     font-size: 12.5px;
     font-weight: 700;
     letter-spacing: 0.13em;
@@ -1565,117 +1565,114 @@ html[data-g="knit"] #wordLogo {
     height: 1px;
     background: linear-gradient(to right, color-mix(in srgb, var(--edge) 90%, transparent), transparent);
 }
-/* 容器：把三组胶囊收进一个框里，框本身很轻（1px 描边 + 极淡填充），
+/* 容器：把六组收进一个框里，框本身很轻（1px 描边 + 极淡填充），
    目的是「收拢」而不是「再糊一层卡片」。 */
 .links-box {
     display: grid;
-    gap: 12px;
-    padding: clamp(12px, 1.4vw, 16px) clamp(12px, 1.6vw, 18px);
+    gap: 6px;
+    padding: 10px clamp(11px, 1.3vw, 14px);
     border: 1px solid color-mix(in srgb, var(--edge) 85%, transparent);
     border-radius: 14px;
     background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
-/* 一行 = 组标签（固定 92px，让五组胶囊左缘对齐）+ 胶囊流。
-   92 是量出来的：最长标签「大白饭中转站」13px 下实际占 82px，76（原先按 4 字给的）会溢出。
-   标签只在宽屏侧置；窄屏改到上方（见底部媒体查询）。 */
+/* 一行 = 组标签（固定 92px，让六组左缘对齐）+ 链接网格。
+   92 是量出来的：最长标签「大白饭中转站」13px 下实际占 82px，76 会溢出。 */
 .links-row {
     display: grid;
     grid-template-columns: 92px minmax(0, 1fr);
-    gap: 8px 14px;
+    gap: 6px 14px;
     align-items: start;
 }
 .links-row-t {
     padding-top: 5px;
     font-family: var(--font-label);
-    /* 【2026-11-02 主人「小标题字再大一些」】11.5 → 13px（比胶囊里的 12.5 略大，
-       让「组」这一层压得住下面的条目）。padding-top 相应从 6 收到 5，保持与首枚胶囊的视觉中线对齐。 */
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.05em;
     color: var(--ink3);
     white-space: nowrap;
 }
+/* 等宽列：auto-fill + 196px 下限。196 是量出来的 —— 最长的
+   「Jubeat LV.10 SSS难易度表」12.5px + 12px 图标后约 196px，压到 180 会把它挤到换行。
+   列宽由 1fr 均分，所以六组共用同一条列线，名字左缘整列对齐。 */
 .links-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 0 12px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
-/* 胶囊本体：1px 描边 + 极淡填充，悬停时描边转主题色并轻微抬起。
-   只动 color/border/transform（合成层），150-250ms 内给到反馈。 */
+/* 条目本体：没有描边、没有底色 —— 就是一段「图标 + 名字」的文字，位置交给网格。
+   热区靠上下 padding 5px 撑到 27px，行间再留 5px，手指点得中。 */
 .links-pill {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    height: 30px;
-    /* 左右 11px 是实测出来的：12px 时「数据来源」7 枚在 1440 下差一点点放不下，
-       会掉一枚到第二行，看起来像被切断；11px + gap 7px 恰好一行收得下。 */
-    padding: 0 11px;
-    border: 1px solid color-mix(in srgb, var(--edge) 100%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    padding: 5px 0;
     font-size: 12.5px;
     font-weight: 600;
-    line-height: 1;
+    line-height: 1.35;
     color: var(--ink2);
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+    transition: color 0.18s ease;
 }
+/* 悬停只加深文字与图标：不加底色（那会退回「一堆按钮」），
+   也不加下划线（2026-11-03 主人否掉过曲名悬停的下划线）。 */
 .links-pill:hover {
     color: var(--ink);
-    border-color: color-mix(in srgb, var(--acc) 70%, var(--edge));
-    background: color-mix(in srgb, var(--acc) 12%, transparent);
-    transform: translateY(-1px);
 }
 .links-pill:focus-visible {
     outline: 2px solid var(--acc-ink);
-    outline-offset: 2px;
+    outline-offset: 3px;
+    border-radius: 4px;
 }
-/* 【友链金色】：整个区块唯一用彩色强调的一组。
-   【2026-11-02 第二版：改成实心金底 + 深字】
-   第一版是「金色文字 + 12% 金色底」，在深色主题下没问题，但在 knit 这类
-   浅色/亮黄底主题上，金字的对比度几乎为零（本地实测截图：JUBEAT VIEWER 几乎看不见）。
-   原因是胶囊的文字色只能跟 --ink 走，而 --ink 并不知道它背后是一张亮黄照片。
-   实心金底 + #2a2110 深褐字就不受背景影响：金 #e8b64a 与深褐的对比度约 8.6:1，
-   在任何主题的底图上都成立，而且「金色胶囊」这件事也才真正做出来。 */
+/* 【友链】整个区块唯一的彩色强调，也是唯一有「面」的条目：
+   22px 高、圆角 5、半透明浅黑底板 + 金色字。
+   【为什么不能只把字改成金色】2026-11-02 实测：纯金色文字在 knit 这类浅色/亮黄底
+   主题上对比度几乎为零（JUBEAT VIEWER 几乎看不见）—— 文字色只能跟 --ink 走，
+   而 --ink 不知道它背后是一张亮黄照片。压一层 rgba(0,0,0,.34) 的底板就与底图无关了：
+   金 #f0c05e 压在 .34 的黑上，在任何主题底图上都成立（对比约 9:1）。 */
 .links-pill.is-gold {
-    color: #2a2110;
-    border-color: color-mix(in srgb, #e8b64a 88%, #ffffff);
-    background: #e8b64a;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.34);
+    color: #f0c05e;
+    line-height: 1;
+    transition: color 0.18s ease, background-color 0.18s ease;
 }
 .links-pill.is-gold:hover {
-    color: #211a0c;
-    border-color: #fff0c2;
-    background: #f2c96a;
+    color: #ffd98a;
+    background: rgba(0, 0, 0, 0.46);
 }
 .links-pill.is-gold .links-ico {
-    color: color-mix(in srgb, #2a2110 78%, #8a6a1e);
+    color: #e8b64a;
     opacity: 1;
 }
-/* 无网址的条目（如「音游街小程序」）：同一套版式，但虚线描边 + 更淡的字色，
-   读者扫过去就知道「这个不是链接」，不会去点它（也不做死链）。 */
+/* 无网址的条目（如「音游街小程序」）：同样带「面」，但只是一道很淡的内描边。
+   给它底色或让悬停变色，读者都会以为点得动；淡边 + 淡字是「这里没有门」的最短说法。 */
 .links-nolink {
-    cursor: default;
-    border-style: dashed;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 5px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--edge) 65%, transparent);
     color: var(--ink3);
-    background: transparent;
+    cursor: default;
+    line-height: 1;
 }
 .links-nolink:hover {
-    transform: none;
     color: var(--ink3);
-    border-color: color-mix(in srgb, var(--edge) 100%, transparent);
-    background: transparent;
 }
-/* 图标：固定 14px 方形占位，颜色跟着胶囊走；所有图标同一描边宽度，排列才不参差。 */
+/* 图标：12px 方形占位、0.5 不透明度 —— 27 个同款小图标排成一片时，
+   高不透明度会把它们连成一行噪点；压暗后只提示「人 / wiki / 网站」三种性质。 */
 .links-ico {
     flex: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     color: var(--ink3);
-    opacity: 0.9;
+    opacity: 0.5;
     transition: color 0.18s ease, opacity 0.18s ease;
 }
 .links-pill:hover .links-ico {
@@ -1684,33 +1681,36 @@ html[data-g="knit"] #wordLogo {
 }
 /* 播放类图标是实心三角，视觉重量比描边图标重，缩一档找齐 */
 .links-ico[fill='currentColor'] {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
 }
-/* 窄屏：组标签挪到胶囊上方，胶囊铺满整行；触控目标抬到 36px（仍小于 44 的行式热区，
-   但胶囊本身是唯一目标、四周留白可点，实测 390px 下不误触）。 */
+/* 窄屏（≤640）：不套网格 —— 340px 的可用宽度下一行只放得下两格，
+   最长那条名字会被挤成两行、把行高撑歪。这里回到 flex 流式换行，
+   靠 13px 横距压紧；组标签独占一行（12.5px、字距收到 0.04em）。 */
 @media (max-width: 640px) {
     .links-row {
         grid-template-columns: minmax(0, 1fr);
-        gap: 6px;
+        gap: 3px;
     }
     .links-row-t {
-        padding-top: 0;
-        font-size: 13.5px;
+        padding-top: 2px;
+        font-size: 12.5px;
+        letter-spacing: 0.04em;
+    }
+    .links-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 13px;
     }
     .links-pill {
-        height: 34px;
-        font-size: 13px;
+        padding: 5px 0;
     }
 }
-/* 尊重减少动效：保留悬停变色（那是反馈），去掉位移与过渡时间 */
+/* 尊重减少动效：保留悬停变色（那是反馈），去掉过渡时间 */
 @media (prefers-reduced-motion: reduce) {
     .links-pill,
     .links-ico {
         transition: none;
-    }
-    .links-pill:hover {
-        transform: none;
     }
 }
 
