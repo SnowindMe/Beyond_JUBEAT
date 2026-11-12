@@ -631,6 +631,21 @@ const metaFoot: Meta[] = song
       var fs = Math.round(parseFloat(getComputedStyle(btn).fontSize));
       if (window.innerWidth <= 700) {
         var guardM = 0;
+        /* 【2026-11-12 主人「移动端视图中两行的曲名字体可以小一些」】
+           占两行的曲名（如「残響二繋ガレタ追憶ノHIDEAWAY」）在 20px 档压在
+           右栏里太肿：曲绘只有 108 宽，两行 20px 的字块比它更抢眼。
+           两行的降到基线的 88%（390px 屏 19.9 → 17px 左右），一行不动——
+           他只说两行可以小一些，不是全站缩字号。下限 16px 兜住
+           （再小就比曲师 12px 只大一档，撑不起 h1 的视觉）。
+           缩完若回到一行，就停在一行（更省纵向空间，不算跑偏）。 */
+        if (countLines(btn) === 2 && fs > 16) {
+          var two = Math.max(16, Math.round(fs * 0.88));
+          while (fs > two && guardM < 60) {
+            fs -= 1;
+            btn.style.fontSize = fs + 'px';
+            guardM++;
+          }
+        }
         /* 【坑·2026-11-02】原来写的是 fs > 13：循环体先减再判断，
            于是最后一档落在 12.125px（比下限还小 1px 的零头）。
            改成「再减 1 之后仍 ≥ 下限」才继续减，最低正好停在 13px。 */
