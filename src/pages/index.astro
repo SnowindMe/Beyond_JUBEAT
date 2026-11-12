@@ -2,8 +2,10 @@
 import Layout from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import SiteLinks from '../components/SiteLinks.astro';
-import Fortune from '../components/Fortune.astro';
-import HotBoard from '../components/HotBoard.astro';
+// 【2026-11-12】Fortune / HotBoard 两块先下线（见下方注释），import 一并注释掉，
+// 否则 Astro 会把两个组件打进产物。将来恢复时取消注释即可。
+// import Fortune from '../components/Fortune.astro';
+// import HotBoard from '../components/HotBoard.astro';
 import data from '../data/data.json';
 import { pageTitle } from '../lib/title';
 import { GEN_JP, GEN_CN } from '../lib/gens';
@@ -27,15 +29,12 @@ export const prerender = false;
 >
   <Hero />
 
-  {/* 今日运势、热门歌曲（2026-11-03）。两块各自独立成板块，中间留正常区块间距
-      （主人当日要求「中间不连着」）。放在 Hero 与友链之间：
-      Hero 是"这是什么站"，接下来读者最想知道的是"今天打哪首"，
-      友链这类出处信息往后排。 */}
-  <div class="fh-split">
-    {/* 运势在左（DOM 在前）：窄屏转单栏时它自然排在前，与 fortune.css 的窄屏注释一致 */}
-    <Fortune />
-    <HotBoard />
-  </div>
+  {/* 【2026-11-12 主人「【今日运势】和【热门歌曲】先隐藏了，以后可能换个实现」】
+      两块先下线，组件文件留在 components/Fortune.astro、HotBoard.astro 不动
+      （样式在 styles/fortune.css、hot.css 里也一并保留），将来换实现时直接接着改。
+      注意：首页 export const prerender = false 一开始是为了这两块读 D1/KV 快照，
+      它们下线后首页其实可以回到预渲染——但那是另一次改动的收益与风险（路由/WorKer
+      首处理配置要一起看），这次不顺手改。 */}
 
   {/* 友链 / 数据来源 / 设计参考（2026-11-01 主人要求，放在首页那条横向分隔线处）。
       位置在 Hero 与站点标识区之间：读者看完首屏、还没到落款时，

@@ -504,9 +504,16 @@ html[data-lum="light"] .mark b .til {
         transition: none;
     }
 }
-/* 抽屉：默认不渲染，data-open=1 才显示；桌面端永不显示 */
+/* 抽屉：收起态不可见也不可聚焦，data-open=1 才展开；桌面端靠汉堡按钮不显示自然永不出现。
+   【2026-11-12 主人「给移动端视图下点击导航键之后菜单添加弹出/收回的动画」】
+   原来是 display:none ↔ flex 硬切——display 不可过渡，所以没有任何动画。
+   改成常驻 flex + visibility/opacity/transform 收放（与 .tsw-pop、.acm-pop 同一套手法）：
+     · 收起：向下 8px 轻微上浮 → 归位，淡入；
+     · 收起态用 visibility:hidden 而不是只 opacity:0——否则抽屉里的 5 条链接
+       仍在 Tab 序列里，键盘用户会连续聚焦到看不见的链接上（tsw-pop 也踩过同一个坑）。
+   visibility 的过渡延迟 0.18s，等淡出走完再真正摘掉，否则收起动画会被截断。 */
 .nav-drawer {
-    display: none;
+    display: flex;
     position: absolute;
     left: 0;
     right: 0;
@@ -520,9 +527,33 @@ html[data-lum="light"] .mark b .til {
        「jubeat」「WELCOME TO」透上来），字叠字没法读。直接吃 --base 实色。 */
     background: var(--base);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0s linear 0.18s;
 }
 .nav-drawer[data-open='1'] {
-    display: flex;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease,
+        visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+    .nav-drawer,
+    .nav-drawer[data-open='1'] {
+        transition: none;
+    }
+    .nav-drawer {
+        transform: none;
+    }
 }
 .nav-drawer a {
     /* 抽屉是窄屏唯一的导航入口，每条都要够点：实测 10px padding 只有 38 高 */
