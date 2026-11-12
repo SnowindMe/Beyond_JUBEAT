@@ -2809,6 +2809,22 @@ html[data-lum="light"] .sd-gauge {
     border-radius: 50%;
     background: var(--acc);
 }
+/* 【2026-11-13 主人「【曲目】页在加载世代的时候要出现加载图标」】
+   补拉世代期间（songs.astro 给 #scActive 挂 .is-busy），左侧那枚状态点换成旋转环：
+   「正在加载剩余 N 个世代」这句话需要一个看得见的对应物。12px 比原来的 6px 点略大，
+   但条的 padding 是 7px 12px、行高由字号撑，实测不会把条撑高（见验收记录）。
+   三实一虚的边框比纯色圆环转起来更明显；transform 旋转走合成层，不动布局。 */
+.sc-active.is-busy .sc-active-i {
+    width: 12px;
+    height: 12px;
+    background: none;
+    border: 1.5px solid color-mix(in srgb, var(--acc) 42%, transparent);
+    border-top-color: var(--acc);
+    animation: scSpin 0.8s linear infinite;
+}
+@keyframes scSpin {
+    to { transform: rotate(360deg); }
+}
 .sc-active-t {
     flex: 1 1 auto;
     min-width: 0;
@@ -3287,6 +3303,10 @@ html.sc-js .sc-panel[hidden] {
 }
 @media (prefers-reduced-motion: reduce) {
     .sc-ph-img {
+        animation: none;
+    }
+    /* 加载环停转后仍要能看出「在加载」：把亮的那一段留在 12 点方向 */
+    .sc-active.is-busy .sc-active-i {
         animation: none;
     }
 }

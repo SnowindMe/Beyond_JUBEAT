@@ -1246,6 +1246,12 @@ const TYPES = [
             activeTxt.textContent = filtering ? (pendingLoad ? '…' : String(totalMine)) : '';
           }
           if (activeCost) activeCost.hidden = !filtering;
+          /* 【2026-11-13 主人「【曲目】页在加载世代的时候要出现加载图标」】
+             补拉期间（pendingLoad）把左侧那枚 6px 状态点换成旋转环。
+             「正在加载剩余 N 个世代」这句话需要一个看得见的对应物，否则用户只看到
+             一张空白页面 + 一句说明。判据与数字、耗时两处同源，都用 pendingLoad；
+             补拉结束后每条路径都会再调一次 apply，class 自己会摘掉。 */
+          activeBox.classList.toggle('is-busy', !!filtering && pendingLoad);
         }
 
         // aria-pressed 在这里统一收口（2026-10-23 收尾）。

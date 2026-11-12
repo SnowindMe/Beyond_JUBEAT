@@ -1,5 +1,5 @@
 ---
-// 首页 · 相关站点：友链 / Officials / 数据来源 / 设计参考 / 大白饭中转站
+// 首页 · 相关站点：友链 / Officials / 数据来源 / 设计参考 / 谱面确认 / 大白饭中转站
 // 2026-11-01 主人要求建立本区块，2026-11-02 改胶囊容器，同日再要求分组与图标规范化。
 // 主人原话：「在【友链】和【数据来源】中间加入【Officials】，把 jubeat_staff，Jubeat音乐魔方，
 //   jubeat beyond the Ave. 和 jubeat（ユビート）移过去」「在【设计参考】后面加入【大白饭中转站】」
@@ -25,7 +25,17 @@ const ICONS = {
 } as const;
 type IconKey = keyof typeof ICONS;
 /** 显式指定的人形图标（个人/账号类） */
-const USERS = new Set(['Jubeat音乐魔方', 'jubeat_staff']);
+// 【2026-11-13 主人给了「谱面确认」一组，条目前缀（人）/（网）就是图标要求：
+//   （人）= 个人/账号类 → user；其余按默认 globe，所以（网）的两个 wiki 也没有进 WIKIS。】
+const USERS = new Set([
+  'Jubeat音乐魔方',
+  'jubeat_staff',
+  '发福魔方',
+  'Jack大本',
+  'Thregren',
+  'ibakenya',
+  'お',
+]);
 /** 显式指定的书本图标（wiki 类） */
 const WIKIS = new Set(['Remywiki', 'BEMANIWiki 2nd', 'jubeat@Wiki']);
 const iconOf = (name: string): IconKey => (USERS.has(name) ? 'user' : WIKIS.has(name) ? 'book' : 'globe');
@@ -50,6 +60,8 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
     links: [
       { name: 'jubeat_staff', url: 'https://x.com/jubeat_staff' },
       { name: 'Jubeat音乐魔方', url: 'https://space.bilibili.com/3546949219256767' },
+      // 【2026-11-13 主人要求放在【Jubeat音乐魔方】后】名字照他给的写法（U 后面是弯引号 ‘）
+      { name: 'jubeat U‘nit', url: 'https://p.eagate.573.jp/game/jubeat/unit/' },
       { name: 'jubeat beyond the Ave.', url: 'https://p.eagate.573.jp/game/jubeat/beyond/' },
       { name: 'jubeat（ユビート）', url: 'https://p.eagate.573.jp/game/jubeat/mobile/' },
     ],
@@ -78,7 +90,30 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
       { name: 'DXRating', url: 'https://dxrating.net/' },
       { name: '落雪咖啡屋', url: 'https://maimai.lxns.net/' },
       { name: 'Union', url: 'https://union.godserver.cn/' },
+      // 【2026-11-13 主人要求放在【Union】后】
+      { name: 'Majdata.Net', url: 'https://cn.majdata.net/' },
       { name: '音游街小程序', url: '' },
+    ],
+  },
+  {
+    key: 'confirm',
+    title: '谱面确认',
+    // 【2026-11-13 主人给定，原样照抄】放在【设计参考】后面：
+    //   · （人）发福魔方 https://space.bilibili.com/3706964538297029
+    //   · （人）Jack大本 https://space.bilibili.com/446748
+    //   · （人）Thregren https://space.bilibili.com/3369422
+    //   · （人）ibakenya https://www.youtube.com/@ibakenya
+    //   · （人）お https://www.youtube.com/@o_jb
+    //   · （网）Cosmos_Memo https://w.atwiki.jp/cosmos_memo/
+    //   · （网）Sonicy_Memo https://w.atwiki.jp/sonicy_memo/
+    links: [
+      { name: '发福魔方', url: 'https://space.bilibili.com/3706964538297029' },
+      { name: 'Jack大本', url: 'https://space.bilibili.com/446748' },
+      { name: 'Thregren', url: 'https://space.bilibili.com/3369422' },
+      { name: 'ibakenya', url: 'https://www.youtube.com/@ibakenya' },
+      { name: 'お', url: 'https://www.youtube.com/@o_jb' },
+      { name: 'Cosmos_Memo', url: 'https://w.atwiki.jp/cosmos_memo/' },
+      { name: 'Sonicy_Memo', url: 'https://w.atwiki.jp/sonicy_memo/' },
     ],
   },
   {
