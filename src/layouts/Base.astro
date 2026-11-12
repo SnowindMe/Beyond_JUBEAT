@@ -23,6 +23,8 @@ interface Props {
   ogImage?: string;
   /** 404 这类不该被索引的页面传 true */
   noindex?: boolean;
+  /** main 的附加类名：目前只有 404 页用它把内容在页头页脚之间垂直居中 */
+  mainClass?: string;
 }
 
 const SITE = 'https://wiki.byd-ub.top';
@@ -42,6 +44,7 @@ const {
   canonicalPath = '/',
   ogImage = SITE + '/assets/images/og/cover.png',
   noindex = false,
+  mainClass = '',
 } = Astro.props;
 
 const canonical = canonicalPath ? SITE + canonicalPath : null;
@@ -231,7 +234,7 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
     <Header />
     {/* main landmark：读屏可用 landmark 快捷键定位正文，也是 skip-link 的落点。
         tabindex="-1" 让点击 skip 后焦点真的落进 main（否则只滚动、焦点不动）。 */}
-    <main id="main" tabindex="-1">
+    <main id="main" class={mainClass || undefined} tabindex="-1">
       <slot />
     </main>
     <footer class="foot mono">

@@ -4,6 +4,7 @@ import NotFound from '../components/NotFound.astro';
 import { pageTitle } from '../lib/title';
 ---
 
-<Layout title={pageTitle('页面不存在')} canonicalPath="" noindex>
+{/* mainClass：把 404 块在页头与页脚之间垂直居中（主人 2026-11-12）。 */}
+<Layout title={pageTitle('页面不存在')} canonicalPath="" noindex mainClass="main-center">
   <NotFound />
 </Layout>

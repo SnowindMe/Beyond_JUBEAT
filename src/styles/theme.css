@@ -1303,6 +1303,26 @@ html[data-g="knit"] #wordLogo {
     flex: 1 0 auto;
 }
 
+/* 404 页：整块在页头与页脚之间的剩余空间里垂直居中（主人 2026-11-12「404块要在页面中居中」）。
+   main 本身已经是 .wrap 的 flex 子项、且占满剩余高度，所以这里只把它再变成纵向 flex，
+   让里面的 .band 用 margin:auto 上下均分——不依赖页头/页脚的具体高度，窗口怎么变都居中。
+   内容高到撑满时 margin:auto 自动归零、退回从顶部开始排，不会被挤出屏幕。
+   .band 自带的 padding-top 在居中后会变成单侧偏移，这里归零。 */
+.main-center {
+    display: flex;
+    flex-direction: column;
+    /* 上内边距要比下内边距多出「页脚的 margin-top」那一份：
+       页脚上方 clamp(46px,5.8vw,76px) 的留白不算在 main 的高度里，
+       只按上下对称的内边距去居中，块会整体偏高 46–76px（实测 -75px）。
+       补上这一份之后块正好落在「页头下沿—页脚上沿」的正中。 */
+    padding-top: calc(clamp(18px, 3vw, 30px) + clamp(46px, 5.8vw, 76px));
+    padding-bottom: clamp(18px, 3vw, 30px);
+}
+.main-center > .band {
+    margin: auto 0;
+    padding-top: 0;
+}
+
 /* foot：左列（编辑时间 / 版本号）+ 右列（品牌字 / Enjoy Yourself） */
 .foot {
     margin-top: clamp(46px, 5.8vw, 76px);
