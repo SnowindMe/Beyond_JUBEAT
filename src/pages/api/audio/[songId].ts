@@ -23,7 +23,7 @@
 // 现在的分工：
 //   * 缓存 HIT + Range  → 从缓存响应体里**流式跳读**出需要的字节段，不再整份加载；
 //   * 缓存 MISS + Range → 把浏览器的 Range **原样转给上游**（上游支持 206），
-//     直接把它的响应流回浏览器，后台再拉一份完整版写进缓存；
+//     直接把它的响应流回浏览器；缓存留到 6 秒后在后台补（见 scheduleRangeBackfill）；
 //   * 缓存 MISS + 无 Range → 流式透传，同时把响应流 tee 一份进缓存；
 //   * HEAD → 只回头，不碰数据体（优先读缓存里的 content-length，没有就探一次上游）。
 //
@@ -55,6 +55,38 @@ const CACHE_CONTROL = 'public, max-age=604800, s-maxage=2592000, immutable';
 const MAX_CACHE_BYTES = 3 * 1024 * 1024;
 
 const UA = { 'user-agent': 'Mozilla/5.0 (compatible; BeyondJUBEAT/1.0; +https://wiki.byd-ub.top)' };
+
+/* 【2026-11-12 补上「Range 冷启动永远不落缓存」这个缺口】
+   背景：2026-10-30 为了让首播最快，Range 请求只透传、不写缓存。代价是某个数据中心
+   如果只收到过 Range 请求（用户一上来就拖进度条、或客户端不从整份 GET 开始），
+   它永远不落缓存、每次都回源，等于那台边缘上没有兜底。
+
+   现在补写，但必须守住 10-30 那条红线——不许抢首播的出口带宽。三个约束：
+     ① 延迟：先让这次响应读完，隔 RANGE_BACKFILL_DELAY_MS 再动手；
+     ② 单飞：同一 isolate 内同一首只补一次，并发 Range 不会各拉一份 1.2MB；
+     ③ waitUntil：绝不 await，永远不进本次请求的关键路径。
+
+   为什么用固定延迟而不是「响应流读完」的回调：没有可靠的客户端读完钩子，
+   拿 stream 的 close 触发又会被中断/取消搞得不稳定，延迟最笨但最可控。
+   6s 的依据：实测 1.2MB 整份在跨墙线路上要 1–5s，正常首播 3s 内就发完了。 */
+const RANGE_BACKFILL_DELAY_MS = 6000;
+const BACKFILLING = new Set<string>();
+
+function scheduleRangeBackfill(
+  locals: App.Locals,
+  cache: Cache,
+  key: Request,
+  target: string,
+  id: string
+): void {
+  if (BACKFILLING.has(id)) return;
+  BACKFILLING.add(id);
+  locals.cfContext.waitUntil(
+    new Promise<void>((resolve) => setTimeout(resolve, RANGE_BACKFILL_DELAY_MS))
+      .then(() => cacheFullInBackground(cache, key, target))
+      .finally(() => BACKFILLING.delete(id))
+  );
+}
 
 export const GET: APIRoute = ({ params, request, locals }) => serve(params, request, locals);
 export const HEAD: APIRoute = ({ params, request, locals }) => serve(params, request, locals);
@@ -249,10 +281,13 @@ async function serve(
       // 现象：Range 请求 TTFB 从上游的 52–201ms 涨到 4.6s。根因是
       // waitUntil 里又发了一条「拉 1.2MB 整份」的 fetch，与本次响应抢同一条出口，
       // 而 CF 到上游是跨墙线路，带宽被占满后本次响应的首字节也跟着排队。
-      // 现在改成：只在「无 Range 的整份请求」时用 tee 顺带写缓存（那条路径本来就是
-      // 从头读到尾，tee 不额外增加出口流量）。Range 路径只透传、不写缓存。
-      // 代价：纯拖动进度条产生的 Range 请求会一直回源；但首播快才是主人要的。
+      //
+      // 【2026-11-12 主人选了「补缓存」这一边：延迟 6 秒 + 单飞 + waitUntil】
+      // 首播路径一个字节都不多等——补的动作在响应交出去 6 秒后才跑，
+      // 那时这次 Range 早已读完，出口空闲。见 scheduleRangeBackfill 的说明。
+      scheduleRangeBackfill(locals, cache, key, target, id);
       headers['x-timing'] = mark.join(' ');
+      headers['x-cache-backfill'] = 'scheduled';
       return new Response(up.body, { status: up.status === 206 ? 206 : 200, headers });
     }
 

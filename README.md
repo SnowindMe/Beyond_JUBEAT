@@ -198,7 +198,7 @@ data/upstream/*.json ───────────────────�
 
 1. Worker 内 isolate 级内存缓存：`src/lib/song-data.ts` 的曲库快照 + 60s 的 `song_rev` 修订号（后台改曲会把修订号 +1，快照随即失效），`src/lib/db.ts` 的最近更改则故意不缓存——改一条要立刻看见
 2. 中间件边缘缓存，只对白名单路径、只对 GET、**带 `Set-Cookie` 的绝不入库**（`src/middleware.ts`）。首页与 `/songs/frag` 还要看登录态（运势用 `user.id` 当种子），行长时绕过
-3. BGM 反代进 `caches.default`，只缓存完整 200，Range 由缓存字节本地切 206
+3. BGM 反代进 `caches.default`，缓存完整 200，Range 由缓存字节本地切 206；Range 未命中时先透传，**6 秒后**在 `waitUntil` 里补一份整份缓存（延迟 + 单飞，不抢首播带宽）
 
 > 流式响应要进 `caches.default`，壳里**必须同时带 `content-length` 与 `cache-control`**。缺 `content-length` 会退回 chunked 存储、HEAD 拿不到长度；缺 `cache-control` 则 TTL 取 0，写进去下一毫秒就过期——两层都要有，否则表现为「在库里但永远 MISS」。
 
