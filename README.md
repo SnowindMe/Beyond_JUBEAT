@@ -84,7 +84,7 @@ Fatal uncaught kj::Exception: kj/filesystem-disk-win32.c++:773: failed: CreateDi
 ### 验本地站的三个约定
 
 - **`curl` 必须带 `--noproxy '*'`**：本机环境变量里有代理，不加会把 `localhost:4321` 甩去代理回 `000`，看着像服务没起（其实在 `netstat` 里正常 LISTENING）。dev 只监听 `::1`，要用 `localhost` 而不是 `127.0.0.1`。
-- **首页、`/songs/`、`/jubility/`、`/recent/` 走中间件边缘缓存**，看响应头 `x-jb-cache`：`HIT` 是缓存命中、`STALE` 是陈旧兜底、没有这个头才是真渲染。改完模板看不见效果时，带一个 `Cookie: jb_session=x` 绕过缓存，别急着改代码。
+- **首页、`/songs/`、`/jubility/`、`/recent/` 走中间件边缘缓存**，看响应头 `x-jb-cache`：`HIT` 是缓存命中、`STALE` 是陈旧兜底、`MISS` 是这次真渲染并写入了缓存、`PASS` 是真渲染但**不入库**（非 200，比如不存在的曲）。改完模板看不见效果时，带一个 `Cookie: jb_session=x` 绕过缓存，别急着改代码。
 - **`CF-Connecting-IP` 在本机会被拦成 403**（`error code: 1000`）。要冒充来源 IP 验限流，改用 `X-Forwarded-For`——取 IP 的代码本来就是 `cf-connecting-ip ?? x-forwarded-for`。
 
 ### dev server 在带代理的环境里
@@ -197,7 +197,7 @@ data/upstream/*.json ───────────────────�
 **站点自己设的缓存分三层**：
 
 1. Worker 内 isolate 级内存缓存：`src/lib/song-data.ts` 的曲库快照 + 60s 的 `song_rev` 修订号（后台改曲会把修订号 +1，快照随即失效），`src/lib/db.ts` 的最近更改则故意不缓存——改一条要立刻看见
-2. 中间件边缘缓存，只对白名单路径、只对 GET、**带 `Set-Cookie` 的绝不入库**（`src/middleware.ts`）。首页与 `/songs/frag` 还要看登录态（运势用 `user.id` 当种子），行长时绕过
+2. 中间件边缘缓存，只对白名单路径、只对 GET、**带 `Set-Cookie` 的绝不入库**（`src/middleware.ts`）。首页与 `/songs/frag` 还要看登录态（运势用 `user.id` 当种子），行长时绕过。**非 200 不入库但也不重渲**：快照带着原本的 status 直接交出去（2026-11-12 前的写法是遇到非 200 就再 `next()` 一次，第二次渲染会把 `Astro.response.status=404` 吃掉，表现为不存在的 songId 回 200 + 404 页）
 3. BGM 反代进 `caches.default`，缓存完整 200，Range 由缓存字节本地切 206；Range 未命中时先透传，**6 秒后**在 `waitUntil` 里补一份整份缓存（延迟 + 单飞，不抢首播带宽）
 
 > 流式响应要进 `caches.default`，壳里**必须同时带 `content-length` 与 `cache-control`**。缺 `content-length` 会退回 chunked 存储、HEAD 拿不到长度；缺 `cache-control` 则 TTL 取 0，写进去下一毫秒就过期——两层都要有，否则表现为「在库里但永远 MISS」。

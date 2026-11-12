@@ -35,7 +35,7 @@ const STALE_TTL = 60 * 60 * 24;
 type Snapshot = { status: number; headers: Headers; body: ReadableStream<Uint8Array> };
 
 /** 同一 isolate 内同路径的渲染只跑一次，其余请求等同一个 Promise */
-const inflight = new Map<string, Promise<Snapshot | null>>();
+const inflight = new Map<string, Promise<Snapshot>>();
 
 /** 空 body（HEAD / 204 这类响应没有流可读，后续照样要能 tee 出一条空的） */
 const emptyBody = () => new ReadableStream<Uint8Array>({ start: (c) => c.close() });
@@ -218,26 +218,33 @@ const handle: MiddlewareHandler = async (context, next) => {
     const fresh = await cache.match(freshKey);
     if (fresh) return relabel(fresh, 'HIT');
 
-    // 渲染一次并写两层缓存；并发调用共用同一个 Promise
-    const refresh = (): Promise<Snapshot | null> => {
+    /* 渲染一次并写两层缓存；并发调用共用同一个 Promise。
+       【2026-11-12 改：非 200 也要把响应带回来，绝不能丢掉再 next() 一次】
+       原来这里遇到「不是 200」或「带 Set-Cookie」就 return null，调用处再 next() 兜底——
+       等于同一请求渲染两遍，而**第二次渲染会把状态码吃掉**：
+       实测 /songs/<不存在的 id>/ POST 得 404、GET 得 200（GET 走这段缓存分支，POST 不走），
+       页面内容明明是 404 页。原因是 Astro 的 next() 第二次返回的是新构造的 Response，
+       Astro.response.status=404 那次的赋值没有跟过来。
+       现在：无论 200 与否都 snapshotOf(res)（它带着 status），只是**不入库**，
+       调用处直接用这份快照构造响应。既保住状态码，也少渲染一遍。 */
+    const refresh = (): Promise<Snapshot> => {
       const running = inflight.get(cachePath);
       if (running) return running;
-      const task = (async (): Promise<Snapshot | null> => {
+      const task = (async (): Promise<Snapshot> => {
         const res = await next();
-        // 只缓存干净的 200；带 Set-Cookie 的响应绝不入库（否则会把会话发给所有人）
-        if (res.status !== 200 || res.headers.has('set-cookie')) return null;
-        /* 这里同步把两条流分出去就返回，**不 await 写缓存**：body 已经是流，
-           等 put 写完才交给用户等于又把整页憋回内存一次，白白多一份完整副本。
-           分完即走，各条流自己跑，谁读谁的。 */
         const snapshot = snapshotOf(res);
-        // 两个写都挂到 waitUntil 上：响应体从流里走完之后，写缓存也不该被草率掐断
-        for (const put of putBoth(cache, freshKey, staleKey, snapshot)) {
-          context.locals.cfContext?.waitUntil?.(put);
+        // 只缓存干净的 200；带 Set-Cookie 的响应绝不入库（否则会把会话发给所有人）
+        if (res.status === 200 && !res.headers.has('set-cookie')) {
+          /* 这里同步把两条流分出去就返回，**不 await 写缓存**：body 已经是流，
+             等 put 写完才交给用户等于又把整页憋回内存一次，白白多一份完整副本。
+             分完即走，各条流自己跑，谁读谁的。 */
+          // 两个写都挂到 waitUntil 上：响应体从流里走完之后，写缓存也不该被草率掐断
+          for (const put of putBoth(cache, freshKey, staleKey, snapshot)) {
+            context.locals.cfContext?.waitUntil?.(put);
+          }
         }
         return snapshot;
-      })()
-        .catch(() => null)
-        .finally(() => inflight.delete(cachePath));
+      })().finally(() => inflight.delete(cachePath));
       inflight.set(cachePath, task);
       return task;
     };
@@ -254,8 +261,8 @@ const handle: MiddlewareHandler = async (context, next) => {
 
     // ③ 冷 PoP（从没渲染过）：只能同步渲染一次
     const snapshot = await refresh();
-    if (!snapshot) return next();
-    return respondWith(snapshot, bodyOf(snapshot), 'MISS');
+    // 非 200（404/500）不进缓存，但状态码与 body 都在这份快照里，原样交出去
+    return respondWith(snapshot, bodyOf(snapshot), snapshot.status === 200 ? 'MISS' : 'PASS');
   } catch {
     // 缓存层任何异常都退回正常渲染路径，绝不把错误抛给用户
     return next();
