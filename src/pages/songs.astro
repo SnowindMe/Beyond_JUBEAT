@@ -1196,7 +1196,15 @@ const TYPES = [
 
         // 空态：整页零命中给明确文案 + 一键重置，而不是留白
         // 空态按**当前服务器**判断：jp 搜不到但 cn 能搜到时，jp 视图下仍要显示空态。
-        if (emptyBox) emptyBox.hidden = totalMine > 0;
+        //
+        // 【2026-11-12 修「先出无结果再出结果」】
+        // 补拉期间（lazyState === 1）骨架块里的卡片还没到，带筛选时骨架按 0 计，
+        // 于是 totalMine 天然偏小、常常是 0 —— 空态就会先亮一下「没有找到符合条件的曲目」，
+        // 等片段回来又被结果顶掉。这不是「没有」，只是「还没算完」，所以不显示空态；
+        // 正在打字（typing）同理：上一次提交的中间态不该替用户先下结论。
+        // 补拉结束后 apply 会再跑一次，那时才是最终裁决。
+        var pendingLoad = lazyState === 1 || typing;
+        if (emptyBox) emptyBox.hidden = totalMine > 0 || pendingLoad;
 
         // 筛选按钮上的角标：整合进面板后，chips 和排序都看不见了，
         // 必须让按钮自己说明「有几项条件正在生效」，否则用户不知道列表为什么变少了。
@@ -1436,20 +1444,29 @@ const TYPES = [
         }
       }
 
-      // ---- 搜索：输入即筛，debounce 120ms（1248 张卡每个按键全量遍历会卡） ----
+      // ---- 搜索：输入即筛，debounce 160ms（1248 张卡每个按键全量遍历会卡） ----
+      //
+      // 【2026-11-12】120ms 对快打还是偏灵：一次连打会连着提交好几次中间态
+      // （"x" → "xe" → "xen"），每次都隐藏一遍不匹配的卡、空态也可能跟着跳。
+      // 收到 160ms 后一次连打基本只提交最终值；typing 标记让提交前的这段时间
+      // 不参与「零命中」的判断（见 apply 里的 pendingLoad）。
       var timer = null;
+      var typing = false;
       function commitSearch() {
+        typing = false;
         state.q = (search && search.value || '').trim().toLowerCase();
         if (clearBtn) clearBtn.hidden = !(search && search.value);
         apply();
       }
       function onSearch() {
+        typing = true;
         if (timer) clearTimeout(timer);
-        timer = setTimeout(commitSearch, 120);
+        timer = setTimeout(commitSearch, 160);
       }
       function clearSearch() {
         if (!search) return;
         if (timer) clearTimeout(timer);
+        typing = false;
         search.value = '';
         state.q = '';
         if (clearBtn) clearBtn.hidden = true;
@@ -1881,7 +1898,11 @@ const TYPES = [
           .then(function (html) {
             var tmp = document.createElement('div');
             tmp.innerHTML = html.trim();
-            var node = tmp.firstElementChild;
+            /* 【2026-11-12】不能用 firstElementChild：本地 astro dev 下 Vite 会给每个 HTML
+               响应最前面注入一段它自己的客户端脚本标签，于是第一个元素是脚本而不是
+               .sc-gen —— 骨架被换成一段脚本，整块世代凭空消失（dev 里只剩首屏那 311 张卡，
+               线上正常）。按类名取，别依赖位置。 */
+            var node = tmp.querySelector('.sc-gen') || tmp.firstElementChild;
             if (!node) throw new Error('frag empty');
             /* 【2026-11-03 修「打字一快就把没筛选的结果也带上来」】
                片段落地时页面可能已经有搜索词了，但它此刻是「全量、未筛选」的。
