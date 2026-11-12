@@ -2809,19 +2809,10 @@ html[data-lum="light"] .sd-gauge {
     border-radius: 50%;
     background: var(--acc);
 }
-/* 【2026-11-13 主人「【曲目】页在加载世代的时候要出现加载图标」】
-   补拉世代期间（songs.astro 给 #scActive 挂 .is-busy），左侧那枚状态点换成旋转环：
-   「正在加载剩余 N 个世代」这句话需要一个看得见的对应物。12px 比原来的 6px 点略大，
-   但条的 padding 是 7px 12px、行高由字号撑，实测不会把条撑高（见验收记录）。
-   三实一虚的边框比纯色圆环转起来更明显；transform 旋转走合成层，不动布局。 */
-.sc-active.is-busy .sc-active-i {
-    width: 12px;
-    height: 12px;
-    background: none;
-    border: 1.5px solid color-mix(in srgb, var(--acc) 42%, transparent);
-    border-top-color: var(--acc);
-    animation: scSpin 0.8s linear infinite;
-}
+/* 状态点保持 6px 实心圆点，不承担加载指示（2026-11-13 主人：「空白处有加载动画之后，
+   命中条左侧的状态点可以不用变成旋转环了」）——加载由列表里的 .sc-loading 块表达，
+   一个意思只用一处视觉，条内不再出现第二种形态。
+   下面这个关键帧仍被 .sc-loading-i 复用（页内加载环）。 */
 @keyframes scSpin {
     to { transform: rotate(360deg); }
 }
@@ -2893,6 +2884,36 @@ html[data-lum="light"] .sd-gauge {
     margin: 0 0 4px;
     font-size: 12.5px;
     color: var(--ink3);
+}
+
+/* ---------- 页内加载 ---------- */
+/* 【2026-11-13 主人「旋转环可能用户看不见，建议在空白处加加载动画」】
+   补拉世代期间整页零命中时，列表区就是一大块空白，原先只有命中条上一枚 12px 的旋转环，
+   视线在列表中段根本注意不到。这里在空白正中放一只 22px 的环 + 一句说明（见 songs.astro）。
+   [hidden] 必须自己兜住：下面写了 display:flex，会盖掉 UA 的 [hidden]。 */
+.sc-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: clamp(48px, 8vw, 88px) 16px;
+    color: var(--ink3);
+    font-size: 12.5px;
+}
+.sc-loading[hidden] {
+    display: none;
+}
+.sc-loading-i {
+    width: 22px;
+    height: 22px;
+    border: 2px solid color-mix(in srgb, var(--acc) 34%, transparent);
+    border-top-color: var(--acc);
+    border-radius: 50%;
+    animation: scSpin 0.8s linear infinite;
+}
+.sc-loading-t {
+    margin: 0;
 }
 
 /* ---------- 排序承载：只用 order，不重排 DOM ---------- */
@@ -3305,8 +3326,8 @@ html.sc-js .sc-panel[hidden] {
     .sc-ph-img {
         animation: none;
     }
-    /* 加载环停转后仍要能看出「在加载」：把亮的那一段留在 12 点方向 */
-    .sc-active.is-busy .sc-active-i {
+    /* 加载环停转后仍要能看出「在加载」：亮的那一段留在 12 点方向 */
+    .sc-loading-i {
         animation: none;
     }
 }
