@@ -20,6 +20,7 @@
 // 数据一生成就固定，第二天起就永远是错的。
 import type { Song } from '../lib/db';
 import { catOf, isPickUp } from '../lib/song-view';
+import HoldMarker from './HoldMarker.astro';
 
 interface Props {
   song: Song;
@@ -73,26 +74,11 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
     ) : (
       <span class="sc-no">no jacket</span>
     )}
-    {/* 长押标识（2026-10-31 主人指定素材 archive/materials/长押标识/hold.gif）。
+    {/* 长押标识（2026-11-12 起改 CSS 重绘，原 hold.gif 退役）。
         判定读 has_hold（1=长押谱 / 0=否 / null=库中未知，未知不画——别把 null 当 0 或当 1）。
         注意与上面的 alt 无关：alt=1 只是「[ 2 ] 谱面变体」，不代表有长押（主人 2026-10-31 强调）。
-        动图全站共用一个 URL，浏览器只下一次；开了 prefers-reduced-motion 的系统走 <source>
-        换静态首帧（动图内部的帧用 CSS 停不下来，只能用 <picture> 换图）。
-        尺寸由 CSS 按曲绘宽度等比给（24%），卡片/详情/窄屏共用一个百分比。 */}
-    {s.hasHold === 1 ? (
-      <picture class="sc-hold">
-        <source srcset="/assets/images/badge/hold-static.png" media="(prefers-reduced-motion: reduce)" />
-        <img
-          src="/assets/images/badge/hold.webp"
-          alt="长押谱"
-          title="长押谱"
-          width="128"
-          height="128"
-          loading="lazy"
-          decoding="async"
-        />
-      </picture>
-    ) : null}
+        结构与动画见 HoldMarker.astro + songs.css 的 .hm-*；这里只给定位类 sc-hold。 */}
+    {s.hasHold === 1 ? <HoldMarker class="sc-hold" /> : null}
     {/* 【2026-10-31 主人「曲目页面的[2]标记可以不要了」】原来这里还有一个
         <span class="sc-alt">[2]</span>，标「这行是 [ 2 ] 谱面变体」。去掉的理由与
         主人一贯的判断一致：全站 1248 行里 71 行是 [ 2 ]，标记的信息量撑不起一个常驻角标，

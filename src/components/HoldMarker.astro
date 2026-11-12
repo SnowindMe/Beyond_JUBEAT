@@ -1,0 +1,27 @@
+---
+// 长押标识（2026-11-12 主人「把长押标识换成 css 重绘」）。
+// 结构只有 7 个节点：网格 1 + 外框 1 + 两条轨道各 3（尾 / 连线 / 头）。
+// 所有几何与动画都在 src/styles/songs.css 的 .hm-* 里，尺寸用 cqw 等比，
+// 所以卡片（41px）、窄屏（23px）、详情（50px）共用同一份结构，这里只挂定位类。
+interface Props {
+    /** 定位类：卡片用 sc-hold、曲目详情用 sd-hold（样式见 songs.css） */
+    class?: string;
+}
+
+const { class: cls = 'sc-hold' } = Astro.props;
+---
+
+<span class={`${cls} hm`} role="img" aria-label="长押谱" title="长押谱">
+    <i class="hm-grid" aria-hidden="true"></i>
+    <i class="hm-frame" aria-hidden="true"></i>
+    <i class="hm-lane is-h" aria-hidden="true">
+        <b class="hm-tail"></b>
+        <b class="hm-beam"></b>
+        <b class="hm-head"></b>
+    </i>
+    <i class="hm-lane is-v" aria-hidden="true">
+        <b class="hm-tail"></b>
+        <b class="hm-beam"></b>
+        <b class="hm-head"></b>
+    </i>
+</span>

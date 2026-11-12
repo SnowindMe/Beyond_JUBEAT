@@ -8,6 +8,7 @@ import { pageTitle } from '../../lib/title';
 import { GEN_ORDER } from '../../lib/gens';
 import NotFound from '../../components/NotFound.astro';
 import SongAudio from '../../components/SongAudio.astro';
+import HoldMarker from '../../components/HoldMarker.astro';
 import { getSongById, type Song } from '../../lib/song-data';
 import { LEVELS, gauge, dash as dashLv, HOLD_PCT_MAX } from '../../lib/difficulty';
 // 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
@@ -334,24 +335,11 @@ const metaFoot: Meta[] = song
             ) : (
               <span class="sd-no">no jacket</span>
             )}
-            {/* 长押标识（2026-10-31 主人 hold.gif）：放在 .sd-j 内，overflow:hidden 会把
-                角标裁在封套范围内。判定只认 has_hold === 1（null=未知不画）。
+            {/* 长押标识（2026-11-12 起改 CSS 重绘，原 hold.gif 退役）：放在 .sd-j 内，
+                overflow:hidden 会把角标裁在封套范围内。判定只认 has_hold === 1（null=未知不画）。
                 原来的「[2] 长押谱」文案已按主人要求删除——那句话把 alt=1 说成了长押，
-                而 alt=1 只是 [ 2 ] 谱面变体。 */}
-            {song.hasHold === 1 ? (
-              <picture class="sd-hold">
-                <source srcset="/assets/images/badge/hold-static.png" media="(prefers-reduced-motion: reduce)" />
-                <img
-                  src="/assets/images/badge/hold.webp"
-                  alt="长押谱"
-                  title="长押谱"
-                  width="128"
-                  height="128"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
-            ) : null}
+                而 alt=1 只是 [ 2 ] 谱面变体。结构与动画见 HoldMarker.astro + songs.css 的 .hm-*。 */}
+            {song.hasHold === 1 ? <HoldMarker class="sd-hold" /> : null}
           </div>
         </div>
       </aside>

@@ -441,13 +441,28 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     padding: 1px 4px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
 }
-/* 长押标识（2026-10-31 主人 hold.gif）：曲绘右上角。
-   ① 宽度用曲绘的百分比（24%）+ aspect-ratio，卡片 171→41px、窄屏 94→23px、详情 208→50px
-      三处一套值，不用分别写死 px。
-   ② 选择器写成 picture.sc-hold > img，是为了压过上面的 .sc-j img（width/height/object-fit/
-      opacity/transition）与 hover 的 scale——否则角标会跟着封套一起放大、并从角上被裁掉。
-   ③ 位置与 PICK UP 不冲突：长押在曲绘**右上角**，PICK UP 在**左上角**，分处两侧
-      （实测两者 rect 不相交）。真正要防的是 ④ 讲的吸顶标题遮挡。 */
+/* ======================================================================
+   长押标识：CSS 重绘（2026-11-12 起，替代 hold.gif / hold-static.png）
+   形状与动画按 archive/materials/hold-marker-css.html 的 176×176 原型 1:1 移植：
+   4×4 发光网格 + 白色外框 + 一枚「先向右、再向下」推进的三角（头 / 尾 / 青色连线）。
+   ① 尺寸全部写 cqw（= 盒宽的 1%），1 原型像素 = 0.568182cqw。卡片 41px、窄屏 23px、
+      详情 50px 共用同一套数字，不再按断点写死 px。容器查询单位要求容器自己声明
+      container-type: size —— 就写在 .hm 上（盒宽由 .sc-hold/.sd-hold 定，高度由比例算，
+      不依赖内容，所以 size 包含是安全的）。
+   ② 动画只动 opacity / transform：原型里 beam 动的是 left + width（每秒 27 次取值，
+      会连带重排），1248 张卡里 330 张有长押，改成 scaleX（transform-origin 在右端）
+      后走合成层，不再触发布局。
+   ③ 三角与连线是 clip-path / box-shadow，无图片、无 SVG、无 canvas。
+   ④ prefers-reduced-motion 下三段动画停掉，只剩外框 + 网格 —— 与旧 hold-static.png
+      是同一帧，不需要额外静帧资源。
+   ⑤ 原型还多两层，故意没移植：.cells（16 个 28×28 的 3% 白描边小格）在 41px 卡片上
+      不可见，却要给每张卡 +16 个节点（330 张）；.marker 的 overflow:hidden 也不需要 ——
+      本块内所有图层都不出盒（beam 用 scaleX 收在 lane 内，三角位移上限 = span）。
+      与原型唯一的差别就是这层几乎看不见的内格，动画取样 21 个相位逐帧一致。
+   每个标识 7 个节点（网格 1 / 外框 1 / 两条 lane 各 3）。
+   ====================================================================== */
+
+/* 定位沿用旧值：24% → 卡片 171→41px、窄屏 94→23px、详情 208→50px */
 .sc-hold,
 .sd-hold {
     position: absolute;
@@ -458,20 +473,266 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     z-index: 2;
     pointer-events: none;
 }
-picture.sc-hold > img,
-picture.sd-hold > img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: contain;
-    opacity: 1;
-    transform: none;
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+
+/* 尺寸参数：与原型 176×176 一一对应（注释里是原型值） */
+.hm {
+    --pitch: 22.727273cqw;      /* 40px */
+    --gx: 3.125cqw;             /* 5.5px */
+    --gy: 5.397727cqw;          /* 9.5px */
+    --inner: 20.454545cqw;      /* 36px = pitch - stroke */
+    --inset: 1.136364cqw;       /* 2px  = stroke / 2 */
+    --span: 88.636364cqw;       /* 156px = pitch * 4 - stroke */
+    /* 浅黑半透明底板（主人 2026-11-12）：白线白框在浅色封面上会糊掉，垫一层 34% 的黑 */
+    background: rgba(0, 0, 0, .3);
+    box-sizing: border-box;
+    container-type: size;
+    isolation: isolate;
 }
-.sc-card:hover picture.sc-hold > img {
-    opacity: 1;
-    transform: none;
+
+/* 4×4 网格：6 条灰线（3 竖 3 横），用背景渐变画，避免 6 个额外节点 */
+.hm-grid {
+    position: absolute;
+    left: var(--gx);
+    top: var(--gy);
+    width: calc(var(--pitch) * 4);
+    height: calc(var(--pitch) * 4);
+    z-index: 1;
+    filter: blur(0.3125cqw);    /* 原型 blur(.55px) */
+    background-image:
+        linear-gradient(#858585, #858585),
+        linear-gradient(#858585, #858585),
+        linear-gradient(#858585, #858585),
+        linear-gradient(#858585, #858585),
+        linear-gradient(#858585, #858585),
+        linear-gradient(#858585, #858585);
+    background-repeat: no-repeat;
+    background-size:
+        1.136364cqw 100%, 1.136364cqw 100%, 1.136364cqw 100%,
+        100% 1.136364cqw, 100% 1.136364cqw, 100% 1.136364cqw;
+    background-position:
+        22.159cqw 0, 44.886cqw 0, 67.614cqw 0,
+        0 22.159cqw, 0 44.886cqw, 0 67.614cqw;
 }
+
+/* 白色外框（带内外发光） */
+.hm-frame {
+    position: absolute;
+    left: calc(var(--gx) - 0.852273cqw);
+    top: calc(var(--gy) - 0.852273cqw);
+    width: calc(var(--pitch) * 4 + 1.704545cqw);
+    height: calc(var(--pitch) * 4 + 1.704545cqw);
+    box-sizing: border-box;
+    border: max(1px, 1.704545cqw) solid #fff;   /* 同上：26px 时 1.7cqw=0.44px 画不出白框 */
+    box-shadow:
+        0 0 0.568182cqw 0.568182cqw #fff,
+        0 0 1.704545cqw 1.136364cqw rgba(255, 255, 255, 0.533),
+        inset 0 0 1.704545cqw rgba(255, 255, 255, 0.467);
+    z-index: 4;
+}
+
+/* 两条推进轨道：横向从第 2 行出发，纵向从第 4 列出发（整条轨道转 90°） */
+.hm-lane {
+    position: absolute;
+    width: var(--span);
+    height: var(--inner);
+    z-index: 2;
+}
+
+.hm-lane.is-h {
+    left: calc(var(--gx) + var(--inset));
+    top: calc(var(--gy) + var(--pitch) + var(--inset));
+}
+
+.hm-lane.is-v {
+    left: calc(var(--gx) + var(--pitch) * 3 - var(--inset));
+    top: calc(var(--gy) + var(--inset));
+    transform: rotate(90deg);
+    transform-origin: 0 0;
+}
+
+/* 三角头：向右指的三角 */
+.hm-head {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--inner);
+    height: var(--inner);
+    z-index: 3;
+    background: #fff;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    filter: blur(0.227273cqw);
+}
+
+/* 尾巴：拖在后面的三角 */
+.hm-tail {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: var(--inner);
+    height: var(--inner);
+    z-index: 1;
+    background: #fff;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 100% 50%);
+    filter: blur(0.227273cqw);
+}
+
+/* 连线：右端固定，只拉伸宽度（见文件头 ②） */
+.hm-beam {
+    position: absolute;
+    left: calc(var(--inner) / 2);
+    top: calc(var(--inner) / 2 - 0.568182cqw);
+    width: calc(var(--span) - var(--inner) / 2);
+    height: 1.136364cqw;
+    z-index: 2;
+    background: #d8faff;
+    box-shadow:
+        0 0 1.136364cqw #e8fbff,
+        0 0 2.272727cqw 1.136364cqw rgba(74, 170, 204, 0.612),
+        0 0 5.113636cqw 2.272727cqw rgba(59, 170, 202, 0.231);
+    transform-origin: 100% 50%;
+}
+
+/* 三段动画共用节奏：1530ms 一轮，steps(1, end) 逐格跳（与原 GIF 一样是跳帧，不是滑行） */
+.hm-head,
+.hm-tail,
+.hm-beam {
+    opacity: 0;
+    animation-duration: 1530ms;
+    animation-iteration-count: infinite;
+    animation-timing-function: steps(1, end);
+}
+
+.is-h .hm-head { animation-name: hm-h-head; }
+.is-h .hm-tail { animation-name: hm-h-tail; }
+.is-h .hm-beam { animation-name: hm-h-beam; }
+.is-v .hm-head { animation-name: hm-v-head; }
+.is-v .hm-tail { animation-name: hm-v-tail; }
+.is-v .hm-beam { animation-name: hm-v-beam; }
+
+/* 关键帧由原型 6 组关键帧逐停点换算而来：head 位移用 translateX(--pitch * n)，
+   beam 的 left/width 换算成 scaleX（右边缘固定 = span）。百分比保留 4 位小数。 */
+@keyframes hm-h-head {
+    0.0000% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+    10.4575% { opacity: 0.25; transform: translateX(calc(var(--pitch) * 0)) }
+    13.0719% { opacity: 0.5; transform: translateX(calc(var(--pitch) * 0)) }
+    15.0327% { opacity: 0.75; transform: translateX(calc(var(--pitch) * 0)) }
+    16.9935% { opacity: 1; transform: translateX(calc(var(--pitch) * 0)) }
+    19.6078% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.25)) }
+    21.5686% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.5)) }
+    23.5294% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.75)) }
+    26.1438% { opacity: 1; transform: translateX(calc(var(--pitch) * 1)) }
+    28.1046% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.25)) }
+    30.0654% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.5)) }
+    32.6797% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.75)) }
+    34.6405% { opacity: 1; transform: translateX(calc(var(--pitch) * 2)) }
+    36.6013% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.25)) }
+    39.2157% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.5)) }
+    41.1765% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.75)) }
+    43.1373% { opacity: 1; transform: translateX(calc(var(--pitch) * 3)) }
+    45.7516% { opacity: 0.75; transform: translateX(calc(var(--pitch) * 3)) }
+    47.7124% { opacity: 0.5; transform: translateX(calc(var(--pitch) * 3)) }
+    49.6732% { opacity: 0.25; transform: translateX(calc(var(--pitch) * 3)) }
+    52.2876% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+    100% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+}
+
+@keyframes hm-h-tail {
+    0.0000% { opacity: 0 }
+    10.4575% { opacity: 0.25 }
+    13.0719% { opacity: 0.5 }
+    15.0327% { opacity: 0.75 }
+    16.9935% { opacity: 1 }
+    45.7516% { opacity: 0.75 }
+    47.7124% { opacity: 0.5 }
+    49.6732% { opacity: 0.25 }
+    52.2876% { opacity: 0 }
+    100% { opacity: 0 }
+}
+
+@keyframes hm-h-beam {
+    0.0000% { opacity: 0; transform: scaleX(1) }
+    19.6078% { opacity: 1; transform: scaleX(0.9275) }
+    21.5686% { opacity: 1; transform: scaleX(0.855) }
+    23.5294% { opacity: 1; transform: scaleX(0.7826) }
+    26.1438% { opacity: 1; transform: scaleX(0.7101) }
+    28.1046% { opacity: 1; transform: scaleX(0.6376) }
+    30.0654% { opacity: 1; transform: scaleX(0.5652) }
+    32.6797% { opacity: 1; transform: scaleX(0.4927) }
+    34.6405% { opacity: 1; transform: scaleX(0.4203) }
+    36.6013% { opacity: 1; transform: scaleX(0.3478) }
+    39.2157% { opacity: 1; transform: scaleX(0.2753) }
+    41.1765% { opacity: 1; transform: scaleX(0.2029) }
+    43.1373% { opacity: 1; transform: scaleX(0.1304) }
+    45.7516% { opacity: 0; transform: scaleX(0.1304) }
+    52.2876% { opacity: 0; transform: scaleX(1) }
+    100% { opacity: 0; transform: scaleX(1) }
+}
+
+@keyframes hm-v-head {
+    0.0000% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+    56.2092% { opacity: 0.25; transform: translateX(calc(var(--pitch) * 0)) }
+    58.8235% { opacity: 0.5; transform: translateX(calc(var(--pitch) * 0)) }
+    60.7843% { opacity: 0.75; transform: translateX(calc(var(--pitch) * 0)) }
+    62.7451% { opacity: 1; transform: translateX(calc(var(--pitch) * 0)) }
+    65.3595% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.25)) }
+    67.3203% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.5)) }
+    69.2810% { opacity: 1; transform: translateX(calc(var(--pitch) * 0.75)) }
+    71.8954% { opacity: 1; transform: translateX(calc(var(--pitch) * 1)) }
+    73.8562% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.25)) }
+    75.8170% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.5)) }
+    78.4314% { opacity: 1; transform: translateX(calc(var(--pitch) * 1.75)) }
+    80.3922% { opacity: 1; transform: translateX(calc(var(--pitch) * 2)) }
+    82.3529% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.25)) }
+    84.9673% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.5)) }
+    86.9281% { opacity: 1; transform: translateX(calc(var(--pitch) * 2.75)) }
+    88.8889% { opacity: 1; transform: translateX(calc(var(--pitch) * 3)) }
+    91.5033% { opacity: 0.75; transform: translateX(calc(var(--pitch) * 3)) }
+    93.4641% { opacity: 0.5; transform: translateX(calc(var(--pitch) * 3)) }
+    95.4248% { opacity: 0.25; transform: translateX(calc(var(--pitch) * 3)) }
+    98.0392% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+    100% { opacity: 0; transform: translateX(calc(var(--pitch) * 0)) }
+}
+
+@keyframes hm-v-tail {
+    0.0000% { opacity: 0 }
+    56.2092% { opacity: 0.25 }
+    58.8235% { opacity: 0.5 }
+    60.7843% { opacity: 0.75 }
+    62.7451% { opacity: 1 }
+    91.5033% { opacity: 0.75 }
+    93.4641% { opacity: 0.5 }
+    95.4248% { opacity: 0.25 }
+    98.0392% { opacity: 0 }
+    100% { opacity: 0 }
+}
+
+@keyframes hm-v-beam {
+    0.0000% { opacity: 0; transform: scaleX(1) }
+    65.3595% { opacity: 1; transform: scaleX(0.9275) }
+    67.3203% { opacity: 1; transform: scaleX(0.855) }
+    69.2810% { opacity: 1; transform: scaleX(0.7826) }
+    71.8954% { opacity: 1; transform: scaleX(0.7101) }
+    73.8562% { opacity: 1; transform: scaleX(0.6376) }
+    75.8170% { opacity: 1; transform: scaleX(0.5652) }
+    78.4314% { opacity: 1; transform: scaleX(0.4927) }
+    80.3922% { opacity: 1; transform: scaleX(0.4203) }
+    82.3529% { opacity: 1; transform: scaleX(0.3478) }
+    84.9673% { opacity: 1; transform: scaleX(0.2753) }
+    86.9281% { opacity: 1; transform: scaleX(0.2029) }
+    88.8889% { opacity: 1; transform: scaleX(0.1304) }
+    91.5033% { opacity: 0; transform: scaleX(0.1304) }
+    98.0392% { opacity: 0; transform: scaleX(1) }
+    100% { opacity: 0; transform: scaleX(1) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hm-head,
+    .hm-tail,
+    .hm-beam {
+        animation: none;
+    }
+}
+
 .sc-t {
     display: block;
     margin: 8px 2px 0;
