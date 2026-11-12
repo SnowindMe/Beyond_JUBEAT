@@ -223,6 +223,9 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
       if (ff) pre('/assets/fonts/' + ff + '.woff2', 'font', 'font/woff2');
     })();
   </script>
+  {/* 页面级 head 追加位（2026-11-13）：目前只有 /songs/ 用它给首屏曲绘发 preload。
+      放在预热脚本之后，保证「世代底图 / 字体」这两项先排队，曲绘不抢它们的带宽。 */}
+  <slot name="head" />
 </head>
 <body>
   {/* 跳过导航：键盘/读屏用户按 Tab 第一下就能直达正文，不用穿过整个顶栏。

@@ -206,6 +206,10 @@ data/upstream/*.json ───────────────────�
 
 `_headers` 是**逐条命中、同名头累加**，不是后写覆盖：`/assets/images/x` 同时命中 `/assets/*` 与 `/assets/images/*` 会回两个 `Cache-Control`。所以长缓存只留一条 `/assets/*`。通配符写单星号，`/assets/**` 会让整条规则失效。
 
+**首屏曲绘**（2026-11-13，主人「曲绘有时加载缓慢、甚至加载不出来」）：/songs/ 在 <head> 里给前 8 张曲绘发 preload，走 Base.astro 的 <slot name="head">；列表由 songs.astro 的 PRELOAD_JACKETS 从 EAGER 那 18 首里现算。**地址必须与 SongCard 的 src 逐字一致**，差一个字符浏览器就当两个 URL、图会被下载两次。取 8 张而不是 18 张：首屏可见的只有最上面两三行，更多的 preload 会和世代底图 / 字体抢同一条慢链路。
+
+public/sw.js 的静态资源失败兜底也一起修了：原来 fetch(...).catch(() => hit) 里的 hit 在这个分支一定是 undefined，respondWith(undefined) 等于「没有响应」，浏览器直接判失败、图变破图且不重试。现在退 250ms 重取一次，两次都失败才回 504。
+
 CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`，只摘六个字段打 `console.log('[csp]')`，不落库——违规量是「改一次内联脚本冒几条」级别，先看 `wrangler tail`。**跨源类违规清零后**才去掉头名里的 `-Report-Only`。逐项放行理由写在 `_headers` 顶部注释里，收口时逐行对着删。
 
 ### 品牌资源版本

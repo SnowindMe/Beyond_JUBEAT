@@ -196,16 +196,25 @@ const DEFAULT_SRV: Srv = 'jp';
 // 首屏 LCP 白等。排除后取的 18 张落在 Ave. 的授权曲（实测为默认视图可见区）。
 // 判据必须与前端 isPickUp() 同一口径，所以这里用同一个函数，别另写一份。
 const EAGER_PICKUP_GENS = new Set(GEN_JP.filter((g) => pickGen(g.k, 'jp')).map((g) => g.k));
-const EAGER = new Set(
-  bucket.jp['授权']
-    ? Object.keys(bucket.jp['授权'])
-        .filter((k) => !EAGER_PICKUP_GENS.has(k))
-        .map((k) => bucket.jp['授权'][k])
-        .reduce((acc, arr) => acc.concat(arr), [])
-        .slice(0, 18)
-        .map((s) => s.id)
-    : [],
-);
+const eagerSongs: Song[] = bucket.jp['授权']
+  ? Object.keys(bucket.jp['授权'])
+      .filter((k) => !EAGER_PICKUP_GENS.has(k))
+      .map((k) => bucket.jp['授权'][k])
+      .reduce((acc, arr) => acc.concat(arr), [])
+  : [];
+const EAGER = new Set(eagerSongs.slice(0, 18).map((s) => s.id));
+
+/* 首屏曲绘 preload（2026-11-13 主人「曲绘有时加载缓慢、甚至加载不出来」）。
+   为什么需要：EAGER 只给了 loading=eager + fetchpriority=high，那是「解析到这行才开始下载」，
+   而卡片的 <img> 在 HTML 里排到几十 KB 之后；在跨境链路（RTT ~1s）上，晚 100ms 解析就晚一个往返。
+   用 <link rel=preload> 让浏览器在解析 <head> 时就发起这 8 张。
+   取前 8 张而不是 18：首屏真正可见的只有最上面两三行，8 张够盖住；
+   再多的 preload 会和世代底图/字体抢同一条慢链路的带宽，反而把 LCP 拖后。
+   地址必须与 SongCard 里那个 src 逐字一致，否则浏览器当成两个 URL、图会被下载两次。 */
+const PRELOAD_JACKETS = eagerSongs
+  .slice(0, 8)
+  .map((s) => s.cover)
+  .filter((c): c is string => !!c);
 
 // 【2026-11-02 分段加载】首屏只 SSR 渲染前若干世代，其余世代先出骨架。
 //
@@ -323,6 +332,12 @@ const TYPES = [
   canonicalPath="/songs/"
   description={`jubeat 音乐魔方曲目库：日服 ${srvTotal('jp')} 首（授权 ${countOf('jp', '授权')} 首、原创 ${countOf('jp', '原创')} 首）、国服 ${srvTotal('cn')} 首（独占 ${countOf('cn', '独占')} 首、KONAMI ${countOf('cn', 'KONAMI')} 首、原创 ${countOf('cn', '原创')} 首、流行 ${countOf('cn', '流行')} 首），按世代分组，可搜索、筛选与排序。`}
 >
+  {/* 首屏曲绘 preload：8 张，必须与 SongCard 的 src 完全一致（见 PRELOAD_JACKETS 上方注释）。 */}
+  <Fragment slot="head">
+    {PRELOAD_JACKETS.map((c) => (
+      <link rel="preload" as="image" href={`/assets/images/jackets/${c}`} fetchpriority="high" />
+    ))}
+  </Fragment>
   {/*
     【本页第 1 个可聚焦元素】键盘逃生口（2026-10-23，t9；位置按稽核实测调整）
 

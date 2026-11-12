@@ -74,17 +74,29 @@ self.addEventListener('fetch', (e) => {
     /\.(png|jpe?g|webp|avif|svg|ico|woff2?|css|js|webmanifest)$/i.test(url.pathname);
   if (!isStatic) return;
 
+  // 走一次网络；成功的同源响应顺手存进缓存（opaque/error 不存）
+  function fromNet() {
+    return fetch(req).then((res) => {
+      if (res && res.status === 200 && res.type === 'basic') {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+      }
+      return res;
+    });
+  }
+
   e.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;
-      return fetch(req).then((res) => {
-        // 只缓存成功的同源响应；opaque/error 不存
-        if (res && res.status === 200 && res.type === 'basic') {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
-        }
-        return res;
-      }).catch(() => hit);
+      /* 【2026-11-13 修「曲绘有时加载不出来」】
+         原来这一行是 .catch(() => hit)：可走到这里时 hit 一定是 undefined，
+         respondWith(undefined) 等于「这个请求没有响应」——浏览器直接判失败、图变破图，
+         一次网络抖动就定死，而且 SW 不会再替你重试。
+         改成：失败后退 250ms 重取一次（只重试一次，弱网下不把请求堆成雪崩），
+         两次都失败才回一个明确的 504，至少状态可辨、不会伪装成成功。 */
+      return fromNet()
+        .catch(() => new Promise((r) => setTimeout(r, 250)).then(fromNet))
+        .catch(() => new Response('', { status: 504, statusText: 'offline' }));
     })
   );
 });
