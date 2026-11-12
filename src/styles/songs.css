@@ -3243,6 +3243,17 @@ html.sc-js .sc-panel[hidden] {
     clip-path: inset(50%);
     white-space: nowrap;
 }
+/* 片段重试后仍失败（songs.astro 打上 data-fail）：这块数据真的没拿到。
+   骨架留着（它仍是「这段没有」），但要和「还在加载」区分开——
+   停掉 shimmer、压低卡片，读屏文案由脚本改成「该世代加载失败，刷新重试」。
+   可见的说明放在命中条（「N 个加载失败（刷新重试）」），这里不塞文字，
+   否则占位高度会比真块高一行。 */
+.sc-gen-ph[data-fail] .sc-grid-ph {
+    opacity: .4;
+}
+.sc-gen-ph[data-fail] .sc-ph-img {
+    animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
     .sc-ph-img {
         animation: none;

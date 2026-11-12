@@ -1078,11 +1078,9 @@ const TYPES = [
            这是有意的：宁可先给个量级，也不要让输入框看起来没反应。 */
         if (lazyState === 0 && hasFilters() && hasSkeletons()) {
           lazyState = 1;
-          if (activeBox) {
-            activeBox.hidden = false;
-            if (activeTxt) activeTxt.textContent = '…';
-            if (activeCostTxt) activeCostTxt.textContent = '正在加载剩余 ' + root.querySelectorAll('.sc-gen-ph').length + ' 个世代';
-          }
+          /* 这里的「…」与「正在加载剩余 N 个世代」原先是就地写的，但同一个 apply 往下走
+             两屏之后会把它们覆盖成本轮数字与耗时（那里的判据改用 pendingLoad 了）。
+             同一份信息两处写、还有一处是错的，所以只留下面那一处，这里只管状态。 */
           ensureAll().then(function () {
             lazyState = 2;
             apply();
@@ -1198,12 +1196,14 @@ const TYPES = [
         // 空态按**当前服务器**判断：jp 搜不到但 cn 能搜到时，jp 视图下仍要显示空态。
         //
         // 【2026-11-12 修「先出无结果再出结果」】
-        // 补拉期间（lazyState === 1）骨架块里的卡片还没到，带筛选时骨架按 0 计，
-        // 于是 totalMine 天然偏小、常常是 0 —— 空态就会先亮一下「没有找到符合条件的曲目」，
-        // 等片段回来又被结果顶掉。这不是「没有」，只是「还没算完」，所以不显示空态；
-        // 正在打字（typing）同理：上一次提交的中间态不该替用户先下结论。
-        // 补拉结束后 apply 会再跑一次，那时才是最终裁决。
-        var pendingLoad = lazyState === 1 || typing;
+        // 补拉期间骨架块里的卡片还没到，带筛选时骨架按 0 计，于是 totalMine 天然偏小、
+        // 常常是 0 —— 空态就会先亮一下「没有找到符合条件的曲目」，等片段回来又被结果顶掉。
+        // 这不是「没有」，只是「还没算完」，所以不显示空态；正在打字（typing）同理。
+        //
+        // 判据取「还有没有骨架块」而不是「lazyState 是否 === 1」：后者只覆盖「正在补拉」，
+        // 一旦某段片段失败、懒状态被置成 2 而骨架还留在页面上，就会重新误报（2026-11-12 晚补）。
+        // 有骨架 = 数据不完整 = 不下结论；补拉结束后 apply 会再跑一次，那才是最终裁决。
+        var pendingLoad = lazyState === 1 || typing || hasSkeletons();
         if (emptyBox) emptyBox.hidden = totalMine > 0 || pendingLoad;
 
         // 筛选按钮上的角标：整合进面板后，chips 和排序都看不见了，
@@ -1223,8 +1223,13 @@ const TYPES = [
         var filtering = !!state.q || activeCount > 0 || state.sort !== DEFAULT_SORT_INLINE;
         if (activeBox) {
           activeBox.hidden = !filtering;
-          // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值
-          if (activeTxt) activeTxt.textContent = filtering ? String(totalMine) : '';
+          // 只在可见时写数字；隐藏时清空，避免下次展开闪一下上一次的旧值。
+          // 数据没齐（pendingLoad）时写「…」而不是那个偏小的数字：补拉期间 totalMine
+          // 只数了已经落地的卡片，写出来就是「匹配 0 首」——用户读到的正是「无结果」，
+          // 一秒后再变成真数字。宁可先不报数，也别先报错数。
+          if (activeTxt) {
+            activeTxt.textContent = filtering ? (pendingLoad ? '…' : String(totalMine)) : '';
+          }
           if (activeCost) activeCost.hidden = !filtering;
         }
 
@@ -1245,7 +1250,17 @@ const TYPES = [
         // 耗时写在最后：它要包含上面全部筛选 + 排序 + 错开入场的标记，
         // 但**不含**浏览器重绘。渲染固定两位小数以下取整，避免出现「耗时 0.30000000000000004ms」。
         if (activeCostTxt && filtering) {
-          activeCostTxt.textContent = Math.round(performance.now() - t0) + ' ms';
+          // 补拉期间同样不报耗时：那一轮的耗时只算了「已落地的卡片」，报出来会显得
+          // 筛选特别快、数字又特别少，两条都是假的。改成报还差几段没到。
+          if (pendingLoad) {
+            var failed = root.querySelectorAll('.sc-gen-ph[data-fail]').length;
+            var waiting = root.querySelectorAll('.sc-gen-ph:not([data-fail])').length;
+            activeCostTxt.textContent = failed > 0
+              ? (waiting > 0 ? waiting + ' 个世代还在加载，' : '') + failed + ' 个世代加载失败（刷新重试）'
+              : '正在加载剩余 ' + waiting + ' 个世代';
+          } else {
+            activeCostTxt.textContent = Math.round(performance.now() - t0) + ' ms';
+          }
         }
       }
 
@@ -1890,11 +1905,24 @@ const TYPES = [
         var srv = ph.getAttribute('data-srv') || 'jp';
         var gen = ph.getAttribute('data-gen') || '';
         var url = '/songs/frag?srv=' + encodeURIComponent(srv) + '&gen=' + encodeURIComponent(gen);
-        return fetch(url, { credentials: 'same-origin' })
-          .then(function (r) {
-            if (!r.ok) throw new Error('frag ' + r.status);
-            return r.text();
-          })
+        /* 【2026-11-12】取片段文本，失败重试一次：失败的那段骨架会一直留在页面上，
+           而懒状态已经走到 2，「有没有算完」和「有没有数据」就不再一致。
+           300ms 后重试一次足够挡住抖动（边缘 429 / 连接被掐）；重试失败才交给调用方吞掉。 */
+        function getText(tries) {
+          return fetch(url, { credentials: 'same-origin' })
+            .then(function (r) {
+              if (!r.ok) throw new Error('frag ' + r.status);
+              return r.text();
+            })
+            .catch(function (err) {
+              if (tries > 0 && ph.parentNode) {
+                return new Promise(function (res) { setTimeout(res, 300); })
+                  .then(function () { return getText(tries - 1); });
+              }
+              throw err;
+            });
+        }
+        return getText(1)
           .then(function (html) {
             var tmp = document.createElement('div');
             tmp.innerHTML = html.trim();
@@ -1929,6 +1957,17 @@ const TYPES = [
             // 高度从「按 data-count 估」换成「按真实卡数算」，一并把块头量准
             refreshIntrinsic();
             return node;
+          })
+          .catch(function (err) {
+            /* 重试也失败：标记为失败但**留在页面上**。它仍然是「这段数据没有」，
+               所以不该让空态/命中数装作算完了（宁可停在「…」并说明原因）；
+               块内那句「加载中…」由 CSS 按 data-fail 改成「加载失败，刷新重试」。 */
+            ph.setAttribute('data-fail', '1');
+            // 骨架里那句 status 是给读屏的（视觉上 1px 裁掉，多一行会撑高占位），
+            // 所以「失败」只能靠这条文案与命中条上的说明，别在这里加可见文字。
+            var st = ph.querySelector('.sc-ph-status');
+            if (st) st.textContent = '该世代加载失败，刷新重试';
+            throw err;
           });
       }
       /** 拉齐所有骨架（筛选用）。并发 3：每一段都是一次 SSR，太多会把 Worker 打回原形。 */
