@@ -1425,6 +1425,11 @@ html[data-g="knit"] #wordLogo {
    窄屏（≤768px）左栏被右侧 121px 的 dsh 徽章挤窄，允许它换行而不是溢出。 */
 .foot-copy {
     flex: 1 0 100%;
+    /* 【2026-11-12 主人「可以向右一些，© 跟上面的第一个数字对齐」】
+       徽章内文字起点 = 边框 1px + 左右内边距 9px，所以首行缩进 10px 才能让 © 压
+       在日期第一个数字的左沿上（实测未缩进时差 9.8px）。缩进放在 padding 而不是
+       margin：满宽 100% 的盒子左移会跟 .foot-l 的 gap 一起把行推歪。 */
+    padding-left: 10px;
     font-size: 10px;
     line-height: 1.5;
     letter-spacing: 0.08em;
