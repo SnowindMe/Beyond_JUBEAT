@@ -37,7 +37,9 @@ const RULES = [
   ['bpm 空值', 'SELECT COUNT(*) c FROM songs WHERE bpm IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
   ['added_at 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
   ['unlock_note 空值', 'SELECT COUNT(*) c FROM songs WHERE unlock_note IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
-  ['占位 id', "SELECT COUNT(*) c FROM songs WHERE id_kind='synthetic'", '**{n}**'],
+  // needle 必须带上下文：2026-11-12 实撞——只写 '**{n}**' 时，文档里任意一处 '**0**'
+  // 都能让它通过，占位 id 从 2 改成 0 后文档仍写 2，脚本照样绿。锚到整句才验得住。
+  ['占位 id', "SELECT COUNT(*) c FROM songs WHERE id_kind='synthetic'", "占位 id（id_kind='synthetic'）共 **{n}**"],
   ['限时曲', 'SELECT COUNT(*) c FROM songs WHERE limited_until IS NOT NULL', '**{n}**'],
   ['索引数', "SELECT COUNT(*) c FROM sqlite_master WHERE type='index' AND sql IS NOT NULL", '**{n}**'],
   // 【2026-10-31 RemyWiki 谱面数据】三列的覆盖情况也要在文档里写清（尤其 NULL ≠ 0 这条）。
