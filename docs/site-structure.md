@@ -138,7 +138,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 > 加新页规则：见记忆里的「导航三处」准则——宽屏 `.nav-txt` + 窄屏 `.nav-drawer` + `.nav-ico`，缺一处手机上进不去。
 
-**抽屉的开合动画（2026-11-12 主人要求）**：`.nav-drawer` 原来用 `display:none ↔ flex` 硬切，display 不可过渡所以没有动画。现在常驻 `display:flex`，靠 `opacity` + `transform: translateY(-8px)` + `visibility` 收放（0.18s ease，与 `.tsw-pop`、`.acm-pop` 同一套）。`visibility` 的过渡延迟 0.18s：收起时等淡出走完再摘掉，展开时立刻可见；收起态必须 `visibility:hidden`——只写 `opacity:0` 的话抽屉里 5 条链接仍在 Tab 序列里。`prefers-reduced-motion` 下全部关掉。
+**抽屉的开合动画（2026-11-12 主人要求）**：`.nav-drawer` 原来用 `display:none ↔ flex` 硬切，display 不可过渡所以没有动画。现在常驻 `display:flex`，靠 `opacity` + `transform: translateY(-8px)` + `visibility` 收放（0.18s ease，与 `.tsw-pop`、`.acm-pop` 同一套）。`visibility` 的过渡延迟 0.18s：收起时等淡出走完再摘掉，展开时立刻可见；收起态必须 `visibility:hidden`——只写 `opacity:0` 的话抽屉里 5 条链接仍在 Tab 序列里。因为 visibility 的摘除要等淡出走完，收起那 180ms 里链接仍可能被 Tab 到，所以抽屉还带 `inert`：模板上默认就有，`set()` 里 `drawer.inert = !open`，收起的一瞬间子树即不可聚焦/不可点/对读屏隐藏（不支持 inert 的老浏览器只是设了个普通属性，仍由 visibility 兜底）。`prefers-reduced-motion` 下动画全部关掉。
 
 ---
 

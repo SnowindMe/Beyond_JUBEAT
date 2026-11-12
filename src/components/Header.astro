@@ -85,8 +85,12 @@ const user = Astro.locals.user;
       </div>
     </div>
   </nav>
-  {/* 窄屏导航抽屉：与 .nav-txt 同一组链接，展开时覆盖在顶栏下方 */}
-  <div class="nav-drawer" id="navDrawer" data-open="0" role="group" aria-label="站点导航">
+  {/* 窄屏导航抽屉：与 .nav-txt 同一组链接，展开时覆盖在顶栏下方。
+      初始带 inert（2026-11-12 主人要求）：收起态整个子树不可聚焦、不可点、对读屏隐藏。
+      只靠 CSS 的 visibility（延迟 0.18s 才生效）的话，收起动画那 180ms 里按 Tab
+      会落进正在淡出的链接上；inert 在收起的一瞬间就生效，视觉淡出照常走。
+      set() 里同步 drawer.inert，展开时移除。 */}
+  <div class="nav-drawer" id="navDrawer" data-open="0" role="group" aria-label="站点导航" inert>
     <a href="/songs/" class:list={[{ on: path.startsWith('/songs/') }]}>曲目</a>
     <a href="/jubility/" class:list={[{ on: path.startsWith('/jubility/') }]}>Jubility</a>
     <a href="/recent/" class:list={[{ on: path === '/recent/' }]}>最近更改</a>
@@ -284,6 +288,9 @@ const user = Astro.locals.user;
         // 开抽屉前先收起其他浮层（同上，主人 2026-10-26 要求互斥）
         if (open && window.jbPop) window.jbPop.closeOthers('drawer');
         drawer.setAttribute('data-open', open ? '1' : '0');
+        // 收起瞬间就摘掉可聚焦性（见上方模板注释）。不支持 inert 的老浏览器
+        // 只是设了一个普通属性，无副作用，仍由 CSS 的 visibility 兜底。
+        drawer.inert = !open;
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
         btn.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
       }
