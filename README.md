@@ -107,7 +107,7 @@ src/
 │  └─ 404.astro
 ├─ components/               Hero / SongCard / GenBlock / Fortune / HotBoard /
 │                            SongAudio / BootScreen / Header / ThemeScript / …
-├─ layouts/Base.astro        全站外壳
+├─ layouts/Base.astro        全站外壳（.wrap 撑满一屏、main 吃掉剩余高度，内容不满时页脚贴底）
 ├─ middleware.ts             会话 cookie → locals.user、边缘缓存、限流前置
 ├─ worker.ts                 Worker 入口（fetch 转发 + scheduled）
 ├─ styles/                   theme · songs · fortune · jubility · auth · server-card

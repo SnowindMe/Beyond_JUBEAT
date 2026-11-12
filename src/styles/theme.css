@@ -253,6 +253,15 @@ img {
 .wrap {
     max-width: 1256px;
     margin: 0 auto;
+    /* 【2026-11-12 主人「无论移动端还是桌面端，内容不满视图时页脚要在底部」】
+       撑成整屏高的纵向 flex：main 吃掉剩余空间，页脚自然被推到底。
+       不做 .foot{margin-top:auto} 是因为那样会吃掉页脚上方 46-76px 的气口，
+       内容长的页面会贴住最后一块内容；让 main 变高，页脚原有的 margin 保留。
+       100dvh 兜住手机地址栏收放：老浏览器不认 dvh 时回落到 100vh。 */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
     /* 左右各加一个刘海屏安全区内边距（非刘海屏 env() 为 0，不影响现有间距） */
     padding-top: 0;
     padding-bottom: 0;
@@ -1287,6 +1296,12 @@ html[data-g="knit"] #wordLogo {
    dist dr tr lat lc cd lede）在 src/ 的 .astro 与 .ts 里一个引用都没有，是纯死代码。
    数据本身仍在 src/data/data.json，需要时从 git 历史取回这段样式。 */
 
+
+/* main 吃掉 .wrap 里剩余的高度（页脚贴底，见 .wrap 注释）：
+   flex:1 0 auto 让它至少和内容一样高，剩余空间全给它。 */
+.wrap > main {
+    flex: 1 0 auto;
+}
 
 /* foot：左列（编辑时间 / 版本号）+ 右列（品牌字 / Enjoy Yourself） */
 .foot {
