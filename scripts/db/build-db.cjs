@@ -140,6 +140,9 @@ function main() {
   // 【2026-10-31 RemyWiki】回填前 bpm 为空的行。**必须在事务外声明**：
   // expect 那一段（事务之后）还要用它算「回填后应剩几行为空」，声明在 try 里就取不到了。
   const bpmNullBefore = new Set();
+  // 快照 key → 库内 id 的谱面表（在事务里、拿到 allIds 之后填；自检的期望值也要用，
+  // 所以在这里先声明，不能让 const 留在 try 里 —— 出了 try 就取不到）。
+  const remyById = new Map();
   const problems = [];
 
   db.exec('BEGIN');
@@ -265,10 +268,18 @@ function main() {
     // 快照里没有该曲时 COALESCE 保留原值（那 115 首不在 remywiki 的 Full Song List 里）。
     for (const r2 of db.prepare('SELECT song_id FROM songs WHERE bpm IS NULL').all()) bpmNullBefore.add(r2.song_id);
     const allIds = new Set(db.prepare('SELECT song_id FROM songs').all().map((r2) => r2.song_id));
+    // 【2026-11-12】快照的 key 是**上游** songId，库里存的是 id-fixes 修正后的 id。
+    // 这里先按「原始 id 是否还在库里」统一翻一遍，得到「库内 id → 谱面数据」的表，
+    // 回填与下面的自检期望值都用它 —— 两边各算一套的话，必然一边对一边错。
+    // 只翻「已从库里消失的 id」：互换对（90000134 ↔ 60000049、60000028 → 20000031）的旧 id
+    // 仍留在库中，无条件翻译会把 BEAT-NEW-WORLD 的谱面写到 Ghost Clock 头上。
+    for (const [rawId, v] of Object.entries(remy)) {
+      remyById.set(allIds.has(rawId) ? rawId : (idFixes.get(rawId) || rawId), v);
+    }
     const updRemy = db.prepare(
       'UPDATE songs SET bpm = COALESCE(?, bpm), has_hold = ?, notecounts = ?, holds = ? WHERE song_id = ?'
     );
-    for (const [id, v] of Object.entries(remy)) {
+    for (const [id, v] of remyById) {
       // 快照里的 id 不在库里 = 抓取口径与建库口径对不上了，必须报出来（静默无效最难查）。
       if (!allIds.has(id)) { problems.push('RemyWiki 快照里的 song_id 不在库中: ' + id); continue; }
       updRemy.run(
@@ -373,8 +384,11 @@ function main() {
       ...Object.fromEntries([...chartOverrides].filter(([, v]) => v.has_hold === 1).map(([id]) => [id, true])),
     }).length,
     // bpm 空值的期望 = 「回填前为 NULL，且快照和补录表里都没有 bpm」的条数。
+    // 必须用 remyById（已按 id-fixes 翻译成库内 id）而不是裸 remy：占位 id 改号后，
+    // 裸查会算成「快照里没有这首」→ 期望多算，实际却回填上了（2026-11-12 实撞）。
     bpmEmpty: [...bpmNullBefore].filter(
-      (id) => !(remy[id] && remy[id].bpm) && !(chartOverrides.has(id) && chartOverrides.get(id).bpm)
+      (id) => !(remyById.get(id) && remyById.get(id).bpm)
+        && !(chartOverrides.has(id) && chartOverrides.get(id).bpm)
     ).length,
   };
   expect.remyUnknown = expect.total - expect.remyRows;

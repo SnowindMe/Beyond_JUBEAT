@@ -56,6 +56,10 @@ node scripts/db/parse-xlsx.cjs --xlsx=/绝对路径/音乐魔方更新歌曲.xls
 - 修正后 id 一律要与曲目自身世代吻合（前缀判据见 0.1）。
 - 自检三条：目标 id 不能重复、旧 id 必须真的消失、新 id 必须真的存在。
   「旧 id 仍在」对**互换项**不算错误（该 id 会被另一方占用），判据是「它是否也是别人的目标」。
+- **改 id 时别忘了下游按 id 查表的那几处**（2026-11-12 实撞）：RemyWiki 快照
+  （`data/remy/by-song-id.json`）是按**上游** song_id 归并的，库里却存修正后的 id。
+  build-db 因此先建一张「库内 id → 谱面」的映射表（只翻已从库里消失的旧 id，互换对不动），
+  回填与 `bpm 为空的行` 的期望值都走这张表 —— 两边各算一套的话，一边回填成功、一边期望算错，必然一对红一绿。
 
 > **seed 必须先清空数据表**：原先只靠 `INSERT OR REPLACE` 做幂等，只对「同主键改内容」有效。
 > 一旦 id 变了，旧主键那行没人覆盖 → 库里同时留新旧两行，页面卡片数凭空变多
@@ -147,7 +151,7 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 
 | 字段 | 日服 1150 首 | 国服 524 行（91 国服独有 + 432 旧框已有曲 + 1 Big Daddy 日服行） |
 |---|---|---|
-| song_id | `jp-resolved.json` 的 `songId`（拿不到官方 id 的 10 首用 `BTA-<曲绘id>` 占位，`id_kind=synthetic`） | xlsx sheet2 的 A 列（9 位） |
+| song_id | `jp-resolved.json` 的 `songId`（源数据里 10 首拿不到官方 id、用 `BTA-<曲绘id>` 占位，`id_kind=synthetic`；其中 2 首 2026-11-12 经 `id-fixes` 改成官方 id，库里已无占位行） | xlsx sheet2 的 A 列（9 位） |
 | title / artist | resolved.json，**再过一层人工修正表 data/title-overrides.json**（2026-10-31 加；目前只有 1 条：50000276 的 `Milchstrae` → `Milchstraße`，源里缺 ß） | sheet2 B / C |
 | bpm | **NULL**（源数据没有），从 wiki-v3 快照按 songId 回查；**2026-10-31 起**再用 remywiki 的 jubeat BPM 覆盖（多机种页面取标 jubeat 的那个），回查不到就留 NULL | sheet2 D（`——` / `—` 归一成 NULL） |
 | bsc / adv / ext | resolved.json `levels` | sheet2 E / F / G |

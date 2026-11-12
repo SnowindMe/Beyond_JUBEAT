@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS songs (
   bsc         REAL,
   adv         REAL,
   ext         REAL,
-  alt         INTEGER NOT NULL DEFAULT 0, -- 1 = 该行是 [ 2 ] 谱面（标题带 [ 2 ]）。**不代表有长押**，见 has_hold
+  alt         INTEGER NOT NULL DEFAULT 0 CHECK (alt IN (0,1)), -- 1 = 该行是 [ 2 ] 谱面（标题带 [ 2 ]）。**不代表有长押**，见 has_hold
   -- 【2026-10-31 主人要求：接入 RemyWiki 的谱面数据（BPM / 是否长押谱 / 总键数 / 长押数）】
   -- 来源 remywiki 的 jubeat 单曲页，判定规则与抓取说明见 data/remy/README.md；
   -- 按 song_id 归并好的入库快照是 data/remy/by-song-id.json（build-db.cjs 回填，不手改库）。
@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS recent_changes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_recent_changed_at ON recent_changes(changed_at DESC);
+
+-- 曲目缓存修订号（2026-11-04）。单行表，rev 只增不减。
+-- 曲目已经改由构建期静态快照提供（src/lib/song-data.ts），后台改一条曲目后
+-- 光改库里的 songs 行是不会让线上变样的 —— 必须同时把 rev +1，
+-- 各 PoP 的缓存 key（?v=<内容版本>&r=<rev>）才会一起换，新内容才会被读到。
+-- 用独立行而不是 songs 的 MAX(rowid)：rev 要能在「只是改字段、不加行」时也变。
+CREATE TABLE IF NOT EXISTS song_rev (
+  id         INTEGER PRIMARY KEY CHECK (id = 1),
+  rev        INTEGER NOT NULL DEFAULT 0,
+  changed_at TEXT                        -- 最后一次 bump 的时间，排查用
+);
+INSERT OR IGNORE INTO song_rev (id, rev) VALUES (1, 0);
+-- 归档清理（2026-11-04）：按 changed_at 早于 N 个月删，与上面 DESC 的那条不是一回事
+CREATE INDEX IF NOT EXISTS idx_recent_changed_at_asc ON recent_changes(changed_at);
 
 
 
@@ -115,7 +129,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('90001029','official','眼光 [ 2 ]','猫大樹','165','festo',1,0,'授权',2,7,9.1,1,1,'{"bsc":134,"adv":399,"ext":592}','{"bsc":18,"adv":54,"ext":42}','id10343674.webp',NULL,NULL,NULL),
   ('11000108','official','ギザバ怪文書','cosMo＠暴走P','280','beyond the Ave.',1,0,'授权',3,8,9.8,0,0,'{"bsc":248,"adv":545,"ext":866}','{"bsc":0,"adv":0,"ext":0}','id80596859.webp',NULL,NULL,NULL),
   ('50000369','official','きたさいたま2000','LindaAI-CUE（BNGI）「太鼓の達人」より','222','saucer fulfill',1,0,'授权',5,9.6,10.6,0,0,'{"bsc":347,"adv":765,"ext":873}','{"bsc":0,"adv":0,"ext":0}','id90871924.webp',NULL,NULL,NULL),
-  ('BTA-83105461','synthetic','ギミギミエンターテイメント','hololive IDOL PROJECT','138-200','beyond the Ave.',1,0,'授权',3,7,9.4,0,0,'{"bsc":319,"adv":680,"ext":996}','{"bsc":0,"adv":0,"ext":0}','id83105461.webp',NULL,NULL,NULL),
+  ('11000244','official','ギミギミエンターテイメント','hololive IDOL PROJECT','138-200','beyond the Ave.',1,0,'授权',3,7,9.4,0,0,'{"bsc":319,"adv":680,"ext":996}','{"bsc":0,"adv":0,"ext":0}','id83105461.webp',NULL,NULL,NULL),
   ('11000178','official','ギャ・ギャ・ギャ・ギャラクシー！','つきみぐー、','140','beyond the Ave.',1,0,'授权',3,7,9.4,0,0,'{"bsc":271,"adv":631,"ext":888}','{"bsc":0,"adv":0,"ext":0}','id17326420.webp',NULL,NULL,NULL),
   ('80000038','official','CandyPop★Showcase','OSTER project','170','clan',1,0,'授权',4,6,8,0,0,'{"bsc":283,"adv":430,"ext":701}','{"bsc":0,"adv":0,"ext":0}','id19372761.webp',NULL,NULL,NULL),
   ('70000048','official','響縁','豚乙女','180','Qubell',1,0,'授权',2,7,9.3,0,0,'{"bsc":234,"adv":426,"ext":742}','{"bsc":0,"adv":0,"ext":0}','id46356259.webp',NULL,NULL,NULL),
@@ -260,7 +274,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('11000221','official','MEGALOVANIA','Toby Fox','240','beyond the Ave.',1,0,'授权',4,8,10,0,1,'{"bsc":317,"adv":673,"ext":888}','{"bsc":36,"adv":53,"ext":87}','id87892930.webp',NULL,NULL,NULL),
   ('11000187','official','メズマライザー','サツキ','185','beyond the Ave.',1,0,'授权',4,8,9.5,0,0,'{"bsc":294,"adv":666,"ext":988}','{"bsc":0,"adv":0,"ext":0}','id93524776.webp',NULL,NULL,NULL),
   ('90000240','official','メランコリック','Junky','140','festo',1,0,'授权',3,6,8,0,0,'{"bsc":151,"adv":364,"ext":686}','{"bsc":0,"adv":0,"ext":0}','id30367909.webp',NULL,NULL,NULL),
-  ('BTA-67975257','synthetic','夢色ワンダー','hololive IDOL PROJECT','135-208','beyond the Ave.',1,0,'授权',2,6,8,0,0,'{"bsc":206,"adv":533,"ext":777}','{"bsc":0,"adv":0,"ext":0}','id67975257.webp',NULL,NULL,NULL),
+  ('11000243','official','夢色ワンダー','hololive IDOL PROJECT','135-208','beyond the Ave.',1,0,'授权',2,6,8,0,0,'{"bsc":206,"adv":533,"ext":777}','{"bsc":0,"adv":0,"ext":0}','id67975257.webp',NULL,NULL,NULL),
   ('50000145','official','Lifetime Journey','J.Speaks','123','saucer',1,0,'授权',2,5,7,0,0,'{"bsc":128,"adv":451,"ext":666}','{"bsc":0,"adv":0,"ext":0}','id40895507.webp',NULL,NULL,NULL),
   ('50000291','official','ラクガキスト','cosMo＠暴走P feat.GUMI','199','saucer fulfill',1,0,'授权',4,7,10.4,0,0,'{"bsc":214,"adv":533,"ext":893}','{"bsc":0,"adv":0,"ext":0}','id96177028.webp',NULL,NULL,NULL),
   ('11000080','official','ラグトレイン','稲葉曇','147','Ave.',1,0,'授权',3,5,8,0,0,'{"bsc":193,"adv":344,"ext":540}','{"bsc":0,"adv":0,"ext":0}','id75728040.webp',NULL,NULL,NULL),
