@@ -352,7 +352,9 @@ const metaFoot: Meta[] = song
             顺序：songId + 世代徽章 + 分区徽章 → 曲名 → 艺术家。 */}
         <p class="sd-idline">
           <button type="button" class="sd-sid" data-copy={song.id} title="点击复制 songId">#{song.id}</button>
-          <span class="sd-badge sd-badge-gen">{song.gen}</span>
+          {/* title：窄屏上世代名放不下时会被省略号截断（见 songs.css 的 .sd-badge-gen），
+              全文靠它补回来。 */}
+          <span class="sd-badge sd-badge-gen" title={song.gen}>{song.gen}</span>
           <span class="sd-badge sd-badge-cat">{song.cat}</span>
         </p>
 

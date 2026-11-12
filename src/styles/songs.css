@@ -2137,18 +2137,11 @@ html[data-lum="light"] .sd-gauge {
         margin-top: 10px;
         font-size: 13px;
     }
-    .sd-badge {
-        height: 20px;
-        padding: 0 8px;
-        font-size: 11px;
-    }
-    /* songId 行与曲名之间的间距也收紧，否则三段信息在窄屏里挤成一坨 */
+    /* 单行规则见文件末尾 @media (max-width:768px) 的「songId 行」一段：
+       768 那段在下面，会把这里的 font-size 改回 12px，两处各写一份只会更难对，
+       所以只留那一处。 */
     .sd-idline {
         margin-bottom: 7px;
-        gap: 6px;
-    }
-    .sd-sid {
-        font-size: 12px;
     }
 }
 /* 【2026-11-02 设计审计·响应式倒挂，已修正】
@@ -3127,7 +3120,8 @@ html.sc-js .sc-panel[hidden] {
         padding: 10.5px 0;
         margin: -10.5px 0;
     }
-    /* 世代/分区徽章：20 高 / 11px → 22 高 / 12px，与小字下限对齐 */
+    /* 世代/分区徽章：20 高 / 11px → 22 高 / 12px，与小字下限对齐。
+       （songId 行挤成一行的例外写在文件末尾 @media (max-width: 460px)，不在这里） */
     .sd-badge {
         height: 22px;
         padding: 0 9px;
@@ -3162,6 +3156,43 @@ html.sc-js .sc-panel[hidden] {
     }
     .sd-foot dt {
         font-size: 12px;
+    }
+}
+
+/* ============================================================
+   songId 行在手机上挤成一行（2026-11-12 主人「这一段在移动端视图建议缩成一行」）
+   三件（#songId / 世代 / 分区）在右栏里必然折行：「授权」被甩到第二行。
+   右栏宽度 ≈ 视口 − 208px（封面 108 + 间距 + 页边距），三件在 12px 下要 242px，
+   所以视口小于 450px 就一定折。判据取 460：再往上是 12px 正常尺寸、不需要压。
+   压到 10px（只在这一行、只在这个宽度段）后三件约 181px，390px 的单行正好放下；
+   更窄（375/360）让世代徽章出省略号——它本来就是三者里唯一长度会变的
+   （beyond the Ave. 15 字最长），全文在 title 里，宁可省略也不折行。
+   ============================================================ */
+@media (max-width: 460px) {
+    .sd-idline {
+        flex-wrap: nowrap;
+        gap: 4px;
+    }
+    .sd-idline .sd-badge {
+        height: 20px;
+        padding: 0 5px;
+        font-size: 10px;
+        letter-spacing: 0.02em;
+        flex: 0 0 auto;
+    }
+    .sd-idline .sd-sid {
+        font-size: 11px;
+        flex: 0 0 auto;
+    }
+    /* 世代名可压缩：block + overflow 才让 text-overflow 生效
+       （flex 容器自身不画省略号）；line-height 顶住 20px 高度，与分区徽章等高。 */
+    .sd-idline .sd-badge-gen {
+        display: block;
+        line-height: 20px;
+        flex: 0 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }
 
