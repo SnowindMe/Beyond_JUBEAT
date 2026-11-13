@@ -1583,6 +1583,27 @@ html[data-g="knit"] #wordLogo {
     gap: 6px 14px;
     align-items: start;
 }
+.links-row {
+    /* 【2026-11-13 主人「给组标签加一条淡分隔线」】行与行之间一条 1px 淡线：
+       画在 .links-row + .links-row 的 ::before 上（top 取行间距的一半，正好落在缝里），
+       右侧渐隐到透明 —— 线只负责「这一组到此为止」，不该一路顶到容器右边缘。
+       用渐变而不是 border-top：border 不能渐隐，整条拉到右边会变成表格框线。 */
+    position: relative;
+}
+.links-row + .links-row::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -3px;
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        color-mix(in srgb, var(--edge) 75%, transparent),
+        color-mix(in srgb, var(--edge) 40%, transparent) 55%,
+        transparent
+    );
+}
 .links-row-t {
     padding-top: 5px;
     font-family: var(--font-label);
@@ -1690,7 +1711,10 @@ html[data-g="knit"] #wordLogo {
 @media (max-width: 640px) {
     .links-row {
         grid-template-columns: minmax(0, 1fr);
-        gap: 3px;
+        gap: 4px;
+    }
+    .links-row + .links-row::before {
+        top: -2px;
     }
     .links-row-t {
         padding-top: 2px;
