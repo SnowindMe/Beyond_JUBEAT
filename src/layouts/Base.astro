@@ -142,6 +142,9 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         if (o && (o.srv === 'jp' || o.srv === 'cn')) {
           document.documentElement.setAttribute('data-srv-pref', o.srv);
         }
+        // 排列方式（2026-11-14）同理提前落到 <html>：列表排列整块样式挂 html[data-view="list"]，
+        // 这里立起来首帧就是列表，不会先画一屏卡片再整体重排。
+        if (o && o.view === 'list') document.documentElement.setAttribute('data-view', 'list');
       } catch (e) {}
     })();
   </script>

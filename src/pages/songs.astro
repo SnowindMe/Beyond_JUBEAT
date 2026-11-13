@@ -627,7 +627,27 @@ const TYPES = [
         <section class="sc-sec sc-sec-all" data-cat="all">
           <header class="sc-sec-h">
             <h2>全部曲目</h2>
-            <em>{srvTotal(srv)} 首</em>
+            {/* 右端一组：曲数 + 排列方式切换（2026-11-14 主人要求）。
+                曲数与切换器放同一组，h2 才不会被 space-between 顶到中间。 */}
+            <span class="sc-sec-r">
+              {/* 【2026-11-14 主人「排列方式左边的XX首可以去掉」】曲数不再写在这里。
+                  它与服务器卡上的总曲数、世代块头上的曲数是同一个信息，三处都写反而分散。
+                  但 em 节点不能删：apply() 里按筛选结果重算命中数并写进 .sc-sec-h em，
+                  删了节点那段会空跑（留着一个没有内容的容器也无害），这里保留 <em hidden>。 */}
+              <em hidden></em>
+              {/* 排列方式（2026-11-14 主人：红框处改为图标状切换，两种排列）。
+                  默认卡片排列，与原来完全一致；列表排列是「左曲绘右信息、桌面四列、移动两列」。
+                  切换写进存档（state.view），切服务器不受影响——它是纯视图偏好，与服务器无关。
+                  图标按钮而不是下拉：只有两项，一眼可见、一次点中。 */}
+              <span class="sc-view" role="group" aria-label="排列方式">
+                <button type="button" class="sc-view-b" data-view="grid" aria-pressed="true" title="卡片排列" aria-label="卡片排列">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+                </button>
+                <button type="button" class="sc-view-b" data-view="list" aria-pressed="false" title="列表排列" aria-label="列表排列">
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="3" height="3" rx=".7"/><rect x="7" y="2.9" width="7" height="1.4" rx=".7"/><rect x="2" y="6.5" width="3" height="3" rx=".7"/><rect x="7" y="7.4" width="7" height="1.4" rx=".7"/><rect x="2" y="11" width="3" height="3" rx=".7"/><rect x="7" y="11.9" width="7" height="1.4" rx=".7"/></svg>
+                </button>
+              </span>
+            </span>
           </header>
           {srvGenOrder(srv).map((gen) =>
             FIRST_LOAD[srv].has(gen) ? (
@@ -777,7 +797,10 @@ const TYPES = [
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
         type: 'all',   // all | std | hold | alt2（2026-10-31 谱面类型，见卡片 data-hh / data-alt）
-        sort: DEFAULT_SORT_INLINE
+        sort: DEFAULT_SORT_INLINE,
+        // 排列方式（2026-11-14）：grid = 卡片（默认）/ list = 列表。
+        // 它是纯视图偏好，不进 matchCard、不改卡片集合，只翻 #songsRoot 的 data-view。
+        view: 'grid'
       };
 
       // ---------------------------------------------------------------------
@@ -806,7 +829,9 @@ const TYPES = [
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
         type: ['all', 'std', 'hold', 'alt2'],
-        sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc']
+        sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc'],
+        // 排列方式跨服务器、跨会话保留（主人 2026-11-14：切服务器也要保留），所以进存档。
+        view: ['grid', 'list']
       };
 
       function loadSaved() {
@@ -840,7 +865,7 @@ const TYPES = [
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
             diff: state.diff, band: state.band,
             scope: state.scope, showLimited: state.showLimited,
-            type: state.type, sort: state.sort
+            type: state.type, sort: state.sort, view: state.view
           }));
         } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
       }
@@ -1484,6 +1509,46 @@ const TYPES = [
         // 范围 chip 只同步当前服务器那一套：隐藏那套的选中态由它自己被显示时重新算
         // （两服 PICK UP 集合不同，把 jp 的「pick」选中态抄到 cn 上会显示错误计数）
         syncGroup('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', 'data-scope', state.scope);
+        syncGroup('[data-view]', 'data-view', state.view);
+      }
+
+      // 排列切换的淡出计时器，与「系统开了降动效」的判据（见 setView）
+      var viewTimer = 0;
+      function prefersReducedMotion() {
+        return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+      }
+
+      /** 排列方式：写 root 的 data-view（CSS 只认这个属性）+ 同步按钮 + 落盘。
+       *  不走 apply() —— view 不改变哪些卡命中，走 apply 会让 1683 张卡白翻一遍 hidden、
+       *  还会把搜索框的命中耗时算进来；这里只重算占位高度（卡高变了，骨架高度必须跟着变）。 */
+      function setView(v) {
+        if (v !== 'grid' && v !== 'list') v = 'grid';
+        if (state.view === v) return;
+        state.view = v;
+        var el = document.documentElement;
+        // 过渡（2026-11-14 主人要求）：先给 <html> 挂 data-view-sw 让当前列表淡出（0.16s），
+        // 到一半再真正换布局，换完撤掉标记淡回。淡出期间列表还在原位，看不见重排的跳变。
+        // 只动 opacity/transform，不动会引发布局的属性；动画挂在 section 上，
+        // 1683 张卡不会各跑一遍。
+        el.setAttribute('data-view-sw', '');
+        clearTimeout(viewTimer);
+        var apply2 = function () {
+          // 写在 <html> 而不是 root：列表排列的样式全部挂 html[data-view="list"]，
+          // 头部预热脚本也认这个属性，刷新时才能首帧就是列表。
+          el.setAttribute('data-view', v);
+          // 按钮态跟着换：它不能在淡出期间就亮起来（那样看起来像「已经切好、只是列表没动」）
+          syncGroup('[data-view]', 'data-view', v);
+          // 落盘：刷新后要保持这次的排列（与其它筛选同一个存档键，首帧预热脚本也读它）
+          saveState();
+          // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
+          refreshIntrinsic();
+          // 下一帧撤标记：与「移除后再加」同理，同一帧内改两次浏览器看不到变化
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { el.removeAttribute('data-view-sw'); });
+          });
+        };
+        if (prefersReducedMotion()) apply2();
+        else viewTimer = setTimeout(apply2, 80);
       }
 
       function syncGroup(sel, attr, want) {
@@ -1872,6 +1937,11 @@ const TYPES = [
 
         if (t.closest('#scReset') || t.closest('[data-sc-reset]')) { resetAll(); return; }
 
+        // 排列方式（2026-11-14）：只切 root 上的 data-view，不重排 DOM、不进 state 的筛选维度，
+        // 所以不触发 apply 里那套隐藏/排序，走一条更轻的路（setView 只写属性 + 高亮 + 存档）。
+        var viewB = t.closest('[data-view]');
+        if (viewB) { setView(viewB.getAttribute('data-view')); return; }
+
         var srvB = t.closest('.sc-srv-b');
         if (srvB) {
           var nextSrv = srvB.getAttribute('data-srv');
@@ -2086,6 +2156,9 @@ const TYPES = [
       // 而 dds 是在上面那句 ddInit 之后才被 push 满的。早一步调用会拿到空数组，
       // 结果就是"筛选生效了、但下拉按钮上还写着『全部』"。
       loadSaved();
+      // 排列方式先落到 <html> 上再 apply：apply 里的 refreshIntrinsic 会按当前布局量卡高，
+      // 晚一步写属性就会先按卡片排列量一遍、再按列表量一遍（白读一次几何）。
+      document.documentElement.setAttribute('data-view', state.view);
       syncControlsFromState();
       apply();
       // 首屏那几块渲染完、视口稳定之后再挂观察器：早挂会在首次 apply 前触发，

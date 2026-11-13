@@ -202,16 +202,28 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 }
 .sc-sec-h {
     display: flex;
-    align-items: baseline;
+    /* 右端已经是 30px 高的按钮组，没有文字基线可对（曲数已隐藏），
+       改顶对齐才能让标题与右侧控件看起来在同一条水平线上（2026-11-14 主人要求）。 */
+    align-items: flex-start;
     justify-content: space-between;
     gap: 14px;
     padding: 0 2px 10px;
     border-bottom: 1px solid var(--edge);
     margin-bottom: 6px;
 }
+/* 右端一组：曲数 + 排列切换。曲数不再被 space-between 甩到最右，
+   而是与切换器并肩，切换器贴着右缘。 */
+.sc-sec-r {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 .sc-sec-h h2 {
-    font-size: 14px;
+    /* 2026-11-14 主人「文字『全部曲目』可以加大一些字号，跟右边顶部水平平齐」：
+       小标题原是 14px，和 30px 高的按钮组比显得弱，放大到 17px。 */
+    font-size: 17px;
     font-weight: 700;
+    line-height: 1.2;
     letter-spacing: 0.12em;
     color: var(--ink);
 }
@@ -362,7 +374,7 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     min-width: 24px;
     background: linear-gradient(
         to right,
-        color-mix(in srgb, var(--acc) 42%, transparent),
+        color-mix(in srgb, var(--acc) 32%, transparent),
         transparent 78%
     );
 }
@@ -841,6 +853,200 @@ html[data-lum="light"] .sc-lv {
         font-size: 10px;
     }
 }
+/* ---------- 排列方式：列表排列（2026-11-14 主人要求） ----------
+   切换器在「全部曲目」这一行的右端（.sc-view），默认仍是卡片排列，
+   两份布局共用同一套 DOM —— 切的是 #songsRoot 的 data-view，不重排节点，
+   所以筛选/排序/切服务器全都照旧，不需要第二份渲染。
+
+   列表排列 = 左曲绘、右信息（曲名 / 曲师 / 三枚难度），桌面四列一行、移动两列一行。
+   曲绘固定宽而不是比例宽：列表行的高度要稳定，才能让 contain-intrinsic-size
+   的占位估算继续成立（骨架卡 .sc-ph-card 用同一组尺寸，高度自然一致，不跳）。
+   用 grid 而不是 float 排：曲绘跨满三行整列，右列永远从第 2 列的第 1 行起排。 */
+/* 列数跟着可用宽度走（2026-11-14 主人「根据视图宽度调整列数」）：
+   固定 4 列在 1024~760 这段会把每行压到 180px 上下、曲名挤成两行；
+   改用 auto-fill + 最小列宽，宽度不够时自己掉列，最宽处仍能到 5 列。
+   下限 196px 是按「曲绘 56 + 间距 10 + 曲名最短可用宽约 118」估的，再窄曲名就只能折行。 */
+html[data-view="list"] .sc-grid {
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 10px 10px;
+}
+html[data-view="list"] .sc-card,
+html[data-view="list"] .sc-ph-card {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-content: center;
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 8px;
+}
+/* 列表行密集排布、彼此的曲绘紧邻，靠一圈圆角边框把每一行分开
+   （卡片排列有曲绘自身的圆角与卡间空隙，不需要）。
+   2026-11-14 主人：「歌曲列表内每首歌曲外围都有圆角边框」。 */
+html[data-view="list"] .sc-card {
+    border-color: var(--edge);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+html[data-view="list"] .sc-card:hover {
+    border-color: color-mix(in srgb, var(--acc) 45%, var(--edge));
+    transform: none;
+    box-shadow: none;
+}
+html[data-view="list"] .sc-link {
+    border-radius: 10px;
+}
+/* 曲绘占到三行，右列的三块内容各自落在自己的行上 */
+html[data-view="list"] .sc-j,
+html[data-view="list"] .sc-ph-img {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    align-self: center;
+    width: 56px;
+    height: 56px;
+}
+html[data-view="list"] .sc-t {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-size: 12.5px;
+}
+html[data-view="list"] .sc-a {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    font-size: 11px;
+}
+html[data-view="list"] .sc-lv {
+    grid-column: 2;
+    grid-row: 3;
+    gap: 3px;
+    margin: 2px 0 0;
+}
+/* 列表行的难度徽章（2026-11-14 主人：改成徽章样式，左难度名、右等级，如「EXT 8」）。
+   卡片排列里三个徽章是等分拉满整行；列表行只有一列文字宽，等分会横向撑开一大条，
+   所以改成按内容宽的小胶囊，各自独立、左标签右数值，紧凑成一组。 */
+html[data-view="list"] .sc-lv {
+    justify-content: flex-start;
+}
+html[data-view="list"] .sc-lv .lv {
+    /* 窄屏那档把徽章改成竖排（标签压数值），列表行空间够，这里一律横排 */
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 5px;
+    padding: 2px 6px 2px 5px;
+    border-radius: 5px;
+}
+html[data-view="list"] .sc-lv .lv u {
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+}
+/* 角标在这一档只有 56px 的曲绘：长押标识从 24% 换成固定 20px，
+   PICK UP 只留星标（文字放不下，aria-label 仍在） */
+html[data-view="list"] .sc-hold,
+html[data-view="list"] .sd-hold {
+    width: 20px;
+}
+html[data-view="list"] .sc-pick {
+    padding: 2px;
+}
+html[data-view="list"] .sc-pick span {
+    display: none;
+}
+/* 骨架卡的右列：两条灰线 + 三枚灰块，位置与真卡的曲名/曲师/徽章一致 */
+html[data-view="list"] .sc-ph-line {
+    grid-column: 2;
+    width: 82%;
+    margin: 0;
+}
+html[data-view="list"] .sc-ph-line-2 {
+    width: 58%;
+    margin: 0;
+}
+html[data-view="list"] .sc-ph-badges {
+    grid-column: 2;
+    margin: 2px 0 0;
+}
+@media (max-width: 768px) {
+    /* 移动端同样按宽度掉列：390 宽仍是两列，320 宽一列（两列时每列只剩 140，
+       曲绘 44 + 间距 8 之后曲名不够用）。曲绘与字号同步收一档。 */
+    html[data-view="list"] .sc-grid {
+        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+        gap: 10px 8px;
+    }
+    html[data-view="list"] .sc-card,
+    html[data-view="list"] .sc-ph-card {
+        grid-template-columns: 44px minmax(0, 1fr);
+        column-gap: 8px;
+        padding: 6px;
+    }
+    html[data-view="list"] .sc-j,
+    html[data-view="list"] .sc-ph-img {
+        width: 44px;
+        height: 44px;
+    }
+    html[data-view="list"] .sc-t {
+        font-size: 13px;
+    }
+    html[data-view="list"] .sc-a {
+        font-size: 12px;
+    }
+}
+/* 排列切换的过渡（2026-11-14 主人要求）：先把当前列表整体压暗，再换布局，再淡回来。
+   只动 opacity / transform（合成层），不动 width/padding 那类会引发布局的属性；
+   动画挂在 .sc-sec 上而不是 .sc-card 上 —— 1683 张卡逐个过渡撑不住。 */
+html.sc-js .sc-sec {
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+html[data-view-sw] .sc-body:not([hidden]) .sc-sec {
+    opacity: 0;
+    transform: translateY(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+    html[data-view-sw] .sc-body:not([hidden]) .sc-sec {
+        transition: none;
+    }
+}
+/* 排列切换器：两枚图标按钮，选中项用强调色描边 + 浅强调底。
+   图标是 16 格几何形状（四宫格 / 三行），读屏靠 aria-label，视觉不带文字。 */
+.sc-view {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--edge);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.sc-view-b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--ink3);
+    cursor: pointer;
+    transition: color 0.18s, background 0.18s;
+}
+.sc-view-b svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+.sc-view-b:hover {
+    color: var(--ink);
+}
+.sc-view-b.is-on {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+}
+.sc-view-b:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 1px;
+}
 /* 整卡点击层：绝对定位铺满卡片，让任意位置（曲绘、空白、徽章区）都能进详情，
    同时链接本身的可访问名只有曲名——卡里的其他内容不被卷进链接名。
    放在 DOM 末尾 + z-index 保证盖住上层内容；文字仍可选中（不影响读屏）。 */
@@ -1017,6 +1223,7 @@ html[data-lum="light"] .sc-lv {
        横向铺满内容区的效果不变（原来那 -239px 负 margin 就是在模拟这个）。 */
     grid-template-areas:
         "aside main"
+        "alias alias"
         "gauge gauge"
         "foot  foot";
     /* 【2026-10-29 主人「难度条要往左扩张」】
@@ -1934,6 +2141,7 @@ html[data-lum="light"] .sd-gauge {
         grid-template-columns: auto minmax(0, 1fr);
         grid-template-areas:
             "aside main"
+            "alias alias"
             "gauge gauge"
             "foot  foot";
         /* 【2026-10-29 主人「移动端播放条靠近曲绘太近」】
