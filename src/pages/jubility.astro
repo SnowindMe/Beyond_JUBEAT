@@ -106,12 +106,12 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
           data-srv={s.id}
           aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}
         >
+          <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
           <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
           <span class="sc-srv-meta">
             <b class="sc-tag sc-tag-n">{s.name}</b>
             <b class="sc-tag sc-tag-c">{VIEW[s.id].theory.total}<i>pt</i></b>
           </span>
-          <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
         </button>
       ))}
     </div>

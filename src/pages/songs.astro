@@ -382,15 +382,16 @@ const TYPES = [
       <div class="sc-srv" role="group" aria-label="切换服务器">
         {SRV_CARDS.map((s) => (
           <button type="button" class={`sc-srv-b${s.id === DEFAULT_SRV ? ' is-on' : ''}`} data-srv={s.id} aria-pressed={s.id === DEFAULT_SRV ? 'true' : 'false'}>
+            {/* 最近收录日（主人 2026-11-14）：先说「这块多久没上新」，再让 logo 与名称说明是哪一服。
+                位置按主人同日改口放在 logo **上面**（原先在两枚徽章下面）。中性胶囊、不染主题色——
+                它是纯信息，不靠颜色强调；日期用数据字体。 */}
+            <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
             <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
             {/* 名称与总曲数并排两枚小徽章（主人 2026-10-22：总曲数放到名称右边，两个都做成徽章）。 */}
             <span class="sc-srv-meta">
               <b class="sc-tag sc-tag-n">{s.name}</b>
               <b class="sc-tag sc-tag-c">{srvTotal(s.id)}<i>首</i></b>
             </span>
-            {/* 最近收录日（主人 2026-11-14）：排在两枚徽章下面单独一行，用中性胶囊，
-                不染主题色——它是纯信息，不靠颜色强调。日期用数据字体。 */}
-            <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
           </button>
         ))}
       </div>
