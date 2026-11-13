@@ -40,9 +40,11 @@ Astro.response.headers.set(
   'public, max-age=30, s-maxage=300, stale-while-revalidate=60'
 );
 
+// latest = 该服最近一次收录新曲的日期，与 /songs/ 的 SRV_CARDS 同值同源口径
+// （各自页面各有一份常量，改一处要记得改另一处；值由主人 2026-11-14 提供）。
 const SRVS = [
-  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
-  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
+  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
+  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-10-29' },
 ] as const;
 const DEFAULT_SRV: (typeof SRVS)[number]['id'] = 'jp';
 
@@ -109,6 +111,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
             <b class="sc-tag sc-tag-n">{s.name}</b>
             <b class="sc-tag sc-tag-c">{VIEW[s.id].theory.total}<i>pt</i></b>
           </span>
+          <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
         </button>
       ))}
     </div>

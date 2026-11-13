@@ -68,9 +68,12 @@ const CAT_GENS: Record<string, Record<string, string[]>> = {
 };
 // 服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
 // 国际服已移除（主人 2026-10-22）：曲库没有独立国际服数据，入口留着只会误导。
+// latest = 该服最近一次收录新曲的日期（主人 2026-11-14 给出：日服 2026-09-20、国服 2026-10-29）。
+// 曲库数据里没有「收录日」这一列，也推不出来，所以是常量；某一服上新后要手动改这里。
+// 文案主人定的是「Latest：」（首版写成 Lastest，2026-11-14 当场纠正）。
 const SRV_CARDS = [
-  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true },
-  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false },
+  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
+  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-10-29' },
 ] as const;
 
 // 按 视图服务器 → 分区 → 世代 建桶。
@@ -385,6 +388,9 @@ const TYPES = [
               <b class="sc-tag sc-tag-n">{s.name}</b>
               <b class="sc-tag sc-tag-c">{srvTotal(s.id)}<i>首</i></b>
             </span>
+            {/* 最近收录日（主人 2026-11-14）：排在两枚徽章下面单独一行，用中性胶囊，
+                不染主题色——它是纯信息，不靠颜色强调。日期用数据字体。 */}
+            <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
           </button>
         ))}
       </div>

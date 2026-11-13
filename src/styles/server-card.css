@@ -91,6 +91,38 @@
     letter-spacing: 0.04em;
 }
 
+/* 最近收录日（主人 2026-11-14：「在【X 服】【X 首】下添加 Latest：XXXX-XX-XX 的标识，
+   可以用胶囊」）。卡片里第三枚胶囊，独占一行——它比上面两枚更长，挤在同一行会把
+   名称与曲数推开。颜色用 --ink3 压弱：日期是补充信息，不是判据；
+   12px / 700 与相邻徽章同档，只有文字色降一档。文案是「Latest：」。 */
+.sc-tag-l {
+    color: var(--ink3);
+    /* 【2026-11-14】日期是定长串、比上面两枚徽章长得多，宽度不能跟内容走：
+       卡片只有 200px，390px 视口下内宽仅 149、360px 下 133，会被顶爆或折行（实测
+       折在「2026-09-」后的连字符上最难看）。做法是撑满卡片内宽，再把标签与日期
+       拆成两个 nowrap 的 flex item —— 单个文本节点在 flex 容器里仍会被压缩换行，
+       包成两层才真的不断。 */
+    align-self: stretch;
+    max-width: 100%;
+    justify-content: center;
+    gap: 2px;
+    padding-right: 6px;
+    padding-left: 6px;
+}
+
+.sc-tag-l-k,
+.sc-tag-l-d {
+    white-space: nowrap;
+    font-style: normal;
+}
+
+/* 日期用数据字体、与上面的计数徽章同一档；「Latest：」标签压到 11px 弱一档，
+   它只是前缀不是信息本体。窄屏把标签再收小，保证 133px 内宽也排得下一行。 */
+.sc-tag-l-d {
+    color: var(--ink2);
+    font-family: var(--font-data);
+}
+
 /* bta 字标是黑色线稿：深色主题反相提亮（与首页 #wordLogo 同策），浅色主题原样。
    判据只认 data-lum——原先六层 :not([data-g=...]) 每加一套浅色主题都得补一层。 */
 html[data-lum="dark"] .sc-line {
@@ -173,6 +205,15 @@ html[data-lum="dark"] .sc-line {
     }
     .sc-tag-c i {
         font-size: 12px;
+    }
+    /* 窄屏卡片只有半屏宽（360px 下内宽 133）。日期降到 11px，前缀标签降到 9.5px，
+        两段加起来仍在一行内，不必折行。 */
+    .sc-tag-l {
+        font-size: 11px;
+        padding: 4px 6px;
+    }
+    .sc-tag-l-k {
+        font-size: 9.5px;
     }
 }
 
