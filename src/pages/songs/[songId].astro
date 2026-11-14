@@ -378,8 +378,56 @@ const metaFoot: Meta[] = song
             播放是"听到这首"的入口，紧挨作品信息；定数条是数据区，压到下面。
             没有音源时试听条整块不渲染，定数条位置照旧。 */}
         {hasAudio ? <SongAudio songId={String(song.id)} bpm={song.bpm} /> : null}
+
+        {/* 【2026-11-09 别名块】玩家给曲目起的俗称（喇叭口、通称），参与全站搜索。
+            主人定的位置：曲绘 / 播放条**下面**，不挤在曲名与艺人之间——
+            曲名与艺人是「这首叫什么、谁做的」，别名是附注，压到作品信息之后才不打断阅读。
+            未登录也整块渲染：访客看得见别人怎么叫这首，只是加不了。 */}
       </div>
 
+        <section class="sd-alias" aria-labelledby="sdAliasH">
+          <div class="sd-alias-head">
+            <h2 class="sd-alias-h" id="sdAliasH">别名</h2>
+            <span class="sd-alias-n">3</span>
+          </div>
+          <ul class="sd-alias-list">
+            <li class="sd-alias-item">
+              <span class="sd-alias-t">喇叭口</span>
+              <span class="sd-alias-by">雪将</span>
+            </li>
+            <li class="sd-alias-item">
+              <span class="sd-alias-t">ラッパ口</span>
+              <span class="sd-alias-by">なまず</span>
+            </li>
+            <li class="sd-alias-item is-pending">
+              <span class="sd-alias-t">喇叭のやつ</span>
+              <span class="sd-alias-by">kuma</span>
+              <span class="sd-alias-flag">待审</span>
+              <button type="button" class="sd-alias-del" title="删除这条别名">
+                <span aria-hidden="true">✕</span><span class="sd-sr">删除</span>
+              </button>
+            </li>
+            <li class="sd-alias-item-add">
+              <button type="button" class="sd-alias-add" title="为这首添加一个别名">
+                <span aria-hidden="true">＋</span>加别名
+              </button>
+              <form class="sd-alias-form" hidden>
+                <label class="sd-sr" for="sdAliasInput">别名</label>
+                <input
+                  id="sdAliasInput"
+                  class="sd-alias-input"
+                  type="text"
+                  maxlength="40"
+                  placeholder="俗称、通称、错记的写法…"
+                  autocomplete="off"
+                />
+                <button type="submit" class="sd-alias-ok">提交</button>
+                <button type="button" class="sd-alias-cancel">取消</button>
+              </form>
+            </li>
+          </ul>
+          <p class="sd-alias-empty" hidden>还没有别名，登录后可添加。</p>
+        </section>
       {/* 【2026-11-03 主人「是这两个重叠」】定数区从 .sd-main 里提出来，成为 .sd-body
           的直接子节点。它原本靠负 margin 横向扩到曲绘下方，纵向位置却由右栏内容决定，
           右栏比曲绘矮时左扩的那半截就压在曲绘上（816px 宽实测重叠 17px）。
