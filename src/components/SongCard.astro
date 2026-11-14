@@ -24,7 +24,10 @@ import HoldMarker from './HoldMarker.astro';
 
 interface Props {
   song: Song;
-  /** 首屏图给 eager + high，其余 lazy + low（一次开 1200+ 请求会被浏览器排队拖慢） */
+  /** 首屏可见图给 eager + high；其余只给 lazy，**不带 fetchpriority**
+      （2026-11-15 P0：optimize-image-priority 要求屏下图 lazy 就够，
+       再叠 fetchpriority=low 会让它滚到眼前时仍以低优先级慢慢爬；
+       默认值 auto 按指南也该直接省略属性） */
   eager?: boolean;
   /** 当前视图服务器：决定该卡属于哪个分区、算不算 PICK UP（口径都在 lib/song-view.ts） */
   srv?: 'jp' | 'cn';
@@ -68,7 +71,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
         width="144"
         height="144"
         loading={eager ? 'eager' : 'lazy'}
-        fetchpriority={eager ? 'high' : 'low'}
+        fetchpriority={eager ? 'high' : undefined}
         decoding="async"
       />
     ) : (

@@ -113,7 +113,7 @@ src/
 ├─ styles/                   theme · songs · fortune · jubility · auth · server-card
 ├─ lib/                      数据访问、认证、缓存、主题/世代表、算法
 └─ data/                     生成物：曲库快照、聚合数据、映射表
-public/                       _headers · manifest · sw.js · assets（背景/曲绘/站标/字体）
+public/                       _headers · manifest · sw.js · assets（背景/曲绘/站标/字体/js）
 data/                         管线输入（xlsx 源表、上游快照）与本地库
 db/                           schema · seed · 迁移 · 增量补丁
 scripts/                      构建、抓取、CI 自检

@@ -260,6 +260,24 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 /* 1248 张卡片一次性布局代价很高：屏外的世代段跳过渲染与样式计算，
    滚到附近时浏览器再补齐（contain-intrinsic-size 用来占位，避免滚动条跳动）。
 
+   【2026-11-15 P1 修复：只跳过屏外块，首屏块改回 content-visibility: visible】
+   原先每个 .sc-gen 都吃 content-visibility: auto，首屏那块也不例外。指南要求视口内的元素
+   别用这条属性：被跳过的块不参与首次布局，尺寸只按 contain-intrinsic-size 的估算值先占着，
+   等"相关性"判定为真才回填真实内容 —— 首屏卡片与文字要多等一帧、再叠一次整块重排，
+   而首屏正是最该快的部分。
+   判据不写世代名（GEN_ORDER 的先后、各服规模都改过），按 DOM 位置取每服列表里**可见的**前两块。
+   用 :nth-child(-n + 2 of .sc-gen:not([hidden]))：「of S」只数匹配 S 的兄弟节点，
+   分区标题 .sc-sec-h 与被筛选藏掉的块都不占号，候选永远落在列表最顶上的两块。
+   光写 -n + 3 不够：它把 header 算进去，且过滤后编号不往前移（hidden 的块照样计数），
+   筛选结果页的首屏就又变成被跳过的那一块。
+   不支持「of S」的老浏览器整条规则作废、退回现状（全部跳过），不会更差。
+   为什么取 2 块：790×700（实测内宽 774）实测只有第 1 块压在视口里 —— 它起于文档 392px、
+   自身 2218px 高（3 列 × 299px 卡，20 首 7 行），一直铺到视口外面去；第 2 块起于 2626px，
+   滚一屏就到。1440 宽（6 列）同样只有第 1 块入画，它 1106px 高、第 2 块起于 1544px，
+   也是一屏之内。把第 2 块一并放出去，代价是首帧多排一块，换来的是第一次滚动不撞上
+   一块待补渲染的内容。第 3 块起（790 下 5147px、1440 下约 2600px 开外）离得够远，
+   照旧跳过，那里才是这条属性真正的收益区。
+
    【2026-10-30 P2 修复：占位高度改为按块估算】
    原来这里写死 `auto 460px`，而实测各世代块真实高度是 1104px（jubeat 20 张）
    到 10266px（festo 226 张）—— 估算值比实际小 22 倍。后果不是"占位不准"这么轻：
@@ -273,8 +291,16 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 .sc-gen {
     content-visibility: auto;
     /* 兜底值：脚本跑起来之前、或 JS 被禁时用。脚本会用实测值覆盖它。
-       ⚠ 这个数只影响"脚本未运行"的极短瞬间，不再是主要机制 —— 别再靠它调精度。 */
+       ⚠ 这个数只影响"脚本未运行"的极短瞬间，不再是主要机制 —— 别再靠它调精度。
+       首屏块已改成 visible，这行仍留着：它只在块被跳过时生效，而 refreshIntrinsic
+       是给所有块统一写的，为省两个块分两套值不值当。 */
     contain-intrinsic-size: auto 460px;
+}
+/* 首屏两块退出跳过（判据与取值的理由见上）。放在 .sc-gen 之后、特异性也更高，
+   不依赖顺序。首屏那两块若还是骨架（.sc-gen-ph 同样是 .sc-gen）也一并覆盖：
+   骨架高度是脚本按 data-count 算的，本就不必跳过。 */
+.sc-sec > .sc-gen:nth-child(-n + 2 of .sc-gen:not([hidden])) {
+    content-visibility: visible;
 }
 /* 世代标题（主人 2026-10-22：原来的全宽玻璃条「好丑」）。
    改法：不再画一整块底板，改成「强调色小竖条 + 世代名 + 年份 · 曲数 + 渐隐细线」。
@@ -1787,6 +1813,206 @@ html[data-bgm="playing"] .sd-disc-spin {
     letter-spacing: 0.02em;
     color: var(--ink2);
     overflow-wrap: anywhere;
+}
+
+/* 别名块（2026-11-09 / 当晚重设计）
+   方向：不做药丸墙，做贴在内容区左缘的一栏**注释台账**——
+   一条 2px 竖标线把这块压成附注，与正文形成缩进关系；每行读作
+   「俗称 → 谁这么叫」，然后才是删除。视觉重量远低于曲名与曲师：
+   无底色差、无投影，行间只用极淡细线。
+   位置：grid-area:alias 独占一行横跨两栏（做法同 .sd-gauge），
+   横向天然从内容区左缘起，不再挤在右栏贴右。 */
+.sd-alias {
+    grid-area: alias;
+    /* 网格行间距已给 var(--sd-row-gap)，这里减回去，净气口才是目标值 */
+    margin-top: calc(clamp(16px, 2vw, 22px) - var(--sd-row-gap));
+    padding-left: 13px;
+    border-left: 2px solid color-mix(in srgb, var(--acc) 32%, transparent);
+    /* 台账形状靠宽度定：一行只放「俗称 + 谁这么叫 + 删除」，
+       再宽下去行会拉成跑道、左侧竖标线也失去「一栏附注」的意思。 */
+    max-width: 36ch;
+}
+/* 窄屏：42ch 的宽度限制在 390px 下会把整块压到半屏，放开成全宽 */
+@media (max-width: 700px) {
+    .sd-alias {
+        max-width: none;
+        padding-left: 10px;
+    }
+}
+.sd-alias-head {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    margin-bottom: 12px;
+}
+.sd-alias-h {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+}
+.sd-alias-n {
+    font-family: var(--font-data);
+    font-size: 11px;
+    color: var(--ink3);
+    font-variant-numeric: tabular-nums;
+}
+.sd-alias-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.sd-alias-item {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 7px 2px 7px 0;
+    /* 分隔线只出现在两行之间，首行不留 */
+    border-top: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+}
+.sd-alias-item:first-child {
+    border-top: 0;
+    padding-top: 2px;
+}
+.sd-alias-t {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+.sd-alias-by {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    color: var(--ink3);
+}
+/* 待审：整行降一档，俗称前挂一小段虚线，取代原来的虚线药丸 */
+.sd-alias-item.is-pending .sd-alias-t {
+    color: var(--ink2);
+}
+.sd-alias-item.is-pending .sd-alias-t::before {
+    content: '';
+    display: inline-block;
+    width: 11px;
+    height: 0;
+    margin-right: 6px;
+    vertical-align: 4px;
+    border-top: 1px dashed currentColor;
+}
+.sd-alias-flag {
+    flex: 0 0 auto;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink3);
+    border: 1px dashed color-mix(in srgb, var(--ink3) 70%, transparent);
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+/* 删除：默认只有一根极淡的 ×，hover 才给底色，不跟俗称抢 */
+.sd-alias-del {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--ink3);
+    background: none;
+    border: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+}
+.sd-alias-del:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--edge) 70%, transparent);
+}
+.sd-alias-del:focus-visible,
+.sd-alias-add:focus-visible,
+.sd-alias-ok:focus-visible,
+.sd-alias-cancel:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+/* 加别名：列表末尾一整行虚线槽，左对齐文字，点开后原位置换成输入行 */
+.sd-alias-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink3);
+    background: none;
+    border: 1px dashed color-mix(in srgb, var(--edge) 90%, transparent);
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+}
+.sd-alias-add:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 输入态：就地展开，不弹层。
+   【[hidden] 必须自己兜住】下面几条写了 display，会盖掉 UA 的 [hidden]。 */
+.sd-alias-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sd-alias-form[hidden],
+.sd-alias-add[hidden],
+.sd-alias-empty[hidden] {
+    display: none;
+}
+.sd-alias-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+.sd-alias-input::placeholder {
+    color: var(--ink3);
+}
+.sd-alias-ok,
+.sd-alias-cancel {
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: none;
+    border: 0;
+    padding: 6px 2px;
+    cursor: pointer;
+}
+.sd-alias-ok {
+    color: var(--acc);
+}
+.sd-alias-cancel {
+    color: var(--ink3);
+}
+.sd-alias-item-add {
+    margin-top: 9px;
+}
+.sd-alias-empty {
+    margin: 0;
+    padding: 2px 0 9px;
+    font-size: 12px;
+    color: var(--ink3);
 }
 
 /* 右栏：songId 行 → 曲名 → 艺术家（2026-10-29 主人重排）。

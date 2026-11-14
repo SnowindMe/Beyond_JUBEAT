@@ -27,6 +27,18 @@ export const prerender = false;
   canonicalPath="/"
   description={`jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
+  {/* 首屏 LCP 图 preload（2026-11-15 P0）。首页此前 0 条 preload，而首屏最大的图是字标
+      logo/ave.webp：它在 <Hero /> 里指向 #wordLogo，**HTML 根本不写 src**（要有 src 就会先下默认
+      世代、再由主题脚本换掉，见 Hero 里那段注释），改由紧贴 img 的内联脚本就地设。
+      代价是浏览器在解析到那行脚本之前完全不知道这张图存在，实测最早图片请求 550ms。
+      preload 让它在解析 <head> 时就发起。
+      只发这 1 条：optimize-preload-priority 是 MANDATORY —— fetchpriority=high 的图片 preload
+      最多 1~2 条、全页图片 preload 上限 2 张；曲绘墙交给 <img loading=eager fetchpriority=high>
+      即可，两边都发就互相摊薄。
+      地址必须与 Hero 里 inner 拼出的那份逐字一致，否则浏览器当成两个 URL、图会被下载两次。 */}
+  <Fragment slot="head">
+    <link rel="preload" as="image" href="/assets/images/logo/ave.webp" fetchpriority="high" />
+  </Fragment>
   <Hero />
 
   {/* 【2026-11-12 主人「【今日运势】和【热门歌曲】先隐藏了，以后可能换个实现」】

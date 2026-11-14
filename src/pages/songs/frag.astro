@@ -41,8 +41,13 @@ if (!GEN_ORDER.some((g) => g.k === gen)) {
 // 片段本身也允许边缘缓存较久；页面级缓存由中间件统一写，这里的头只对直连生效
 Astro.response.headers.set('cache-control', 'public, max-age=300, s-maxage=3600');
 
-// 片段里的前 6 张图立即加载（它们一进 DOM 就在视口附近），其余仍 lazy
-const eager = new Set(list.slice(0, 6).map((s) => s.id));
+// 片段里的前 2 张图立即加载（它们一进 DOM 就在视口附近），其余仍 lazy。
+// 2 张而不是 6（2026-11-15 P0）：这一块是滚到附近才插入的，插入时已经在视口边缘，
+// 与首页的「首屏头两张」同理；fetchpriority=high 的图一多就互相摊薄。
+// 片段不占 <head>，发不出 preload，只能靠 loading=eager 抢在滚动之前——所以这里
+// 保留 eager（不同于屏下卡的纯 lazy）。
+const EAGER_FRAG = 2;
+const eager = new Set(list.slice(0, EAGER_FRAG).map((s) => s.id));
 ---
 {list.length > 0 && (
   <GenBlock gen={gen} list={list} date={GEN_ORDER.find((g) => g.k === gen)?.date ?? ''} eager={eager} srv={srv} markPick />

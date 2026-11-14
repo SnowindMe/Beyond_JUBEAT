@@ -14,10 +14,13 @@
 #   script-src https://challenges.cloudflare.com
 #     Turnstile 从该域拉 api.js（src/components/Turnstile.astro:60，注册/登录页用）。
 #   script-src 里**故意不放 'unsafe-inline'**
-#     全站 37 处 <script is:inline>（集中在 songs.astro、Base.astro、ThemeScript.astro、
-#     Hero.astro、BootScreen.astro、Turnstile.astro、Header.astro，另有 SongAudio/
-#     BackTop/InstallPrompt/jubility/[songId] 各 1；数量会随开发变动，以报告为准）。
-#     不放 unsafe-inline 才能测出真实面——报告里的每一条都是将来要迁走或加哈希的清单。
+#     仍然是为了测出真实面：每一条内联报告都是将来要迁走或加哈希的清单。
+#     【2026-11-15 起 songs.astro 那块 64KB 主脚本已外链】从"37 处"里减去 1 处，
+#     而且是最大的一处：它搬去 /assets/js/songs-list.js（defer、命中下面 /assets/* 的
+#     一年缓存），script-src 'self' 本来就放行，不需要改这条策略。
+#     其余内联仍集中在 Base.astro、ThemeScript.astro、Hero.astro、BootScreen.astro、
+#     Turnstile.astro、Header.astro、songs.astro（防 FOUC 之外的那些），另有 SongAudio/
+#     BackTop/InstallPrompt/jubility/[songId] 各 1；数量会随开发变动，以报告为准。
 #   script-src-attr 'none'
 #     全站 0 处 on*=（grep 过）。写死 'none' 是为了让「有人手写 onclick」直接报出来。
 #   style-src 'self' https://challenges.cloudflare.com
