@@ -166,6 +166,20 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
         transform: none;
     }
 }
+/* 排列切换时的卡片浮出（2026-11-14 主人「排列切换时，曲目没有动画过渡（比如浮出）」）。
+   只给切换后可见的头十几张挂 .sc-vin —— 换布局不重排节点、元素不变，
+   靠 hidden 换 display 那套重播机制用不上，所以用一个专门类名 + 专用关键帧直接播。
+   与 section 的整段淡出叠加时，section 那层只做很浅的一档，主体交给卡片。 */
+@keyframes scViewIn {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
 @keyframes scPop {
     0% {
         transform: scale(0.96);
@@ -183,6 +197,10 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 .sc-card.sc-stag {
     animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
+.sc-card.sc-vin {
+    animation: scViewIn 0.34s cubic-bezier(0.22, 0.7, 0.3, 1) both;
+    will-change: opacity, transform;
+}
 /* 切服务器卡时的入场 pop：/songs 独有（/jubility 不需要这个动画），
    所以留在本文件；.sc-srv-b 的结构样式在 server-card.css。 */
 .sc-srv-b.is-on {
@@ -192,6 +210,7 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 @media (prefers-reduced-motion: reduce) {
     .sc-sec:not([hidden]),
     .sc-card.sc-stag,
+    .sc-card.sc-vin,
     .sc-srv-b.is-on {
         animation: none;
     }
@@ -202,9 +221,9 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 }
 .sc-sec-h {
     display: flex;
-    /* 右端已经是 30px 高的按钮组，没有文字基线可对（曲数已隐藏），
-       改顶对齐才能让标题与右侧控件看起来在同一条水平线上（2026-11-14 主人要求）。 */
-    align-items: flex-start;
+    /* 右端是 30px 高的按钮组，没有文字基线可对（曲数已隐藏）：顶对齐会让
+       17px 的标题贴着按钮框上沿、看着比按钮高一截，改垂直居中对齐才在同一条线上。 */
+    align-items: center;
     justify-content: space-between;
     gap: 14px;
     padding: 0 2px 10px;
@@ -900,8 +919,10 @@ html[data-view="list"] .sc-link {
 html[data-view="list"] .sc-j,
 html[data-view="list"] .sc-ph-img {
     grid-column: 1;
-    grid-row: 1 / span 3;
-    align-self: center;
+    grid-row: 1 / span 2;
+    /* 曲绘靠上，给下面留出整行给难度徽章（2026-11-14 主人「把曲绘上移，
+       然后难度徽章放在曲绘下面」） */
+    align-self: start;
     width: 56px;
     height: 56px;
 }
@@ -918,16 +939,22 @@ html[data-view="list"] .sc-a {
     font-size: 11px;
 }
 html[data-view="list"] .sc-lv {
-    grid-column: 2;
+    /* 徽章横跨整行、落在曲绘下面，所以能保持一句排完（2026-11-14 主人要求） */
+    grid-column: 1 / -1;
     grid-row: 3;
     gap: 3px;
-    margin: 2px 0 0;
+    margin: 6px 0 0;
 }
 /* 列表行的难度徽章（2026-11-14 主人：改成徽章样式，左难度名、右等级，如「EXT 8」）。
    卡片排列里三个徽章是等分拉满整行；列表行只有一列文字宽，等分会横向撑开一大条，
    所以改成按内容宽的小胶囊，各自独立、左标签右数值，紧凑成一组。 */
 html[data-view="list"] .sc-lv {
     justify-content: flex-start;
+}
+html[data-view="list"] .sc-lv {
+    /* 窄屏窄到一列文字只剩 100 出头时，三枚徽章一行放不下（2026-11-14 主人截图报溢出），
+       允许换行兜底：放得下仍是一行，放不下就折到第二行，行高自己长，不撑出卡片。 */
+    flex-wrap: wrap;
 }
 html[data-view="list"] .sc-lv .lv {
     /* 窄屏那档把徽章改成竖排（标签压数值），列表行空间够，这里一律横排 */

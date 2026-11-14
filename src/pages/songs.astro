@@ -1542,14 +1542,49 @@ const TYPES = [
           saveState();
           // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
           refreshIntrinsic();
-          // 下一帧撤标记：与「移除后再加」同理，同一帧内改两次浏览器看不到变化
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { el.removeAttribute('data-view-sw'); });
-          });
+          // 下一帧撤标记：与「移除后再加」同理，同一帧内改两次浏览器看不到变化。
+          // 这里同样不用 requestAnimationFrame —— 本机浏览器的 rAF 会整段不回调（见 viewIn）。
+          setTimeout(function () {
+            setTimeout(function () {
+              el.removeAttribute('data-view-sw');
+              // 撤掉整段淡出之后，再让可见的头十几张浮出（见 viewIn）
+              if (!prefersReducedMotion()) viewIn();
+            }, 16);
+          }, 16);
         };
         if (prefersReducedMotion()) apply2();
         else viewTimer = setTimeout(apply2, 80);
       }
+
+      /** 排列切换后的浮出：只给切换后可见的头十几张挂 .sc-vin（同 stagger 的取舍，
+       *  1683 张各跑一遍撑不住）。换布局不重排节点、元素不变，"删类名 + 下一帧再加"
+       *  那套重播机制在这里用不上，所以每次换了卡片集合后整批先删、再逐个加。 */
+      var vinToken = 0;
+      function viewIn() {
+        var my = ++vinToken;
+        // 容器每次现取：本脚本在 <head> 之后、结构落位之前就跑了，闭包里的 root 不保证还在
+        var box = document.getElementById('songsRoot');
+        if (!box) return;
+        var old = box.querySelectorAll('.sc-card.sc-vin');
+        for (var i = 0; i < old.length; i++) {
+          old[i].classList.remove('sc-vin');
+          old[i].style.animationDelay = '';
+        }
+        // 用 setTimeout 而不是 requestAnimationFrame：实测本机浏览器里页面的 rAF 会被
+        // 节流到几乎不回调（400ms 内 0 次，同页 setInterval 20ms 却正常 20 次），
+        // 挂在 rAF 上的挂类逻辑就一直等不到。16ms 与一帧等效。
+        setTimeout(function () {
+          if (my !== vinToken) return;
+          var vis = box.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden]) .sc-card:not([hidden])');
+          for (var c = 0; c < vis.length && c < 14; c++) {
+            vis[c].classList.add('sc-vin');
+            vis[c].style.animationDelay = (c * 0.022).toFixed(3) + 's';
+          }
+        });
+      }
+
+      // 调试出口：控制台里敲 __viewIn() 可手动复播一次浮出，不用来回点切换器
+      try { window.__viewIn = viewIn; } catch (e) {}
 
       function syncGroup(sel, attr, want) {
         var list = root.querySelectorAll(sel);
@@ -1939,7 +1974,9 @@ const TYPES = [
 
         // 排列方式（2026-11-14）：只切 root 上的 data-view，不重排 DOM、不进 state 的筛选维度，
         // 所以不触发 apply 里那套隐藏/排序，走一条更轻的路（setView 只写属性 + 高亮 + 存档）。
-        var viewB = t.closest('[data-view]');
+        // 只认按钮类名：data-view 也挂在 <html> 上，用 [data-view] 时任何点击都会
+        // closest 到 <html> 被当成「点了切换器」，后面的切服/分区全被挡掉（2026-11-14 bug）。
+        var viewB = t.closest('.sc-view-b');
         if (viewB) { setView(viewB.getAttribute('data-view')); return; }
 
         var srvB = t.closest('.sc-srv-b');
