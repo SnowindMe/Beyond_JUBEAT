@@ -9,7 +9,15 @@ import sharp from 'sharp';
 const ROOT = path.resolve(import.meta.dirname, '..', '..');
 const SRC = path.join(ROOT, '.devhome', 'yyj-today.json');
 const OUT = path.join(ROOT, 'public', 'assets', 'images', 'jackets');
-const REFERER = 'https://servicewechat.com/wx133c9dfee00bbfec/60/page-frame.html';
+// 【AppID 不进仓库】小程序的 wx AppID 是公开标识、不是密钥，但 GitHub secret scanning
+// 仍会报 Tencent WeChat API App ID（2026-11-15 告警 1）。所以取 env 或 .devhome/yyj-wxid.txt
+// 这类被忽略的位置，源码里不出现那串 wx…（.devhome/ 在 .gitignore:56）。
+const WXID = process.env.YYJ_WX_APPID
+  || (fs.existsSync(path.join(ROOT, '.devhome', 'yyj-wxid.txt'))
+    ? fs.readFileSync(path.join(ROOT, '.devhome', 'yyj-wxid.txt'), 'utf8').trim()
+    : '');
+if (!WXID) throw new Error('缺小程序 AppID：设 YYJ_WX_APPID 或写 .devhome/yyj-wxid.txt');
+const REFERER = `https://servicewechat.com/${WXID}/60/page-frame.html`;
 
 const get = (url) => new Promise((resolve, reject) => {
   https.get(url, { headers: { Referer: REFERER, 'User-Agent': 'Mozilla/5.0 MicroMessenger/7.0.20' } }, (res) => {
