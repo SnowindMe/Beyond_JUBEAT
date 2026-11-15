@@ -84,3 +84,42 @@
 安全、缓存、无障碍骨架都已经到位，**性能上的失分几乎全部集中在「资源优先级判断反了」**：给看不见的图开 high 绿灯，给眼前的图踩 low 刹车。P0 两条改完，首屏图片请求时间会有肉眼可见的前移。
 
 > 附注：截图前请先 `localStorage.removeItem('jb-songs-filter-v1')`，残留搜索词会让页面渲染成空列表，容易误测。
+---
+
+## 修复与复核（2026-11-15 当天逐条落地）
+
+> 本节由修复方回填，只写实测口径，不改上面的原始判断。每条都注明「改了什么 / 现在实测是什么」。截图与计数均在 `localStorage.removeItem('jb-songs-filter-v1')` 之后进行。
+
+### P0-1 · 已修
+8 条 preload 的选源口径换了：原逻辑从 `bucket.jp['授权']` 摊平取 18 首，与真实渲染顺序（`srvGenOrder` + songId 升序、默认全部曲目）不同源，所以指到了第 39,000 字符之后的卡。
+现在改成 `eagerOf(srv)`：取该服**第一个世代块的前 12 张（jp）/ 6 张（cn）**，因为两个服的容器一份 DOM、`display:none` 里 lazy 图不下载，得各保一份。
+preload 收成 2 张，指向该服首卡。线上实测 `preloads=2`，URL 正好是第 1、2 张卡（`id13239494.webp` / `id78361624.webp`）。
+
+### P0-2 · 已修
+`SongCard.astro` 的 `fetchpriority` 由 `eager ? 'high' : 'low'` 改成 `eager ? 'high' : undefined`——屏下图只留 `lazy` 一层。
+线上 `/songs` 实测 `low=0`、首卡为 `loading="eager" fetchpriority="high"`。首页 `fetchpriority="auto"` 残留归 0（P2 第一条同批清掉）。
+
+### P1 · 已修
+`songs.css` 加 `.sc-sec > .sc-gen:nth-child(-n + 2 of .sc-gen:not([hidden])) { content-visibility: visible; }`。
+判据不能写裸 `:first-child`：`.sc-gen` 的第 1 个兄弟是 `<header class="sc-sec-h">`；也不能写 `-n + 3`：它把 header 算进编号、且 `hidden` 的块仍占位。用「of S」只数可见块。实测前两块 `visible`、第 3 块起 `auto`，把前两块 hidden 后规则正确顺延。
+`contain-intrinsic-size` 由 `auto 460px` 改成 `auto 3200px`（真实区间 1104–10266px，460 会让文档虚长到 37274px）。
+同批还让骨架块也不被跳过：`songs-list.js` 的 `refreshIntrinsicNow()` 对 `.sc-gen-ph` 写行内 `content-visibility:visible`，`refreshIntrinsic()` 里先同步旁路一遍，否则首帧要等 load 那次才生效。
+
+### P2 · 逐条结论
+
+| 项 | 结论 |
+|---|---|
+| `fetchpriority="auto"` | 已清，线上 0 处 |
+| 无 srcset | **不做**。曲绘只有 144×144 webp（`scripts/optimize-images.cjs` 按 208 宽压），archive 里 1265 张中 968 张是 145×145；卡片渲染 170px、详情页封面 54px，DPR 1 下没有可选档位 |
+| 首页无 lazy | **原判不成立**。16 张曲绘 eager 在窄屏 774 与宽屏 1440 下全在首屏内（belowFoldEager=0）；唯一屏外 eager 是页脚 brand.webp，已单独改 lazy |
+| 同图重复引用 | 是 Hero 的 `[data-dup]` 接缝副本（窄屏横滑用，宽屏 `display:none`），已由 eager 改 lazy |
+| 内联脚本 90KB | 主脚本（单块 64KB）已外链成 `public/assets/js/songs-list.js`；首页最大块是首屏立方体数据，已由 `<script is:inline define:vars>` 改成 `<script type="application/json">`，并把 CDN 前缀剥出，20073→13893B |
+| 缺 preconnect | 已加 `<link rel="preconnect" href="https://free-img.400040.xyz">`（故意不带 `crossorigin`：`img` 是 no-cors，加了会另建 CORS 连接池） |
+| 强制暗色 | 已改成跟随系统：无存档时 `prefers-color-scheme: light` → 默认浅色主题 `yymf`、深色 → `bta`；选过主题则存档压过系统。**关键坑**：判断段一度写在 `if (!raw) return;` 之后，而那个 return 返回的是整个 IIFE，无存档时一条都跑不到 |
+
+### P3 · 部分落地
+页面内补了 `<script type="speculationrules">`，只给首卡 1 条、`eagerness: 'moderate'`（悬停才真的开始，不与首屏抢带宽）。不支持该 API 的浏览器忽略整段。
+顺带修了一个连带问题：`src/lib/csp.ts` 的 `img-src` 漏了图床域，全站 CDN 曲绘每张都报 CSP violation。
+**验证注意**：本机 Chrome 156 只要挂着 DevTools，CDP 就明报 `PrerenderingDisabledByDevTools`、`activationStart` 恒为 0。想看真实激活要在无 DevTools 的普通窗口里点。
+其余 P3 特性（view transitions / `@container` / `hidden="until-found"` / `oklch` / `text-wrap` / `subgrid`）仍未动。
+
