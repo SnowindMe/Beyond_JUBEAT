@@ -4,6 +4,10 @@ import { jacketUrl } from '../lib/covers';
 import data from '../data/data.json';
 const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo','ripples'];
 const jacket = (id: string, c: string | null | undefined) => jacketUrl(id, c);
+// 反代前缀：发数据时逐条剥掉它省体积，运行时（见下方 script 里的 CDN）再拼回去。
+// 【教训】这个常量原先只定义在客户端脚本里，上面第 26 行的构建期 .replace 就取不到 →
+// 整个 SSR 在 "CDN is not defined" 处抛错、全站打不开（2026-11-16）。构建期与运行期要各定义一次。
+const JACKET_CDN = '/api/jacket/';
 // 首屏曲绘墙：16 张按 8 + 8 分成上下两条轨道（2026-10-27 主人要求窄屏双行滑动）。
 // 宽屏仍是 4×4 方阵（.cube-r 用 display:contents 摊平），窄屏才变成两条反向滚动的行。
 const hero16 = data.gen.find((g) => g.k === 'Ave.')?.top16 ?? [];
@@ -23,7 +27,7 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
     将来录入一首带斜杠标签的，没有它整页首屏就废了。 */}
 <script type="application/json" id="jbCubeData" set:html={JSON.stringify(
   data.gen.reduce((m, g) => {
-    if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover).replace(CDN, ''), t: s.t, e: s.lv?.ext ?? null }));
+    if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover).replace(JACKET_CDN, ''), t: s.t, e: s.lv?.ext ?? null }));
     return m;
   }, {} as Record<string, unknown>),
 ).replace(/<\//g, '<\\/')}></script>
