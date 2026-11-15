@@ -8,21 +8,30 @@ const jacket = (id: string, c: string | null | undefined) => jacketUrl(id, c);
 // 宽屏仍是 4×4 方阵（.cube-r 用 display:contents 摊平），窄屏才变成两条反向滚动的行。
 const hero16 = data.gen.find((g) => g.k === 'Ave.')?.top16 ?? [];
 const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
+// 首屏立方体的 208 条曲绘地址里，CDN 前缀每条约 44 字符、占这一块一半体积。
+// 发数据时剥掉前缀、只留文件名，运行时再拼回去。
+const CDN = 'https://free-img.400040.xyz/4/';
 ---
 
-<script is:inline define:vars={{ cubeData: data.gen.reduce((m, g) => {
-  if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover), t: s.t, e: s.lv?.ext ?? null }));
-  return m;
-}, {}) }}>
-  // 首屏立方体：主题世代 → 该世代定数最高的 16 首。
-  // 为什么用 define:vars 而不是 <script type="application/json">：
-  // 后者要再 JSON.parse 一次、且 Astro 对 set:html 的 JSON 里尖括号转义有坑；
-  // define:vars 直接把对象序列化进脚本，最省事。
-  //
-  // 【为什么放在<head>前的同步脚本里】主题是在 HTML 解析早期由 ThemeScript 设的
-  // data-g；若这里等到 DOMContentLoaded 才换，会先闪一下 ave 那 16 张再跳成目标世代。
-  // 但此时 #cubeGrid 还不存在，所以这里只做「记录」，真正替换由 cube-apply 调用。
-  window.__cubeData = cubeData;
+{/* 首屏立方体数据：主题世代 → 该世代定数最高的 16 首。
+    【2026-11-15 复查改法】原来用 `<script is:inline define:vars>` 把整份对象当 JS 源码写进脚本，
+    16 个世代 × 16 首 ≈ 20KB 全是可执行脚本，要过 JS 解析器。改成 application/json + JSON.parse：
+    浏览器按数据处理、不进脚本队列，体积也更小（不再双重转义引号）。
+    【必须手动转义 `</`】set:html 不转义，曲名里一旦出现 `</script>` 就会提前截断整块。
+    当前 1248 首的曲名里恰好一个都没有（实测裸 `</` 计数 0），所以这条只是防御：曲名是外部数据，
+    将来录入一首带斜杠标签的，没有它整页首屏就废了。 */}
+<script type="application/json" id="jbCubeData" set:html={JSON.stringify(
+  data.gen.reduce((m, g) => {
+    if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover).replace(CDN, ''), t: s.t, e: s.lv?.ext ?? null }));
+    return m;
+  }, {} as Record<string, unknown>),
+).replace(/<\//g, '<\\/')}></script>
+<script is:inline>
+  // 数据节点紧贴在脚本前面，此刻已经在 DOM 里，直接解析。
+  // 【为什么还要这段同步脚本】主题是在 HTML 解析早期由 ThemeScript 设的 data-g；
+  // 若等到 DOMContentLoaded 才换，会先闪一下 ave 那 16 张再跳成目标世代。
+  // 但此时 #cubeGrid 还不存在，所以这里只做「解析+记录」，真正替换由 cube-apply 调用。
+  try { window.__cubeData = JSON.parse(document.getElementById('jbCubeData').textContent); } catch (e) {}
 </script>
 
 <section class="hero">
@@ -125,6 +134,14 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
       // 而 data.json 的 gen.k 是「世代」层（beyond the Ave. / Qubell / 音乐魔方 / clan…）。
       // 两层名字几乎都不同，只写 clan 的别名会取不到数据 → 网格被清空（本轮实测 cells:0）。
       // 映射必须与 lib/themes.ts 的 THEMES 条数、顺序一一对应，加主题时这里跟着加。
+      // 曲绘前缀：数据里存的是剥掉前缀的文件名（省体积），这里拼回来。
+      // 以 / 开头的是站内回退（尚未迁到图床的少数曲），原样用。
+      var CDN = 'https://free-img.400040.xyz/4/';
+      function srcOf(s) { return s.c && s.c.charAt(0) === '/' ? s.c : CDN + s.c; }
+      // 兜底解析：上面那段同步脚本若被执行顺序打乱（如插件延迟脚本），这里还能自取一次。
+      function safeParse() {
+        try { return JSON.parse(document.getElementById('jbCubeData').textContent) || {}; } catch (e) { return {}; }
+      }
       var THEME2GEN = {
         jubeat: 'jubeat', ripples: 'ripples', knit: 'knit', copious: 'copious', saucer: 'saucer',
         saucerfulfill: 'saucer fulfill', prop: 'prop', qubell: 'Qubell',
@@ -133,7 +150,7 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
       };
       function applyCube(themeKey) {
         var grid = document.getElementById('cubeGrid');
-        var data = window.__cubeData;
+        var data = window.__cubeData || (window.__cubeData = safeParse());
         if (!grid || !data) return;
         var key = THEME2GEN[themeKey] || themeKey;
         var list = data[key] || data['Ave.'];
@@ -152,10 +169,10 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
           for (var i = 0; i < rows[r].length; i++) {
             var s = rows[r][i];
             if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
-            one += '<i><img src="' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
+            one += '<i><img src="' + srcOf(s) + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
                    '" width="144" height="144" loading="eager" decoding="async"' +
                    (r === 0 && i < 2 ? ' fetchpriority="high"' : '') + '></i>';
-            dup += '<i data-dup aria-hidden="true"><img src="' + s.c +
+            dup += '<i data-dup aria-hidden="true"><img src="' + srcOf(s) +
                    '" alt="" width="144" height="144" loading="lazy" decoding="async"></i>';
           }
           html += '<div class="cube-r ' + (r === 0 ? 'cube-r-a' : 'cube-r-b') + '">' + one + dup + '</div>';
