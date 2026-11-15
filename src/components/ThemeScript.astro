@@ -38,7 +38,11 @@ const themesJson = JSON.stringify(THEMES);
     b.type='button'; b.title=g.n;
     b.style.setProperty('--sw',g.c);
     b.innerHTML='<i></i><span>'+g.n+'</span>';
-    b.addEventListener('click',function(){apply(g);});
+    b.addEventListener('click',function(){
+      apply(g);
+      // 只有用户亲手选才落盘：见 commit() 里那段说明
+      try{localStorage.setItem('jubeat-gen',g.k);}catch(e){}
+    });
     dock.appendChild(b); btns[g.k]=b;
   });
 
@@ -148,7 +152,10 @@ const themesJson = JSON.stringify(THEMES);
     }else{
       paint(g);
     }
-    try{localStorage.setItem('jubeat-gen',g.k);}catch(e){}
+    /* 【这里不写 localStorage（2026-11-15）】
+       首屏那一次 apply() 只是为了把存档/系统推断落成画面，并不代表用户选过。
+       原先在这里无差别写入，会把「系统浅色 → yymf」当场固化成用户选择，
+       之后系统切回暗色就不再跟随了。改成只在 click 时写（见上面的按钮绑定）。 */
   }
 
   function apply(g,instant){
@@ -168,8 +175,12 @@ const themesJson = JSON.stringify(THEMES);
     setTimeout(stop, 3000);
   }
 
-  var saved='ave';
-  try{saved=localStorage.getItem('jubeat-gen')||'ave';}catch(e){}
+  /* 默认世代：沿用 <head> 首帧脚本已经定下的 data-g。
+     那条脚本在「用户没选过主题 + 系统偏好浅色」时会把 data-g 改成 yymf，
+     这里若还回落别的世代，就会把刚定好的浅色又顶回深色，等于白改。
+     读 data-g 而不是重算系统偏好：一条判据只有一个地方，也不会与首帧错位。 */
+  var saved=root.getAttribute('data-g')||'bta';
+  try{saved=localStorage.getItem('jubeat-gen')||saved;}catch(e){}
   var hit=GEN.filter(function(g){return g.k===saved;})[0]||GEN[0];
   apply(hit,true);
 

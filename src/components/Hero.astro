@@ -55,7 +55,7 @@ const CDN = 'https://free-img.400040.xyz/4/';
         这段必须紧贴 img（is:inline 同步执行），否则浏览器已按空 src 判定过一次。 */}
     <script is:inline>
       (function () {
-        var g = document.documentElement.getAttribute('data-g') || 'ave';
+        var g = document.documentElement.getAttribute('data-g') || 'bta';
         var el = document.getElementById('wordLogo');
         if (el) el.src = '/assets/images/logo/' + (g.indexOf('clan_') === 0 ? 'clan' : g) + '.webp';
       })();
@@ -183,7 +183,7 @@ const CDN = 'https://free-img.400040.xyz/4/';
       // 首屏立即执行一次：SSR 渲染的是 ave 那 16 张，但用户上次可能停在别的主题。
       // 本脚本在 #cubeGrid 之后，且 ThemeScript 早已设好 data-g，所以直接读它重绘，
       // 避免「先看到 ave 再跳成目标世代」。
-      applyCube(document.documentElement.getAttribute('data-g') || 'ave');
+      applyCube(document.documentElement.getAttribute('data-g') || 'bta');
     })();
   </script>
 

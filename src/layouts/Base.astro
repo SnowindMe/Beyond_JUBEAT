@@ -39,7 +39,7 @@ const {
   title = pageTitle('首页'),
   // 原来同一句里并列「15 个世代」和「14 套主题」，读者会以为自相矛盾（审计第 19 条）。
   description = `jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`,
-  gen = 'ave',
+  gen = 'bta',
   font = 'F',
   canonicalPath = '/',
   ogImage = SITE + '/assets/images/og/cover.png',
@@ -135,6 +135,22 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
       末尾脚本仍会再设一次 hidden（两套机制一致，互相兜底）。 */}
   <script is:inline>
     (function () {
+      /* 【没选过主题时跟随系统明暗（2026-11-15 复查 P2「强制暗色」）】
+         放在最前面：下面那段筛选存档用 `return` 提前退出，而 return 返的是整个 IIFE，
+         写在它后面照样跑不到（踩过一次，别再挪下去）。
+         之前不管系统是亮是暗，一律先给深底——系统开浅色的访客会被硬按进暗站。
+         用户自己选过主题就一律以他的选择为准，只有「从没选过」才听系统的。
+         data-g 决定字标 URL、底色与全部画面层，越晚改越闪，必须赶在任何渲染前定下来。
+         浅色侧挑 yymf：它是唯一「新世代 + 浅底」的组合，不至于像个降级皮肤。 */
+      try {
+        var chosenTheme = localStorage.getItem('jubeat-gen');
+        if (!chosenTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+          document.documentElement.setAttribute('data-g', 'yymf');
+          document.documentElement.setAttribute('data-lum', 'light');
+        }
+        // 暗色侧不动：SSR 默认就是 bta + dark，与系统偏好一致。
+      } catch (e) {}
+
       try {
         var raw = localStorage.getItem('jb-songs-filter-v1');
         if (!raw) return;
@@ -146,6 +162,7 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         // 这里立起来首帧就是列表，不会先画一屏卡片再整体重排。
         if (o && o.view === 'list') document.documentElement.setAttribute('data-view', 'list');
       } catch (e) {}
+
     })();
   </script>
   {/* 主题表里跟首帧有关的两个字段（字形组 f、底色 b）在这里也发给浏览器：
@@ -161,11 +178,14 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
         THEME_BG[t[0]] = t[2];
         THEME_LUM[t[0]] = t[3];
       });
-      var DEF = 'ave';
-      var g = DEF;
-      try { g = localStorage.getItem('jubeat-gen') || DEF; } catch (e) {}
-      if (!FONT[g]) g = DEF;
+      /* 默认世代 bta（2026-11-15 主人定：没选过主题的默认深色是 bta，浅色是 yymf）。
+         这里**不能**只写 DEF：上面那条首帧脚本可能已经按系统浅色偏好把 data-g 设成 yymf，
+         照 DEF 覆盖回去就等于白改。所以先认 <html> 上已有的值，DEF 只作最后兜底。 */
+      var DEF = 'bta';
       var el = document.documentElement;
+      var g = el.getAttribute('data-g') || DEF;
+      try { g = localStorage.getItem('jubeat-gen') || g; } catch (e) {}
+      if (!FONT[g]) g = DEF;
       el.setAttribute('data-g', g);
       el.setAttribute('data-font', FONT[g]);
       /* 明暗跟着世代一起落：老用户刷新时先闪浅色底、再被深色主题盖住，就是这里缺一步。
