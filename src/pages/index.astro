@@ -28,16 +28,34 @@ export const prerender = false;
   description={`jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
 >
   {/* 首屏 LCP 图 preload（2026-11-15 P0）。首页此前 0 条 preload，而首屏最大的图是字标
-      logo/ave.webp：它在 <Hero /> 里指向 #wordLogo，**HTML 根本不写 src**（要有 src 就会先下默认
+      字标图：它在 <Hero /> 里指向 #wordLogo，**HTML 根本不写 src**（要有 src 就会先下默认
       世代、再由主题脚本换掉，见 Hero 里那段注释），改由紧贴 img 的内联脚本就地设。
       代价是浏览器在解析到那行脚本之前完全不知道这张图存在，实测最早图片请求 550ms。
       preload 让它在解析 <head> 时就发起。
-      只发这 1 条：optimize-preload-priority 是 MANDATORY —— fetchpriority=high 的图片 preload
-      最多 1~2 条、全页图片 preload 上限 2 张；曲绘墙交给 <img loading=eager fetchpriority=high>
-      即可，两边都发就互相摊薄。
-      地址必须与 Hero 里 inner 拼出的那份逐字一致，否则浏览器当成两个 URL、图会被下载两次。 */}
+      只发这 1 条字标：optimize-preload-priority 是 MANDATORY —— fetchpriority=high 的图片
+      preload 最多 1~2 条、全页图片 preload 上限 2 张；曲绘墙交给
+      <img loading=eager fetchpriority=high> 即可，两边都发就互相摊薄。
+      （背景图那条由 Base.astro 的预热脚本按世代发，与本条是不同 URL，不冲突。）
+      地址必须与 Hero 里拼出的那份逐字一致，否则浏览器当成两个 URL、图会被下载两次。 */}
   <Fragment slot="head">
-    <link rel="preload" as="image" href="/assets/images/logo/ave.webp" fetchpriority="high" />
+    {/* 为什么用脚本而不是写死一条 <link media="(prefers-color-scheme)">：
+        2026-11-15 起没选过主题时深色给 bta、浅色给 yymf；但**选过**主题的老用户要走他
+        自己那一张，media 查询不知道 localStorage，写死 media 对这些人必然下错图。
+        这段排在 Base.astro 那条首帧脚本之后，读到的 data-g 已经是最终值（存档优先、
+        其次系统偏好），所以谁都能命中自己那张。
+        clan_* 四套共用 clan 字标，与 Hero 里拼接时的归一化同一条规则。 */}
+    <script is:inline>
+      (function () {
+        var g = document.documentElement.getAttribute('data-g') || 'bta';
+        var k = g.indexOf('clan_') === 0 ? 'clan' : g;
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'image';
+        l.fetchPriority = 'high';
+        l.href = '/assets/images/logo/' + k + '.webp';
+        document.head.appendChild(l);
+      })();
+    </script>
   </Fragment>
   <Hero />
 
