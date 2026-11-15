@@ -77,6 +77,9 @@ pastes/
 archive/
 # 图床上传的当日配额与小时窗口：本机断点状态，换机器重建即可
 .cdn-quota.json
+# 补丁两边：base 是对比基线，patch.sql 是产物（diff-seed 随时重算）
+.seed-base.sql
+db/patch.sql
 wk-mini/
 wk-*.capnp
 probe-*.cjs
