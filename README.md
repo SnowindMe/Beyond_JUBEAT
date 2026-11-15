@@ -252,6 +252,8 @@ npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-p0.sql     # �
 
 新开一份迁移要同时改 `db/schema.sql` 的对应段落，两份别分叉——本地靠 schema 一次建全，线上只能一条条跑迁移。
 
+**日常改数据用补丁，别重放 seed**：`node scripts/db/diff-seed.cjs --base=<上次部署的 seed> ` 生成 `db/patch.sql`（只含受影响的行），再 `node scripts/db/apply-patch.cjs --token=<CF token>` 灌进去。后者走 D1 REST `/query`、每批 100 条失败即停，不依赖 `wrangler` 的本地登录态——这台机器上 `wrangler d1 execute --remote` 会因缺授权直接失败，而 token 只要给了 D1 Edit 权限就能用同一条路径。
+
 **不要拿 `db/schema.sql` 对线上跑**，它开头有 `DROP TABLE songs`。
 
 四份都已于 2026-11-04 在线上跑过（鉴权五表与热度计数三表均已存在，`idx_hot_hits_day_song` 已删）。当时 wrangler 没登录，走的是 Cloudflare MCP 的 D1 query 通道；`wrangler d1 execute --remote` 需要先 `npx wrangler login`。**已上线的库不会因为 schema.sql 改了而自己补表**，换环境或回滚后重跑这四条是常规动作。

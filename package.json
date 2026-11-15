@@ -7,6 +7,7 @@
     "data": "node scripts/build-data.cjs && node scripts/build-search-key.cjs && node scripts/build-difficulty-stats.cjs",
     "db": "node scripts/db/parse-xlsx.cjs && node scripts/db/build-db.cjs --seed && node scripts/build-data.cjs && node scripts/build-search-key.cjs",
     "patch": "node scripts/db/diff-seed.cjs",
+    "apply:patch": "node scripts/db/apply-patch.cjs",
     "dev": "astro dev",
     "build": "node scripts/build-difficulty-stats.cjs && node scripts/ub/split-ub-charts.cjs && node scripts/gen-build-stamp.cjs && node scripts/gen-seo.cjs && astro build",
     "preview": "npm run build && wrangler dev",
