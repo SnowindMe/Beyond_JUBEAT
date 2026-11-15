@@ -32,7 +32,7 @@
 #     InstallPrompt.astro:192），另有 12 处模板变量 style={...}（Fortune/HotBoard/
 #     [songId]/jubility，用来下发 CSS 变量）。只有写 style 属性才受管；JS 里
 #     element.style.x 走 CSSOM，CSP 不管，不必处理。
-#   img-src 'self' data: https://img.shields.io
+#   img-src 'self' data: https://img.shields.io https://free-img.400040.xyz
 #     /assets/images/**（曲绘、评级、logo）。shields.io 是页脚徽章
 #     （Base.astro:265），是全站唯一的外链图片。data: 现在 0 处，留给内联 SVG。
 #   font-src 'self'
@@ -75,7 +75,7 @@
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' https://challenges.cloudflare.com; style-src-attr 'unsafe-inline'; img-src 'self' data: https://img.shields.io; font-src 'self'; media-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests; report-uri /api/csp-report
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' https://challenges.cloudflare.com; style-src-attr 'unsafe-inline'; img-src 'self' data: https://img.shields.io https://free-img.400040.xyz; font-src 'self'; media-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests; report-uri /api/csp-report
 
 # ── 长缓存区（2026-11-03 合并）─────────────────────────────────
 # 【为什么合并成一条、且用单星号】CF 的 _headers 是**逐条命中、同名头累加**，

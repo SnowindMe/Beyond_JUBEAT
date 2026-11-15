@@ -21,6 +21,7 @@
 import type { Song } from '../lib/db';
 import { catOf, isPickUp } from '../lib/song-view';
 import HoldMarker from './HoldMarker.astro';
+import { jacketUrl } from '../lib/covers';
 
 interface Props {
   song: Song;
@@ -66,7 +67,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   <div class="sc-j">
     {s.cover ? (
       <img
-        src={`/assets/images/jackets/${s.cover}`}
+        src={jacketUrl(s.id, s.cover)}
         alt=""
         width="144"
         height="144"

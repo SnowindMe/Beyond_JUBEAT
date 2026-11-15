@@ -13,6 +13,7 @@ import '../styles/fortune.css';
 import { env } from 'cloudflare:workers';
 import { TOP } from '../lib/hot';
 import { byIds, fallbackPool, todaySnapshot, type PoolSong } from '../lib/hotPage';
+import { jacketUrl } from '../lib/covers';
 
 export const prerender = false;
 
@@ -105,7 +106,7 @@ const shown = list;
                     浏览器判定不可见就一张都不拉；等滚动把它们带进视窗已经是几秒后的事，
                     观感上就是「先空着，动一下鼠标才冒出来」。曲绘单张约 7KB、25 张不到 200KB，
                     这里省的不是带宽而是首屏正确性。 */}
-                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
+                <img class="fh-cover" src={jacketUrl(s.songId, s.cover)} alt="" width="38" height="38" decoding="async" />
                 <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>

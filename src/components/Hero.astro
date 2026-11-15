@@ -1,8 +1,9 @@
 ---
 // 首屏：标语 + 字标 + 数据统计 + 世代曲绘立方体
+import { jacketUrl } from '../lib/covers';
 import data from '../data/data.json';
 const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo','ripples'];
-const jacket = (c) => '/assets/images/jackets/' + String(c || '').split('/').pop();
+const jacket = (id: string, c: string | null | undefined) => jacketUrl(id, c);
 // 首屏曲绘墙：16 张按 8 + 8 分成上下两条轨道（2026-10-27 主人要求窄屏双行滑动）。
 // 宽屏仍是 4×4 方阵（.cube-r 用 display:contents 摊平），窄屏才变成两条反向滚动的行。
 const hero16 = data.gen.find((g) => g.k === 'Ave.')?.top16 ?? [];
@@ -10,7 +11,7 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
 ---
 
 <script is:inline define:vars={{ cubeData: data.gen.reduce((m, g) => {
-  if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: s.cover, t: s.t, e: s.lv?.ext ?? null }));
+  if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover), t: s.t, e: s.lv?.ext ?? null }));
   return m;
 }, {}) }}>
   // 首屏立方体：主题世代 → 该世代定数最高的 16 首。
@@ -85,7 +86,7 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
               {/* fetchpriority 只给首行前 2 张（2026-11-15）：LCP 已由 head 里那条
                   logo preload + #wordLogo 的 high 锁定，曲绘墙再标 4 张就摊薄了。
                   其余省略属性（默认就是 auto，写出来只是噪音，P2 一并清掉）。 */}
-              <img src={jacket(s.cover)} alt={s.t} width="144" height="144"
+              <img src={jacket(s.id, s.cover)} alt={s.t} width="144" height="144"
                    loading="eager" decoding="async" fetchpriority={ri === 0 && i < 2 ? 'high' : undefined} />
             </i>
           ))}
@@ -95,7 +96,7 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
               改 lazy（2026-11-15 P2）——窄屏它们就在第一行右侧的视口边缘，照样及时加载。 */}
           {row.map((s) => (
             <i data-dup aria-hidden="true">
-              <img src={jacket(s.cover)} alt="" width="144" height="144" loading="lazy" decoding="async" />
+              <img src={jacket(s.id, s.cover)} alt="" width="144" height="144" loading="lazy" decoding="async" />
             </i>
           ))}
         </div>
@@ -151,10 +152,10 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
           for (var i = 0; i < rows[r].length; i++) {
             var s = rows[r][i];
             if (!s.c) continue; // 没有曲绘的跳过（宁可少一格也不出裂图）
-            one += '<i><img src="/assets/images/jackets/' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
+            one += '<i><img src="' + s.c + '" alt="' + String(s.t).replace(/"/g, '&quot;') +
                    '" width="144" height="144" loading="eager" decoding="async"' +
                    (r === 0 && i < 2 ? ' fetchpriority="high"' : '') + '></i>';
-            dup += '<i data-dup aria-hidden="true"><img src="/assets/images/jackets/' + s.c +
+            dup += '<i data-dup aria-hidden="true"><img src="' + s.c +
                    '" alt="" width="144" height="144" loading="lazy" decoding="async"></i>';
           }
           html += '<div class="cube-r ' + (r === 0 ? 'cube-r-a' : 'cube-r-b') + '">' + one + dup + '</div>';

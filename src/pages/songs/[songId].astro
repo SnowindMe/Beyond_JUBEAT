@@ -11,6 +11,7 @@ import SongAudio from '../../components/SongAudio.astro';
 import HoldMarker from '../../components/HoldMarker.astro';
 import { getSongById, type Song } from '../../lib/song-data';
 import { LEVELS, gauge, dash as dashLv, HOLD_PCT_MAX } from '../../lib/difficulty';
+import { jacketUrl } from '../../lib/covers';
 // 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
 // 【2026-11-01 线上事故，别改回现算】最初写成每次请求调 buildDifficultyStats()，
 // 要对 1248 首 × 3 档做分桶 + 60 万次内层循环（实测 77 ms），
@@ -147,7 +148,7 @@ const dash = dashLv;
 // 键数四位数（最高 1606）在窄卡里要读得快，加千分位
 const fmtInt = (v: number) => v.toLocaleString('en-US');
 const servers = song ? [song.jp ? '日服' : null, song.cn ? '国服' : null].filter(Boolean).join(' / ') : '';
-const coverSrc = song?.cover ? `/assets/images/jackets/${song.cover}` : null;
+const coverSrc = song?.cover ? jacketUrl(song.id, song.cover) : null;
 
 // 定数刻度、难度顺序与空值显示已统一抽到 src/lib/difficulty.ts——
 // 加一档难度或改上限只需改那一处，模板与样式不再各持一份。

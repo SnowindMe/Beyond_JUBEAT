@@ -55,13 +55,15 @@ const srvOf = (s) => (s.server_jp && s.server_cn ? 'both' : s.server_jp ? 'jp' :
 const ext = (s) => num(s.ext);
 
 // 两服源文件后缀不同，站点侧一律用 .webp 名（转档在文件末尾统一做）。
-const coverName = (c) => (c ? String(c).replace(/\.gif$/i, '.webp') : null);
+// 站点侧的曲绘名统一规范成 id<歌id>.webp（与 scripts/cdn-jackets.cjs 的目标名、图床/CDN 一致）。
+// 保留「有 cover 才给名字」的语义：没曲绘的行仍是 null，不让页面去请求 id<id>.webp 凭空 404。
+const coverName = (songId, cover) => (cover ? 'id' + songId + '.webp' : null);
 
 // site 侧统一字段：t 曲名 / a 艺术家 / lv 三难度 / cover 曲绘名 / d 上线日期 / o 世代
 const pick = (s) => ({
   t: s.title, a: s.artist || null,
   lv: { bsc: num(s.bsc), adv: num(s.adv), ext: num(s.ext) },
-  cover: coverName(s.cover), d: s.added_at || null, o: s.gen_name,
+  cover: coverName(s.song_id, s.cover), d: s.added_at || null, o: s.gen_name,
   srv: srvOf(s), cat: s.category, alt: s.alt ? 1 : 0,
 });
 
@@ -70,7 +72,7 @@ const pick = (s) => ({
 const SONGS = rows.map((s) => ({
   id: s.song_id, t: s.title, a: s.artist || null,
   lv: { bsc: num(s.bsc), adv: num(s.adv), ext: num(s.ext) },
-  cover: coverName(s.cover), d: s.added_at || null, bpm: s.bpm || null,
+  cover: coverName(s.song_id, s.cover), d: s.added_at || null, bpm: s.bpm || null,
   gen: s.gen_name, jp: !!s.server_jp, cn: !!s.server_cn, cat: s.category, alt: s.alt ? 1 : 0,
   unlock: s.unlock_note || null, kind: s.id_kind,
   // 【2026-10-28 限时曲】限时结束日 YYYY-MM-DD，NULL = 非限时。
@@ -171,7 +173,14 @@ if (version !== digest) {
 
 // 曲目页要用全量曲绘，这里不再只转 data.json 引用的那几十张。
 fs.mkdirSync(JDEST, { recursive: true });
-const wanted = new Set(SONGS.map((x) => x.cover).filter(Boolean));
+// 【2026-11-15 曲绘迁图床】已经搬走的图不再要求本地存在：
+// src/data/cdn.json 记着「规范名 → 图床 URL」，页面走 jacketUrl() 直取 CDN，
+// 本地文件被移进 archive/materials/jackets/（不入库）。所以这里把已映射的从待转清单剔除，
+// 否则每搬一张就会多报一条「缺曲绘」，真正的缺图反而淹在噪音里。
+const cdnMapped = new Set(Object.keys((() => {
+  try { return JSON.parse(fs.readFileSync(path.join(OUTDIR, 'cdn.json'), 'utf8')).jackets || {}; } catch { return {}; }
+})()));
+const wanted = new Set(SONGS.map((x) => x.cover).filter((c) => c && !cdnMapped.has(c)));
 
 let sharp = null;
 try { sharp = require('sharp'); } catch { /* 没装 sharp 时只能拷现成的国服 webp */ }

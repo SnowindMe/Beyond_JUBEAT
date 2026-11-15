@@ -212,6 +212,15 @@ public/sw.js 的静态资源失败兜底也一起修了：原来 fetch(...).catc
 
 CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`，只摘六个字段打 `console.log('[csp]')`，不落库——违规量是「改一次内联脚本冒几条」级别，先看 `wrangler tail`。**跨源类违规清零后**才去掉头名里的 `-Report-Only`。逐项放行理由写在 `_headers` 顶部注释里，收口时逐行对着删。
 
+## 曲绘托管在图床
+
+曲绘（1248 张）不放仓库、不进构建产物，统一传公益图床 <https://tc.mofashi.ltd>，页面取 `src/data/cdn.json` 的映射拼 CDN 绝对地址；映射里没有的才回退 `/assets/images/jackets/<规范名>`。读取一律走 `src/lib/covers.ts` 的 `jacketUrl()`，模板里不再出现硬编码路径。
+
+- **规范名 = `id<歌id>.webp`**。本地文件、`songs.cover`、映射键、CDN 落盘名四处同名，换床或回滚能逐条对上；不是 `idN` 形态的老 hash 名已在 2026-11-15 全量改名。
+- 上传用 `node scripts/cdn-jackets.cjs`：按 `songs.json` 顺序补缺、逐张写映射、把本地原图 rename 进 `archive/materials/jackets/`（本地留档，不入库）。配额与断点存 `.cdn-quota.json`。
+- 图床三道闸：**1200 张/天、600 张/小时、120 张/分钟**，脚本按 1200/590/115 自我节流；限流（42900）不计失败，推窗口后退避重抓同一张。`42216` 是并发写库抖动，重试即过。
+- 映射命中前不要删本地图，否则页面回退到 404。CSP 的 `img-src` 已放行 `https://free-img.400040.xyz`（仍是 Report-Only）。
+
 ### 品牌资源版本
 
 图片扩展名的 `Cache-Control` 曾被上一跳（腾讯 EdgeOne）统一压成 3600，已于 2026-11-01 改为遵循源站。但**已被缓存的旧图不随部署失效**——这就是「明明换了 favicon 却看不到」的真凶。所以换图标只能靠 URL 变化：品牌资源一律带 `?v=N`，改图时 `Base.astro` 四处图标链接、`Header.astro` 与 `index.astro` 的品牌图、`manifest.webmanifest` 三个 icons、`sw.js` 的 `ASSET_V` 四处同改并把 N 加一。

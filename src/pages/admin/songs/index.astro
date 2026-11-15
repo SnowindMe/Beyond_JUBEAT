@@ -15,6 +15,7 @@ import { isStaff } from '../../../lib/auth';
 import { GEN_ORDER } from '../../../lib/gens';
 import { env } from 'cloudflare:workers';
 import { buildSongListQuery, songEditError } from '../../../lib/song-admin';
+import { jacketUrl } from '../../../lib/covers';
 
 export const prerender = false;
 
@@ -200,7 +201,7 @@ const SRV_OPTS = [
                       与 lib/db.ts 的 rowToSong 同一归一化，否则列表图全 404 */}
                   {s.cover ? (
                     <img
-                      src={'/assets/images/jackets/' + s.cover.replace(/\.gif$/i, '.webp')}
+                      src={jacketUrl(s.song_id, s.cover.replace(/\.gif$/i, '.webp'))}
                       alt=""
                       width="144"
                       height="144"

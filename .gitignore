@@ -75,6 +75,8 @@ pastes/
 #   · 构建生成物：曲目 JSON 与版本号由 scripts/build-data.cjs 产出，不进版本库
 #   · miniflare 的 email-store 临时目录
 archive/
+# 图床上传的当日配额与小时窗口：本机断点状态，换机器重建即可
+.cdn-quota.json
 wk-mini/
 wk-*.capnp
 probe-*.cjs

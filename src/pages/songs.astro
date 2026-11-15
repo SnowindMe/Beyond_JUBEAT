@@ -16,6 +16,7 @@ import Layout from '../layouts/Base.astro';
 import '../styles/server-card.css';
 import '../styles/songs.css';
 import SongCard from '../components/SongCard.astro';
+import { jacketUrl } from '../lib/covers';
 import GenBlock from '../components/GenBlock.astro';
 import GenSkeleton from '../components/GenSkeleton.astro';
 import { pageTitle } from '../lib/title';
@@ -222,10 +223,7 @@ const EAGER = new Set(['jp', 'cn'].flatMap((srv) => eagerOf(srv as Srv)).map((s)
    超过就互相抢带宽、每张的优先级提升被摊薄。原版 8 条已经超了 4 倍。
    其余首屏图由 loading=eager + fetchpriority=high 的 <img> 承担，它们本来就排在 HTML 前部。
    地址必须与 SongCard 里那个 src 逐字一致，否则浏览器当成两个 URL、图会被下载两次。 */
-const PRELOAD_JACKETS = eagerOf(DEFAULT_SRV)
-  .slice(0, 2)
-  .map((s) => s.cover)
-  .filter((c): c is string => !!c);
+const PRELOAD_SONGS = eagerOf(DEFAULT_SRV).slice(0, 2).filter((s) => !!s.cover);
 
 // 【2026-11-02 分段加载】首屏只 SSR 渲染前若干世代，其余世代先出骨架。
 //
@@ -346,8 +344,8 @@ const TYPES = [
   {/* 首屏曲绘 preload：2 张（2026-11-15 由 8 张压下来，理由见 PRELOAD_JACKETS 上方注释），
       必须与 SongCard 的 src 完全一致。 */}
   <Fragment slot="head">
-    {PRELOAD_JACKETS.map((c) => (
-      <link rel="preload" as="image" href={`/assets/images/jackets/${c}`} fetchpriority="high" />
+    {PRELOAD_SONGS.map((s) => (
+      <link rel="preload" as="image" href={jacketUrl(s.id, s.cover)} fetchpriority="high" />
     ))}
   </Fragment>
   {/*

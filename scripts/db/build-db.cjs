@@ -203,7 +203,7 @@ function main() {
         finalId, s.idKind || 'official', finalTitle, finalArtist, arc.bpm ? String(arc.bpm) : null,
         genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
-        s.alt ? 1 : 0, webpCover(s.jacketFile),
+        s.alt ? 1 : 0, webpCover(finalId, s.jacketFile),
         arc.addedAt || null, note, limitedUntilOf(arc)
       );
       if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
@@ -228,7 +228,7 @@ function main() {
         r.songId, 'official', r.title, r.artist || null, dashNull(r.bpm),
         '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
-        /\[\s*2\s*\]/.test(r.title) ? 1 : 0, r.cover || null,
+        /\[\s*2\s*\]/.test(r.title) ? 1 : 0, webpCover(r.songId, r.cover),
         isoDate(r.date), dashNull(r.pool),
         // 国服行也按 songId 回查一次快照：限时曲实测都在国服（新年快乐、Will We Shine）
         limitedUntilOf(archiveById.get(String(r.songId)))
@@ -251,7 +251,7 @@ function main() {
         v.bpm ? String(v.bpm) : null, '音乐魔方', 0, 1, cat || '原创',
         num(v.bsc), num(v.adv), num(v.ext),
         /\[\s*2\s*\]/.test(String(v.title)) ? 1 : 0,
-        v.cover ? String(v.cover) : null,
+        webpCover(id, v.cover),
         isoDate(v.date), dashNull(v.pool), null
       );
       if (v.cover) stat.cnCover++;
@@ -494,10 +494,13 @@ function readSheet1Unlock() {
   return map;
 }
 
-// 曲绘入库即归一化为站点素材名：日服源文件是 idN.gif，build-data 转档产物统一叫 idN.webp。
-function webpCover(v) {
+// 曲绘入库即归一化为**规范名 id<歌id>.webp**（2026-11-15 迁图床时定）。
+// 原来只把 .gif 换成 .webp、保留官方原名（id17130843.webp）或国服 md5 名，于是同一张图
+// 在库、图床、CDN 三处是三个不同的名字，换床或回滚都对不上。现在统一成按 songId 派生，
+// 源文件怎么叫都不影响入库值；是否真有曲绘仍由入参 v 决定（null 保持 null，不凭空造请求）。
+function webpCover(songId, v) {
   const s = String(v || '').trim();
-  return s ? s.replace(/\.gif$/i, '.webp') : null;
+  return s ? 'id' + String(songId) + '.webp' : null;
 }
 
 // 归一化：小写、去空格、去长押标记与常见标点（Big Daddy 这类跨服同曲的匹配键）
@@ -756,7 +759,8 @@ function readCnRows(archiveById) {
       cnCategory: String(r[7] || '').trim(),
       pool: String(r[8] || '').trim(),
       date: String(r[9] || '').trim(),
-      cover: arc.cover ? String(arc.cover).split('/').pop() : cnCoverFallback(songId),
+      // 统一走规范名（见 webpCover 注释）：有源图就按 songId 派生，没源图再试素材库回退
+      cover: arc.cover ? 'id' + songId + '.webp' : cnCoverFallback(songId),
     });
   }
   return out;

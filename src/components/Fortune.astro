@@ -23,6 +23,7 @@ import { env } from 'cloudflare:workers';
 import { DIFF_LABEL, dayOf, fortuneOf, type Diff, type GradeKey, type Svr } from '../lib/hot';
 import { fallbackByIds, pickFortune, todaySnapshot, fortunePool, type PoolSong } from '../lib/hotPage';
 import data from '../data/data.json';
+import { jacketUrl } from '../lib/covers';
 
 export const prerender = false;
 
@@ -121,7 +122,7 @@ const luck = active ? active.picks[0].luck : 60;
               <li class="fh-pick">
                 {/* 整块可点：同热榜，链接层铺满整行，其余内容在层下面 */}
                 <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
-                <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
+                <img class="fh-cover" src={jacketUrl(s.songId, s.cover)} alt="" width="38" height="38" decoding="async" />
                 <span class="fh-txt">
                   <b>{s.title}</b>
                   <small>{s.artist}</small>
@@ -154,7 +155,7 @@ const luck = active ? active.picks[0].luck : 60;
           <li class="fh-pick">
             <a class="fh-name" href={`/songs/${s.songId}/`} aria-label={`${s.title} - ${s.artist}`} />
             <span class="fh-tier">新曲</span>
-            <img class="fh-cover" src={`/assets/images/jackets/${s.cover}`} alt="" width="38" height="38" decoding="async" />
+            <img class="fh-cover" src={jacketUrl(s.songId, s.cover)} alt="" width="38" height="38" decoding="async" />
             <span class="fh-txt">
               <b>{s.title}</b>
               <small>{s.artist}</small>
