@@ -347,6 +347,21 @@ const TYPES = [
     {PRELOAD_SONGS.map((s) => (
       <link rel="preload" as="image" href={jacketUrl(s.id, s.cover)} fetchpriority="high" />
     ))}
+    {/* 预渲染首卡详情页（2026-11-15 P3）：列表站最常见的下一步就是点开第一首。
+        只给 1 条、eagerness 用 moderate —— 要指针悬停/按下才真的开始，不与首屏图片抢带宽；
+        用 immediate 会在刚进页面时就把带宽吃掉，实测首屏更慢。
+        详情页是 SSR（[songId].astro 的 prerender=false），预渲染会把整页渲染好，
+        点击时直接换上，省掉一次完整的服务端往返。
+        不支持的浏览器（Firefox/Safari）忽略整段规则，无副作用。
+        本机 Chrome 156 带 DevTools 时命中不了（CDP 明确报 PrerenderingDisabledByDevTools），
+        所以本地只能验规则内容与请求头，activationStart 要在无 DevTools 的普通窗口里看。 */}
+    <script type="speculationrules" set:html={JSON.stringify({
+      prerender: [{
+        source: 'list',
+        urls: PRELOAD_SONGS.slice(0, 1).map((s) => `/songs/${s.id}/`),
+        eagerness: 'moderate',
+      }],
+    })} />
   </Fragment>
   {/*
     【本页第 1 个可聚焦元素】键盘逃生口（2026-10-23，t9；位置按稽核实测调整）

@@ -28,7 +28,7 @@ const STATIC_HEADERS: ReadonlyArray<readonly [string, string]> = [
     'content-security-policy-report-only',
     "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-attr 'none'; " +
       "style-src 'self' https://challenges.cloudflare.com; style-src-attr 'unsafe-inline'; " +
-      "img-src 'self' data: https://img.shields.io; font-src 'self'; media-src 'self'; " +
+      "img-src 'self' data: https://img.shields.io https://free-img.400040.xyz; font-src 'self'; media-src 'self'; " +
       "connect-src 'self' https://challenges.cloudflare.com; " +
       "frame-src https://challenges.cloudflare.com; manifest-src 'self'; worker-src 'self'; " +
       "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; " +
