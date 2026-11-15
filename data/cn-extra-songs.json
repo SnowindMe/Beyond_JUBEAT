@@ -14,5 +14,83 @@
     "",
     "维护方式：key = 官方 songId，value 见 build-db.cjs 的读取处。"
   ],
-  "songs": {}
+  "songs": {
+    "990000031": {
+      "title": "SUPERBALL",
+      "artist": "Yooh",
+      "bsc": 5,
+      "adv": 8,
+      "ext": 10.5,
+      "cover": "id990000031.webp",
+      "category": "华立独占",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "990000039": {
+      "title": "Mirror Break",
+      "artist": "GENESA MUSIC \"Florist\"",
+      "bsc": 4,
+      "adv": 8,
+      "ext": 10.1,
+      "cover": "id990000039.webp",
+      "category": "华立独占",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "991000019": {
+      "title": "moon shadow",
+      "artist": "Z ClaxX & HoworD",
+      "bsc": 4,
+      "adv": 6,
+      "ext": 9.3,
+      "cover": "id991000019.webp",
+      "category": "音乐魔方/原创",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "995000005": {
+      "title": "本日の主役！",
+      "artist": "恋音契约",
+      "bsc": 4,
+      "adv": 6,
+      "ext": 9.1,
+      "cover": "id995000005.webp",
+      "category": "音乐魔方/流行",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "995000035": {
+      "title": "可见不可说",
+      "artist": "王秋实",
+      "bsc": 1,
+      "adv": 4,
+      "ext": 7,
+      "cover": "id995000035.webp",
+      "category": "音乐魔方/流行",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "995000036": {
+      "title": "下雨天",
+      "artist": "为歌而赞/A-Lin",
+      "bsc": 1,
+      "adv": 4,
+      "ext": 6,
+      "cover": "id995000036.webp",
+      "category": "音乐魔方/流行",
+      "date": "2026-11-16",
+      "pool": ""
+    },
+    "995000042": {
+      "title": "悬溺",
+      "artist": "葛东琪",
+      "bsc": 2,
+      "adv": 5,
+      "ext": 8,
+      "cover": "id995000042.webp",
+      "category": "音乐魔方/流行",
+      "date": "2026-11-16",
+      "pool": ""
+    }
+  }
 }

@@ -511,6 +511,20 @@
       },
       "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 147 / adv 343 / ext 582，ub bsc 147 / adv 343 / ext 521；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
     },
+    "50000255": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 210,
+        "adv": 433,
+        "ext": 733
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
     "50000267": {
       "has_hold": 0,
       "notecounts": {
@@ -847,6 +861,20 @@
       },
       "note": "泡沫、哀のまほろば｜RemyWiki AC Charts: Notecounts/Holds 133/18 · 365/65 · 608/137。库取 CS Charts（278/433/710，无长押）。2026-11-01 修"
     },
+    "90000057": {
+      "has_hold": 1,
+      "hold_flags": {
+        "bsc": 1,
+        "adv": 1,
+        "ext": 1
+      },
+      "notecounts": {
+        "bsc": 524,
+        "adv": 818,
+        "ext": 1116
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
     "90000061": {
       "has_hold": 1,
       "notecounts": {
@@ -874,6 +902,20 @@
         "ext": 0
       },
       "note": "物量按 ub（https://ub.thregren.world）谱面键数校正｜原库 bsc 133 / adv 511 / ext 663，ub bsc 133 / adv 511 / ext 662；改动档 ext。2026-11-01 主人指示「键数不符的按 ub 上的键数更改」"
+    },
+    "90000113": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 571,
+        "adv": 693,
+        "ext": 736
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
     },
     "90000120": {
       "bpm": "156",
@@ -1328,6 +1370,20 @@
       },
       "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
     },
+    "990000031": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 405,
+        "adv": 576,
+        "ext": 882
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
     "990000032": {
       "has_hold": 1,
       "notecounts": {
@@ -1397,6 +1453,20 @@
         "ext": 1
       },
       "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "990000039": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 312,
+        "adv": 590,
+        "ext": 793
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
     },
     "990000041": {
       "has_hold": 0,
@@ -1678,6 +1748,20 @@
       },
       "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
     },
+    "991000019": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 313,
+        "adv": 537,
+        "ext": 694
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
     "991000020": {
       "has_hold": 1,
       "notecounts": {
@@ -1859,6 +1943,20 @@
         "ext": 1
       },
       "note": "音游街 rank_song 抓取（2026-10-31）：主人手动打开这三首的详情页触发。hold_flags 由 radarData.hold>0 判定，只有有无没有数量"
+    },
+    "995000005": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 370,
+        "adv": 563,
+        "ext": 898
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
     },
     "995000006": {
       "has_hold": 0,
@@ -2251,6 +2349,48 @@
         "ext": 0
       },
       "note": "音游街六维抓取（2026-10-31）：noteCount 为各难度音符数；hold_flags 由 radarData.hold>0 判定，**只有有无、没有数量**（主人原话「六维只能看出有没有 hold，无法看出 hold 有多少」）"
+    },
+    "995000035": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 76,
+        "adv": 253,
+        "ext": 429
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
+    "995000036": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 108,
+        "adv": 188,
+        "ext": 362
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
+    },
+    "995000042": {
+      "has_hold": 0,
+      "hold_flags": {
+        "bsc": 0,
+        "adv": 0,
+        "ext": 0
+      },
+      "notecounts": {
+        "bsc": 194,
+        "adv": 358,
+        "ext": 601
+      },
+      "note": "音游街 2026-11-16 抓取（radarData.hold 只给有无）"
     },
     "995000043": {
       "has_hold": 0,

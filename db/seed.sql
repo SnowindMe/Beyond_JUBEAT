@@ -81,7 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_recent_changed_at_asc ON recent_changes(changed_a
 
 DELETE FROM songs;
 
--- songs: 1248 行
+-- songs: 1255 行
 INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp,server_cn,category,bsc,adv,ext,alt,has_hold,notecounts,holds,cover,added_at,unlock_note,limited_until) VALUES
   ('30000114','official','R.P.G.～Rockin'' Playing Game','SuG','205','knit',1,0,'授权',4,7,9.5,0,0,'{"bsc":318,"adv":543,"ext":869}','{"bsc":0,"adv":0,"ext":0}','id30000114.webp',NULL,NULL,NULL),
   ('11000183','official','アイスクリームマジック','雪乃イト','110','beyond the Ave.',1,0,'授权',2,5,8,0,0,'{"bsc":213,"adv":432,"ext":642}','{"bsc":0,"adv":0,"ext":0}','id11000183.webp',NULL,NULL,NULL),
@@ -376,7 +376,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('11000078','official','IGNITE THE IRON HEART','BEMANI Sound Team "L.E.D."','100-155','beyond the Ave.',1,0,'原创',3,6,9.3,0,0,'{"bsc":253,"adv":467,"ext":819}','{"bsc":0,"adv":0,"ext":0}','id11000078.webp',NULL,NULL,NULL),
   ('50000204','official','イ号零型','あさき','170','saucer',1,1,'原创',3,5,9.5,0,0,'{"bsc":200,"adv":293,"ext":728}','{"bsc":0,"adv":0,"ext":0}','id50000204.webp',NULL,'解禁I - RAINBOW',NULL),
   ('80001002','official','イ号零型 [ 2 ]','あさき','170','clan',1,1,'原创',3,7,9.8,1,1,'{"bsc":202,"adv":363,"ext":603}','{"bsc":34,"adv":37,"ext":43}','id80001002.webp',NULL,'解禁II - RAINBOW',NULL),
-  ('90000057','official','1116','BEMANI Sound Team "Dustup"','190','festo',1,0,'原创',7,10.2,10.9,0,1,'{"bsc":524,"adv":818,"ext":1116}','{"bsc":35,"adv":50,"ext":62}','id90000057.webp',NULL,NULL,NULL),
+  ('90000057','official','1116','BEMANI Sound Team "Dustup"','190','festo',1,1,'原创',7,10.2,10.9,0,1,'{"bsc":524,"adv":818,"ext":1116}','{"bsc":35,"adv":50,"ext":62}','id90000057.webp',NULL,NULL,NULL),
   ('11000071','official','It''s my Miracle','Another Infinity feat. Mayumi Morinaga','175','beyond the Ave.',1,0,'原创',3,6,9.1,0,0,'{"bsc":251,"adv":458,"ext":795}','{"bsc":0,"adv":0,"ext":0}','id11000071.webp',NULL,NULL,NULL),
   ('90000250','official','鋳鉄の檻','小寺可南子,ランコ,SARAH by BEMANI Sound Team "Yvya"','200','festo',1,0,'原创',4,7,9.2,0,0,'{"bsc":335,"adv":556,"ext":830}','{"bsc":0,"adv":0,"ext":0}','id90000250.webp',NULL,NULL,NULL),
   ('50000329','official','Idola','iconoclasm feat.GUMI','201','saucer fulfill',1,0,'原创',4,8,10.1,0,0,'{"bsc":395,"adv":636,"ext":903}','{"bsc":0,"adv":0,"ext":0}','id50000329.webp',NULL,NULL,NULL),
@@ -837,7 +837,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('50000087','official','天上の果て','マジックアカデミー管弦楽部×劇団レコード','144','saucer',1,0,'原创',4,7,8,0,0,'{"bsc":254,"adv":454,"ext":514}','{"bsc":0,"adv":0,"ext":0}','id50000087.webp',NULL,NULL,NULL),
   ('50000368','official','10,000,000,000','TAG feat. 96','205','saucer fulfill',1,1,'原创',3,8,9.1,0,0,'{"bsc":190,"adv":495,"ext":702}','{"bsc":0,"adv":0,"ext":0}','id50000368.webp',NULL,NULL,NULL),
   ('11000090','official','天鈴少女','駄々子','160','beyond the Ave.',1,0,'原创',3,6,9.3,0,1,'{"bsc":216,"adv":426,"ext":724}','{"bsc":14,"adv":20,"ext":35}','id11000090.webp',NULL,NULL,NULL),
-  ('90000113','official','toy boxer','BEMANI Sound Team "S-C-U & SYUNN"','190','festo',1,0,'原创',8,9.5,10.5,0,0,'{"bsc":571,"adv":693,"ext":736}','{"bsc":0,"adv":0,"ext":0}','id90000113.webp',NULL,NULL,NULL),
+  ('90000113','official','toy boxer','BEMANI Sound Team "S-C-U & SYUNN"','190','festo',1,1,'原创',8,9.5,10.5,0,0,'{"bsc":571,"adv":693,"ext":736}','{"bsc":0,"adv":0,"ext":0}','id90000113.webp',NULL,NULL,NULL),
   ('90000158','official','Toy Robot Factory','MARON (IOSYS)','184','festo',1,1,'原创',4,7,9.8,0,0,'{"bsc":303,"adv":526,"ext":854}','{"bsc":0,"adv":0,"ext":0}','id90000158.webp',NULL,NULL,NULL),
   ('60000071','official','twinkle noise','ZUKI','140','prop',1,1,'原创',2,5,8,0,0,'{"bsc":251,"adv":409,"ext":707}','{"bsc":0,"adv":0,"ext":0}','id60000071.webp',NULL,NULL,NULL),
   ('40000122','official','TWINKLE HEART','jun','185','copious',1,1,'原创',3,7,9.2,0,0,'{"bsc":254,"adv":527,"ext":722}','{"bsc":0,"adv":0,"ext":0}','id40000122.webp',NULL,'解禁I - KUMQUAT',NULL),
@@ -1088,7 +1088,7 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('11000121','official','White Stream','BEMANI Sound Team "ZAQUVA"','222','beyond the Ave.',1,0,'原创',4,8,10.4,0,0,'{"bsc":332,"adv":628,"ext":966}','{"bsc":0,"adv":0,"ext":0}','id11000121.webp',NULL,NULL,NULL),
   ('70000154','official','Bonjour, The World!!','中島由貴 feat. dj TAKA with S-C-U meets Akhuta','158','Qubell',1,1,'原创',3,7,9,0,0,'{"bsc":273,"adv":507,"ext":708}','{"bsc":0,"adv":0,"ext":0}','id70000154.webp',NULL,'解禁I - RAINBOW',NULL),
   ('50000072','official','Mynarco','positive MAD-crew','181','saucer',1,1,'原创',5,7,9.4,0,0,'{"bsc":437,"adv":566,"ext":820}','{"bsc":0,"adv":0,"ext":0}','id50000072.webp',NULL,'解禁I - BLUEBERRY',NULL),
-  ('50000255','official','マインド・ゲーム','96 with メカショッチョー','180','saucer',1,0,'原创',3,7,9.2,0,0,'{"bsc":210,"adv":433,"ext":733}','{"bsc":0,"adv":0,"ext":0}','id50000255.webp',NULL,NULL,NULL),
+  ('50000255','official','マインド・ゲーム','96 with メカショッチョー','180','saucer',1,1,'原创',3,7,9.2,0,0,'{"bsc":210,"adv":433,"ext":733}','{"bsc":0,"adv":0,"ext":0}','id50000255.webp',NULL,NULL,NULL),
   ('20000051','official','Macuilxochitl','TOMOSUKE','148','ripples',1,1,'原创',7,8,10.3,0,0,'{"bsc":396,"adv":582,"ext":757}','{"bsc":0,"adv":0,"ext":0}','id20000051.webp',NULL,'解禁I - KUMQUAT / 兑换 U点:6000 兑换票:35',NULL),
   ('50000041','official','Magnetic','Sota Fujimori','160','saucer',1,1,'原创',5,8,9.6,0,0,'{"bsc":368,"adv":578,"ext":795}','{"bsc":0,"adv":0,"ext":0}','id50000041.webp',NULL,'解禁I - RAINBOW',NULL),
   ('50000025','official','Mother Ship','Sota Fujimori','152','saucer',1,1,'原创',4,8,9.6,0,0,'{"bsc":292,"adv":518,"ext":740}','{"bsc":0,"adv":0,"ext":0}','id50000025.webp',NULL,'解禁I - LIME / 兑换 U点:4500 兑换票:25',NULL),
@@ -1332,7 +1332,14 @@ INSERT OR REPLACE INTO songs(song_id,id_kind,title,artist,bpm,gen_name,server_jp
   ('995000048','official','零距离的思念','TINY7','128','音乐魔方',0,1,'流行',1,4,6,0,0,'{"bsc":118,"adv":280,"ext":500}',NULL,'id995000048.webp','2026-10-15',NULL,NULL),
   ('995000053','official','末日香槟','扭蛋姬','141','音乐魔方',0,1,'流行',1,5,8,0,0,'{"bsc":129,"adv":336,"ext":538}',NULL,'id995000053.webp','2026-10-29',NULL,NULL),
   ('995000054','official','我爱你就像','李承铉','180','音乐魔方',0,1,'流行',2,4,6,0,0,'{"bsc":160,"adv":291,"ext":508}',NULL,'id995000054.webp','2026-10-15',NULL,NULL),
-  ('995000055','official','太极','井胧/井迪','145','音乐魔方',0,1,'流行',2,4,8,0,0,'{"bsc":198,"adv":376,"ext":764}',NULL,'id995000055.webp','2026-09-29',NULL,NULL);
+  ('995000055','official','太极','井胧/井迪','145','音乐魔方',0,1,'流行',2,4,8,0,0,'{"bsc":198,"adv":376,"ext":764}',NULL,'id995000055.webp','2026-09-29',NULL,NULL),
+  ('990000031','official','SUPERBALL','Yooh',NULL,'音乐魔方',0,1,'独占',5,8,10.5,0,0,'{"bsc":405,"adv":576,"ext":882}',NULL,'id990000031.webp','2026-11-16',NULL,NULL),
+  ('990000039','official','Mirror Break','GENESA MUSIC "Florist"',NULL,'音乐魔方',0,1,'独占',4,8,10.1,0,0,'{"bsc":312,"adv":590,"ext":793}',NULL,'id990000039.webp','2026-11-16',NULL,NULL),
+  ('991000019','official','moon shadow','Z ClaxX & HoworD',NULL,'音乐魔方',0,1,'原创',4,6,9.3,0,0,'{"bsc":313,"adv":537,"ext":694}',NULL,'id991000019.webp','2026-11-16',NULL,NULL),
+  ('995000005','official','本日の主役！','恋音契约',NULL,'音乐魔方',0,1,'流行',4,6,9.1,0,0,'{"bsc":370,"adv":563,"ext":898}',NULL,'id995000005.webp','2026-11-16',NULL,NULL),
+  ('995000035','official','可见不可说','王秋实',NULL,'音乐魔方',0,1,'流行',1,4,7,0,0,'{"bsc":76,"adv":253,"ext":429}',NULL,'id995000035.webp','2026-11-16',NULL,NULL),
+  ('995000036','official','下雨天','为歌而赞/A-Lin',NULL,'音乐魔方',0,1,'流行',1,4,6,0,0,'{"bsc":108,"adv":188,"ext":362}',NULL,'id995000036.webp','2026-11-16',NULL,NULL),
+  ('995000042','official','悬溺','葛东琪',NULL,'音乐魔方',0,1,'流行',2,5,8,0,0,'{"bsc":194,"adv":358,"ext":601}',NULL,'id995000042.webp','2026-11-16',NULL,NULL);
 
 -- recent_changes: 0 行（空表，无 INSERT）
 
