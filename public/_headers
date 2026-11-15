@@ -33,8 +33,10 @@
 #     [songId]/jubility，用来下发 CSS 变量）。只有写 style 属性才受管；JS 里
 #     element.style.x 走 CSSOM，CSP 不管，不必处理。
 #   img-src 'self' data: https://img.shields.io https://free-img.400040.xyz
-#     /assets/images/**（曲绘、评级、logo）。shields.io 是页脚徽章
+#     /assets/images/**（评级、logo、尚未迁图床的少量曲绘）。shields.io 是页脚徽章
 #     （Base.astro:265），是全站唯一的外链图片。data: 现在 0 处，留给内联 SVG。
+#     【2026-11-16 起曲绘走同源反代 /api/jacket/<名>】free-img 这条只留作反代
+#     302 回退时的兜底（见 src/pages/api/jacket/[name].ts），正常路径浏览器不直连它。
 #   font-src 'self'
 #     字体全部自托管在 /assets/fonts（2026-11-02），没有 Google Fonts。
 #   media-src 'self'

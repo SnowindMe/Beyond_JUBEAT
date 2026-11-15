@@ -216,14 +216,18 @@ CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`
 
 ## 曲绘托管在图床
 
-曲绘（1248 张）迁往公益图床 <https://tc.mofashi.ltd>，页面取 `src/data/cdn.json` 的映射拼 CDN 绝对地址；映射里没有的才回退 `/assets/images/jackets/<规范名>`。读取一律走 `src/lib/covers.ts` 的 `jacketUrl()`，模板里不再出现硬编码路径。
+曲绘（1248 张）存在公益图床 <https://tc.mofashi.ltd> 的源站，但**页面不直连它**：一律取 `src/data/cdn.json` 的映射走同源反代 `/api/jacket/<规范名>`（见 `src/pages/api/jacket/[name].ts`），映射里没有的才回退 `/assets/images/jackets/<规范名>`。读取一律走 `src/lib/covers.ts` 的 `jacketUrl()`，模板里不再出现硬编码路径。
+
+**为什么要反代（2026-11-16）**：图床没有防盗链开关，跨境直连单张 p50 也要 356ms、48 张并发在浏览器里排队 8 秒以上（移动端实测 load 8.9s），它给的缓存只有 5 小时。反代把这两件事都挪到边缘：`s-maxage=2592000` 缓存一个月、命中后不再回源；防盗链判 Referer（无 Referer 放行、解析不出拒、host 必须是本站或本机），不合规直接 403 且**不查也不写缓存**——热链多了也不会把本站的缓存位顶成 403。只代理 free-img 一个主机，目标路径由服务端从映射表拼，不接用户传入的 URL。
+
+**缓存写入必须挂 `waitUntil`**：`cache.put` 既不能 `await`（整张图要等落盘才回，白搭一次往返），也不能裸调不接（响应一交出去、这次请求就被判结束，put 被掐掉，于是每次都 MISS、每次都回源）。做法与 `src/middleware.ts`、`api/audio/[songId].ts` 一致：交给 `locals.cfContext.waitUntil`，请求生命周期撑到写盘结束，但不占本次响应耗时。改前 8 并发 16 张 p50 1877ms、同批二次请求仍全 MISS；改后同批二次请求 p50 1348ms、单张连打三次 146/258/286ms。
 
 **迁移状态（2026-11-15）**：已上传 1194 张、映射同数，仓库里那部分图已删（本地副本在 `archive/materials/jackets/`）。剩 54 张因当日 1200 张配额用尽暂停，暂留仓库——它们仍靠回退路径出图，**传完并确认映射后才可以删**。
 
 - **规范名 = `id<歌id>.webp`**。本地文件、`songs.cover`、映射键、CDN 落盘名四处同名，换床或回滚能逐条对上；不是 `idN` 形态的老 hash 名已在 2026-11-15 全量改名。
 - 上传用 `node scripts/cdn-jackets.cjs`：按 `songs.json` 顺序补缺、逐张写映射、把本地原图 rename 进 `archive/materials/jackets/`（本地留档，不入库）。配额与断点存 `.cdn-quota.json`。
 - 图床三道闸：**1200 张/天、600 张/小时、120 张/分钟**，脚本按 1200/590/115 自我节流；限流（42900）不计失败，推窗口后退避重抓同一张。`42216` 是并发写库抖动，重试即过。
-- 映射命中前不要删本地图，否则页面回退到 404。CSP 的 `img-src` 已放行 `https://free-img.400040.xyz`（仍是 Report-Only）。
+- 映射命中前不要删本地图，否则页面回退到 404。CSP 的 `img-src` 仍放行 `https://free-img.400040.xyz`（Report-Only）——正常路径已用不上，留着是给反代缓存与转发都异常时那次 302 回退兜底。
 
 ### 品牌资源版本
 

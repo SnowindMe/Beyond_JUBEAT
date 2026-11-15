@@ -28,6 +28,9 @@ const STATIC_HEADERS: ReadonlyArray<readonly [string, string]> = [
     'content-security-policy-report-only',
     "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; script-src-attr 'none'; " +
       "style-src 'self' https://challenges.cloudflare.com; style-src-attr 'unsafe-inline'; " +
+      // img-src 里的 free-img 只服务反代 302 回退（src/pages/api/jacket/[name].ts）：
+      // 正常路径是同源 /api/jacket/<名>，命中缓存或经服务端转发，浏览器不直连图床；
+      // 只有在缓存与上游转发都异常时才 302 过去，那时才会用上这条放行。
       "img-src 'self' data: https://img.shields.io https://free-img.400040.xyz; font-src 'self'; media-src 'self'; " +
       "connect-src 'self' https://challenges.cloudflare.com; " +
       "frame-src https://challenges.cloudflare.com; manifest-src 'self'; worker-src 'self'; " +

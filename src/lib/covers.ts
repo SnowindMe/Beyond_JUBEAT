@@ -7,6 +7,7 @@
 // 库、图床、CDN 三处同名，将来换床或回滚都逐一对得上。key 用规范名，改名动作就不用二次维护映射。
 //
 // 映射缺项时回退站内原路径：搬完之前站点照常，搬完删掉本地图也不必改代码。
+// 命中映射时返回站内反代 /api/jacket/<name>（2026-11-16 起；不再把图床域名暴露给浏览器）。
 import cdn from '../data/cdn.json';
 
 const BASE = '/assets/images/jackets/';
@@ -28,5 +29,11 @@ export function jacketUrl(songId: string | number | null | undefined, cover?: st
   // 规范名本身就是 idN.webp，从它里面抠 id 即可，不用为此改数据形状。
   const id = String(songId ?? '') || (bare.match(/^id(\d+)\./)?.[1] ?? '');
   if (!id) return bare ? BASE + bare : '';
-  return map[jacketName(id)] || BASE + (bare || jacketName(id));
+  // 【2026-11-16 起不再直连图床】有映射就走站内反代 /api/jacket/<name>：
+  // 图床给的是 5 小时缓存、没有防盗链，直连等于每个人的浏览器都要跨境取图、
+  // 还每 5 小时重取一遍。反代替成同源后由本站边缘缓存、并发 immutable 长缓存，
+  // 并在那一层做 Referer 防盗链（详见 src/pages/api/jacket/[name].ts 头注释）。
+  // 映射缺项（还没搬的 54 张）仍回退站内原图，搬完自然全走反代。
+  if (map[jacketName(id)]) return '/api/jacket/' + jacketName(id);
+  return BASE + (bare || jacketName(id));
 }

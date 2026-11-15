@@ -8,9 +8,10 @@ const jacket = (id: string, c: string | null | undefined) => jacketUrl(id, c);
 // 宽屏仍是 4×4 方阵（.cube-r 用 display:contents 摊平），窄屏才变成两条反向滚动的行。
 const hero16 = data.gen.find((g) => g.k === 'Ave.')?.top16 ?? [];
 const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
-// 首屏立方体的 208 条曲绘地址里，CDN 前缀每条约 44 字符、占这一块一半体积。
-// 发数据时剥掉前缀、只留文件名，运行时再拼回去。
-const CDN = 'https://free-img.400040.xyz/4/';
+// 首屏立方体的 208 条曲绘地址里，前缀每条约 14 字符、占这一块大半体积。
+// 发数据时剥掉前缀、只留 fileName，运行时再拼回去。
+// 【2026-11-16】前缀从图床域名换成站内反代 /api/jacket/：曲绘改由本站边缘缓存与
+// 防盗链端点分发（详见 src/pages/api/jacket/[name].ts）。
 ---
 
 {/* 首屏立方体数据：主题世代 → 该世代定数最高的 16 首。
@@ -135,8 +136,8 @@ const CDN = 'https://free-img.400040.xyz/4/';
       // 两层名字几乎都不同，只写 clan 的别名会取不到数据 → 网格被清空（本轮实测 cells:0）。
       // 映射必须与 lib/themes.ts 的 THEMES 条数、顺序一一对应，加主题时这里跟着加。
       // 曲绘前缀：数据里存的是剥掉前缀的文件名（省体积），这里拼回来。
-      // 以 / 开头的是站内回退（尚未迁到图床的少数曲），原样用。
-      var CDN = 'https://free-img.400040.xyz/4/';
+      // 前缀必须与 SSR 侧同一串（/api/jacket/）。以 / 开头的整串是站内回退原图，原样用。
+      var CDN = '/api/jacket/';
       function srcOf(s) { return s.c && s.c.charAt(0) === '/' ? s.c : CDN + s.c; }
       // 兜底解析：上面那段同步脚本若被执行顺序打乱（如插件延迟脚本），这里还能自取一次。
       function safeParse() {
