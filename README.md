@@ -214,7 +214,9 @@ CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`
 
 ## 曲绘托管在图床
 
-曲绘（1248 张）不放仓库、不进构建产物，统一传公益图床 <https://tc.mofashi.ltd>，页面取 `src/data/cdn.json` 的映射拼 CDN 绝对地址；映射里没有的才回退 `/assets/images/jackets/<规范名>`。读取一律走 `src/lib/covers.ts` 的 `jacketUrl()`，模板里不再出现硬编码路径。
+曲绘（1248 张）迁往公益图床 <https://tc.mofashi.ltd>，页面取 `src/data/cdn.json` 的映射拼 CDN 绝对地址；映射里没有的才回退 `/assets/images/jackets/<规范名>`。读取一律走 `src/lib/covers.ts` 的 `jacketUrl()`，模板里不再出现硬编码路径。
+
+**迁移状态（2026-11-15）**：已上传 1194 张、映射同数，仓库里那部分图已删（本地副本在 `archive/materials/jackets/`）。剩 54 张因当日 1200 张配额用尽暂停，暂留仓库——它们仍靠回退路径出图，**传完并确认映射后才可以删**。
 
 - **规范名 = `id<歌id>.webp`**。本地文件、`songs.cover`、映射键、CDN 落盘名四处同名，换床或回滚能逐条对上；不是 `idN` 形态的老 hash 名已在 2026-11-15 全量改名。
 - 上传用 `node scripts/cdn-jackets.cjs`：按 `songs.json` 顺序补缺、逐张写映射、把本地原图 rename 进 `archive/materials/jackets/`（本地留档，不入库）。配额与断点存 `.cdn-quota.json`。
