@@ -715,10 +715,19 @@
           var gens = secs[s].querySelectorAll('.sc-gen');
           for (var g = 0; g < gens.length; g++) {
             var el = gens[g];
+            /* 【骨架块一律不跳过（2026-11-15 复查补修）】
+               CSS 那条「前两块豁免」只认位置，而骨架根本不在位置上：实测首块骨架排在第 5 块，
+               前几块全是已经落地的真卡。骨架被跳过时只能按 data-count 的估值站着、不参与
+               真布局，补齐那一刻整块回填——顶部那根正好跳在首屏里。
+               成本很低，可以整类放开：一根骨架就 8 张占位卡，1200 多张的真卡在后面的真块里，
+               跳过它们的收益一点没少。骨架被 loadFrag 换成真卡后不再带 sc-gen-ph，
+               行内值随即清空、交回 CSS 按 DOM 位置判断。 */
+            var isPh = el.className.indexOf('sc-gen-ph') !== -1;
+            el.style.contentVisibility = isPh ? 'visible' : '';
             /* 骨架块（2026-11-02）：按 data-count 算高度，高度 = 真块高度。
                这是「骨架不跳」的关键：否则滚到它时页面会长高一截（CLS）。
                骨架网格本身也撑到同样高度，让 8 张占位卡靠上排、下方留白由网格撑住。 */
-            if (el.className.indexOf('sc-gen-ph') !== -1) {
+            if (isPh) {
               var phN = Number(el.getAttribute('data-count') || 0);
               var phRows = Math.ceil(phN / intrinsicCols);
               el.style.containIntrinsicSize =
@@ -742,6 +751,17 @@
       /** 推迟到两帧后再算：第一帧让 apply 的 DOM 改动先交给浏览器排版，第二帧才量。 */
       function refreshIntrinsic() {
         var my = ++intrinsicToken;
+        /* 【首帧也要点亮骨架（2026-11-15 复查补修）】
+           光把 content-visibility 写进行内样式不够：这条属性由 style 决定生效与否，
+           而记着的骨架块在被跳过时**不会参与布局**，写上去的这一行要对它重排才落地。
+           排在两个 rAF 之后就是「首帧之后」，第一帧看不到骨架，列表头那一块是空白。
+           所以另起一条同步旁路：只挑还没换掉的骨架块、只在这一帧里写，不读任何几何，
+           代价是几毫秒；真正的尺寸计算照旧留在 refreshIntrinsicNow 里。
+           筛选/排序要重排骨架时也走这里，同样没有额外代价（骨架本来就要重排）。 */
+        var live = root.querySelectorAll('.sc-gen-ph:not([style*="content-visibility"])');
+        for (var i = 0; i < live.length; i++) {
+          live[i].style.contentVisibility = 'visible';
+        }
         requestAnimationFrame(function () {
           requestAnimationFrame(function () {
             if (my !== intrinsicToken) return;   // 期间又切了一次，这次作废

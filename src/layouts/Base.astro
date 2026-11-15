@@ -228,6 +228,11 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
   </script>
   {/* 页面级 head 追加位（2026-11-13）：目前只有 /songs/ 用它给首屏曲绘发 preload。
       放在预热脚本之后，保证「世代底图 / 字体」这两项先排队，曲绘不抢它们的带宽。 */}
+  {/* 图床预连接（2026-11-15 P2）：曲绘全站走 free-img.400040.xyz，DNS + TLS 握手要在
+      第一张曲绘排队之前完成，否则省下来的预加载时间又还回握手。只发一次、只对这一个域——
+      全站无其它跨源资源（shields.io 徽章在页脚，且是 lazy）。
+      不加 crossorigin：<img> 是 no-cors 请求，加上反而会另建一条 CORS 连接池、握两次手。 */}
+  <link rel="preconnect" href="https://free-img.400040.xyz" />
   <slot name="head" />
 </head>
 <body>
