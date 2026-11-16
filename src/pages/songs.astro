@@ -338,17 +338,15 @@ const SORTS = [
 // 【上线日期筛选的可选值（2026-11-16）】只收真正用过的国服上架日，去重后升序。
 // 主人要求「只能选择固定日期（非上线日期不可选）」——日历里的可点格子就由这份清单决定，
 // 没有曲目落在的日子显示成不可点的灰格。
-// 只取国服上架日（added_at_cn）的理由见 components/SongCard.astro 的 data-dcn 注释：
-// 日服那列拆列后整列为空，用它做可选值会一个日期都没有。
-const DATA_DATES = [...new Set(ALL.map((s) => s.dCn).filter((d): d is string => !!d))].sort();
-// 【按服各一份可选日期】日服那列拆列后整列为空，日服的日期只能靠「同一首歌的国服日期」推：
-// 双服行在原数据里是同一条、日期记录在国服侧，所以日服的可选日期 = 那些同时上过国服的曲的日期。
-// 注意必须带 s.jp：只上过国服的曲（如 2026-11-16 那 7 首）在日服视图里筛出来必然是 0 张，
-// 把它们列进日服的可选日期会变成「点了没有结果」。
-const datesOf = (srv: 'jp' | 'cn') =>
-  srv === 'cn'
-    ? DATA_DATES
-    : [...new Set(ALL.filter((s) => s.dCn && s.jp).map((s) => s.dCn as string))].sort();
+// 【2026-11-16 主人定口径：按服各读各的列，互不借用】
+// 「日服的【上线日期】应只读 added_at_jp，国服的只读 added_at_cn」——
+// 所以两边各自从自己的列取，不去 fallback 到另一服（早前日服借国服列的写法已废）。
+// 日服那一列当前整列为空（拆列时旧日期全进了国服列），于是日服的日历暂时只有禁用格；
+// 等日服真有 added_at_jp 数据，这里自动就有可选日期，不需要再改代码。
+const datesIn = (srv: 'jp' | 'cn') =>
+  [...new Set(ALL.map((s) => (srv === 'jp' ? s.dJp : s.dCn)).filter((d): d is string => !!d))].sort();
+const DATA_DATES_JP = datesIn('jp');
+const DATA_DATES_CN = datesIn('cn');
 
 const TYPES = [
   { v: 'all', label: '全部' },
@@ -653,7 +651,7 @@ const TYPES = [
             判据是卡片的 data-dcn（与 DOM 里那串 dates 同一来源），两边不会漂。 */}
         <div class="sc-pf sc-pf-cell">
           <span class="sc-pf-k" id="scDateK">上线日期</span>
-          <div class="sc-date" data-dates={datesOf('cn').join(' ')} data-dates-jp={datesOf('jp').join(' ')}>
+          <div class="sc-date" data-dates={DATA_DATES_CN.join(' ')} data-dates-jp={DATA_DATES_JP.join(' ')}>
             <button type="button" class="sc-dd-b sc-date-b" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="scDateK">
               <span class="sc-dd-v" id="scDateV">全部日期</span>
               <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>

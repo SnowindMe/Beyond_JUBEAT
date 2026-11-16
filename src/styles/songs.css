@@ -3202,7 +3202,10 @@ html[data-lum="light"] .sd-gauge {
 .sc-cal {
     position: absolute;
     z-index: 210;
-    top: calc(100% + 4px);
+    /* 固定向上展开（2026-11-16 主人：「无论【上线日期】在哪里，展开的日历依旧向上」）。
+       这一项恒在面板最后一行，向下会压住列表；所以基准就写成 bottom，
+       data-drop="up" 那条规则留着只为兼容旧产物，不再由脚本按空间切换。 */
+    bottom: calc(100% + 4px);
     left: 0;
     width: 244px;
     padding: 10px;

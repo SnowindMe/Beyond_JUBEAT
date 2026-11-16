@@ -289,12 +289,11 @@
         // 没日期的卡 data-dcn 是空串，选中任意日期都不命中——这正是「只能选固定日期」的含义，
         // 空日期不该混进某个日期的结果里。与举服有关的筛选一样，只对当前视图的 body 生效。
         if (state.date) {
-          // 按该 body 自己的服取列：国服看 data-dcn，日服看 data-djp。
-          // 日服那列拆列后整列为空（主人指令下日期全进了国服列），所以日服视图要退回国服值——
-          // 否则在默认的日服视图里选任何日期都是 0 命中，看着像整个功能坏了。
-          var dc = bodySrv === 'jp'
-            ? (card.getAttribute('data-djp') || card.getAttribute('data-dcn'))
-            : card.getAttribute('data-dcn');
+          // 按该 body 自己的服取列：国服看 data-dcn，日服看 data-djp，**不互相借用**
+          // （2026-11-16 主人定口径：「日服只读 added_at_jp、国服只读 added_at_cn」）。
+          // 日服列当前整列为空，故日服视图选任何日期都是 0 命中，属预期；
+          // 可选日期同样按列取（见 datePool），点了没结果的情况只会出现在手改了存档时。
+          var dc = card.getAttribute(bodySrv === 'jp' ? 'data-djp' : 'data-dcn');
           if (dc !== state.date) return false;
         }
 
@@ -1183,7 +1182,13 @@
         if (calMonth) return;
         var latest = dateLatest();
         var base = (d && d.slice(0, 7)) || (latest ? latest.slice(0, 7) : '');
-        if (base) calMonth = base + '-01';
+        // 池子可能是空的（2026-11-16 起日服只读 added_at_jp，而那一列当前整列为空）：
+        // 拿不到锚点就落在当月，否则 calMonth 一直是空串、标题印成「0 年 0 月」。
+        if (!base) {
+          var now = new Date();
+          base = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        }
+        calMonth = base + '-01';
       }
 
       // 画一个月：周一打头（中文习惯，和 .sc-cal-w 的表头一致）。
@@ -1215,14 +1220,15 @@
         dateSet = datePool(); // 每次都按当前服重取：切服后可选日期跟着变
         calJumpTo(state.date);
         cal.hidden = false;
+        cal.setAttribute('data-drop', 'up');
         dateB.setAttribute('aria-expanded', 'true');
         calRender();
         // 这一项在面板最后一行，向下必出屏：量按钮下方空间，不够就整体翻到按钮上方。
         // 内置高度约 300px（标题+表头+6 行+清除），留 12px 呼吸位。
-        var br = dateB.getBoundingClientRect();
-        var need = (cal.getBoundingClientRect().height || 300) + 12;
-        if (br.bottom + need > window.innerHeight) cal.setAttribute('data-drop', 'up');
-        else cal.removeAttribute('data-drop');
+        // 【2026-11-16 主人改口径：无条件向上】原先按「下方空间不够才上翻」量，
+        // 面板一在页面上半就永远往下走，而这一项本来就在面板最后一行、向下还会压住列表；
+        // 主人原话「建议无论【上线日期】在哪里，展开的日历依旧向上」。改成固定 data-drop="up"，
+        // 不再按空间判断（也不用再量高度）。
         // 右边界：日历固定在按钮左沿向右展开，按钮太靠右时会顶出视口，改为向左对齐。
         // 窄屏的 2×2 让日期落在右列，这条几乎必中，所以不能只靠 CSS 的 right:0。
         var cw = cal.getBoundingClientRect().width || 244;
@@ -1417,6 +1423,13 @@
             state.cat = 'all';
             state.gen = 'all';
             state.scope = 'all';
+            // 上线日期同样是「服务器专属」维度，而且两服读的是不同的列（jp→added_at_jp、
+            // cn→added_at_cn）：留着旧日期切过去，命中集合与日历可选池全都对不上。
+            // 2026-11-16 主人：「当【上线日期】已选择值时，切换服务器后应该清除上线日期」。
+            // 可见按钮文字也一起复位（只清 state 会留下上一次的日期，用户看到
+            // 「2026.11.16」却已经没在筛；与 resetAll 同款处理）。
+            state.date = '';
+            if (dateV) dateV.textContent = DATE_ALL_LABEL;
             // 世代是**服务器专属**维度，归零之后连可见的自定义下拉也一起回「全部世代」。
             // 2026-11-04 主人实测撞出：只写 select.value 不调 ddRefresh，可见按钮文字与
             // 弹层的 aria-selected 全停在旧世代，列表却已经是全部世代——筛选项显示 A、
