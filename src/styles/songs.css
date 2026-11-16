@@ -168,6 +168,27 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 }
 /* 【2026-11-16】原来的 .sc-vin / scViewIn（排列切换专用浮出）已删除：
    排列切换改成复用切服务器那套（按钮 scPop + 卡片 stagger），与 scIn 完全重复。 */
+/* 排列切换的交叉淡：光靠「换完再浮出」是硬切——布局在 1683 张卡上瞬间整体重排，
+   眼睛先吃到一次跳动，动画才开始，所以显得生硬。加一段两拍：
+     ①data-view-sw="out"：整块面板 90ms 淡到 0.35 并微微下沉（.09s ease-in，短而果断）；
+     ②换完布局立刻切 "in"：220ms 淡回 1、回到原位（长尾缓出，收得软）。
+   只动 opacity/transform，且挂在 .sc-sec 上（不是每张卡）。降动效时 JS 直接跳过这段。
+   **必须带 animation:none**：.sc-sec 平时挂着 scIn（fill 是 both），动画的 fill 值会压过
+   transition 里写的 opacity —— 实测不加这条，属性到位了但 opacity 一路恒为 1。 */
+html[data-view-sw] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
+    animation: none;
+}
+html[data-view-sw="out"] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
+    opacity: 0.35;
+    transform: translateY(6px) scale(0.997);
+    transition: opacity 0.07s ease-in, transform 0.07s ease-in;
+}
+html[data-view-sw="in"] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.3s cubic-bezier(0.22, 0.7, 0.3, 1),
+        transform 0.3s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
 /* 选中回弹：切服务器（.sc-srv-b.is-on）与切排列（.sc-view-b.is-on）共用同一条，
    两条路选中的是「同一层级的视图开关」，反馈语言必须一致（2026-11-16 主人要求）。 */
 @keyframes scPop {
@@ -200,6 +221,11 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
     .sc-srv-b.is-on,
     .sc-view-b.is-on {
         animation: none;
+    }
+    /* 交叉淡那两拍：JS 已按同一个查询跳过定时器，这里再把 transition 关死，
+       双保险——系统设置是运行中可变的，JS 里的判断可能早于媒体查询。 */
+    html[data-view-sw] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
+        transition: none;
     }
 }
 
@@ -980,17 +1006,19 @@ html[data-view="list"] .sc-lv {
        允许换行兜底：放得下仍是一行，放不下就折到第二行，行高自己长，不撑出卡片。 */
     flex-wrap: wrap;
 }
-/* 【2026-11-16 主人】列表档的徽章改成「圆角正方形」、加高、只留等级数字：
+/* 【2026-11-16 主人】列表档的徽章改成「圆角矩形」、加高、只留等级数字：
    BSC/ADV/EXT 三个词在列表里重复 1248 遍、信息量约等于 0（颜色已经区分难度），
-   所以整块不显示 <u>，只留定数。正方形靠 aspect-ratio 锁，30×30、圆角 8px —— 
-   比卡片档高出一档，等级数字有了呼吸，和放大后的曲绘也不失衡。 */
+   所以整块不显示 <u>，只留定数，36×30、圆角 8px。
+   【同日补充·改宽】第一版是 30×30 正方形，主人嫌窄 —— 数字居中的方形在横排里像三个孤点，
+   横向留白比数字本身还多。改宽到 36 后三枚连起来是一段定数带，与 80px 的曲绘同高对齐。
+   **不写 aspect-ratio**：宽高比靠 width/height 各自写死，改一边不会牵动另一边。 */
 html[data-view="list"] .sc-lv .lv {
     flex: 0 0 auto;
     flex-direction: row;
     gap: 0;
-    width: 30px;
+    width: 36px;
+    height: 30px;
     padding: 0;
-    aspect-ratio: 1;
     border-radius: 8px;
     font-size: 14px;
 }
@@ -1055,7 +1083,8 @@ html[data-view="list"] .sc-ph-badges {
         height: 66px;
     }
     html[data-view="list"] .sc-lv .lv {
-        width: 26px;
+        width: 31px;
+        height: 24px;
         font-size: 12.5px;
         border-radius: 7px;
     }

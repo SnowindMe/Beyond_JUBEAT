@@ -805,10 +805,13 @@
       /** 排列方式：写 root 的 data-view（CSS 只认这个属性）+ 同步按钮 + 落盘。
        *  不走 apply() —— view 不改变哪些卡命中，走 apply 会让 1683 张卡白翻一遍 hidden、
        *  还会把搜索框的命中耗时算进来；这里只重算占位高度（卡高变了，骨架高度必须跟着变）。 */
+      // 连点两下切换器：后一次作废前一次的定时器，否则淡暗/淡回的旧回调会插进新一轮
+      var viewToken = 0;
       function setView(v) {
         if (v !== 'grid' && v !== 'list') v = 'grid';
         if (state.view === v) return;
         state.view = v;
+        var my = ++viewToken;
         var el = document.documentElement;
         /* 过渡用**切服务器那一套**（2026-11-16 主人原话：「卡片/列表视图切换过渡动画
            可以用服务器选项切换过渡动画」）—— 语言完全照搬，不再自创一套：
@@ -818,17 +821,34 @@
                .sc-stag + 30ms 错开 + scIn）。
            原先这里是「整块面板压暗 80ms → 换布局 → 淡回 → 再 viewIn()」，
            与服务器那套并不一致，且多出一整段全屏淡出。 */
-        // 写在 <html> 而不是 root：列表排列的样式全部挂 html[data-view="list"]，
-        // 头部预热脚本也认这个属性，刷新时才能首帧就是列表。
-        el.setAttribute('data-view', v);
-        // 按钮态跟着换（.is-on 一到新按钮上就播回弹）
-        syncGroup('[data-view]', 'data-view', v);
-        // 落盘：刷新后要保持这次的排列（与其它筛选同一个存档键，首帧预热脚本也读它）
-        saveState();
-        // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
-        refreshIntrinsic();
-        // 卡片的错开浮出交给 stagger（它会先删旧的 .sc-stag、下一帧再加新的）
-        stagger();
+        // 第一拍：整块先淡暗一点再换（少了这一拍就是硬切 —— 1683 张卡的布局在瞬间重排，
+        // 眼睛先吃到跳动动画才开始）。走 data-view-sw 两态，CSS 里对应对时的两条 transition。
+        // 出程 70ms：够看出「暗下去」，又不至于让 1683 张卡的重排空等太久
+        var swap = prefersReducedMotion() ? 0 : 70;
+        el.setAttribute('data-view-sw', 'out');
+        swapNow(swap);
+
+        function swapNow(delay) {
+          setTimeout(function () {
+            if (my !== viewToken) return;
+            // 写在 <html> 而不是 root：列表排列的样式全部挂 html[data-view="list"]，
+            // 头部预热脚本也认这个属性，刷新时才能首帧就是列表。
+            el.setAttribute('data-view', v);
+            // 按钮态跟着换（.is-on 一到新按钮上就播回弹）
+            syncGroup('[data-view]', 'data-view', v);
+            // 落盘：刷新后要保持这次的排列（与其它筛选同一个存档键，首帧预热脚本也读它）
+            saveState();
+            // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
+            refreshIntrinsic();
+            // 第二拍：淡回，卡片错开浮出交给 stagger（它先删旧 .sc-stag、下一帧再加新的）
+            // **"in" 之后不再移除属性**：移除会让 .sc-sec 上的 animation:none 一起失效，
+            // scIn 于是重播一遍，变成「淡回 + 又淡入一次」的交叠（实测移除瞬间 opacity
+            // 从 1 掉到 0.2 再涨回）。下一次切换的第一拍还会覆盖成 "out"，留着无害。
+            if (swap) el.setAttribute('data-view-sw', 'in');
+            else el.removeAttribute('data-view-sw');
+            stagger();
+          }, delay);
+        }
       }
 
       // 调试出口：控制台里敲 __stagger() 可手动复播一次入场错开，不用来回点切换器
