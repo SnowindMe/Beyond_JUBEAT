@@ -43,10 +43,11 @@ db.exec(schema);
 db.prepare(
   `INSERT INTO songs (song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn,
                       category, bsc, adv, ext, alt, cover, added_at_jp, added_at_cn, unlock_note)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 ).run(
   '80001015', 'official', 'アガット', 'Bazole', '190', 'beyond the Ave.', 1, 0,
-  '原创', 3.0, 7.0, 10.0, 1, 'id71588407.webp', '2024-03-01', '日服解禁池 #3'
+  // 上线日期 2026-11-16 拆成 jp/cn 两列后，这里是日服曲，日期填 jp 列、cn 列留空
+  '原创', 3.0, 7.0, 10.0, 1, 'id71588407.webp', '2024-03-01', null, '日服解禁池 #3'
 );
 
 /** 最小 D1 替身：只实现 prepare/bind/first/all/run/batch */
