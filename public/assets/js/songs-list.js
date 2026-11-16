@@ -797,8 +797,7 @@
         syncGroup('[data-view]', 'data-view', state.view);
       }
 
-      // 排列切换的淡出计时器，与「系统开了降动效」的判据（见 setView）
-      var viewTimer = 0;
+      // 「系统开了降动效」的判据（stagger 用；CSS 里也有一份同义的 media 查询）
       function prefersReducedMotion() {
         return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
       }
@@ -811,65 +810,31 @@
         if (state.view === v) return;
         state.view = v;
         var el = document.documentElement;
-        // 过渡（2026-11-14 主人要求）：先给 <html> 挂 data-view-sw 让当前列表淡出（0.16s），
-        // 到一半再真正换布局，换完撤掉标记淡回。淡出期间列表还在原位，看不见重排的跳变。
-        // 只动 opacity/transform，不动会引发布局的属性；动画挂在 section 上，
-        // 1683 张卡不会各跑一遍。
-        el.setAttribute('data-view-sw', '');
-        clearTimeout(viewTimer);
-        var apply2 = function () {
-          // 写在 <html> 而不是 root：列表排列的样式全部挂 html[data-view="list"]，
-          // 头部预热脚本也认这个属性，刷新时才能首帧就是列表。
-          el.setAttribute('data-view', v);
-          // 按钮态跟着换：它不能在淡出期间就亮起来（那样看起来像「已经切好、只是列表没动」）
-          syncGroup('[data-view]', 'data-view', v);
-          // 落盘：刷新后要保持这次的排列（与其它筛选同一个存档键，首帧预热脚本也读它）
-          saveState();
-          // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
-          refreshIntrinsic();
-          // 下一帧撤标记：与「移除后再加」同理，同一帧内改两次浏览器看不到变化。
-          // 这里同样不用 requestAnimationFrame —— 本机浏览器的 rAF 会整段不回调（见 viewIn）。
-          setTimeout(function () {
-            setTimeout(function () {
-              el.removeAttribute('data-view-sw');
-              // 撤掉整段淡出之后，再让可见的头十几张浮出（见 viewIn）
-              if (!prefersReducedMotion()) viewIn();
-            }, 16);
-          }, 16);
-        };
-        if (prefersReducedMotion()) apply2();
-        else viewTimer = setTimeout(apply2, 80);
+        /* 过渡用**切服务器那一套**（2026-11-16 主人原话：「卡片/列表视图切换过渡动画
+           可以用服务器选项切换过渡动画」）—— 语言完全照搬，不再自创一套：
+             ①按钮回弹：syncGroup 会把 .is-on 挪到新按钮上，CSS 的 .sc-view-b.is-on
+               播 scPop（与 .sc-srv-b.is-on 同一条关键帧、同一时长）；
+             ②卡片浮出：调 stagger()，与切服后 apply() 里走的是同一个函数（同一套
+               .sc-stag + 30ms 错开 + scIn）。
+           原先这里是「整块面板压暗 80ms → 换布局 → 淡回 → 再 viewIn()」，
+           与服务器那套并不一致，且多出一整段全屏淡出。 */
+        // 写在 <html> 而不是 root：列表排列的样式全部挂 html[data-view="list"]，
+        // 头部预热脚本也认这个属性，刷新时才能首帧就是列表。
+        el.setAttribute('data-view', v);
+        // 按钮态跟着换（.is-on 一到新按钮上就播回弹）
+        syncGroup('[data-view]', 'data-view', v);
+        // 落盘：刷新后要保持这次的排列（与其它筛选同一个存档键，首帧预热脚本也读它）
+        saveState();
+        // 换完布局要让占位高度按新卡高重算（骨架块高度必须跟着变，否则滚到时会跳）
+        refreshIntrinsic();
+        // 卡片的错开浮出交给 stagger（它会先删旧的 .sc-stag、下一帧再加新的）
+        stagger();
       }
 
-      /** 排列切换后的浮出：只给切换后可见的头十几张挂 .sc-vin（同 stagger 的取舍，
-       *  1683 张各跑一遍撑不住）。换布局不重排节点、元素不变，"删类名 + 下一帧再加"
-       *  那套重播机制在这里用不上，所以每次换了卡片集合后整批先删、再逐个加。 */
-      var vinToken = 0;
-      function viewIn() {
-        var my = ++vinToken;
-        // 容器每次现取：本脚本在 <head> 之后、结构落位之前就跑了，闭包里的 root 不保证还在
-        var box = document.getElementById('songsRoot');
-        if (!box) return;
-        var old = box.querySelectorAll('.sc-card.sc-vin');
-        for (var i = 0; i < old.length; i++) {
-          old[i].classList.remove('sc-vin');
-          old[i].style.animationDelay = '';
-        }
-        // 用 setTimeout 而不是 requestAnimationFrame：实测本机浏览器里页面的 rAF 会被
-        // 节流到几乎不回调（400ms 内 0 次，同页 setInterval 20ms 却正常 20 次），
-        // 挂在 rAF 上的挂类逻辑就一直等不到。16ms 与一帧等效。
-        setTimeout(function () {
-          if (my !== vinToken) return;
-          var vis = box.querySelectorAll('.sc-body:not([hidden]) .sc-sec:not([hidden]) .sc-card:not([hidden])');
-          for (var c = 0; c < vis.length && c < 14; c++) {
-            vis[c].classList.add('sc-vin');
-            vis[c].style.animationDelay = (c * 0.022).toFixed(3) + 's';
-          }
-        });
-      }
-
-      // 调试出口：控制台里敲 __viewIn() 可手动复播一次浮出，不用来回点切换器
-      try { window.__viewIn = viewIn; } catch (e) {}
+      // 调试出口：控制台里敲 __stagger() 可手动复播一次入场错开，不用来回点切换器
+      // 【2026-11-16】原先这里还有一个专门的 viewIn()（.sc-vin + 22ms 错开），
+      // 排列切换改走切服那套之后与 stagger() 完全重复，已删除，统一用 stagger()。
+      try { window.__stagger = stagger; } catch (e) {}
 
       function syncGroup(sel, attr, want) {
         var list = root.querySelectorAll(sel);
@@ -897,6 +862,9 @@
           old[i].classList.remove('sc-stag');
           old[i].style.animationDelay = '';
         }
+        // 降动效：删完就收工，不再加回来（CSS 里这几条 animation 也已按同一条媒体查询关掉，
+        // 两处都留着只是免得白挂一批类名）
+        if (prefersReducedMotion()) return;
         requestAnimationFrame(function () {
           // 期间又调了一次 apply（连打搜索、切服），这帧作废，交给最后一次
           if (my !== staggerToken) return;
@@ -1295,6 +1263,10 @@
             // syncPressed() 会按新服务器那一套重新同步（手写一遍反而可能与它打架）。
           }
           state.srv = nextSrv;
+          // 切服本来就有自己的入场语言：服务器卡 .sc-srv-b.is-on 播 scPop（0.24s 回弹）
+          // + apply() 里的 stagger()（可见前 12 张 scIn 错开）。2026-11-16 主人确认
+          // 「切换服务器的动画」就是这套，**排列切换要照抄它**，两条路各走各的、
+          // 谁也别给谁再加一段（早前这里加过整块淡出，与已有动画叠成了两遍）。
           apply(); return;
         }
 

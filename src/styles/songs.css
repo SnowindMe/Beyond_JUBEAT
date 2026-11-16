@@ -166,20 +166,10 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
         transform: none;
     }
 }
-/* 排列切换时的卡片浮出（2026-11-14 主人「排列切换时，曲目没有动画过渡（比如浮出）」）。
-   只给切换后可见的头十几张挂 .sc-vin —— 换布局不重排节点、元素不变，
-   靠 hidden 换 display 那套重播机制用不上，所以用一个专门类名 + 专用关键帧直接播。
-   与 section 的整段淡出叠加时，section 那层只做很浅的一档，主体交给卡片。 */
-@keyframes scViewIn {
-    from {
-        opacity: 0;
-        transform: translateY(14px) scale(0.985);
-    }
-    to {
-        opacity: 1;
-        transform: none;
-    }
-}
+/* 【2026-11-16】原来的 .sc-vin / scViewIn（排列切换专用浮出）已删除：
+   排列切换改成复用切服务器那套（按钮 scPop + 卡片 stagger），与 scIn 完全重复。 */
+/* 选中回弹：切服务器（.sc-srv-b.is-on）与切排列（.sc-view-b.is-on）共用同一条，
+   两条路选中的是「同一层级的视图开关」，反馈语言必须一致（2026-11-16 主人要求）。 */
 @keyframes scPop {
     0% {
         transform: scale(0.96);
@@ -197,12 +187,9 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 .sc-card.sc-stag {
     animation: scIn 0.32s cubic-bezier(0.22, 0.7, 0.3, 1) both;
 }
-.sc-card.sc-vin {
-    animation: scViewIn 0.34s cubic-bezier(0.22, 0.7, 0.3, 1) both;
-    will-change: opacity, transform;
-}
 /* 切服务器卡时的入场 pop：/songs 独有（/jubility 不需要这个动画），
-   所以留在本文件；.sc-srv-b 的结构样式在 server-card.css。 */
+   所以留在本文件；.sc-srv-b 的结构样式在 server-card.css。
+   排列切换器 .sc-view-b.is-on 也播这一条，规则写在它的选中态那里。 */
 .sc-srv-b.is-on {
     animation: scPop 0.24s ease-out both;
 }
@@ -210,8 +197,8 @@ html[data-srv-pref="jp"] .sc-scope-set[data-srv="cn"] {
 @media (prefers-reduced-motion: reduce) {
     .sc-sec:not([hidden]),
     .sc-card.sc-stag,
-    .sc-card.sc-vin,
-    .sc-srv-b.is-on {
+    .sc-srv-b.is-on,
+    .sc-view-b.is-on {
         animation: none;
     }
 }
@@ -915,13 +902,15 @@ html[data-lum="light"] .sc-lv {
    改用 auto-fill + 最小列宽，宽度不够时自己掉列，最宽处仍能到 5 列。
    下限 196px 是按「曲绘 56 + 间距 10 + 曲名最短可用宽约 118」估的，再窄曲名就只能折行。 */
 html[data-view="list"] .sc-grid {
-    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    /* 【2026-11-16 主人】曲绘从 56 扩到 80，列下限跟着从 196 抬到 236
+       （曲绘 80 + 间距 10 + 曲名最短可用宽约 146）。 */
+    grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
     gap: 10px 10px;
 }
 html[data-view="list"] .sc-card,
 html[data-view="list"] .sc-ph-card {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 80px minmax(0, 1fr);
     grid-template-rows: auto;
     align-content: center;
     column-gap: 10px;
@@ -944,16 +933,19 @@ html[data-view="list"] .sc-card:hover {
 html[data-view="list"] .sc-link {
     border-radius: 10px;
 }
-/* 曲绘占到三行，右列的三块内容各自落在自己的行上 */
+/* 曲绘跨满三行，右列的三块内容（曲名 / 曲师 / 徽章）各自落在自己的行上 */
 html[data-view="list"] .sc-j,
 html[data-view="list"] .sc-ph-img {
     grid-column: 1;
-    grid-row: 1 / span 2;
-    /* 曲绘靠上，给下面留出整行给难度徽章（2026-11-14 主人「把曲绘上移，
-       然后难度徽章放在曲绘下面」） */
+    grid-row: 1 / span 3;
+    /* 曲绘跨满三行（曲名 / 曲师 / 徽章），对齐到顶端 */
     align-self: start;
-    width: 56px;
-    height: 56px;
+    /* 【2026-11-16 主人】曲绘扩大（56 → 80）：徽章挪到曲师下面后右列腾出整列宽度，
+       曲绘可以直接放大。仍只跨两行（曲名 + 曲师），高度由下面的 min-height 撑住 80，
+       徽章落在第 3 行、在曲绘右下，不会把卡片顶高。 */
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
 }
 html[data-view="list"] .sc-t {
     grid-column: 2;
@@ -967,12 +959,15 @@ html[data-view="list"] .sc-a {
     margin: 0;
     font-size: 11px;
 }
+/* 【2026-11-16 主人】徽章不再横跨整行，改到曲师下面（右列第 3 行）、三枚横排；
+   徽章让出整列之后曲绘可以从 56 直接放大到 80。 */
 html[data-view="list"] .sc-lv {
-    /* 徽章横跨整行、落在曲绘下面，所以能保持一句排完（2026-11-14 主人要求） */
-    grid-column: 1 / -1;
+    grid-column: 2;
     grid-row: 3;
-    gap: 3px;
-    margin: 6px 0 0;
+    align-self: start;
+    flex-direction: row;
+    gap: 4px;
+    margin: 2px 0 0;
 }
 /* 列表行的难度徽章（2026-11-14 主人：改成徽章样式，左难度名、右等级，如「EXT 8」）。
    卡片排列里三个徽章是等分拉满整行；列表行只有一列文字宽，等分会横向撑开一大条，
@@ -985,23 +980,32 @@ html[data-view="list"] .sc-lv {
        允许换行兜底：放得下仍是一行，放不下就折到第二行，行高自己长，不撑出卡片。 */
     flex-wrap: wrap;
 }
+/* 【2026-11-16 主人】列表档的徽章改成「圆角正方形」、加高、只留等级数字：
+   BSC/ADV/EXT 三个词在列表里重复 1248 遍、信息量约等于 0（颜色已经区分难度），
+   所以整块不显示 <u>，只留定数。正方形靠 aspect-ratio 锁，30×30、圆角 8px —— 
+   比卡片档高出一档，等级数字有了呼吸，和放大后的曲绘也不失衡。 */
 html[data-view="list"] .sc-lv .lv {
-    /* 窄屏那档把徽章改成竖排（标签压数值），列表行空间够，这里一律横排 */
     flex: 0 0 auto;
     flex-direction: row;
-    gap: 5px;
-    padding: 2px 6px 2px 5px;
-    border-radius: 5px;
+    gap: 0;
+    width: 30px;
+    padding: 0;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    font-size: 14px;
 }
 html[data-view="list"] .sc-lv .lv u {
-    font-size: 9.5px;
-    letter-spacing: 0.04em;
+    display: none;
 }
-/* 角标在这一档只有 56px 的曲绘：长押标识从 24% 换成固定 20px，
-   PICK UP 只留星标（文字放不下，aria-label 仍在） */
-html[data-view="list"] .sc-hold,
-html[data-view="list"] .sd-hold {
+/* 【2026-11-16 主人】列表档的长押标识跟着这一档的曲绘（80px）一起收小：
+   按 24% 算是 19px，直接写 20px 免得百分比在小尺寸上取整抖动。
+   **只写 .sc-hold，不写 .sd-hold** —— 歌曲详情页的曲绘尺寸与排列方式无关，
+   详情页的标识恒用卡片视图那一档（24%），否则在列表存档下打开详情会莫名其妙变小
+   （html 上的 data-view="list" 是站内偏好，会一路带到详情页）。 */
+html[data-view="list"] .sc-hold {
     width: 20px;
+    right: 4px;
+    top: 4px;
 }
 html[data-view="list"] .sc-pick {
     padding: 2px;
@@ -1020,26 +1024,43 @@ html[data-view="list"] .sc-ph-line-2 {
     margin: 0;
 }
 html[data-view="list"] .sc-ph-badges {
+    /* 与真卡的 .sc-lv 同位：右列第 3 行、靠下，三枚灰块横排 */
     grid-column: 2;
+    grid-row: 3;
+    flex-direction: row;
+    align-self: start;
+    gap: 4px;
     margin: 2px 0 0;
 }
 @media (max-width: 768px) {
     /* 移动端同样按宽度掉列：390 宽仍是两列，320 宽一列（两列时每列只剩 140，
        曲绘 44 + 间距 8 之后曲名不够用）。曲绘与字号同步收一档。 */
     html[data-view="list"] .sc-grid {
+        /* 徽章独占一列后两列排不下（一列时每列只剩 140，曲绘 56 + 徽章 26 之后曲名不够用），
+           下限从 168 抬到 202。 */
+        /* 下限 168：390 宽排两列（每列约 178，曲绘 66 + 缝 8 之后文字列剩 104），
+           宽些自动加到三列，320 这种极窄才掉成一列。 */
         grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
         gap: 10px 8px;
     }
     html[data-view="list"] .sc-card,
     html[data-view="list"] .sc-ph-card {
-        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-columns: 66px minmax(0, 1fr);
         column-gap: 8px;
         padding: 6px;
     }
     html[data-view="list"] .sc-j,
     html[data-view="list"] .sc-ph-img {
-        width: 44px;
-        height: 44px;
+        width: 66px;
+        height: 66px;
+    }
+    html[data-view="list"] .sc-lv .lv {
+        width: 26px;
+        font-size: 12.5px;
+        border-radius: 7px;
+    }
+    html[data-view="list"] .sc-hold {
+        width: 17px;
     }
     html[data-view="list"] .sc-t {
         font-size: 13px;
@@ -1048,21 +1069,12 @@ html[data-view="list"] .sc-ph-badges {
         font-size: 12px;
     }
 }
-/* 排列切换的过渡（2026-11-14 主人要求）：先把当前列表整体压暗，再换布局，再淡回来。
-   只动 opacity / transform（合成层），不动 width/padding 那类会引发布局的属性；
-   动画挂在 .sc-sec 上而不是 .sc-card 上 —— 1683 张卡逐个过渡撑不住。 */
-html.sc-js .sc-sec {
-    transition: opacity 0.16s ease, transform 0.16s ease;
-}
-html[data-view-sw] .sc-body:not([hidden]) .sc-sec {
-    opacity: 0;
-    transform: translateY(6px);
-}
-@media (prefers-reduced-motion: reduce) {
-    html[data-view-sw] .sc-body:not([hidden]) .sc-sec {
-        transition: none;
-    }
-}
+/* 排列切换的过渡（2026-11-16 主人「卡片/列表视图切换过渡动画可以用服务器选项切换过渡动画」）：
+   语言与切服务器**完全一致** —— ①被选中的那枚按钮回弹一下（.sc-view-b.is-on 播 scPop，
+   与 .sc-srv-b.is-on 同一条关键帧）；②可见的前 12 张卡错开浮出（setView 调 stagger()，
+   与 apply() 里切服后走的是同一个函数）。不再做「整块面板压暗再淡回」那一层：
+   有了按钮回弹与卡片浮出，整块再压一次就是第二段动画。
+   卡片之外的整段动画挂在 .sc-sec 上，1683 张卡逐个过渡撑不住。 */
 /* 排列切换器：两枚图标按钮，选中项用强调色描边 + 浅强调底。
    图标是 16 格几何形状（四宫格 / 三行），读屏靠 aria-label，视觉不带文字。 */
 .sc-view {
@@ -1098,6 +1110,8 @@ html[data-view-sw] .sc-body:not([hidden]) .sc-sec {
 .sc-view-b.is-on {
     color: var(--acc);
     background: color-mix(in srgb, var(--acc) 14%, transparent);
+    /* 与 .sc-srv-b.is-on 同一条回弹，切排列的即时反馈就是它（2026-11-16 主人要求统一） */
+    animation: scPop 0.24s ease-out both;
 }
 .sc-view-b:focus-visible {
     outline: 2px solid var(--acc);
