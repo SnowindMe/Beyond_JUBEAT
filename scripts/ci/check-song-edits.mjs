@@ -42,7 +42,7 @@ db.exec(schema);
 
 db.prepare(
   `INSERT INTO songs (song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn,
-                      category, bsc, adv, ext, alt, cover, added_at, unlock_note)
+                      category, bsc, adv, ext, alt, cover, added_at_jp, added_at_cn, unlock_note)
    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 ).run(
   '80001015', 'official', 'アガット', 'Bazole', '190', 'beyond the Ave.', 1, 0,

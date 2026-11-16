@@ -79,11 +79,15 @@ export async function fallbackPool(
 ): Promise<string[]> {
   const col = srvCol(srv);
   const where = col ? `${col} = 1` : "server_jp = 1 OR server_cn = 1";
+  // 【2026-11-16 added_at 拆列】指定了服务器就按该服自己的上架日排——拿日服日期去排国服候选
+  // 等于把两条时间轴混着用。没说服务器（两服合排）才退回「两列取较晚」的口径。
+  const dcol = srv === "jp" ? "added_at_jp" : srv === "cn" ? "added_at_cn" : null;
+  const orderDate = dcol ?? "COALESCE(added_at_jp, added_at_cn)";
   const { results } = await db
     .prepare(
       `SELECT song_id FROM songs
               WHERE ${where}
-              ORDER BY (added_at IS NULL), added_at DESC, song_id DESC
+              ORDER BY (${orderDate} IS NULL), ${orderDate} DESC, song_id DESC
               LIMIT ?`,
     )
     .bind(size)

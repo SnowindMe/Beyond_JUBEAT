@@ -30,7 +30,9 @@ export type Song = {
   a: string | null;
   lv: { bsc: number | null; adv: number | null; ext: number | null };
   cover: string | null;
-  d: string | null;
+  /** 【2026-11-16 拆列】两服的上线/上架日分开存；null = 该服没有日期或不是该服。 */
+  dJp: string | null;
+  dCn: string | null;
   bpm: string | null;
   gen: string;
   jp: boolean;

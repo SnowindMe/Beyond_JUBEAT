@@ -46,7 +46,8 @@ type Row = {
    */
   has_hold: number | null;
   cover: string | null;
-  added_at: string | null;
+  added_at_jp: string | null;
+  added_at_cn: string | null;
   unlock_note: string | null;
   id_kind: string | null;
 };
@@ -113,7 +114,9 @@ const hasHoldVal = (v: number | null) => (v === 1 ? '1' : v === 0 ? '0' : '');
             <div><dt>世代</dt><dd>{song.gen_name}</dd></div>
             <div><dt>分区</dt><dd>{song.category}</dd></div>
             <div><dt>服务器</dt><dd>{servers || '—'}</dd></div>
-            <div><dt>上线</dt><dd>{fmt(song.added_at)}</dd></div>
+            {/* 【2026-11-16 拆列】两服的日期分开显示，没值的照旧走 fmt() 的占位 */}
+            <div><dt>日服上线</dt><dd>{fmt(song.added_at_jp)}</dd></div>
+            <div><dt>国服上线</dt><dd>{fmt(song.added_at_cn)}</dd></div>
             <div><dt>[ 2 ] 谱面</dt><dd>{song.alt ? '是（标题带 [ 2 ]）' : '否'}</dd></div>
             <div><dt>长押谱</dt><dd>{hasHoldText(song.has_hold)}</dd></div>
           </dl>

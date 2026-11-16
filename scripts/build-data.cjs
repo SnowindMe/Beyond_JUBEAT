@@ -31,7 +31,7 @@ const GEN_ORDER = [
 const db = new DatabaseSync(DB, { readOnly: true });
 const rows = db.prepare(`
   SELECT song_id, title, artist, bpm, gen_name, server_jp, server_cn, category,
-         bsc, adv, ext, alt, cover, added_at, unlock_note, id_kind, limited_until,
+         bsc, adv, ext, alt, cover, added_at_jp, added_at_cn, unlock_note, id_kind, limited_until,
          has_hold, notecounts, holds
   FROM songs ORDER BY gen_name, ext DESC
 `).all();
@@ -63,7 +63,9 @@ const coverName = (songId, cover) => (cover ? 'id' + songId + '.webp' : null);
 const pick = (s) => ({
   t: s.title, a: s.artist || null,
   lv: { bsc: num(s.bsc), adv: num(s.adv), ext: num(s.ext) },
-  cover: coverName(s.song_id, s.cover), d: s.added_at || null, o: s.gen_name,
+  cover: coverName(s.song_id, s.cover), o: s.gen_name,
+  // 【2026-11-16 拆列】两服日期各存各的，短键 dJp / dCn（与 d 一样只给展示与排序用）。
+  dJp: s.added_at_jp || null, dCn: s.added_at_cn || null,
   srv: srvOf(s), cat: s.category, alt: s.alt ? 1 : 0,
 });
 
@@ -72,7 +74,7 @@ const pick = (s) => ({
 const SONGS = rows.map((s) => ({
   id: s.song_id, t: s.title, a: s.artist || null,
   lv: { bsc: num(s.bsc), adv: num(s.adv), ext: num(s.ext) },
-  cover: coverName(s.song_id, s.cover), d: s.added_at || null, bpm: s.bpm || null,
+  cover: coverName(s.song_id, s.cover), dJp: s.added_at_jp || null, dCn: s.added_at_cn || null, bpm: s.bpm || null,
   gen: s.gen_name, jp: !!s.server_jp, cn: !!s.server_cn, cat: s.category, alt: s.alt ? 1 : 0,
   unlock: s.unlock_note || null, kind: s.id_kind,
   // 【2026-10-28 限时曲】限时结束日 YYYY-MM-DD，NULL = 非限时。
@@ -88,8 +90,14 @@ const SONGS = rows.map((s) => ({
 
 const byExtDesc = (a, b) => (ext(b) || 0) - (ext(a) || 0);
 const TOP = rows.slice().sort(byExtDesc).slice(0, 12).map(pick);
-const LATEST = rows.filter((s) => s.added_at)
-  .sort((a, b) => String(b.added_at).localeCompare(String(a.added_at))).slice(0, 12).map(pick);
+// 「最近收录」按**两服合一的时间轴**排：取两列里较晚的那个当这一行的日期。
+// 拆列前是一列直接排；拆开后各自为空的情况更多，取 COALESCE 等价物才不会把只有一侧日期的行漏掉。
+const newestOf = (s) => {
+  const a2 = s.added_at_jp || '', b2 = s.added_at_cn || '';
+  return a2 > b2 ? a2 : b2;
+};
+const LATEST = rows.filter((s) => newestOf(s))
+  .sort((a, b) => newestOf(b).localeCompare(newestOf(a))).slice(0, 12).map(pick);
 
 const GEN = GEN_ORDER.map(([key, server, y]) => {
   const arr = rows.filter((s) => (server === 'cn' ? s.server_cn : s.server_jp) && s.gen_name === key);

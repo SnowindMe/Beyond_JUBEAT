@@ -153,7 +153,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 | 首页统计卡 | `stat.songs` `stat.charts` `stat.gens` `gen10` | ✅ 已有 |
 | 首页曲绘方块 | `gen[].rep.cover` `gen[].k` | ✅ 已有 |
 | 曲目列表 | D1 `songs` 表的全量字段（曲名 / 作曲 / 三档定数 / 曲绘 / 世代 / 分区 / 收录日期） | ✅ 已有（v1.7.0 起运行期读 D1，`src/lib/db.ts` 的 `getAllSongs`） |
-| 曲目详情 | 同上 + `added_at` + `unlock_note` | ✅ 已用上；谱面预览功能已于 v1.13.0 下线 |
+| 曲目详情 | 同上 + `added_at_jp` / `added_at_cn` + `unlock_note` | ✅ 已用上；谱面预览功能已于 v1.13.0 下线 |
 | Jubility 理论值 | 定数 → 理论值映射表 | ❌ `data.json` 无此字段 |
 | Emblem / 伙伴 / 成就 | — | ❌ `data.json` 无此字段 |
 | 定数分布 | `dist` `dots` `gen105` | ✅ 已有（当前无页面消费） |

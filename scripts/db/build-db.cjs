@@ -120,8 +120,8 @@ function main() {
 
   const ins = db.prepare(`INSERT OR REPLACE INTO songs(
     song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-    bsc, adv, ext, alt, cover, added_at, unlock_note, limited_until
-  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    bsc, adv, ext, alt, cover, added_at_jp, added_at_cn, unlock_note, limited_until
+  ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
   // 【2026-10-28 限时曲】取 archive 快照里的 limitedPeriod.endsOn（YYYY-MM-DD）。
   // 只认 endsOn，不要 limited 布尔：实测 Will We Shine 的 limited 是 false，
@@ -134,7 +134,7 @@ function main() {
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : null;
   };
 
-  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, cnOverride: 0, jpBpm: 0, jpAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
+  const stat = { jp: 0, cn: 0, jpOfficial: 0, jpSynthetic: 0, cnUnmapped: 0, cnDual: 0, cnOldFrame: 0, cnOverride: 0, jpBpm: 0, cnAdded: 0, jpNote: 0, cnCover: 0, unlockI: 0, unlockII: 0, limited: 0 };
   // 覆盖表实际命中的 id：跑完后与表里的 key 逐一比对，没命中的要报出来
   const cnOverrideHit = new Set();
   // 【2026-10-31 RemyWiki】回填前 bpm 为空的行。**必须在事务外声明**：
@@ -174,7 +174,7 @@ function main() {
       // 无占位 id 的新曲（721 首）在快照里压根不存在，回查不到就保持 NULL，不猜。
       const arc = archiveById.get(srcId) || {};
       if (arc.bpm) stat.jpBpm++;
-      if (arc.addedAt) stat.jpAdded++;
+      if (arc.addedAt) stat.cnAdded++; // 拆列后快照日期一律进 added_at_cn，见下方 ins.run 注释
       const note = jpUnlockNote(arc, s1Unlock.get(srcId));
       if (note) stat.jpNote++;
       // 解禁期次计数：与 sheet1 I 列的独立推算对比（见自检），不写死数字。
@@ -204,7 +204,10 @@ function main() {
         genName, 1, isCnOnline ? 1 : 0, cat,
         num(s.levels && s.levels.bsc), num(s.levels && s.levels.adv), num(s.levels && s.levels.ext),
         s.alt ? 1 : 0, webpCover(finalId, s.jacketFile),
-        arc.addedAt || null, note, limitedUntilOf(arc)
+        // 【2026-11-16 拆列】快照 arc.addedAt 是旧站 v3 的记录，实测 125 条带日期的全部落在
+        // 双服行上（同日进国服），按主人指令「原有日期数据的全进 added_at_cn」，一律写 cn 列；
+        // added_at_jp 留 NULL 等上游给日服首登日，不拿国服日期冒充日服日期。
+        null, arc.addedAt || null, note, limitedUntilOf(arc)
       );
       if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
       stat.jp++;
@@ -229,7 +232,7 @@ function main() {
         '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
         /\[\s*2\s*\]/.test(r.title) ? 1 : 0, webpCover(r.songId, r.cover),
-        isoDate(r.date), dashNull(r.pool),
+        null, isoDate(r.date), dashNull(r.pool),
         // 国服行也按 songId 回查一次快照：限时曲实测都在国服（新年快乐、Will We Shine）
         limitedUntilOf(archiveById.get(String(r.songId)))
       );
@@ -252,7 +255,7 @@ function main() {
         num(v.bsc), num(v.adv), num(v.ext),
         /\[\s*2\s*\]/.test(String(v.title)) ? 1 : 0,
         webpCover(id, v.cover),
-        isoDate(v.date), dashNull(v.pool), null
+        null, isoDate(v.date), dashNull(v.pool), null
       );
       if (v.cover) stat.cnCover++;
       stat.cn++;

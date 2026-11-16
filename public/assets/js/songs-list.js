@@ -62,6 +62,7 @@
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
         type: 'all',   // all | std | hold | alt2（2026-10-31 谱面类型，见卡片 data-hh / data-alt）
+        date: '',      // '' = 不按上线日期筛 | YYYY-MM-DD（2026-11-16，判据是卡片的 data-dcn）
         sort: DEFAULT_SORT_INLINE,
         // 排列方式（2026-11-14）：grid = 卡片（默认）/ list = 列表。
         // 它是纯视图偏好，不进 matchCard、不改卡片集合，只翻 #songsRoot 的 data-view。
@@ -94,6 +95,7 @@
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
         type: ['all', 'std', 'hold', 'alt2'],
+        date: null,     // 只校验是字符串；是否真是可选日期由日历状态自己兜（无效值筛出 0 张也无害）
         sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc'],
         // 排列方式跨服务器、跨会话保留（主人 2026-11-14：切服务器也要保留），所以进存档。
         view: ['grid', 'list']
@@ -130,7 +132,7 @@
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
             diff: state.diff, band: state.band,
             scope: state.scope, showLimited: state.showLimited,
-            type: state.type, sort: state.sort, view: state.view
+            type: state.type, date: state.date, sort: state.sort, view: state.view
           }));
         } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
       }
@@ -157,6 +159,9 @@
         pick('[data-band]', 'data-band', state.band);
         pick('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
         pick('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', 'data-scope', state.scope);
+        // 日期控件在下面的日历块里定义，这里只调它；此刻日历可能还没初始化（函数已提升、状态已就绪即可）
+        if (dateV) dateV.textContent = state.date ? dateText(state.date) : DATE_ALL_LABEL;
+        if (state.date) calJumpTo(state.date);
         ddRefresh();
       }
 
@@ -278,6 +283,19 @@
           } else if (state.type === 'alt2') {
             if (card.getAttribute('data-alt') !== '1') return false;
           }
+        }
+
+        // 上线日期（2026-11-16 主人要求）：只比字符串。
+        // 没日期的卡 data-dcn 是空串，选中任意日期都不命中——这正是「只能选固定日期」的含义，
+        // 空日期不该混进某个日期的结果里。与举服有关的筛选一样，只对当前视图的 body 生效。
+        if (state.date) {
+          // 按该 body 自己的服取列：国服看 data-dcn，日服看 data-djp。
+          // 日服那列拆列后整列为空（主人指令下日期全进了国服列），所以日服视图要退回国服值——
+          // 否则在默认的日服视图里选任何日期都是 0 命中，看着像整个功能坏了。
+          var dc = bodySrv === 'jp'
+            ? (card.getAttribute('data-djp') || card.getAttribute('data-dcn'))
+            : card.getAttribute('data-dcn');
+          if (dc !== state.date) return false;
         }
 
         // ---- 难度档 + 定数区间 ----
@@ -552,7 +570,7 @@
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
                           (state.diff !== '' ? 1 : 0) +
                           (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
-          (state.type !== 'all' ? 1 : 0);
+          (state.type !== 'all' ? 1 : 0) + (state.date ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
         // 两个状态共用一个 class 会互相覆盖——展开时把「有筛选」的强调抹掉，收起时又反过来。
@@ -1126,6 +1144,135 @@
         list.addEventListener('keydown', function (e) {});
         ddSync(dd);
       });
+
+      // ---- 上线日期日历（2026-11-16 主人要求「新增【上线日期】筛选（日历组件）…只能选择固定日期」）----
+      // 为什么自绘而不是 <input type=date>：①原生弹层由系统画，和这套玻璃质感不合（同理由已让排序/世代改自绘）；
+      // ②「非上线日期不可选」原生做不到（date 不能只禁用部分日期）。
+      // 可选日期来自服务端烘在 .sc-date[data-dates] 上的国服上架日清单，前端只读它，不查库、不写死年份。
+      //
+      // 交互语言与 .sc-dd 完全一致（同时只开一个、点外面关、Esc 关），因为它们在用户眼里是同一类控件；
+      // 差别只在这里多了月导航与禁用格。
+      var dateWrap = root.querySelector('.sc-date');
+      var dateSel = dateWrap;
+      var dateB = dateWrap ? dateWrap.querySelector('.sc-date-b') : null;
+      var dateV = document.getElementById('scDateV');
+      var cal = document.getElementById('scCal');
+      var calGrid = document.getElementById('scCalGrid');
+      var calTitle = document.getElementById('scCalTitle');
+      var DATE_ALL_LABEL = '全部日期';
+      // 可选日期集合（Set 查询 O(1)，日历每月重绘上百格时省一次线性查找）
+      // 可选日期按服各一份：国服用 data-dates，日服用 data-dates-jp（那些曲也上过国服）。
+      // 分开的理由——在日服视图点开 2026-11-16（只上过国服的新曲）不该是一片空。
+      // 国服那份属性没有后缀（data-dates），别拼成 data-dates-cn——拼错了拿到空串，
+      // 日历会直接渲染成「0 年 0 月」且只见禁用格。日服带后缀 data-dates-jp。
+      function datePool() {
+        var attr = state.srv === 'jp' ? 'data-dates-jp' : 'data-dates';
+        var a = dateWrap ? dateWrap.getAttribute(attr) : '';
+        return new Set((a || '').split(' ').filter(Boolean));
+      }
+      var dateSet = datePool();
+      // 日期的可读写法：2026-11-16 → 2026.11.16
+      function dateText(d) { return d.replace(/-/g, '.'); }
+      // 最近的一个可选日期：没有任何筛选时，日历默认翻到这个月，而不是 1970 或今年 1 月。
+      // 写成函数是因为可选池会随服务器变（见 datePool）。
+      function dateLatest() { return dateSet.size ? Array.from(dateSet).sort().pop() : ''; }
+      // 当前正在看哪个月（YYYY-MM 锚在 1 号）。有筛选值就落在那个月，否则落在最近的日期所在月。
+      var calMonth = '';
+      function calJumpTo(d) {
+        // 锚点只在「还没初始过」或「用户没在工作」时用，免得每轮回填把用户翻到的月拽回去
+        if (calMonth) return;
+        var latest = dateLatest();
+        var base = (d && d.slice(0, 7)) || (latest ? latest.slice(0, 7) : '');
+        if (base) calMonth = base + '-01';
+      }
+
+      // 画一个月：周一打头（中文习惯，和 .sc-cal-w 的表头一致）。
+      // 没有曲目的日子渲染成 disabled 按钮而不是 div —— 键盘能跳过、读屏念「不可用」，
+      // 与「只能选固定日期」这个事实一致。
+      function calRender() {
+        if (!calMonth) calJumpTo(state.date);
+        var y = Number(calMonth.slice(0, 4));
+        var m = Number(calMonth.slice(5, 7));
+        calTitle.textContent = y + ' 年 ' + m + ' 月';
+        var first = new Date(y, m - 1, 1);
+        var lead = (first.getDay() + 6) % 7; // getDay() 0=周日 → 周一打头的 0..6
+        var days = new Date(y, m, 0).getDate();
+        var html = '';
+        for (var i = 0; i < lead; i++) html += '<span class="sc-cal-x"></span>';
+        for (var d = 1; d <= days; d++) {
+          var iso = y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+          var on = dateSet.has(iso);
+          var cur = state.date === iso;
+          html += '<button type="button" class="sc-cal-d' + (on ? '' : ' is-off') +
+            (cur ? ' is-on' : '') + '" role="gridcell" data-cal-d="' + iso + '"' +
+            (on ? '' : ' disabled') + ' aria-selected="' + (cur ? 'true' : 'false') + '">' + d + '</button>';
+        }
+        calGrid.innerHTML = html;
+      }
+      function calOpen() {
+        for (var i = 0; i < dds.length; i++) ddClose(dds[i]); // 与 .sc-dd 互斥
+        calMonth = '';
+        dateSet = datePool(); // 每次都按当前服重取：切服后可选日期跟着变
+        calJumpTo(state.date);
+        cal.hidden = false;
+        dateB.setAttribute('aria-expanded', 'true');
+        calRender();
+        // 这一项在面板最后一行，向下必出屏：量按钮下方空间，不够就整体翻到按钮上方。
+        // 内置高度约 300px（标题+表头+6 行+清除），留 12px 呼吸位。
+        var br = dateB.getBoundingClientRect();
+        var need = (cal.getBoundingClientRect().height || 300) + 12;
+        if (br.bottom + need > window.innerHeight) cal.setAttribute('data-drop', 'up');
+        else cal.removeAttribute('data-drop');
+        // 右边界：日历固定在按钮左沿向右展开，按钮太靠右时会顶出视口，改为向左对齐。
+        // 窄屏的 2×2 让日期落在右列，这条几乎必中，所以不能只靠 CSS 的 right:0。
+        var cw = cal.getBoundingClientRect().width || 244;
+        if (br.left + cw > window.innerWidth - 12) cal.setAttribute('data-align', 'right');
+        else cal.removeAttribute('data-align');
+      }
+      function calClose() {
+        if (!cal || cal.hidden) return; // cal 为 null = 页面上没有这个控件
+        cal.hidden = true;
+        dateB.setAttribute('aria-expanded', 'false');
+      }
+      function calPick(v) {
+        state.date = v || '';
+        dateV.textContent = state.date ? dateText(state.date) : DATE_ALL_LABEL;
+        calClose();
+        apply();
+        if (dateB) dateB.focus();
+      }
+      if (dateB) {
+        dateB.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (cal.hidden) calOpen(); else calClose();
+        });
+        cal.addEventListener('click', function (e) {
+          e.stopPropagation(); // 点日历内部任何位置都不该冒泡到 document（否则刚开就被关）
+          var nav = e.target.closest('[data-cal-nav]');
+          if (nav) {
+            var step = Number(nav.getAttribute('data-cal-nav'));
+            var y = Number(calMonth.slice(0, 4));
+            var m = Number(calMonth.slice(5, 7)) - 1 + step;
+            var d2 = new Date(y, m, 1); // 跨年交给 Date 进位，别手算字符串
+            calMonth = d2.getFullYear() + '-' + String(d2.getMonth() + 1).padStart(2, '0') + '-01';
+            calRender();
+            return;
+          }
+          var cell = e.target.closest('[data-cal-d]');
+          if (cell && !cell.disabled) calPick(cell.getAttribute('data-cal-d'));
+        });
+        var calClear = document.getElementById('scCalClear');
+        if (calClear) calClear.addEventListener('click', function (e) { e.stopPropagation(); calPick(''); });
+        // 点外面关掉；Esc 用 capture 抢在「Esc 收起面板」前面
+        document.addEventListener('click', function () { calClose(); });
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape' || cal.hidden) return;
+          e.stopPropagation();
+          calClose();
+          dateB.focus();
+        }, true);
+      }
+
       // 点外面关掉；Esc 也关掉（注意别和「Esc 收起面板」抢：这里先处理并阻止冒泡）
       document.addEventListener('click', function () {
         for (var i = 0; i < dds.length; i++) if (dds[i].getAttribute('data-open') === 'true') ddClose(dds[i]);
@@ -1160,6 +1307,10 @@
         state.q = ''; state.gen = 'all';
         state.diff = ''; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
         state.cat = 'all'; state.scope = 'all'; state.showLimited = false; state.type = 'all';
+        state.date = '';
+        // 按钮上的可见文字也要跟着回「全部日期」：只改 state 会留下上一次的日期，
+        // 用户看到「2026.09.15」却已经没在筛（与 ddRefresh 同一个道理）。
+        if (dateV) dateV.textContent = DATE_ALL_LABEL;
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
         var limBox = document.getElementById('scLimited');
@@ -1346,7 +1497,7 @@
       function hasSkeletons() { return !!root.querySelector('.sc-gen-ph'); }
       function hasFilters() {
         return !!(state.q || state.cat !== 'all' || state.gen !== 'all' || state.diff ||
-          state.band !== 'all' || state.scope !== 'all' || state.type !== 'all');
+          state.band !== 'all' || state.scope !== 'all' || state.type !== 'all' || state.date);
       }
       /** 把一个骨架块换成真实世代块。失败时保留骨架（比留一片空白好）。 */
       function loadFrag(ph) {

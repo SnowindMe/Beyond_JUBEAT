@@ -269,7 +269,10 @@ const metaFoot: Meta[] = song
       { k: '服务器', v: servers },
       // 【2026-10-31 主人「把如图的 BPM 给去掉」】BPM 已由播放条左上角的徽章承担，
       // 底部背签不再重复同一个字段（他此前也有「同一份信息别出现两处」的口径）。
-      ...(song.d ? [{ k: '上线', v: song.d, mono: true }] : []),
+      // 【2026-11-16 拆列】两服日期分开显示：有哪服的日期就显示哪条，不合并成一个「上线」。
+      // 双服曲的两条日期常常不同（国服是上架、日服是首登），合成一格会读成同一个时间点。
+      ...(song.dJp ? [{ k: '日服上线', v: song.dJp, mono: true }] : []),
+      ...(song.dCn ? [{ k: '国服上线', v: song.dCn, mono: true }] : []),
       ...(song.unlock ? [{ k: '解禁', v: song.unlock }] : []),
       ...(song.kind === 'synthetic' ? [{ k: '备注', v: '官方 songId 暂缺，此处为占位 id' }] : []),
     ].filter((m) => m.v)

@@ -31,7 +31,13 @@ CREATE TABLE songs (
   notecounts  TEXT,                      -- 各难度总键数 JSON，如 {"bsc":414,"adv":491,"ext":805}
   holds       TEXT,                      -- 各难度长押数 JSON，形状同 notecounts
   cover       TEXT,                      -- 曲绘文件名（日服 jkt/id 图，国服 webp）
-  added_at    TEXT,                      -- 上线/解禁日期 YYYY-MM-DD
+  -- 【2026-11-16 主人要求「added_at 拆成 added_at_jp 和 added_at_cn」】按服分开存。
+  -- 原来一列装两服两个含义的日期：日服行记的是日服首登、国服行记的是国服上架，
+  -- 混在一列里做「最近收录」等于把两条时间轴按日期搅在一起排。
+  -- 拆分时按主人指令「原有日期数据的全进 added_at_cn」——实测那 171 行全在国服侧
+  -- （双服 80 / 国服独有 91 / 日服独有 0），所以迁移后 added_at_jp 是空的，等上游给日服日期再填。
+  added_at_jp TEXT,                      -- 日服上线/首登日 YYYY-MM-DD；NULL = 未知
+  added_at_cn TEXT,                      -- 国服上架日 YYYY-MM-DD；NULL = 未知
   unlock_note TEXT,                      -- 解禁池或联动来源，人类可读
   -- 【2026-10-28 主人要求「显示限时曲」】限时曲的结束日（YYYY-MM-DD）；NULL = 非限时。
   -- 只存日期、不存布尔：判定要按**真实今天**算（主人定的口径是「区间结束才算限时」），

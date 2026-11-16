@@ -3189,6 +3189,165 @@ html[data-lum="light"] .sd-gauge {
 .sc-dd[data-open="true"] .sc-dd-ico {
     transform: rotate(180deg);
 }
+
+/* ---------- 上线日期日历（2026-11-16 主人要求「新增【上线日期】筛选（日历组件）」） ---------- */
+/* 外观刻意贴着 .sc-dd 走：同一个面板里并排的控件，用户不该看到两套语言。
+   差别只在体积——日历是弹层，比下拉列表高，所以它是浮起来的卡片而不是列表。 */
+.sc-date {
+    position: relative;
+}
+.sc-date-b {
+    /* 与 .sc-dd-b 同款，日期按钮不另立一套 */
+}
+.sc-cal {
+    position: absolute;
+    z-index: 210;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 244px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--base) 96%, transparent);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-sm);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+    animation: scDdIn 0.16s ease;
+}
+/* 面板最后一行的控件在视口底部时同样要向上翻——与下拉同一套 data-drop 判据，
+   但日历固定向上去不掉（向下会出屏），所以这里不需要方向属性，直接由脚本测量后定位。 */
+.sc-cal[data-align="right"] {
+    left: auto;
+    right: 0;
+}
+.sc-cal[data-drop="up"] {
+    top: auto;
+    bottom: calc(100% + 4px);
+}
+.sc-cal-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.sc-cal-h b {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink2, var(--ink));
+}
+.sc-cal-nav {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    color: var(--ink3);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--r-xs);
+    cursor: pointer;
+    transition: color 0.16s, border-color 0.16s, background-color 0.16s;
+}
+.sc-cal-nav:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+    background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.sc-cal-nav svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.sc-cal-w,
+.sc-cal-g {
+    display: grid;
+    /* 周一打头，七列等宽 */
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.sc-cal-w {
+    margin-bottom: 4px;
+}
+.sc-cal-w span {
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink3);
+}
+.sc-cal-x {
+    /* 月初留白：占位但不接受点击，尺寸由网格决定 */
+    aspect-ratio: 1;
+}
+.sc-cal-d {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    background-color: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid transparent;
+    border-radius: var(--r-xs);
+    cursor: pointer;
+    transition: background-color 0.16s, border-color 0.16s, color 0.16s;
+}
+.sc-cal-d:hover:not(:disabled) {
+    border-color: var(--edge2);
+    background-color: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+/* 没有曲目上线的日子：淡到能看出"这里没有东西"，但仍然占位保持月历完整。
+   用 disabled 而不是 display:none —— 网格才不会塌成残月。 */
+.sc-cal-d.is-off {
+    color: var(--ink3);
+    background-color: transparent;
+    opacity: 0.45;
+    cursor: default;
+}
+.sc-cal-d.is-on {
+    color: var(--base);
+    background-color: var(--acc);
+    border-color: var(--acc);
+    opacity: 1;
+}
+.sc-cal-d.is-on:hover:not(:disabled) {
+    background-color: var(--acc);
+}
+.sc-cal-f {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--edge);
+}
+.sc-cal-f .sc-btn-r {
+    width: 100%;
+    height: 32px;
+}
+/* hidden 必须真的藏住（与其它自设 display 的容器同一条规矩） */
+.sc-cal[hidden] {
+    display: none;
+}
+/* 【谱面类型 / 排序 / 世代 / 上线日期 四项并排成一行（主人 2026-11-16 原话
+   「排在谱面类型/排序/世代这一行最后」；移动端「与这三项组成 2×2 也排最后」）】
+   为什么单给它们一个行容器，而不是靠面板的 auto-fit：面板网格是 auto-fit + minmax(210px)，
+   这四项的宽度加起来远超一行，各自会被折到不同行去（实测就是这个结果）。
+   行容器跨满整行（grid-column: 1/-1）后再自己分列，四项就锁在同一条线上。
+   列数：桌面 4 列（1×4），窄屏 2 列（2×2，主人指定的形态）。
+   容器本身不带底/边，视觉上与其它筛选组一致，只做排布。 */
+.sc-pf-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px 18px;
+}
+.sc-pf-cell {
+    min-width: 0;
+}
+
 /* 弹层：站点自己的玻璃卡片，绝不用系统弹层。
    position:absolute + max-height + overflow:auto：曲师有 39 项，必须能滚。 */
 .sc-dd-list {
@@ -3508,6 +3667,17 @@ html[data-lum="light"] .sd-gauge {
     }
     .sc-pf-end .sc-btn-r {
         width: 100%;
+    }
+    /* 窄屏：这四项排成 2×2（主人 2026-11-16「移动端与这三项组成 2×2 也排最后」） */
+    .sc-pf-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    /* 日历在窄屏更靠下，弹层宽度跟着视口收，但不超出按钮。
+       2×2 里它固定在右列，右对齐才不会从视口右边溢出（实测 left:0 会贴到 448/448）。 */
+    .sc-cal {
+        width: min(244px, calc(100vw - 40px));
+        left: auto;
+        right: 0;
     }
 }
 

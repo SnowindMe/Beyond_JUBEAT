@@ -335,6 +335,21 @@ const SORTS = [
 // 「全部 / STD谱 / HOLD谱 / [2]谱」。STD 与 HOLD 是「有没有长按」这条轴的两端，
 // [ 2 ] 谱是另一条轴（谱面变体），三项互斥只是因为这个下拉是单选。
 // ⚠ [ 2 ] ≠ 长押谱（主人 2026-10-30 原话），判据分别落在卡片的 data-alt 与 data-hh 上。
+// 【上线日期筛选的可选值（2026-11-16）】只收真正用过的国服上架日，去重后升序。
+// 主人要求「只能选择固定日期（非上线日期不可选）」——日历里的可点格子就由这份清单决定，
+// 没有曲目落在的日子显示成不可点的灰格。
+// 只取国服上架日（added_at_cn）的理由见 components/SongCard.astro 的 data-dcn 注释：
+// 日服那列拆列后整列为空，用它做可选值会一个日期都没有。
+const DATA_DATES = [...new Set(ALL.map((s) => s.dCn).filter((d): d is string => !!d))].sort();
+// 【按服各一份可选日期】日服那列拆列后整列为空，日服的日期只能靠「同一首歌的国服日期」推：
+// 双服行在原数据里是同一条、日期记录在国服侧，所以日服的可选日期 = 那些同时上过国服的曲的日期。
+// 注意必须带 s.jp：只上过国服的曲（如 2026-11-16 那 7 首）在日服视图里筛出来必然是 0 张，
+// 把它们列进日服的可选日期会变成「点了没有结果」。
+const datesOf = (srv: 'jp' | 'cn') =>
+  srv === 'cn'
+    ? DATA_DATES
+    : [...new Set(ALL.filter((s) => s.dCn && s.jp).map((s) => s.dCn as string))].sort();
+
 const TYPES = [
   { v: 'all', label: '全部' },
   { v: 'std', label: 'STD谱' },
@@ -563,7 +578,10 @@ const TYPES = [
               · [2]谱 = 谱面变体，看 data-alt。
                 ⚠ [ 2 ] ≠ 长押谱（主人 2026-10-30 原话），别把两个判据合并。
             放在「限时曲」之后、排序之前：它是内容筛选，而排序/世代是呈现方式。 */}
-        <div class="sc-pf">
+        {/* 谱面类型 / 排序 / 世代 / 上线日期：同一行、也排在面板最后（主人 2026-11-16）。
+            行容器只管排布，移动端由 CSS 改成 2×2。 */}
+        <div class="sc-pf-row">
+        <div class="sc-pf sc-pf-cell">
           <span class="sc-pf-k" id="scTypeK">谱面类型</span>
           <div class="sc-dd" data-dd="scType">
             <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scTypeK">
@@ -588,7 +606,7 @@ const TYPES = [
 
             原来监听 select 的筛选逻辑一行都不用改。 */}
 
-        <div class="sc-pf">
+        <div class="sc-pf sc-pf-cell">
           <span class="sc-pf-k" id="scSortK">排序</span>
           <div class="sc-dd" data-dd="scSort">
             <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scSortK">
@@ -604,7 +622,7 @@ const TYPES = [
           </div>
         </div>
 
-        <div class="sc-pf">
+        <div class="sc-pf sc-pf-cell">
           <span class="sc-pf-k" id="scGenK">世代</span>
           <div class="sc-dd" data-dd="scGen">
             <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scGenK">
@@ -621,6 +639,47 @@ const TYPES = [
             </ul>
           </div>
         </div>
+
+        {/* 【上线日期筛选（2026-11-16 主人要求「新增【上线日期】筛选（日历组件），
+            排在谱面类型/排序/世代这一行最后，移动端与这三项组成 2×2 也排最后，
+            只能选择固定日期（非上线日期不可选）」）】
+
+            形态是**自绘日历**而不是 <input type=date>：原生日期控件的弹层由系统绘制，
+            和这套玻璃质感不合（同一个理由已经让排序/世代改成了自绘下拉）；
+            更要紧的是「非上线日期不可选」这条——原生 date 做不到禁用整片无数据的日期，
+            自绘可以只让有曲目的日期成为可点格子。
+            可选日期由服务端从库里的国服上架日现算（DATA_DATES）烘成 data-dates，
+            前端不查库、也不写死年份范围。
+            判据是卡片的 data-dcn（与 DOM 里那串 dates 同一来源），两边不会漂。 */}
+        <div class="sc-pf sc-pf-cell">
+          <span class="sc-pf-k" id="scDateK">上线日期</span>
+          <div class="sc-date" data-dates={datesOf('cn').join(' ')} data-dates-jp={datesOf('jp').join(' ')}>
+            <button type="button" class="sc-dd-b sc-date-b" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="scDateK">
+              <span class="sc-dd-v" id="scDateV">全部日期</span>
+              <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+            </button>
+            <div class="sc-cal" id="scCal" role="dialog" aria-label="按上线日期筛选" hidden>
+              <div class="sc-cal-h">
+                <button type="button" class="sc-cal-nav" data-cal-nav="-1" aria-label="上个月">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 7l-5 5 5 5"/></svg>
+                </button>
+                <b id="scCalTitle">—</b>
+                <button type="button" class="sc-cal-nav" data-cal-nav="1" aria-label="下个月">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7l5 5-5 5"/></svg>
+                </button>
+              </div>
+              <div class="sc-cal-w" aria-hidden="true">
+                <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+              </div>
+              <div class="sc-cal-g" id="scCalGrid" role="grid" aria-labelledby="scCalTitle"></div>
+              <div class="sc-cal-f">
+                <button type="button" class="sc-btn sc-btn-r" id="scCalClear">清除日期</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        </div>{/* /.sc-pf-row */}
 
         <div class="sc-pf sc-pf-end">
           <button type="button" id="scReset" class="sc-btn sc-btn-r">重置全部</button>

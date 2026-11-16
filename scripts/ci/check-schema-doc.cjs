@@ -35,7 +35,9 @@ const RULES = [
   ['国服独有行', 'SELECT COUNT(*) c FROM songs WHERE server_jp=0 AND server_cn=1', '**{n}**'],
   ['谱面总数', 'SELECT COUNT(bsc)+COUNT(adv)+COUNT(ext) c FROM songs', '**{n}**'],
   ['bpm 空值', 'SELECT COUNT(*) c FROM songs WHERE bpm IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
-  ['added_at 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
+  // 【2026-11-16 added_at 拆列】两列各验一条：并成一列验会漏掉「一列填错、另一列被清空」这种错。
+  ['added_at_jp 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at_jp IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
+  ['added_at_cn 空值', 'SELECT COUNT(*) c FROM songs WHERE added_at_cn IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
   ['unlock_note 空值', 'SELECT COUNT(*) c FROM songs WHERE unlock_note IS NULL', '**{n} / {m}**', 'SELECT COUNT(*) c FROM songs'],
   // needle 必须带上下文：2026-11-12 实撞——只写 '**{n}**' 时，文档里任意一处 '**0**'
   // 都能让它通过，占位 id 从 2 改成 0 后文档仍写 2，脚本照样绿。锚到整句才验得住。

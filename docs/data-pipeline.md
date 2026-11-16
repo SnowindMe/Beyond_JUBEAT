@@ -161,7 +161,8 @@ data/upstream/wiki-v3-songs.json   eb3fe063489ceb035e4da2f6f819525689024c382e28f
 | alt | resolved.json `alt` | 标题匹配 `[ 2 ]` |
 | has_hold / notecounts / holds | **旁路快照**：data/remy/by-song-id.json（remywiki 抓取 → 曲名归一化匹配 → song_id）。**不走 INSERT**，在 build-db.cjs 的 COMMIT 前用 UPDATE 回填 | 同左（双服行共享同一份曲库数据） |
 | cover | `jacketFile` 的 `.gif` → `.webp` | wiki-v3 快照的 md5 名 → `.webp`；7 首新曲按 `id<songId>.webp` 回退（素材库 png 或已转档 webp 任一存在） |
-| added_at | 从快照回查 | sheet2 J 的 `YYYY.MM.DD` → `YYYY-MM-DD` |
+| added_at_cn | 从快照 / sheet2 回查 | sheet2 J 的 `YYYY.MM.DD` → `YYYY-MM-DD`；快照 addedAt 也全进这一列（2026-11-16 拆列） |
+| added_at_jp | 暂无来源 | 迁移后全空，等上游给日服首登日 |
 | unlock_note | **解禁池/期次以 sheet1 的 I 列为准**；快照 `unlockPool`/`poolPhase` 只在源表没有该曲时才兜底。`exchangeCost`/`limitedPeriod` 源表没有，仍只取快照 → 合成一句 | sheet2 I（移植机种 / 联动） |
 
 **缺失值一律 NULL，不猜。** 日服 1150 首里 721 首没有占位 id、快照里也不存在，BPM / 上线日期就保持 NULL。

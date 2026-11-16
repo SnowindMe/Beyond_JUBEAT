@@ -281,7 +281,7 @@ export function isMachineRequest(headers: { get(name: string): string | null }):
 
 /** songs 表的全列（与 src/lib/db.ts 的 SELECT 保持一致，两处都只读不写） */
 export const SONG_COLUMNS = `song_id, id_kind, title, artist, bpm, gen_name, server_jp, server_cn, category,
-              bsc, adv, ext, alt, cover, added_at, unlock_note`;
+              bsc, adv, ext, alt, cover, added_at_jp, added_at_cn, unlock_note`;
 
 export type SongListInput = {
   q: string;
@@ -339,7 +339,7 @@ export function buildSongListQuery(input: SongListInput): {
 
 /** 编辑页读单行：直接读原始列（不经 lib/db.ts 的 60s 缓存，改完马上回看要是新值） */
 export const SQL_EDIT_ROW = `SELECT song_id, title, artist, bpm, gen_name, server_jp, server_cn, category,
-            bsc, adv, ext, alt, has_hold, cover, added_at, unlock_note, id_kind
+            bsc, adv, ext, alt, has_hold, cover, added_at_jp, added_at_cn, unlock_note, id_kind
        FROM songs WHERE song_id = ?`;
 
 export const SQL_UPDATE = `UPDATE songs
