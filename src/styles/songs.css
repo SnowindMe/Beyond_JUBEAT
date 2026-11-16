@@ -1082,8 +1082,17 @@ html[data-view="list"] .sc-ph-badges {
         width: 66px;
         height: 66px;
     }
+    /* 390 宽两列时，文字列只剩约 85px：三枚 31px + 4px 缝 = 93 会折行（主人截图报「等级徽章都两行了」）。
+       这一档改成三枚平分该行（flex:1 1 0）、缝收到 3px，宽度由列宽算出来约 26-27px，
+       既不再折行，也比写死 25px 更能吃满——列宽变化时跟着走。 */
+    html[data-view="list"] .sc-lv {
+        flex-wrap: nowrap;
+        gap: 3px;
+    }
     html[data-view="list"] .sc-lv .lv {
-        width: 31px;
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
         height: 24px;
         font-size: 12.5px;
         border-radius: 7px;
