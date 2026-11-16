@@ -14,6 +14,11 @@
 // 【配额】图床三道闸：每天 1200 张、每小时 600 张、每分钟 120 张。
 // 脚本按 1200/590/115 自我节流（各留余量），日额度用完就明天再跑。
 // 配额、小时窗口与映射全部落盘，进程被杀也能断点续传，不会重算额度再撞 429。
+//
+// 【查重】上传前先把目标相册（默认 135 = Jubeat）的现有文件名拉成一册，同名的直接复用
+// 图床地址、不重传（主人 2026-11-16「上传到图床之前，先去看看相册有没有该照片」）。
+// 复用会同时写映射、把本地文件移进 archive/，但**不扣配额**——它根本没占一次上传。
+// 拉全册是每页 100 条的翻页 GET，比逐张查省得多；相册是空的或接口挂了就退化成全部上传。
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -23,6 +28,7 @@ const KEEP = path.join(ROOT, 'archive', 'materials', 'jackets');
 const MAP_FILE = path.join(ROOT, 'src', 'data', 'cdn.json');
 const QUOTA_FILE = path.join(ROOT, '.cdn-quota.json');
 const API = 'https://tc.mofashi.ltd/api/v1/upload';
+const LIST_API = 'https://tc.mofashi.ltd/api/v1/images';
 const DAILY_CAP = 1200;
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')));
@@ -30,6 +36,7 @@ const TOKEN = args.token || process.env.IMG_TOKEN || '';
 const LIMIT = Number(args.limit || 0) || Infinity;
 const CONCURRENCY = Number(args.concurrency || 4);
 const DRY = 'dry' in args;
+const ALBUM = String(args.album || 135);
 
 const readJson = (f, fb) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return fb; } };
 const map = readJson(MAP_FILE, { base: '', jackets: {} });
@@ -66,6 +73,25 @@ function buildJobs() {
   return jobs.sort((a, b) => a.target.localeCompare(b.target));
 }
 
+// 拉相册全册文件名 -> 图床地址。翻到 current_page >= last_page 即止；任何异常返回 null，
+// 调用方据此跳过查重（宁可贵一点重传，也别因为查重挂了整批停下）。
+async function fetchAlbumIndex(album) {
+  const seen = new Map();
+  for (let page = 1; page <= 40; page++) {
+    const res = await fetch(LIST_API + '?album_id=' + album + '&per_page=100&page=' + page, {
+      headers: { Accept: 'application/json', Authorization: 'Bearer ' + TOKEN },
+    });
+    if (!res.ok) return null;
+    let json; try { json = await res.json(); } catch { return null; }
+    const rows = json?.data?.data;
+    if (!Array.isArray(rows)) return null;
+    for (const r of rows) if (r?.origin_name && r?.links?.url) seen.set(r.origin_name, r.links.url);
+    const last = json?.data?.last_page || 1;
+    if (page >= last || rows.length === 0) break;
+  }
+  return seen;
+}
+
 async function uploadOne(job) {
   const form = new FormData();
   form.append('file', new Blob([fs.readFileSync(job.src)]), job.target);
@@ -90,10 +116,31 @@ async function uploadOne(job) {
 }
 
 async function main() {
-  const all = buildJobs();
-  console.log('待传 ' + all.length + ' 张曲绘；今日已用 ' + quota.count + '/' + DAILY_CAP);
-  if (DRY) { all.slice(0, 8).forEach((j) => console.log('  ' + j.cover + ' -> ' + j.target)); return 0; }
+  const pending = buildJobs();
+  console.log('待传 ' + pending.length + ' 张曲绘；今日已用 ' + quota.count + '/' + DAILY_CAP);
+  if (DRY) { pending.slice(0, 8).forEach((j) => console.log('  ' + j.cover + ' -> ' + j.target)); return 0; }
   fs.mkdirSync(KEEP, { recursive: true });
+
+  // 查重：相册里已有的直接复用地址，不重传、不扣配额。索引拿不到就整批照传。
+  let all = pending;
+  let reused = 0;
+  if (pending.length) {
+    const idx = await fetchAlbumIndex(ALBUM);
+    if (idx) {
+      all = [];
+      for (const job of pending) {
+        const hit = idx.get(job.target);
+        if (!hit) { all.push(job); continue; }
+        map.jackets[job.target] = hit;
+        try { fs.renameSync(job.src, path.join(KEEP, job.cover)); } catch {}
+        reused++;
+      }
+      saveMap();
+      console.log('相册已有 ' + reused + ' 张，复用不重传；实传 ' + all.length + ' 张');
+    } else {
+      console.log('相册索引拉取失败（' + LIST_API + '），本次不查重');
+    }
+  }
 
   // 【节流】服务端两道上限：120 张/分钟、600 张/小时（主人 2026-11-15 补的）。
   // 撞上去只会连续吃 429，所以两条都主动排队、各留 5 张余量吸收并发抖动。

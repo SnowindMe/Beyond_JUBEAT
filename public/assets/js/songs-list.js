@@ -1426,6 +1426,22 @@
             throw err;
           });
       }
+      /* 【2026-11-16 修】片段落地时没人按「限时曲默认隐藏」处理卡片：
+         无筛选的路径里 loadFrag 只插 DOM、不调 apply（apply 只在 hasFilters() 时调），
+         于是新插进来的卡片 hidden 默认 false，已结束的限时曲直接露在页面上——
+         用户看到「刷新后限时曲是可见的，只有一筛选才消失」（主人 2026-11-16 报的正是这个）。
+         首屏那批没这问题，因为启动时 apply() 会过一遍。
+         这里只补「藏起来」这一件事，不整套跑 apply：命中数/排序在无筛选时都不变，
+         而段头那句「N 首」服务端按可见数写好了（GenBlock 的 visibleCount）。
+         有筛选的路径不调它 —— 那边由 apply() 统一算，重复设 hidden 只会多一遍遍历。 */
+      function hideEndedLimited(node) {
+        if (state.showLimited) return;
+        var cards = node.querySelectorAll('.sc-card');
+        for (var k = 0; k < cards.length; k++) {
+          if (isEndedLimited(cards[k])) cards[k].hidden = true;
+        }
+      }
+
       /** 拉齐所有骨架（筛选用）。并发 3：每一段都是一次 SSR，太多会把 Worker 打回原形。 */
       function ensureAll() {
         var list = root.querySelectorAll('.sc-gen-ph');
@@ -1458,10 +1474,11 @@
             if (!e.isIntersecting) continue;
             io.unobserve(e.target);
             loadFrag(e.target)
-              .then(function () {
+              .then(function (node) {
                 // 若此刻有筛选条件，新到的卡片要重新参与匹配：
                 // 把状态打回 0，让 apply 的守卫去走「先补拉再一次算完」
                 if (hasFilters()) { lazyState = 0; apply(); }
+                else hideEndedLimited(node);
               })
               .catch(function () {});
           }

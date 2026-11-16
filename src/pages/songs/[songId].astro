@@ -383,10 +383,15 @@ const metaFoot: Meta[] = song
         {/* 【2026-11-09 别名块】玩家给曲目起的俗称（喇叭口、通称），参与全站搜索。
             主人定的位置：曲绘 / 播放条**下面**，不挤在曲名与艺人之间——
             曲名与艺人是「这首叫什么、谁做的」，别名是附注，压到作品信息之后才不打断阅读。
-            未登录也整块渲染：访客看得见别人怎么叫这首，只是加不了。 */}
+            未登录也整块渲染：访客看得见别人怎么叫这首，只是加不了。
+            【2026-11-16 主人「顺便把歌曲详情页的别名模块先隐藏了」】
+            用 hidden 藏起来而不是删：数据与交互都还是死的静态示例（「喇叭口」那三条写死在
+            模板里，提交按钮没接接口），先不占版面。恢复时只去掉这里的 hidden 与下面那条
+            注释里的 .sd-alias[hidden] 规则即可；grid-template-areas 的 alias 行留着不动，
+            它只是多出一个零高的行，不影响别的行。 */}
       </div>
 
-        <section class="sd-alias" aria-labelledby="sdAliasH">
+        <section class="sd-alias" aria-labelledby="sdAliasH" hidden>
           <div class="sd-alias-head">
             <h2 class="sd-alias-h" id="sdAliasH">别名</h2>
             <span class="sd-alias-n">3</span>

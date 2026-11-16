@@ -23,7 +23,7 @@ import { pageTitle } from '../lib/title';
 import site from '../data/site.json';
 import { GEN_ORDER, GEN_JP, GEN_CN } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/song-data';
-import { CATS, catOf, countedIn, isPickUp, todayISO, viewRows, type Srv } from '../lib/song-view';
+import { CATS, catOf, countedIn, isLimitedEnded, isPickUp, todayISO, viewRows, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
@@ -70,12 +70,13 @@ const CAT_GENS: Record<string, Record<string, string[]>> = {
 };
 // 服务器卡：卡片内 logo 在上、服务器名在下（主人 2026-10-21 指定）。
 // 国际服已移除（主人 2026-10-22）：曲库没有独立国际服数据，入口留着只会误导。
-// latest = 该服最近一次收录新曲的日期（主人 2026-11-14 给出：日服 2026-09-20、国服 2026-10-29）。
+// latest = 该服最近一次收录新曲的日期（主人 2026-11-14 给出：日服 2026-09-20、国服 2026-10-29；
+// 国服 2026-11-16 上新后由本人改为同日，与 jubility.astro 同值同源）。
 // 曲库数据里没有「收录日」这一列，也推不出来，所以是常量；某一服上新后要手动改这里。
 // 文案主人定的是「Latest：」（首版写成 Lastest，2026-11-14 当场纠正）。
 const SRV_CARDS = [
   { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
-  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-10-29' },
+  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
 ] as const;
 
 // 按 视图服务器 → 分区 → 世代 建桶。
@@ -159,6 +160,12 @@ for (const srv of ['jp', 'cn'] as const) {
 // 判据改成「该视图下这个世代桶非空」，与是谁的世代无关；空世代仍然不出现。
 const srvGenOrder = (srv: Srv) =>
   GEN_ORDER.map((g) => g.k).filter((k) => (byGen[srv][k] || []).length > 0);
+
+/* 骨架块头那个「N 首」要与真卡片的可见数一致（2026-11-16 主人指出）：
+   默认藏掉的已结束限时曲不能算进去，否则骨架写「105 首」、换成真卡片后变「103 首」。
+   data-count 同时是占位高度的估算输入，用可见数也只会让估算更准。 */
+const visibleCountOf = (srv: Srv, gen: string) =>
+  (byGen[srv][gen] || []).filter((s) => !isLimitedEnded(s)).length;
 
 // 计数必须与实际渲染同一套口径，否则就会出现「标题 524、页面 523」这种自相矛盾
 // （本轮实测：去重过滤器只加在渲染循环里，countOf/srvTotal 还在裸数 ALL）。
@@ -678,7 +685,7 @@ const TYPES = [
             ) : (
               /* 首屏之外的世代：只出骨架。真实卡片由 /songs/frag 在滚到时补上（见页面末尾脚本）。
                  data-count 让脚本算得出精确占位高度 —— 骨架块长得和真块一样高，滚动后不会跳。 */
-              <GenSkeleton gen={gen} date={dateOf(gen)} count={(byGen[srv][gen] || []).length} srv={srv} />
+              <GenSkeleton gen={gen} date={dateOf(gen)} count={visibleCountOf(srv, gen)} srv={srv} />
             )
           )}
         </section>

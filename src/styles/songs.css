@@ -1825,6 +1825,12 @@ html[data-bgm="playing"] .sd-disc-spin {
    无底色差、无投影，行间只用极淡细线。
    位置：grid-area:alias 独占一行横跨两栏（做法同 .sd-gauge），
    横向天然从内容区左缘起，不再挤在右栏贴右。 */
+/* 【2026-11-16 主人「顺便把别名模块先隐藏了」】hidden 属性在网格项上照常生效，
+   但 .sd-alias 自带 margin-top / border-left，display 被重置回 block 后仍会占位，
+   所以这里补一条 display:none。整块的样式全部保留，恢复只删模板上的 hidden 与此条。 */
+.sd-alias[hidden] {
+    display: none;
+}
 .sd-alias {
     grid-area: alias;
     /* 网格行间距已给 var(--sd-row-gap)，这里减回去，净气口才是目标值 */
