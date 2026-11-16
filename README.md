@@ -222,7 +222,7 @@ CSP 目前是 **Report-Only**（只报不拦），报告发到 `/api/csp-report`
 
 **缓存写入必须挂 `waitUntil`**：`cache.put` 既不能 `await`（整张图要等落盘才回，白搭一次往返），也不能裸调不接（响应一交出去、这次请求就被判结束，put 被掐掉，于是每次都 MISS、每次都回源）。做法与 `src/middleware.ts`、`api/audio/[songId].ts` 一致：交给 `locals.cfContext.waitUntil`，请求生命周期撑到写盘结束，但不占本次响应耗时。改前 8 并发 16 张 p50 1877ms、同批二次请求仍全 MISS；改后同批二次请求 p50 1348ms、单张连打三次 146/258/286ms。
 
-**迁移状态（2026-11-15）**：已上传 1194 张、映射同数，仓库里那部分图已删（本地副本在 `archive/materials/jackets/`）。剩 54 张因当日 1200 张配额用尽暂停，暂留仓库——它们仍靠回退路径出图，**传完并确认映射后才可以删**。
+**迁移状态（2026-11-16 迁完）**：全部曲绘 1255 张已上传、映射同数，`public/assets/images/jackets/` 已空（本地副本全在 `archive/materials/jackets/`）。这批分三轮跑：2026-11-15 传 1194 张后撞日配额停下，2026-11-16 补最後 61 张。**回退路径仍在**（映射缺失才走），所以删本地图前必须确认映射已落盘并能在线上取到。
 
 - **规范名 = `id<歌id>.webp`**。本地文件、`songs.cover`、映射键、CDN 落盘名四处同名，换床或回滚能逐条对上；不是 `idN` 形态的老 hash 名已在 2026-11-15 全量改名。
 - 上传用 `node scripts/cdn-jackets.cjs`：按 `songs.json` 顺序补缺、逐张写映射、把本地原图 rename 进 `archive/materials/jackets/`（本地留档，不入库）。配额与断点存 `.cdn-quota.json`。
