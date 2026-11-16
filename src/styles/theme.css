@@ -274,7 +274,11 @@ img {
 /* ---------- top ---------- */
 .top {
     position: relative;
-    z-index: 2;
+    /* 【2026-11-16 修】原来是 2。曲目页的吸顶世代标题 .sc-gen-h 是 z-index 3，
+       列表排列下它一滚到顶就压住顶栏的两个弹层（主题切换 .tsw-pop、账户菜单 .acm-pop）——
+       弹层自己的 z-index 再高也没用，因为父级 .top 只有 2，子元素的层序出不了父级。
+       抬到 4（> 3）让顶栏与其所有弹层整体压在吸顶条之上：顶栏本来就在最上层。 */
+    z-index: 4;
     display: flex;
     align-items: center;
     justify-content: space-between;
