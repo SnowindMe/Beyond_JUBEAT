@@ -58,7 +58,7 @@
         q: '',
         gen: 'all',
           diff: '',     // '' = 不按难度档筛 | bsc | adv | ext
-        band: 'all',   // all | lt7 | 7 | 8 | 9 | 9p | 10 | 10p（2026-10-28 改八档）
+        band: 'lt7',   // lt7（默认=不限制）| 7 | 8 | 9 | 9p | 10 | 10p（2026-11-17 改滑块）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
         showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
         type: 'all',   // all | std | hold | alt2（2026-10-31 谱面类型，见卡片 data-hh / data-alt）
@@ -91,7 +91,7 @@
         q: null,            // 搜索词任意字符串
         gen: null,
         diff: ['', 'bsc', 'adv', 'ext'],
-        band: ['all', 'lt7', '7', '8', '9', '9p', '10', '10p'],
+        band: ['lt7', '7', '8', '9', '9p', '10', '10p'],
         scope: ['all', 'pick', 'common'],
         showLimited: ['boolean'],
         type: ['all', 'std', 'hold', 'alt2'],
@@ -155,8 +155,10 @@
             nodes[i].setAttribute('aria-pressed', hit ? 'true' : 'false');
           }
         }
-        pick('[data-diff]', 'data-diff', state.diff);
-        pick('[data-band]', 'data-band', state.band);
+        // 难度是下拉：值写到 select，可见文字与列表勾选交给 ddSync。
+        // 区间是滑块：位置/读数/刻度高亮由 syncBandUI 一处算（含"难度为空就整块藏起来"）。
+        var dSel = document.getElementById('scDiff'); if (dSel) dSel.value = state.diff;
+        syncBandUI();
         pick('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', 'data-cat', state.cat);
         pick('.sc-scope-set[data-srv="' + state.srv + '"] .sc-chip', 'data-scope', state.scope);
         // 日期控件在下面的日历块里定义，这里只调它；此刻日历可能还没初始化（函数已提升、状态已就绪即可）
@@ -165,8 +167,17 @@
         ddRefresh();
       }
 
-      // 定数区间：与页面上那八档按钮一一对应，改这里必须同步改模板里的 BANDS。
-      // 语义见文件上方 BANDS 定义的注释（7 / 8 是整段，9 / 10 各拆 X 与 X+ 半段）。
+      // 定数区间：滑块七个刻度，值域与模板里 BANDS.slice(1) 一一对应（BAND_KEYS / BAND_LABELS 同序）。
+      //
+      // 【2026-11-17】这两行是**互斥的档**，不是"从这一档往上"——滑块只是换了个控件形态，
+      // 每一格的语义没变。主人原话：「这个滑块选择类似于挡位，比如说你选择【10】，
+      // 并不是 10.0 及其以下，而是 10.0 - 10.4 这个区间」。
+      // 所以「10」只命中 10.0~10.4、「10+」才是 10.5 以上；最左「7-」是 7 以下。
+      // 每档边界互不重叠、合起来 100% 覆盖（详见 songs.astro 里 BANDS 的注释）。
+      // 刻度索引 0..6 直接对应下面这七个键。
+      // 最左「7-」是默认值，等价于"不按区间收窄"——所以下面的判据都把 lt7 当未选。
+      var BAND_KEYS = ['lt7', '7', '8', '9', '9p', '10', '10p'];
+      var BAND_LABELS = ['7-', '7', '8', '9', '9+', '10', '10+'];
       var BANDS = {
         lt7: function (v) { return v < 7; },
         '7': function (v) { return v >= 7 && v < 8; },
@@ -313,25 +324,29 @@
         //   ② 选了难度档、没选定数区间   → 该档有值即命中
         //   ③ 选了定数区间（无论有没有选难度档）→ 在候选档位里找，任一档的定数值落在区间内即命中
         // 情况③是这次真正修好的地方：定数区间可以独立使用，不再被难度档绑架。
-        var bandOn = state.band !== 'all';
+        // 【2026-11-17 重做：难度改成下拉、区间改成滑块，两者从"可以各自独立"变成"主控 + 下钻"】
+        // 难度「全部」= 不按难度筛（state.diff 是空串），区间那一块此时在页面上不出现，
+        // state.band 也会被复位成 'all'，所以这里只剩两种情况：
+        //   ① state.diff 为空                → 这一段不过滤
+        //   ② 选了某一档（区间必然在 7- 或更右）→ 该档的值必须落进区间
+        // 旧的「只选区间、不选难度」分支（遍历三档任一命中）保留成兜底：
+        // 老存档里可能还留着 diff='' + band='9p'，不认它就会表现为"存档有筛选却全放开"。
         var diffOn = state.diff !== DIFF_NONE_INLINE && state.diff !== 'all';
+        var bandOn = state.band !== 'all' && state.band !== 'lt7';
 
-        if (!bandOn && !diffOn) return true;            // ① 两者都没选
-
-        if (diffOn) {
-          var vOne = lvOf(card, state.diff);
-          if (vOne === null) return false;              // ② 缺这一档：不命中
-          return bandOn ? BANDS[state.band](vOne) : true;
+        if (!diffOn) {
+          if (!bandOn) return true;
+          var diffs0 = ['bsc', 'adv', 'ext'];
+          for (var d0 = 0; d0 < diffs0.length; d0++) {
+            var v0 = lvOf(card, diffs0[d0]);
+            if (v0 !== null && BANDS[state.band](v0)) return true;
+          }
+          return false;
         }
 
-        // ③ 只选了定数区间：BSC/ADV/EXT 任一档落在区间内就算命中。
-        // 注意「缺这一档」的卡（定数为 null）不算命中——空串不是 0，不能拿去比区间。
-        var diffs = ['bsc', 'adv', 'ext'];
-        for (var di = 0; di < diffs.length; di++) {
-          var vAny = lvOf(card, diffs[di]);
-          if (vAny !== null && BANDS[state.band](vAny)) return true;
-        }
-        return false;
+        var vOne = lvOf(card, state.diff);
+        if (vOne === null) return false;                // 缺这一档：不命中
+        return bandOn ? BANDS[state.band](vOne) : true;
       }
 
       // ---- 排序：只写 style.order ----
@@ -568,7 +583,7 @@
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
                           (state.diff !== '' ? 1 : 0) +
-                          (state.band !== 'all' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
+                          (state.band !== 'all' && state.band !== 'lt7' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
           (state.type !== 'all' ? 1 : 0) + (state.date ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
@@ -1144,6 +1159,43 @@
         ddSync(dd);
       });
 
+      // ---- 定数区间滑块（2026-11-17）----
+      // 控件本身是原生 <input type=range>：键盘/读屏/触屏拖动都是白送的，
+      // 视觉由 .sc-band 系列重画（原生轨道太细、拇指在不同系统上长得不一样）。
+      // 刻度那排 <span> 是纯展示（aria-hidden），点击也认——点数字比拖准得多。
+      var bandWrap = document.getElementById('scBandWrap');
+      var bandIn = document.getElementById('scBand');
+      var bandV = document.getElementById('scBandV');
+      var bandTicks = root.querySelectorAll('.sc-band-ticks [data-i]');
+      function setBandIdx(i) {
+        var k = BAND_KEYS[Math.max(0, Math.min(BAND_KEYS.length - 1, i | 0))];
+        state.band = k;
+        syncBandUI();
+      }
+      /** state.band → 滑块位置 / 读数 / 刻度高亮 /「是否露出整块」。 */
+      function syncBandUI() {
+        var i = Math.max(0, BAND_KEYS.indexOf(state.band));
+        // state.band 有 'all'（老存档）时 indexOf 给 -1，落到 0 = 7-，正好是默认值。
+        if (bandIn) bandIn.value = String(i);
+        if (bandV) bandV.textContent = BAND_LABELS[i] || BAND_LABELS[0];
+        if (bandIn) bandIn.setAttribute('aria-valuetext', BAND_LABELS[i] || BAND_LABELS[0]);
+        for (var ti = 0; ti < bandTicks.length; ti++) {
+          bandTicks[ti].classList.toggle('is-on', ti <= i);
+        }
+        // 难度为「全部」时整块不出现：主控没选，下钻没有对象。
+        if (bandWrap) bandWrap.hidden = !state.diff;
+      }
+      if (bandTicks) {
+        for (var bi = 0; bi < bandTicks.length; bi++) {
+          bandTicks[bi].addEventListener('click', function (e) {
+            e.stopPropagation();
+            setBandIdx(parseInt(this.getAttribute('data-i'), 10) || 0);
+            apply();
+          });
+        }
+      }
+      syncBandUI();
+
       // ---- 上线日期日历（2026-11-16 主人要求「新增【上线日期】筛选（日历组件）…只能选择固定日期」）----
       // 为什么自绘而不是 <input type=date>：①原生弹层由系统画，和这套玻璃质感不合（同理由已让排序/世代改自绘）；
       // ②「非上线日期不可选」原生做不到（date 不能只禁用部分日期）。
@@ -1297,6 +1349,20 @@
         if (t.id === 'scGen') { state.gen = t.value; ddRefresh(); apply(); }
         else if (t.id === 'scSort') { state.sort = t.value; ddRefresh(); apply(); }
         else if (t.id === 'scType') { state.type = t.value; ddRefresh(); apply(); }
+        // 难度（下拉）：空串 = 全部。选全部时把区间整块收起来并复位成 7-，
+        // 否则会出现"看不见的条件还在生效"（难度全开、却被上一次的 10+ 卡着）。
+        else if (t.id === 'scDiff') {
+          state.diff = t.value;
+          ddRefresh();
+          if (!state.diff) setBandIdx(0);
+          syncBandUI();
+          apply();
+        }
+        // 区间（滑块）：索引 → BAND_KEYS 里的键。
+        else if (t.id === 'scBand') {
+          setBandIdx(parseInt(t.value, 10) || 0);
+          apply();
+        }
       });
 
       // ---- chip / 按钮：服务器、分区、难度档、区间、重置 ----
@@ -1311,7 +1377,7 @@
 
       function resetAll() {
         state.q = ''; state.gen = 'all';
-        state.diff = ''; state.band = 'all'; state.sort = DEFAULT_SORT_INLINE;
+        state.diff = ''; state.band = 'lt7'; state.sort = DEFAULT_SORT_INLINE;
         state.cat = 'all'; state.scope = 'all'; state.showLimited = false; state.type = 'all';
         state.date = '';
         // 按钮上的可见文字也要跟着回「全部日期」：只改 state 会留下上一次的日期，
@@ -1325,13 +1391,11 @@
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ti = document.getElementById('scType'); if (ti) ti.value = 'all';
         ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
-        // 难度档没有「全部」chip 了：重置 = 让所有 chip 都取消选中
-        var dChips = root.querySelectorAll('[data-diff]');
-        for (var dc = 0; dc < dChips.length; dc++) {
-          dChips[dc].classList.remove('is-on');
-          dChips[dc].setAttribute('aria-pressed', 'false');
-        }
-        setChipGroup('[data-band]', root.querySelector('[data-band="all"]'));
+        // 难度回「全部」= select 回空串；区间随之复位成 7- 并被收起（syncBandUI 统一做）。
+        var dRest = document.getElementById('scDiff');
+        if (dRest) dRest.value = '';
+        setBandIdx(0);
+        syncBandUI();
         var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');
         if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
         var scSet = root.querySelector('.sc-scope-set[data-srv="' + state.srv + '"]');
@@ -1454,34 +1518,6 @@
           apply(); return;
         }
 
-        var dChip = t.closest('[data-diff]');
-        if (dChip) {
-          // 【2026-10-30 删掉「全部档」后必须补这个：点已选中的档 = 取消选择】
-          // 原来「回到不筛」是靠点「全部档」这个 chip 实现的；chip 没了，
-          // 若不补这个开关，用户选了 EXT 就再也回不到"不按难度筛"的状态
-          // （只能点面板底部的重置全部，那会把其他条件一起清掉，太重）。
-          var clicked = dChip.getAttribute('data-diff');
-          if (state.diff === clicked) {
-            state.diff = '';
-            var chips = root.querySelectorAll('[data-diff]');
-            for (var ci = 0; ci < chips.length; ci++) {
-              chips[ci].classList.remove('is-on');
-              chips[ci].setAttribute('aria-pressed', 'false');
-            }
-          } else {
-            state.diff = clicked;
-            setChipGroup('[data-diff]', dChip);
-          }
-          apply(); return;
-        }
-
-        var bChip = t.closest('[data-band]');
-        if (bChip) {
-          state.band = bChip.getAttribute('data-band');
-          setChipGroup('[data-band]', bChip);
-          apply(); return;
-        }
-
         // 范围 chip（PICK UP / COMMON）：与分区 chip 一样「只认自己服务器那一套」
         var sChip = t.closest('[data-scope]');
         if (sChip) {
@@ -1510,7 +1546,7 @@
       function hasSkeletons() { return !!root.querySelector('.sc-gen-ph'); }
       function hasFilters() {
         return !!(state.q || state.cat !== 'all' || state.gen !== 'all' || state.diff ||
-          state.band !== 'all' || state.scope !== 'all' || state.type !== 'all' || state.date);
+          (state.band !== 'all' && state.band !== 'lt7') || state.scope !== 'all' || state.type !== 'all' || state.date);
       }
       /** 把一个骨架块换成真实世代块。失败时保留骨架（比留一片空白好）。 */
       function loadFrag(ph) {

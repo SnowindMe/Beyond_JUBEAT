@@ -3014,34 +3014,145 @@ html[data-lum="light"] .sd-gauge {
     grid-column: 1 / -1;
 }
 
-/* ---------- 难度档 + 定数区间 合成一组（2026-10-30 主人：「给难度档、定数区间套一个框在一起，
-   边框显示颜色」） ---------- */
-/* 这两项是同一条筛选轴的两级：难度档决定「哪一档谱面」，定数区间决定「那一档里哪个数值段」。
-   拆成两个平铺区块时读者要自己建立联系；套一个框就在视觉上把它们绑成一件事。
-   配色用 --acc（当前世代主题色）的淡边 + 极浅底：既和页面主题呼应，又不抢 chip 本身的强调色。 */
-.sc-pf-box {
+/* ---------- 难度（下拉）+ 定数区间（滑块），并成一行（2026-11-17 主人指定） ----------
+   2026-10-30 那版是"套一个框 + 两半各占一行 + chip"。这一版去掉了框（主人：
+   「去除难度和定数区间下面的div」），也换了控件：难度是下拉（主控）、区间是滑块（下钻）。
+   为什么并成一行而不是各占一行：区间是难度的下属维度，紧挨着读才对得上；
+   一行里主控窄、下钻宽，视觉上直接说明了松紧关系。 */
+.sc-diffrow {
     display: flex;
     flex-direction: row;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: 10px 18px;
-    padding: 10px 12px 11px;
-    border: 1px solid color-mix(in srgb, var(--acc) 38%, var(--edge));
-    border-radius: var(--r-md);
-    background: color-mix(in srgb, var(--acc) 5%, transparent);
 }
-/* 框内两半各自竖排（标签在上、chips 在下），与框外 .sc-pf 的排布一致 */
-.sc-pf-half {
+/* 主控（难度）：只占内容宽，不抢空间 */
+.sc-diffrow-main {
+    flex: 0 0 auto;
+    /* 与下拉同宽即可，别被 .sc-pf 的 stretch 拉满整行 */
+    width: 132px;
+}
+/* 下钻（区间）：吃掉剩余宽度，压在难度右边同一行 */
+.sc-diffrow-band {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+/* 整块都没选时由脚本置 hidden；hidden 在 flex 子项上 display 会被重置，必须显式写 */
+.sc-diffrow-band[hidden] {
+    display: none;
+}
+
+/* 滑块：原生 input 只留交互，轨道/拇指/刻度全部自绘。
+   刻度那排同时是"可以被点"的快捷位——拖到 10+ 要横跨整条，点一下数字快得多。 */
+.sc-band {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 0;
     min-width: 0;
-    /* 定数区间有 8 个 chip，比难度档宽得多：让它优先占剩余宽度，
-       窄屏放不下时自然折到下一行（flex-wrap 已开）。 */
-    flex: 1 1 auto;
 }
-/* 难度档只有 4 个 chip（含"全部档"），不需要抢宽度 */
-.sc-pf-half:first-child {
-    flex: 0 1 auto;
+.sc-band-rail {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+/* 标题行：组标题 + 当前挡位徽章（2026-11-17 主人「滑到的刻度数字可以做个小徽章放在标题的右边」）。
+   读数从滑条右端搬到标题行后，成了"当前值"的常驻展示位，所以给它徽章的形：
+   强调色描边 + 等宽数字，与卡片上的定数徽章同一套语汇。 */
+.sc-band-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+}
+.sc-band-in {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;          /* 触控下限，与 .sc-chip / .sc-dd-b 一致 */
+    /* 44px 是给手指的，视觉上轨道居在中间、上方会空一大截；
+       刻度搬到上面后要把这段空收掉，用负 margin 抵，触控高度不变。 */
+    margin: -8px 0 0;
+    background: transparent;
+    cursor: pointer;
+}
+.sc-band-in::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.sc-band-in::-moz-range-track {
+    height: 4px;
+    border-radius: var(--pill);
+    background: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.sc-band-in::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    margin-top: -6px;      /* (4 - 16) / 2：拇指压在轨道正中 */
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--acc) 70%, transparent);
+    background: var(--acc);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+    transition: transform 0.14s ease;
+}
+.sc-band-in::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--acc) 70%, transparent);
+    background: var(--acc);
+}
+.sc-band-in:active::-webkit-slider-thumb {
+    transform: scale(1.12);
+}
+.sc-band-in:focus-visible {
+    outline: none;
+}
+.sc-band-in:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 38%, transparent);
+}
+/* 读数徽章：拖动时只有这一处变化，眼睛不用跟着拇指跑 */
+.sc-band-v {
+    flex: none;
+    min-width: 30px;
+    padding: 1px 7px;
+    text-align: center;
+    border-radius: var(--r-hair);
+    border: 1px solid color-mix(in srgb, var(--acc) 46%, transparent);
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    font-family: var(--font-data);
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+    color: var(--acc-ink, var(--ink));
+}
+/* 刻度：住在滑条**上方**（2026-11-17 主人「这些挡位表示可以放到滑条上面」）。
+   仍靠左右 padding 对齐拇指行程、等宽排布让每一格位置正对刻度值；
+   字号压到 10px，7 格在窄屏（可用宽 ~200）也不会挤在一起。 */
+.sc-band-ticks {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px 2px;
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink3);
+}
+.sc-band-ticks span {
+    cursor: pointer;
+    padding: 2px 3px;
+    border-radius: var(--r-hair);
+    transition: color 0.16s;
+}
+.sc-band-ticks span:hover {
+    color: var(--ink);
+}
+.sc-band-ticks span.is-on {
+    color: var(--acc-ink, var(--ink));
 }
 /* 组标题：统一成"小节标签"——左侧一条 2px 强调色竖线 + 文字，
    比原来的全大写小字更好认，也和数据卡片上的分区标签同一套语汇。 */
@@ -3674,6 +3785,17 @@ html[data-lum="light"] .sd-gauge {
     /* 窄屏：这四项排成 2×2（主人 2026-11-16「移动端与这三项组成 2×2 也排最后」） */
     .sc-pf-row {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    /* 难度+区间在窄屏仍要保持同一行：主控收到 104px、下钻 basis 归零让它只按剩余空间长，
+       否则 132+18+220 的基准宽超过面板内宽（354），flex-wrap 直接把区间甩到下一行。 */
+    .sc-diffrow {
+        gap: 8px 10px;
+    }
+    .sc-diffrow-main {
+        width: 104px;
+    }
+    .sc-diffrow-band {
+        flex: 1 1 0;
     }
     /* 日历在窄屏更靠下，弹层宽度跟着视口收，但不超出按钮。
        2×2 里它固定在右列，右对齐才不会从视口右边溢出（实测 left:0 会贴到 448/448）。 */

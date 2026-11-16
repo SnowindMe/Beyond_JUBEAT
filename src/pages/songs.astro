@@ -270,7 +270,12 @@ const FIRST_LOAD: Record<Srv, Set<string>> = { jp: firstLoadGens('jp'), cn: firs
 // 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 CONTEXT.md）
 const GEN_OPTS = GEN_ORDER;
 
-// 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BANDS 一一对应，改一处必须改两处。
+// 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BAND_KEYS / BANDS 一一对应，改一处必须改两处。
+//
+// 【2026-11-17 难度与区间换控件】难度改成下拉（全部 / BSC / ADV / EXT），区间改成滑块
+// （7- 7 8 9 9+ 10 10+）。滑块只是换了形态，每格仍是**互斥的档**（10 = 10.0~10.4），
+// 主人原话：「这个滑块选择类似于挡位，比如说你选择【10】，并不是 10.0 及其以下，
+// 而是 10.0 - 10.4 这个区间」。模板里刻度用 BANDS.slice(1)——滑块轴上不需要「全部」那一格。
 //
 // 【2026-10-28 主人改档位】原五档（7.0 以下 / 7.x / 8.x / 9.x / 10.0 以上）
 // 改成八档：全部、7-、7、8、9、9+、10、10+。
@@ -532,22 +537,51 @@ const TYPES = [
             顺序也按主人要求改成 **难度档 → 定数区间 → 限时曲**（原来是限时曲在最前）。
             理由同样：先定"哪一档"，再定"哪个数值段"，最后才是"要不要把已过期的也算进来"
             —— 限时曲是全局开关，不是这条轴的一部分，所以留在框外面。 */}
-        <div class="sc-pf sc-pf-wide sc-pf-box">
-          <div class="sc-pf-half">
-            <span class="sc-pf-k">难度档</span>
-            <div class="sc-pf-chips" role="group" aria-label="按难度档筛选">
-              {/* 默认一个都不选（主人：「默认不选」），所以这里没有初始 is-on */}
-              {DIFFS.map((d) => (
-                <button type="button" class="sc-chip sc-chip-sm" data-diff={d.v} aria-pressed="false">{d.label}</button>
-              ))}
+        {/* 【2026-11-17 难度 / 定数区间重做（主人指定形态）】
+            原样：外面套一个 .sc-pf-box 框、框内两半各自占一整行、难度是 3 个 chip、区间是 8 个 chip。
+            现在：①去掉那个框（它是"隔开上下"的壳，主人要求「去除难度和定数区间下面的div」）；
+                  ②两项并成一行——难度是主控、区间是它的下钻，主控在左、下钻在右；
+                  ③难度改成下拉菜单（全部 / BSC / ADV / EXT，默认「全部」），与排序、世代同一套 .sc-dd
+                    （原来是 chip，靠"再点一次取消"回到不筛；下拉里「全部」就是那个出口，更直白）；
+                  ④区间改成滑块（7- 7 8 9 9+ 10 10+，默认 7-）——八档 chip 在窄屏要折两行，
+                    而它本来就是一根单调轴（"从某一档往上"），滑块正好是这个语义。
+                  ⑤难度为「全部」时区间整块不出现（主控没选，下钻没有对象），
+                    同时 state.band 复位成 'all'，避免"看不见的条件还在生效"。 */}
+        <div class="sc-pf sc-pf-wide sc-diffrow">
+          <div class="sc-pf sc-diffrow-main">
+            <span class="sc-pf-k" id="scDiffK">难度</span>
+            <div class="sc-dd" data-dd="scDiff">
+              <button type="button" class="sc-dd-b" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="scDiffK">
+                <span class="sc-dd-v">全部</span>
+                <svg class="sc-dd-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+              </button>
+              <select id="scDiff" class="sc-dd-sel" aria-label="按难度筛选" tabindex="-1" aria-hidden="true">
+                <option value="" selected>全部</option>
+                {DIFFS.map((d) => <option value={d.v}>{d.label}</option>)}
+              </select>
+              <ul class="sc-dd-list" role="listbox" aria-labelledby="scDiffK" hidden>
+                <li role="option" data-v="" aria-selected="true">全部</li>
+                {DIFFS.map((d) => <li role="option" data-v={d.v} aria-selected="false">{d.label}</li>)}
+              </ul>
             </div>
           </div>
-          <div class="sc-pf-half">
-            <span class="sc-pf-k">定数区间</span>
-            <div class="sc-pf-chips" role="group" aria-label="按定数区间筛选">
-              {BANDS.map((b) => (
-                <button type="button" class={`sc-chip sc-chip-sm${b.v === 'all' ? ' is-on' : ''}`} data-band={b.v} aria-pressed={b.v === 'all' ? 'true' : 'false'}>{b.label}</button>
-              ))}
+          {/* 区间：BANDS 的第一项是旧的「全部」，滑块轴上不需要它（有它就有个"什么都不选"的中间态，
+              而难度一旦选了就必然有一个档），所以模板里 slice(1)，脚本侧的 BAND_KEYS 同样从 lt7 起。 */}
+          <div class="sc-pf sc-diffrow-band" id="scBandWrap" hidden>
+            {/* 当前挡位做成标题右边的小徽章（2026-11-17 主人指定）：读数紧贴「定数区间」，
+                拖动时视线不用来回跑；挡位数字本身则上移到滑条上方那排刻度里。 */}
+            <span class="sc-band-head">
+              <span class="sc-pf-k" id="scBandK">定数区间</span>
+              <output class="sc-band-v" id="scBandV" for="scBand">7-</output>
+            </span>
+            <div class="sc-band">
+              <div class="sc-band-ticks" aria-hidden="true">
+                {BANDS.slice(1).map((b, i) => <span data-i={i} class={i === 0 ? 'is-on' : ''}>{b.label}</span>)}
+              </div>
+              <div class="sc-band-rail">
+                <input type="range" id="scBand" class="sc-band-in" min="0" max="6" step="1" value="0"
+                  aria-labelledby="scBandK" aria-valuetext="7-" />
+              </div>
             </div>
           </div>
         </div>
