@@ -1621,7 +1621,12 @@
                屏幕上全是 bass 搜不到的曲。所以先就地按当前条件筛一遍再插入，
                逐张卡调同一个 matchCard，判据不另写一份。 */
             if (hasFilters()) {
-              var srvOfNode = node.getAttribute('data-srv') || 'jp';
+              /* 【2026-11-17 修】原取 node 的 data-srv，但 GenBlock 根节点根本没有这个属性，
+                 于是恒回落 'jp' —— 国服视图下所有片段卡都按日服列（data-djp，整列为空）
+                 判成不匹配，整块被 hidden、段头写「0 首」。表现为移动端筛日期只出 8 首、
+                 桌面反而对（桌面等骨架滚完、由 apply 用对的 srv 重算过一遍）。
+                 骨架 ph 上带 data-srv，优先用它；node 那份留作将来 GenBlock 补属性后的快路径。 */
+              var srvOfNode = node.getAttribute('data-srv') || ph.getAttribute('data-srv') || 'jp';
               var incoming = node.querySelectorAll('.sc-card');
               var kept = 0;
               for (var ci = 0; ci < incoming.length; ci++) {
