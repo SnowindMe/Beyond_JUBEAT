@@ -100,7 +100,9 @@ async function liveVersion() {
       headers: { 'cache-control': 'no-cache', 'user-agent': UA },
     });
     const html = await res.text();
-    return (html.match(/v(\d+\.\d+\.\d+)/) || [])[1] || '';
+    // 【只认页脚版本徽章，别用裸 /v\d+\.\d+\.\d+/】2026-11-17 CI 实撞：页面里还有代码注释
+    // 写着「实撞（v1.19.0）」，裸正则先命中它，明明源站已是 1.64.72 却判成 1.19.0，白等满 5 分钟超时。
+    return (html.match(/class="foot-badge foot-ver"[^>]*>v(\d+\.\d+\.\d+)</) || [])[1] || '';
   } catch {
     return '';
   }
