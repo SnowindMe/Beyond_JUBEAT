@@ -33,6 +33,7 @@ const SERVICE = 'teo';
 const ACTION = 'CreatePurgeTask';
 const VERSION = '2022-09-01';
 const ORIGIN = 'https://wiki.byd-ub.top/'; // 直连 CF 的源站域名，绕过 EdgeOne
+const UA = 'Mozilla/5.0 (compatible; jb-wiki-purge/1.0)';
 const WAIT_MS = 5 * 60 * 1000;
 const POLL_MS = 10 * 1000;
 
@@ -93,7 +94,11 @@ function sign(payload) {
 /** 读源站页脚版本号（直连 CF）。取不到就当还没上线 */
 async function liveVersion() {
   try {
-    const res = await fetch(ORIGIN + '?_=' + Date.now(), { headers: { 'cache-control': 'no-cache' } });
+    const res = await fetch(ORIGIN + '?_=' + Date.now(), {
+      // 这个 zone 开着 Browser Integrity Check，裸 UA 的请求会被打成 403 challenge，
+      // CI 里就更明显（GitHub runner 的出口 IP 常年被 CF 盯着），所以固定带一个浏览器 UA。
+      headers: { 'cache-control': 'no-cache', 'user-agent': UA },
+    });
     const html = await res.text();
     return (html.match(/v(\d+\.\d+\.\d+)/) || [])[1] || '';
   } catch {
@@ -116,18 +121,22 @@ async function waitForVersion() {
 }
 
 const payload = { ZoneId: zone, Type: 'purge_all' };
-const req = dry ? { body: JSON.stringify(payload), headers: sign(payload).headers } : sign(payload);
-
-if (!dry && !now) {
-  const v = await waitForVersion();
-  console.log(`[purge] 源站已是 v${v}，开始刷新 EdgeOne 站点 ${zone}`);
-}
 
 if (dry) {
+  const req = sign(payload);
   console.log('[purge] dry run，请求体：' + req.body);
   console.log('[purge] 头：' + JSON.stringify(req.headers, null, 2));
   process.exit(0);
 }
+
+// 【签名必须放在等待之后】TC3 的 X-TC-Timestamp 只有 5 分钟有效期，等待最长 5 分钟，
+// 先签再等就会签出过期请求（2026-11-17 CI 首次真跑即撞 AuthFailure.SignatureExpire：
+// 等完 5 分钟超时后拿 300 秒前的戳去请求，服务器判签名过期）。
+if (!now) {
+  const v = await waitForVersion();
+  console.log(`[purge] 源站已是 v${v}，开始刷新 EdgeOne 站点 ${zone}`);
+}
+const req = sign(payload);
 
 const res = await fetch(`https://${HOST}/`, { method: 'POST', headers: req.headers, body: req.body });
 const json = await res.json();
