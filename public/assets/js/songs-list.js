@@ -175,7 +175,9 @@
       // 所以「10」只命中 10.0~10.4、「10+」才是 10.5 以上；最左「7-」是 7 以下。
       // 每档边界互不重叠、合起来 100% 覆盖（详见 songs.astro 里 BANDS 的注释）。
       // 刻度索引 0..6 直接对应下面这七个键。
-      // 最左「7-」是默认值，等价于"不按区间收窄"——所以下面的判据都把 lt7 当未选。
+      // 最左「7-」是默认值，但**它是真条件**（2026-11-17 主人指出）：选 7- 只出 7 以下，
+      // 不能像最早那样当成「不限制」，否则 7 以下的谱会混进 7- 的结果里。
+      // 只有「难度为空、区间整块不出现」时，lt7 才退回未选（见下面 diffOn 分支）。
       var BAND_KEYS = ['lt7', '7', '8', '9', '9p', '10', '10p'];
       var BAND_LABELS = ['7-', '7', '8', '9', '9+', '10', '10+'];
       var BANDS = {
@@ -332,10 +334,14 @@
         // 旧的「只选区间、不选难度」分支（遍历三档任一命中）保留成兜底：
         // 老存档里可能还留着 diff='' + band='9p'，不认它就会表现为"存档有筛选却全放开"。
         var diffOn = state.diff !== DIFF_NONE_INLINE && state.diff !== 'all';
-        var bandOn = state.band !== 'all' && state.band !== 'lt7';
+        /* 【2026-11-17 修】bandOn 原先排除 'lt7'，等于把最左档当"未选"，7 以下的谱会混进 7- 的
+           结果（实测 EXT + 7- 出 113 首、其中含 ext 6.0，而 EXT 档本身只有 82 首落在 10 档以上）。
+           档是互斥的，7- 就该只出 v < 7。这里只在**难度为空**时保留 lt7 当未选：
+           那种情况区间块整个不出现，滑块位置没有意义。 */
+        var bandOn = state.band !== 'all';
 
         if (!diffOn) {
-          if (!bandOn) return true;
+          if (!bandOn || state.band === 'lt7') return true;
           var diffs0 = ['bsc', 'adv', 'ext'];
           for (var d0 = 0; d0 < diffs0.length; d0++) {
             var v0 = lvOf(card, diffs0[d0]);
@@ -613,8 +619,8 @@
         // 必须让按钮自己说明「有几项条件正在生效」，否则用户不知道列表为什么变少了。
         // 只数**筛选类**条件（不含排序）：排序不减少结果，算进去会让角标永远是 1。
         var activeCount = (state.cat !== 'all' ? 1 : 0) + (state.gen !== 'all' ? 1 : 0) +
-                          (state.diff !== '' ? 1 : 0) +
-                          (state.band !== 'all' && state.band !== 'lt7' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
+                          // 难度与区间是同一条轴上的主控 + 下钻，合计算一项。
+                          (state.diff !== '' ? 1 : 0) + (state.scope !== 'all' ? 1 : 0) +
           (state.type !== 'all' ? 1 : 0) + (state.date ? 1 : 0);
         if (filterTxt) filterTxt.textContent = activeCount > 0 ? '筛选 · ' + activeCount : '筛选';
         // 用 has-filter 而不是 is-on：is-on 已被「面板展开」占用（见 setPanel），
