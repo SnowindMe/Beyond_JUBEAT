@@ -276,6 +276,10 @@ Turnstile secret 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jub
 
 做过的事：站标由「全部渲染靠 CSS 隐藏」改成单个 `<img>` 按世代换 src（少下 10 张）；曲绘缩到 144×144；背景缩到 1440 宽 q62；PNG 转 WebP；`/_astro/*` 与 `/assets/*` 长缓存；head 内联预热脚本先读 localStorage 再渲染。
 
+列表排序（2026-11-17 按 modern-web-guidance 改）：原本只写 `style.order`、DOM 顺序永不变化，键盘 Tab 与读屏的顺序和眼睛看到的相反。现在改为移动真实节点（`moveBefore`，不支持时 `append`），重排后用一条 `role="status"` 报一次结果，焦点留在触发控件上。
+
+动效：只动 `opacity`/`transform`；系统开「减少动态效果」时关掉全部位移与缩放（唱片停转、卡片不放大、定数条不做宽度过渡），颜色过渡保留——**不要**用全局 `animation-duration:0.01ms`，那会把带 delay 的错开入场压塌。
+
 `npm run opt` 与字体子集化都是**原地覆盖**，重复跑会越压越糊，要重压先从 git 历史取原图。字体已于 2026-11-02 改为站内自托管（`public/assets/fonts/`，10 款 woff2）——原来走 CDN，跨域往返直接压在 FCP 上，实测单次要 1.0–1.4s。
 
 ## 文档

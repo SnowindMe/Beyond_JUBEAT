@@ -856,6 +856,13 @@ html[data-lum="light"] .wl-pre {
         transform: none;
     }
 }
+/* 降动效：首屏标题不做上浮（它是首帧就要稳的元素）。
+   只关这一条，别用全局 animation-duration:0.01ms —— 那会让带 delay 的 stagger 变形。 */
+@media (prefers-reduced-motion: reduce) {
+    .word-line {
+        animation: none;
+    }
+}
 .word {
     font-family: var(--font-label);
     font-size: clamp(60px, 8.6vw, 108px);

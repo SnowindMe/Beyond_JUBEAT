@@ -730,6 +730,12 @@ const TYPES = [
         <span class="sc-active-t">匹配到 <b id="scActiveTxt">0</b> 首</span>
         <span class="sc-active-cost" id="scCost" hidden><i id="scCostTxt">—</i></span>
       </p>
+
+      {/* 排序/排列变化的播报（2026-11-17，按 dynamic-sort 指南）：
+          重排会移动几百个节点，但用户只做了一次操作。**不要**给列表挂 aria-live，
+          那会逐个念；改用一条独立的 role=status，每次重排只写一次结果。
+          焦点留在触发控件上，不往列表里挪。 */}
+      <p class="sc-reorder-status" id="scReorderStatus" role="status"></p>
     </div>
 
     {/* 列表锚点：sc-skip 的落点。tabindex="-1" 让焦点真的移进来（否则只滚动不换焦点）。 */}

@@ -349,7 +349,7 @@
         return bandOn ? BANDS[state.band](vOne) : true;
       }
 
-      // ---- 排序：只写 style.order ----
+      // ---- 排序：移动真实 DOM 节点（2026-11-17 起；此前只写 style.order） ----
       function sortCards(cards) {
         var arr = [];
         for (var i = 0; i < cards.length; i++) arr.push(cards[i]);
@@ -394,7 +394,19 @@
             return (a.getAttribute('data-t') || '').localeCompare(b.getAttribute('data-t') || '');
           });
         }
-        for (var n = 0; n < arr.length; n++) arr[n].style.order = String(n);
+        /* 【2026-11-17 改真实 DOM 顺序，不再只写 style.order】
+           guidance/performance 与 dynamic-sort 都要求视觉顺序 = DOM 顺序：
+           只写 order，键盘 Tab 与读屏仍按 HTML 原序走，看到的和听到的对不上。
+           用 moveBefore 而不是 append：moveBefore 会保留节点状态（焦点、
+           正在播的动画、<img> 已解码的帧）；不支持时退回 append，能不能保状态
+           不重要，顺序本身对就行。一次遍历到底，循环里不做任何几何读取。
+           历史包袱：以前写 order 是为了「19ms 写完 1255 个 order、不重排 DOM」，
+           现在移动节点同样是 O(n) 且不需要强制回流，收益没丢。 */
+        var move = Object.hasOwn(Element.prototype, 'moveBefore')
+          ? function (node) { gridOf(node).moveBefore(node, null); }
+          : function (node) { gridOf(node).append(node); };
+        function gridOf(node) { return node.parentNode; }
+        for (var n = 0; n < arr.length; n++) move(arr[n]);
       }
 
       // 【2026-10-30 简化】原来这里有一段「世代 新→旧」的专门分支：
@@ -404,13 +416,25 @@
       // 世代块的先后始终由 DOM 顺序（GEN_ORDER 旧→新）决定。
       //
       // 【2026-11-13 加跳过判据（同上：点 X 清除搜索的卡顿）】
-      // 这个函数每次 apply 都给**全部**卡片写一遍 style.order。实测写 1683 个 order 本身只要 ~19ms，
-      // 但它让整份样式失效，紧接着的那次重排里样式重算 257~417ms —— 而绝大多数 apply
+      // 这个函数每次 apply 都要动全部卡片。写 1683 个 style.order 本身只要 ~19ms，
+      // 但会让整份样式失效、紧接着的那次重排里样式重算 257~417ms —— 而绝大多数 apply
       // （清除搜索、切分区、切服务器）根本没换排序方式、也没来新卡，这一遍是纯白工。
+      // （2026-11-17：order 换成 moveBefore 移动节点后，仍然保留这个跳过判据——
+      //  移动同样要让布局失效，而且广播会跟着多念一遍。）
       // 所以记住「上次排序用的 state.sort + 哪台服务器」，两者都没变就直接跳过。
       // 为什么不必跟踪「来过新卡」：loadFrag 落地时已经对该块自己的网格跑过一次 sortCards
       // （order 是每个 .sc-grid 内部各自生效的，新块不会打乱别的网格）；
       // 切服带 srv 进 key，因为这里只给可见 body 的网格排序，另一套得等它现身再排。
+      /* 重排后播报一次（dynamic-sort）：只写结果，不念机制；
+         焦点留在触发控件上，不往列表里挪。 */
+      var reorderStatus = document.getElementById('scReorderStatus');
+      function announceOrder(n) {
+        if (!reorderStatus) reorderStatus = document.getElementById('scReorderStatus');
+        if (!reorderStatus) return;
+        var sel = document.querySelector('[data-dd="scSort"] .sc-dd-v');
+        var txt = sel ? sel.textContent : '';
+        reorderStatus.textContent = (txt ? '已按「' + txt + '」排序，' : '已重新排序，') + n + ' 首';
+      }
       var sortApplied = '';
       function applySort() {
         var tag = state.sort + '|' + state.srv;
@@ -419,9 +443,16 @@
         var genBlocks = root.querySelectorAll('.sc-gen');
         for (var k = 0; k < genBlocks.length; k++) genBlocks[k].style.order = '';
         var grids = root.querySelectorAll('.sc-body:not([hidden]) .sc-grid');
+        var moved = 0;
         for (var g = 0; g < grids.length; g++) {
-          sortCards(grids[g].querySelectorAll('.sc-card'));
+          var list = grids[g].querySelectorAll('.sc-card');
+          // 数字只数**可见**的：被筛掉的卡也算进去会念出「113 首」，
+          // 而屏幕上明明只有几张，读屏用户听到的与实际不符。
+          moved += grids[g].querySelectorAll('.sc-card:not([hidden])').length;
+          sortCards(list);
         }
+        // 播报放在这里而不是每次 apply：只有排序方式真的变了（tag 变了）才念一次
+        announceOrder(moved);
       }
 
       // ---- 主流程 ----

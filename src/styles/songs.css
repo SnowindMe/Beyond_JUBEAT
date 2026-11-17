@@ -227,6 +227,31 @@ html[data-view-sw="in"] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
     html[data-view-sw] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
         transition: none;
     }
+    /* 【2026-11-17 补齐 canvas 之外的漏网（guidance/motion：只衰减位移与缩放，
+       颜色过渡保留）。下面三条原本都还在动： */
+    /* ①唱片持续旋转（9s 一圈，视口角落常驻）：停转后留 0 度，别停在半途 */
+    html[data-bgm="playing"] .sd-disc-spin {
+        animation: none;
+    }
+    /* ②卡片 hover 的曲绘放大（scale），合成层但要跟上指针，直接不缩放 */
+    .sc-j img {
+        transition: opacity 0.25s;
+    }
+    .sc-card:hover .sc-j img {
+        transform: none;
+    }
+    /* ③定数条宽度过渡（width 是布局属性）：规则留在末尾那条专门的 reduce 块里，
+       这里不重复一份，免得两处各改一半。 */
+}
+
+/* 排序播报用的 role=status：视觉上不占位、只给读屏（同 .sc-ph-status 的手法） */
+.sc-reorder-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 .sc-sec + .sc-sec {
@@ -3711,7 +3736,7 @@ html[data-lum="light"] .sd-gauge {
     margin: 0;
 }
 
-/* ---------- 排序承载：只用 order，不重排 DOM ---------- */
+/* ---------- 排序承载：2026-11-17 起改为移动真实 DOM 节点（此前用 order） ---------- */
 /* 卡片的 order 由脚本写进 style；.sc-grid 是 grid，order 天然生效。
    【2026-10-30 删除「世代 新→旧」相关规则】那套要么给 .sc-sec 切 flex 换块位、
    要么临时关掉 .sc-gen 的 content-visibility；排序项被主人删掉后这些规则没有触发者，
