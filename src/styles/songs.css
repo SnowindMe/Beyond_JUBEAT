@@ -3379,14 +3379,18 @@ html[data-lum="light"] .sd-gauge {
 .sc-cal-sel-w {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
-    margin-left: auto;
-    margin-right: auto;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .sc-cal-sel {
-    padding: 2px 7px;
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 9px;
     font: inherit;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--ink2, var(--ink));
     background-color: color-mix(in srgb, var(--ink) 6%, transparent);
@@ -3399,10 +3403,24 @@ html[data-lum="light"] .sd-gauge {
 .sc-cal-sel:hover {
     border-color: var(--acc);
 }
+/* 这两个是按钮、不是纯文字标题：右下角一个小三角，提示「点开会换视图」 */
+.sc-cal-sel::after {
+    content: "";
+    width: 0;
+    height: 0;
+    margin-left: 4px;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 4px solid currentColor;
+    opacity: 0.7;
+}
+/* 展开态：不填实心。--acc-ink 在本站主题里就等于 --acc（橙底橙字看不见），
+   改成与 .is-on 同一套「浅底 + acc 描边 + acc 文字」，两种主题都读得清。 */
 .sc-cal-sel[aria-pressed="true"] {
-    color: var(--acc-ink, #fff);
-    background-color: var(--acc);
+    color: var(--acc);
+    background-color: color-mix(in srgb, var(--acc) 14%, transparent);
     border-color: var(--acc);
+    font-weight: 600;
 }
 .sc-cal-sel:focus-visible {
     outline: 2px solid var(--acc);
@@ -3410,25 +3428,39 @@ html[data-lum="light"] .sd-gauge {
 }
 /* 年/月视图的格子：等比铺开，比日格大一点，减少误点 */
 /* 年/月都是一整块网格，格子等宽等高、数字居中，和日视图的 7 列小格区分开 */
+/* 年格比月格窄一档：4 位数字 12px 下只要 32px，48px 会拉成扁条；40px 配 36px 高是近方形。 */
+/* 年/月视图的网格：列宽写死、整块居中。之前是 4 等分铺满 224px 内宽，
+   每格 51×30 的长条（月视图更扁到 70×30），纵向只有 6px 缝，看着像挤在一起的三行文字。
+   现在按「格子近方 + 8px 双向缝」排：4×44+3×8=200、3×56+2×8=184，都窄于内宽 224，
+   再多也只会居中留白，不会把格子拉扁。 */
 .sc-cal-yrs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* 父级 .sc-cal-g 是 7 列网格，这里必须跨满整行，否则只占一格 30px、48px 的格子全挤出去 */
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 40px));
+    justify-content: center;
     gap: 6px;
-    padding: 2px 0;
+    padding: 4px 0 2px;
 }
+/* 月份也 4×3（主人 2026-11-18：「月份也要4*3」）。3 列时每格虽有 56px 仍会把「11 月」
+   折成两行——12px 字加「月」本身就要 40px 上下，再被 padding 一挤就换行；4 列每格 48px
+   配上 nowrap 反而稳（4×48+3×6=210 < 内宽 224）。 */
 .sc-cal-mos {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 48px));
+    justify-content: center;
     gap: 6px;
-    padding: 2px 0;
+    padding: 4px 0 2px;
 }
 .sc-cal-y, .sc-cal-m {
     display: grid;
     place-items: center;
-    height: 30px;
-    padding: 0;
+    height: 36px;
+    padding: 0 2px;
     font: inherit;
     font-size: 12px;
+    white-space: nowrap;
     font-variant-numeric: tabular-nums;
     color: var(--ink2, var(--ink));
     background-color: color-mix(in srgb, var(--ink) 4%, transparent);
