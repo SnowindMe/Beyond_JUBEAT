@@ -210,7 +210,9 @@ function main() {
         // 【2026-11-17 主人报「added_at_cn 数据补齐」】覆盖层的 date 必须落进 added_at_cn。
         // 原来这里只读 arc.addedAt（旧站快照），于是在覆盖表里写了 date 也白写——
         // 那些行在「最近收录」里直接消失，且日期筛选里点不到。覆盖层优先于快照。
-        null, (byOverride ? isoDate(cnOnlineOverrides.get(srcId).date) : null) || arc.addedAt || null,
+        null,
+        (byOverride ? isoDate(cnOnlineOverrides.get(srcId).date) : null)
+          || unlockDateOf(s1Unlock.get(srcId)) || arc.addedAt || null,
         note, limitedUntilOf(arc)
       );
       if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
@@ -467,6 +469,16 @@ function main() {
 //   ② 实测两者重叠 179 首、值完全一致（0 处冲突），说明口径同源，谁补谁都安全；
 //   ③ 但快照缺 7 首（6 首 [2] 长押曲 + concon），源表全有 —— 只信快照就会少 6 首解禁II。
 // 兑换价 / 限时这两项源表没有，仍只从快照取，不与解禁池来源混淆。
+// 解禁池曲目的国服上线日期（2026-11-17 主人给）：整池同日上架，按池给常量而不是一首首写覆盖层。
+// 解禁I 除 RAINBOW 线 2025-12-27、解禁I RAINBOW 线 2026-02-11、解禁II 全部 2026-06-30。
+// 优先级低于人工覆盖层（个别曲要单点改仍走 cn-online-overrides.json）。
+const UNLOCK_DATES = { 'I': '2025-12-27', 'I-RAINBOW': '2026-02-11', 'II': '2026-06-30' };
+function unlockDateOf(s1) {
+  if (!s1) return null;
+  const key = s1.phase === 2 ? 'II' : (s1.pool === 'RAINBOW' ? 'I-RAINBOW' : 'I');
+  return UNLOCK_DATES[key] || null;
+}
+
 function jpUnlockNote(arc, s1) {
   const parts = [];
   const pool = s1 && s1.pool ? s1 : (arc.unlockPool ? { pool: arc.unlockPool, phase: arc.poolPhase } : null);
