@@ -249,6 +249,10 @@ zone 的 `browser_cache_ttl` 已设为 **0**（Respect Existing Headers）。原
 
 push 到 main，Cloudflare 的 Git 集成自动构建 + 部署（`wrangler.jsonc` 的 `main` 是 `src/worker.ts`，`assets.directory` 是 `./dist/client`）。
 
+**EdgeOne 缓存的自动清除**：加速站 `wiki-cn.byd-ub.top` 是 EdgeOne 前置，旧 HTML 会被它按源站 `max-age` 缓存住，源站已发新版、加速站却继续吐旧页（2026-11-17 事故即此）。所以 `build-check` 在 push 到 main 时会跑 `scripts/ops/purge-edgeone.mjs`：先轮询源站 `wiki.byd-ub.top`（直连 CF）直到页脚出现本次版本号，再对站点 `zone-3we3ellu1uc3` 发 `purge_all`。需要两个仓库 secret：`TENCENTCLOUD_SECRET_ID` / `TENCENTCLOUD_SECRET_KEY`（腾讯云子账号，权限只开 EdgeOne 缓存刷新即可）；缺失时该步骤失败但 job 不红。本机临时清一次：`EDGEONE_ZONE_ID=… TENCENTCLOUD_SECRET_ID=… TENCENTCLOUD_SECRET_KEY=… node scripts/ops/purge-edgeone.mjs --now`，`--dry` 只打印请求不发送。
+
+**Worker 侧的 `caches.default` 不用管**：缓存 key 里带 `SITE_VERSION`（`src/middleware.ts` 的 `CACHE_PREFIX`），发版换版本号即自动换 key，旧条目自然失效。
+
 **上线前必须先跑的迁移**（都是幂等的 `IF NOT EXISTS` / `IF EXISTS`，与 `db/schema.sql` 里对应的建表段逐字同源）：
 
 ```bash

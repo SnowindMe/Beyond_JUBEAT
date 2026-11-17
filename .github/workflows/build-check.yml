@@ -38,3 +38,19 @@ jobs:
 
       - name: 全部自检
         run: npm run check
+
+      # 【2026-11-17 新增】清 EdgeOne 边缘缓存。
+      # 起因：wiki-cn.byd-ub.top 是 EdgeOne 前置，旧 HTML 会被它按源站 max-age 缓存住，
+      # 源站已发新版、加速站还在吐旧页（事故见 scripts/ops/purge-edgeone.mjs 的文件头）。
+      # 部署由 Cloudflare Workers Builds 在 push 后并行执行，所以脚本会先轮询源站
+      # （直连 CF 的 wiki.byd-ub.top）直到页脚出现本次版本号，再发 purge_all。
+      # 只在该 workflow 由 push 触发时跑：PR 没有部署，清了也是白清。
+      # 密钥用腾讯云子账号，权限只开 EdgeOne 缓存刷新；缺 secret 时步骤失败但整个 job 不红。
+      - name: 清 EdgeOne 缓存
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          TENCENTCLOUD_SECRET_ID: ${{ secrets.TENCENTCLOUD_SECRET_ID }}
+          TENCENTCLOUD_SECRET_KEY: ${{ secrets.TENCENTCLOUD_SECRET_KEY }}
+          EDGEONE_ZONE_ID: zone-3we3ellu1uc3
+        run: node scripts/ops/purge-edgeone.mjs
