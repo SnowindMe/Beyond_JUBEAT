@@ -207,7 +207,11 @@ function main() {
         // 【2026-11-16 拆列】快照 arc.addedAt 是旧站 v3 的记录，实测 125 条带日期的全部落在
         // 双服行上（同日进国服），按主人指令「原有日期数据的全进 added_at_cn」，一律写 cn 列；
         // added_at_jp 留 NULL 等上游给日服首登日，不拿国服日期冒充日服日期。
-        null, arc.addedAt || null, note, limitedUntilOf(arc)
+        // 【2026-11-17 主人报「added_at_cn 数据补齐」】覆盖层的 date 必须落进 added_at_cn。
+        // 原来这里只读 arc.addedAt（旧站快照），于是在覆盖表里写了 date 也白写——
+        // 那些行在「最近收录」里直接消失，且日期筛选里点不到。覆盖层优先于快照。
+        null, (byOverride ? isoDate(cnOnlineOverrides.get(srcId).date) : null) || arc.addedAt || null,
+        note, limitedUntilOf(arc)
       );
       if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
       stat.jp++;
