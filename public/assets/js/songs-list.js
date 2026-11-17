@@ -1247,6 +1247,32 @@
       var cal = document.getElementById('scCal');
       var calGrid = document.getElementById('scCalGrid');
       var calTitle = document.getElementById('scCalTitle');
+      // 【2026-11-18 主人要求】点年份/月份标题换成年视图/月视图，选完回天视图，省掉逐月翻页。
+      // 年范围 2008–2030 是主人给的「暂时」上限，放常量好改；超出范围的年份仍可用月导航翻到。
+      var CAL_YEAR_MIN = 2008;
+      var CAL_YEAR_MAX = 2030;
+      var calY = document.getElementById('scCalY');
+      var calM = document.getElementById('scCalM');
+      // 日历当前是哪种视图：day=天（默认）、year=选年、month=选月
+      var calMode = 'day';
+      var calPrev = cal.querySelector('[data-cal-nav="-1"]');
+      var calNext = cal.querySelector('[data-cal-nav="1"]');
+      // ‹ › 的两种职责：天/年视图里翻页，月视图里整块隐藏（12 个月一屏放得下）。
+      // 视觉上一个箭头是指向过去还是未来，随视图变——年视图要按年份方向走。
+      function calSyncNav(y, m) {
+        var show = calMode !== 'month';
+        if (calPrev) {
+          calPrev.hidden = !show;
+          calPrev.disabled = false;
+          calPrev.setAttribute('aria-label', calMode === 'year' ? '上一页年份' : '上个月');
+        }
+        if (calNext) {
+          calNext.hidden = !show;
+          calNext.disabled = false;
+          calNext.setAttribute('aria-label', calMode === 'year' ? '下一页年份' : '下个月');
+        }
+        void y; void m;
+      }
       var DATE_ALL_LABEL = '全部日期';
       // 可选日期集合（Set 查询 O(1)，日历每月重绘上百格时省一次线性查找）
       // 可选日期按服各一份：国服用 data-dates，日服用 data-dates-jp（那些曲也上过国服）。
@@ -1288,6 +1314,19 @@
         var y = Number(calMonth.slice(0, 4));
         var m = Number(calMonth.slice(5, 7));
         calTitle.textContent = y + ' 年 ' + m + ' 月';
+        // 两个标题按钮显示当前年月；aria-pressed 让读屏知道现在展开了哪种视图
+        if (calY && calM) {
+          calY.textContent = y + ' 年';
+          calM.textContent = m + ' 月';
+          calY.setAttribute('aria-pressed', calMode === 'year' ? 'true' : 'false');
+          calM.setAttribute('aria-pressed', calMode === 'month' ? 'true' : 'false');
+        }
+        // 表头（一二三四…）只在日视图有意义
+        var wk = cal.querySelector('.sc-cal-w');
+        if (wk) wk.hidden = calMode !== 'day';
+        calSyncNav(y, m);
+        if (calMode === 'year') return calRenderYears(y);
+        if (calMode === 'month') return calRenderMonths(m);
         var first = new Date(y, m - 1, 1);
         var lead = (first.getDay() + 6) % 7; // getDay() 0=周日 → 周一打头的 0..6
         var days = new Date(y, m, 0).getDate();
@@ -1303,9 +1342,41 @@
         }
         calGrid.innerHTML = html;
       }
+      // 年视图：4×3 一页（12 年），2008–2030 共 23 年 → 2 页，用 ‹ › 翻页。
+      // 一屏铺 23 年会把格子压得太小；4×3 与日历本体的 7 列网格区分开，也不至于误点。
+      var CAL_YEAR_PAGE = 12;
+      var calYearPage = 0;
+      function calRenderYears(cur) {
+        var total = CAL_YEAR_MAX - CAL_YEAR_MIN + 1;
+        var pages = Math.max(1, Math.ceil(total / CAL_YEAR_PAGE));
+        if (calYearPage >= pages) calYearPage = pages - 1;
+        var start = CAL_YEAR_MIN + calYearPage * CAL_YEAR_PAGE;
+        var end = Math.min(start + CAL_YEAR_PAGE - 1, CAL_YEAR_MAX);
+        var html = '<div class="sc-cal-yrs" role="row">';
+        for (var y = start; y <= end; y++) {
+          var on = y === cur;
+          html += '<button type="button" class="sc-cal-y' + (on ? ' is-on' : '') +
+            '" role="gridcell" data-cal-y="' + y + '" aria-selected="' + (on ? 'true' : 'false') + '">' + y + '</button>';
+        }
+        calGrid.innerHTML = html + '</div>';
+        // 翻页按钮的可用性：页首禁用上一个、页尾禁用下一个
+        if (calPrev) calPrev.disabled = calYearPage <= 0;
+        if (calNext) calNext.disabled = calYearPage >= pages - 1;
+      }
+      // 月视图：12 个月，选完直接跳回天视图并把 calMonth 落到该月
+      function calRenderMonths(cur) {
+        var html = '<div class="sc-cal-mos" role="row">';
+        for (var m = 1; m <= 12; m++) {
+          var on = m === cur;
+          html += '<button type="button" class="sc-cal-m' + (on ? ' is-on' : '') +
+            '" role="gridcell" data-cal-m="' + m + '" aria-selected="' + (on ? 'true' : 'false') + '">' + m + ' 月</button>';
+        }
+        calGrid.innerHTML = html + '</div>';
+      }
       function calOpen() {
         for (var i = 0; i < dds.length; i++) ddClose(dds[i]); // 与 .sc-dd 互斥
         calMonth = '';
+        calMode = 'day';
         dateSet = datePool(); // 每次都按当前服重取：切服后可选日期跟着变
         calJumpTo(state.date);
         cal.hidden = false;
@@ -1346,10 +1417,47 @@
           var nav = e.target.closest('[data-cal-nav]');
           if (nav) {
             var step = Number(nav.getAttribute('data-cal-nav'));
+            if (calMode === 'year') {
+              // 年视图：翻一页年份（12 年），不改已选的月
+              calYearPage += step;
+              calRender();
+              return;
+            }
             var y = Number(calMonth.slice(0, 4));
             var m = Number(calMonth.slice(5, 7)) - 1 + step;
             var d2 = new Date(y, m, 1); // 跨年交给 Date 进位，别手算字符串
             calMonth = d2.getFullYear() + '-' + String(d2.getMonth() + 1).padStart(2, '0') + '-01';
+            calRender();
+            return;
+          }
+          // 标题按钮：在年/月视图之间切换（再点一次同一个就回天视图）
+          if (e.target.closest('#scCalY')) {
+            calMode = calMode === 'year' ? 'day' : 'year';
+            // 进年视图时把页码对到当前年那一页，不然总是从 2008 开头翻
+            if (calMode === 'year') {
+              calYearPage = Math.floor((Number(calMonth.slice(0, 4)) - CAL_YEAR_MIN) / CAL_YEAR_PAGE);
+            }
+            calRender();
+            return;
+          }
+          if (e.target.closest('#scCalM')) {
+            calMode = calMode === 'month' ? 'day' : 'month';
+            calRender();
+            return;
+          }
+          // 年视图选年：保留当前月，回天视图
+          var yb = e.target.closest('[data-cal-y]');
+          if (yb) {
+            calMonth = yb.getAttribute('data-cal-y') + '-' + calMonth.slice(5, 7) + '-01';
+            calMode = 'day';
+            calRender();
+            return;
+          }
+          // 月视图选月：回天视图，日期留给用户点
+          var mb = e.target.closest('[data-cal-m]');
+          if (mb) {
+            calMonth = calMonth.slice(0, 5) + String(mb.getAttribute('data-cal-m')).padStart(2, '0') + '-01';
+            calMode = 'day';
             calRender();
             return;
           }
@@ -1363,6 +1471,8 @@
         document.addEventListener('keydown', function (e) {
           if (e.key !== 'Escape' || cal.hidden) return;
           e.stopPropagation();
+          // 年/月视图里按 Esc 先退回天视图，再按一次才关日历（不然一按就跳出去了）
+          if (calMode !== 'day') { calMode = 'day'; calRender(); return; }
           calClose();
           dateB.focus();
         }, true);

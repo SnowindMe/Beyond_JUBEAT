@@ -98,7 +98,8 @@ songs.category 存的是**源生分类**，页面上的分区由 src/lib/song-vi
 | 列 | 空值行数 | 原因 |
 | --- | --- | --- |
 | bpm | **7 / 1255** | 2026-10-31 曾清零一次。2026-11-16 新增的 7 首音乐魔方曲 BPM 尚缺（音游街接口不提供 BPM，主人明确「暂时不急」），所以又是 7 行空；`id_kind='synthetic'` 以外的空值均属这一类，用 COALESCE 显示即可 |
-| added_at_cn | **886 / 1255** | 来源五处，按优先级：人工覆盖表 `data/cn-online-overrides.json`（单点改）→ 解禁池常量 `UNLOCK_DATES`（整池同日，见下）→ 国服更新表（xlsx）→ 旧站快照。**覆盖层的 date 优先生效**（2026-11-17 修：此前该层只置 server_cn、date 被丢弃，写了也白写）。剩余空值主要是日服独有、国服尚未上线的曲 |
+| added_at_cn | **711 / 1255** | 来源六处，按优先级：人工覆盖表 `data/cn-online-overrides.json`（单点改）→ 解禁池常量 `UNLOCK_DATES`（整池同日，见下）→ 国服更新表（xlsx）→ 旧站快照 → 兜底常量 `CN_REMAINDER_DATE`。**覆盖层的 date 优先生效**（2026-11-17 修：此前该层只置 server_cn、date 被丢弃，写了也白写）。剩余空值全是 `server_cn=0` 的日服独有曲 |
+| — | 兜底日期 | 2026-11-18 主人指令：`server_cn=1` 且 `added_at_cn` 为空的曲一律记 `2025-12-27`。写在 `build-db.cjs` 的 `CN_REMAINDER_DATE`，排在所有显式来源之后，只对国服在线的行生效 |
 | — | 解禁池日期 | 解禁曲整池同日上架，2026-11-17 主人给：解禁I 非 RAINBOW 线 `2025-12-27`、解禁I RAINBOW 线 `2026-02-11`、解禁II 全部 `2026-06-30`。写在 `scripts/db/build-db.cjs` 的 `UNLOCK_DATES`，一首首铺覆盖层太啰嗦；个别曲要单点改仍走覆盖层 |
 | added_at_jp | **1255 / 1255** | 2026-11-16 拆列时按主人指令把旧 `added_at` 的日期**全搬进 `added_at_cn`**（实测 171 行全在国服侧），日服这一列迁移后整列空、等上游给首登日 |
 | unlock_note | **1025 / 1255** | 只有解禁池曲目有 |

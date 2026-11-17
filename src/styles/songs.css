@@ -3375,6 +3375,95 @@ html[data-lum="light"] .sd-gauge {
     letter-spacing: 0.02em;
     color: var(--ink2, var(--ink));
 }
+/* 年/月下拉：外观对齐站点小控件，去掉原生箭头（用自带的下拉图标会与月导航按钮撞车） */
+.sc-cal-sel-w {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.sc-cal-sel {
+    padding: 2px 7px;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink2, var(--ink));
+    background-color: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--edge2);
+    border-radius: var(--r-xs);
+    cursor: pointer;
+    text-align: center;
+    transition: color 0.16s, border-color 0.16s, background-color 0.16s;
+}
+.sc-cal-sel:hover {
+    border-color: var(--acc);
+}
+.sc-cal-sel[aria-pressed="true"] {
+    color: var(--acc-ink, #fff);
+    background-color: var(--acc);
+    border-color: var(--acc);
+}
+.sc-cal-sel:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 1px;
+}
+/* 年/月视图的格子：等比铺开，比日格大一点，减少误点 */
+/* 年/月都是一整块网格，格子等宽等高、数字居中，和日视图的 7 列小格区分开 */
+.sc-cal-yrs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 2px 0;
+}
+.sc-cal-mos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 2px 0;
+}
+.sc-cal-y, .sc-cal-m {
+    display: grid;
+    place-items: center;
+    height: 30px;
+    padding: 0;
+    font: inherit;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink2, var(--ink));
+    background-color: color-mix(in srgb, var(--ink) 4%, transparent);
+    border: 1px solid transparent;
+    border-radius: var(--r-xs);
+    cursor: pointer;
+    transition: color 0.14s, border-color 0.14s, background-color 0.14s;
+}
+.sc-cal-y:hover, .sc-cal-m:hover {
+    color: var(--ink);
+    border-color: var(--edge2);
+    background-color: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.sc-cal-y.is-on, .sc-cal-m.is-on {
+    color: var(--acc);
+    border-color: var(--acc);
+    background-color: color-mix(in srgb, var(--acc) 14%, transparent);
+    font-weight: 600;
+}
+.sc-cal-y:focus-visible, .sc-cal-m:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 1px;
+}
+/* 标题在有下拉时只作读屏锚点（aria-labelledby 指着它），视觉上不需要再来一遍 */
+.sc-cal-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+.sc-cal-h {
+    position: relative;
+}
 .sc-cal-nav {
     display: grid;
     place-items: center;
@@ -3411,6 +3500,10 @@ html[data-lum="light"] .sd-gauge {
 }
 .sc-cal-w {
     margin-bottom: 4px;
+}
+/* grid 会盖掉 [hidden] 的 display:none，年/月视图要显式关掉星期行 */
+.sc-cal-w[hidden] {
+    display: none;
 }
 .sc-cal-w span {
     text-align: center;

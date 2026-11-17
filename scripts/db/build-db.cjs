@@ -212,7 +212,8 @@ function main() {
         // 那些行在「最近收录」里直接消失，且日期筛选里点不到。覆盖层优先于快照。
         null,
         (byOverride ? isoDate(cnOnlineOverrides.get(srcId).date) : null)
-          || unlockDateOf(s1Unlock.get(srcId)) || arc.addedAt || null,
+          || unlockDateOf(s1Unlock.get(srcId)) || arc.addedAt
+          || (isCnOnline ? CN_REMAINDER_DATE : null),
         note, limitedUntilOf(arc)
       );
       if (limitedUntilOf(arc)) stat.limited = (stat.limited || 0) + 1;
@@ -238,7 +239,7 @@ function main() {
         '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
         /\[\s*2\s*\]/.test(r.title) ? 1 : 0, webpCover(r.songId, r.cover),
-        null, isoDate(r.date), dashNull(r.pool),
+        null, isoDate(r.date) || CN_REMAINDER_DATE, dashNull(r.pool),
         // 国服行也按 songId 回查一次快照：限时曲实测都在国服（新年快乐、Will We Shine）
         limitedUntilOf(archiveById.get(String(r.songId)))
       );
@@ -261,7 +262,7 @@ function main() {
         num(v.bsc), num(v.adv), num(v.ext),
         /\[\s*2\s*\]/.test(String(v.title)) ? 1 : 0,
         webpCover(id, v.cover),
-        null, isoDate(v.date), dashNull(v.pool), null
+        null, isoDate(v.date) || CN_REMAINDER_DATE, dashNull(v.pool), null
       );
       if (v.cover) stat.cnCover++;
       stat.cn++;
@@ -473,6 +474,9 @@ function main() {
 // 解禁I 除 RAINBOW 线 2025-12-27、解禁I RAINBOW 线 2026-02-11、解禁II 全部 2026-06-30。
 // 优先级低于人工覆盖层（个别曲要单点改仍走 cn-online-overrides.json）。
 const UNLOCK_DATES = { 'I': '2025-12-27', 'I-RAINBOW': '2026-02-11', 'II': '2026-06-30' };
+// 【2026-11-18 主人给】剩下所有 server_cn=1 但 added_at_cn 仍为空的曲，上线时间统一 2025-12-27。
+// 放在优先级最末（覆盖层 > 解禁池 > 旧站快照 > 这条兜底），只对国服在线的行生效，永不覆盖已有值。
+const CN_REMAINDER_DATE = '2025-12-27';
 function unlockDateOf(s1) {
   if (!s1) return null;
   const key = s1.phase === 2 ? 'II' : (s1.pool === 'RAINBOW' ? 'I-RAINBOW' : 'I');
