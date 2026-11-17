@@ -1390,12 +1390,15 @@
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ti = document.getElementById('scType'); if (ti) ti.value = 'all';
-        ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
         // 难度回「全部」= select 回空串；区间随之复位成 7- 并被收起（syncBandUI 统一做）。
         var dRest = document.getElementById('scDiff');
         if (dRest) dRest.value = '';
         setBandIdx(0);
         syncBandUI();
+        // ⚠ ddRefresh 必须放在上面三个 select 的值**都改完之后**。
+        // 它读的是 select.value 现算按钮文字，早调一步就会把旧值（如「EXT」）写回按钮，
+        // 表现为「点一次重置难度没变，得再点一次」——2026-11-17 主人报的就是这个。
+        ddRefresh(); // select.value 改了，可见的下拉按钮文字也要跟着回「全部…」
         var set = root.querySelector('.sc-cat-set[data-srv="' + state.srv + '"]');
         if (set) setChipGroup('.sc-cat-set[data-srv="' + state.srv + '"] .sc-chip', set.querySelector('.sc-chip[data-cat="all"]'));
         var scSet = root.querySelector('.sc-scope-set[data-srv="' + state.srv + '"]');
