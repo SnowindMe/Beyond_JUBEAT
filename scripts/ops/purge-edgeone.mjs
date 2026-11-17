@@ -136,4 +136,10 @@ if (r.Error) {
   console.error(`[purge] 失败：${r.Error.Code} ${r.Error.Message}`);
   process.exit(1);
 }
-console.log(`[purge] 已提交：TaskId=${r.TaskId} RequestId=${r.RequestId}`);
+// 实测（2026-11-17）：成功响应只有 JobId 与空的 FailedList，**没有 TaskId**。
+// 早期按文档写 TaskId 会打印 undefined，看着像没提交成功，所以两个字段都认。
+if (Array.isArray(r.FailedList) && r.FailedList.length) {
+  console.error(`[purge] 部分失败：${JSON.stringify(r.FailedList)}`);
+  process.exit(1);
+}
+console.log(`[purge] 已提交：JobId=${r.JobId || r.TaskId || '?'} RequestId=${r.RequestId}`);
