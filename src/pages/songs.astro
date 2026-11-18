@@ -476,12 +476,28 @@ const TYPES = [
             inputmode="search"
             autocomplete="off"
             spellcheck="false"
-            placeholder="搜索曲名 / 曲师 / songId / 定数（可用假名·罗马字）"
+            placeholder="曲名 / 曲师 / SongID ..."
             aria-label="搜索曲目：匹配曲名、曲师、songId、定数，也支持假名与罗马字读音"
           />
           <button type="button" id="scClear" class="sc-q-x" aria-label="清空搜索" title="清空搜索（Esc）" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
           </button>
+          {/* 搜索语法提示（2026-11-18 主人要求）。放在框内最右，清空键往左让位，
+              两者都是真按钮：气泡由点击/Enter 开、Esc 或点外面关。 */}
+          <button type="button" id="scQHelp" class="sc-q-h" aria-label="搜索关键词说明"
+            aria-expanded="false" aria-controls="scQHelpPop" title="搜索关键词说明">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/>
+              <path d="M9.6 9.4a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.9.7-.9 1.3v.4"/><path d="M12 17h.01"/></svg>
+          </button>
+          <div class="sc-q-hp" id="scQHelpPop" role="note">
+            <p class="sc-q-hp-t">搜索关键词：</p>
+            <ul>
+              <li>曲名（支持日文/罗马音）</li>
+              <li>曲师</li>
+              <li>SongID</li>
+              <li>定数</li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -495,11 +511,23 @@ const TYPES = [
       */}
       <div class="sc-panel" id="scPanel" data-open="false" hidden>
         <div class="sc-panel-in">
-        {/* 范围：PICK UP / COMMON（2026-10-25 主人要求）。
+        {/* 【范围：PICK UP / COMMON（2026-10-25 主人要求；2026-11-18 移到分区之前）】
             与「分区」正交的第二个维度——一首歌可以既是原创又是 PICK UP，
             所以它是独立的一组 chip，判定走 lib/song-view.ts 的 isPickUp()，
-            不并进 CATS、也不参与 catOf。计数与卡片上的 data-scope 同一判据。 */}
-        <div class="sc-pf sc-pf-wide">
+            不并进 CATS、也不参与 catOf。计数与卡片上的 data-scope 同一判据。
+            位置：主人 2026-11-18 要求「范围位置要在分区上面」——它比分区更"粗"一层
+            （先决定这一屏要不要 PICK UP 那批，再看分区），所以排在分区之前。
+            「隐藏删除曲」开关同在这一行的右边（见下），是这一行唯一的独立开关。 */}
+
+        {/* 【隐藏删除曲】（2026-11-18 主人要求，替换掉原来的「显示限时曲」）
+            原来的开关是"勾上才把已过期的限时曲露出来"（默认藏）。现在反过来：删除曲**默认就显示**，
+            勾上这个开关才把它们藏掉——默认视图因此是完整的，用户不会以为库里少了歌。
+            ⚠ 方形开关、不是 chip——它是独立开关、不是互斥选项。
+            「删除曲」的判定与「已过期的限时曲」同一口径（主人 2026-11-18 选定复用），
+            库里目前就是那 2 首过期限时曲，不再另建删除清单。
+            判定不在服务端做：卡片的 data-lu 是结束日，「是否已删除」由脚本按真实今天算；
+            构建期焊死的话第二天起就永远是错的。 */}
+        <div class="sc-pf sc-pf-wide sc-scope-row">
           <span class="sc-pf-k">范围</span>
           <div class="sc-scope" role="group" aria-label="按 PICK UP / COMMON 筛选">
             {(['jp', 'cn'] as const).map((srv) => (
@@ -510,6 +538,11 @@ const TYPES = [
               </div>
             ))}
           </div>
+          <label class="sc-sw sc-toggle-row">
+            <input type="checkbox" id="scRemoved" />
+            <span class="sc-sw-track" aria-hidden="true"></span>
+            <span class="sc-sw-txt">隐藏删除曲</span>
+          </label>
         </div>
 
         {/* 分区选择：按服务器各一套 chips，切服时由 apply() 显隐（sets 变量仍指向它们）。 */}
@@ -584,20 +617,6 @@ const TYPES = [
               </div>
             </div>
           </div>
-        </div>
-
-        {/* 【显示限时曲】（2026-10-28 主人要求）
-            默认不显示：限时曲的活动期已过，混在常规列表里会让「总数」和实际可玩对不上。
-            ⚠ 用 checkbox 而不是和「范围/分区」一样是单选 chip——它是独立开关、不是互斥选项
-            （主人原话「添加【显示限时曲】，默认不显示」）。
-            判定不在这里做：卡片的 data-lu 是结束日，「是否已结束」由脚本按真实今天算；
-            构建期焊死的话第二天起就永远是错的。 */}
-        <div class="sc-pf sc-pf-wide">
-          <span class="sc-pf-k">限时曲</span>
-          <label class="sc-toggle">
-            <input type="checkbox" id="scLimited" />
-            <span>显示限时曲</span>
-          </label>
         </div>
 
         {/* 【谱面类型（2026-10-31 主人要求「增加筛选条件【谱面类型】（下拉菜单式）」）】

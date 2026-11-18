@@ -60,7 +60,7 @@
           diff: '',     // '' = 不按难度档筛 | bsc | adv | ext
         band: 'lt7',   // lt7（默认=不限制）| 7 | 8 | 9 | 9p | 10 | 10p（2026-11-17 改滑块）
         scope: 'all',  // all | pick | common（与分区正交的第二维，判据是卡片的 data-scope）
-        showLimited: false, // 2026-10-28：显示限时曲，默认关（已结束的限时曲不混进常规列表）
+        showRemoved: false, // 2026-11-18：隐藏删除曲（过期限时曲），默认关 = 删除曲照常显示（盖 Removed 遮罩）
         type: 'all',   // all | std | hold | alt2（2026-10-31 谱面类型，见卡片 data-hh / data-alt）
         date: '',      // '' = 不按上线日期筛 | YYYY-MM-DD（2026-11-16，判据是卡片的 data-dcn）
         sort: DEFAULT_SORT_INLINE,
@@ -93,7 +93,7 @@
         diff: ['', 'bsc', 'adv', 'ext'],
         band: ['lt7', '7', '8', '9', '9p', '10', '10p'],
         scope: ['all', 'pick', 'common'],
-        showLimited: ['boolean'],
+        showRemoved: ['boolean'],
         type: ['all', 'std', 'hold', 'alt2'],
         date: null,     // 只校验是字符串；是否真是可选日期由日历状态自己兜（无效值筛出 0 张也无害）
         sort: ['id-asc', 'id-desc', 'ext-desc', 'ext-asc', 't-asc', 't-desc'],
@@ -131,7 +131,7 @@
           localStorage.setItem(SAVE_KEY, JSON.stringify({
             srv: state.srv, cat: state.cat, q: state.q, gen: state.gen,
             diff: state.diff, band: state.band,
-            scope: state.scope, showLimited: state.showLimited,
+            scope: state.scope, showRemoved: state.showRemoved,
             type: state.type, date: state.date, sort: state.sort, view: state.view
           }));
         } catch (e) { /* 隐私模式/配额满：静默跳过，不影响使用 */ }
@@ -142,8 +142,8 @@
       function syncControlsFromState() {
         if (search) search.value = state.q || '';
         if (clearBtn) clearBtn.hidden = !state.q;
-        var limBox = document.getElementById('scLimited');
-        if (limBox) limBox.checked = !!state.showLimited;
+        var rmBox = document.getElementById('scRemoved');
+        if (rmBox) rmBox.checked = !!state.showRemoved;
         var sSel = document.getElementById('scSort'); if (sSel) sSel.value = state.sort;
         var gSel = document.getElementById('scGen'); if (gSel) gSel.value = state.gen;
         var tySel = document.getElementById('scType'); if (tySel) tySel.value = state.type;
@@ -245,9 +245,9 @@
       }
 
       function matchCard(card, bodySrv) {
-        // 【2026-10-28】限时曲默认不显示：勾了「显示限时曲」才放行。
+        // 【2026-11-18】删除曲（= 已过期的限时曲）默认显示，勾了「隐藏删除曲」才挡掉。
         // 放在最前面短路，省掉后面一串字符串比较。
-        if (!state.showLimited && isEndedLimited(card)) return false;
+        if (state.showRemoved && isEndedLimited(card)) return false;
         if (state.q) {
           // 匹配 曲名 / 曲师 / songId 三个字段（任务书①），外加 data-lv 的三档定数：
           // 用户常直接打「10.5」找这个定数的歌，只搜前三个字段会一无所获。
@@ -1003,6 +1003,37 @@
       }
       if (clearBtn) clearBtn.addEventListener('click', clearSearch);
 
+      // ---- 搜索语法提示气泡（2026-11-18 主人要求）----
+      // 与日历弹层同一套开合口径：点按钮开、点按钮或点外面或 Esc 关，
+      // aria-expanded 跟着翻，关的时候焦点不被吞掉。
+      var qHelp = document.getElementById('scQHelp');
+      var qHelpPop = document.getElementById('scQHelpPop');
+      if (qHelp && qHelpPop) {
+        // 开合状态挂在 data-open 而不是 hidden：hidden 是 display:none，过渡会直接跳完。
+        var qHelpOpen = function () {
+          qHelp.setAttribute('aria-expanded', 'true');
+          qHelpPop.setAttribute('data-open', '');
+        };
+        var qHelpClose = function () {
+          qHelp.setAttribute('aria-expanded', 'false');
+          qHelpPop.removeAttribute('data-open');
+        };
+        qHelp.addEventListener('click', function () {
+          if (qHelpPop.hasAttribute('data-open')) qHelpClose(); else qHelpOpen();
+        });
+        document.addEventListener('click', function (e) {
+          if (!qHelpPop.hasAttribute('data-open')) return;
+          if (qHelp.contains(e.target) || qHelpPop.contains(e.target)) return;
+          qHelpClose();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape' || !qHelpPop.hasAttribute('data-open')) return;
+          e.stopPropagation();
+          qHelpClose();
+          qHelp.focus();
+        });
+      }
+
       // ---- 折叠面板：展开/收起带动画（2026-10-25 主人要求）----
       //
       // 【为什么不能再用 hidden 做开合】
@@ -1525,15 +1556,15 @@
       function resetAll() {
         state.q = ''; state.gen = 'all';
         state.diff = ''; state.band = 'lt7'; state.sort = DEFAULT_SORT_INLINE;
-        state.cat = 'all'; state.scope = 'all'; state.showLimited = false; state.type = 'all';
+        state.cat = 'all'; state.scope = 'all'; state.showRemoved = false; state.type = 'all';
         state.date = '';
         // 按钮上的可见文字也要跟着回「全部日期」：只改 state 会留下上一次的日期，
         // 用户看到「2026.09.15」却已经没在筛（与 ddRefresh 同一个道理）。
         if (dateV) dateV.textContent = DATE_ALL_LABEL;
         if (search) search.value = '';
         if (clearBtn) clearBtn.hidden = true;
-        var limBox = document.getElementById('scLimited');
-        if (limBox) limBox.checked = false;
+        var rmBoxR = document.getElementById('scRemoved');
+        if (rmBoxR) rmBoxR.checked = false;
         if (sortSel) sortSel.value = DEFAULT_SORT_INLINE;
         var gi = document.getElementById('scGen'); if (gi) gi.value = 'all';
         var ti = document.getElementById('scType'); if (ti) ti.value = 'all';
@@ -1560,13 +1591,13 @@
         suppressSave = false;   // 只在这一次 apply 期间禁写，之后恢复正常存档
       }
 
-      // 【2026-10-28 显示限时曲】独立开关：change 即生效（不用点应用）。
-      // 它是全局维度，切服务器时不清零——两服的限时曲口径一致。
+      // 【2026-11-18 隐藏删除曲】独立开关：change 即生效（不用点应用）。
+      // 它是全局维度，切服务器时不清零——两服的删除曲口径一致。
       (function () {
-        var box = document.getElementById('scLimited');
+        var box = document.getElementById('scRemoved');
         if (!box) return;
         box.addEventListener('change', function () {
-          state.showLimited = !!box.checked;
+          state.showRemoved = !!box.checked;
           apply();
         });
       })();
@@ -1782,7 +1813,7 @@
          而段头那句「N 首」服务端按可见数写好了（GenBlock 的 visibleCount）。
          有筛选的路径不调它 —— 那边由 apply() 统一算，重复设 hidden 只会多一遍遍历。 */
       function hideEndedLimited(node) {
-        if (state.showLimited) return;
+        if (!state.showRemoved) return;
         var cards = node.querySelectorAll('.sc-card');
         for (var k = 0; k < cards.length; k++) {
           if (isEndedLimited(cards[k])) cards[k].hidden = true;

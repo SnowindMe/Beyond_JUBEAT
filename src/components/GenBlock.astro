@@ -6,6 +6,7 @@
 // 组件化后两种视图只有「传哪些曲目进来」的区别。
 import SongCard from './SongCard.astro';
 import { isLimitedEnded } from '../lib/song-view';
+
 import type { Song } from '../lib/db';
 
 type Props = {
@@ -21,12 +22,12 @@ type Props = {
 
 const { gen, list, date, eager, srv = 'jp', markPick = false } = Astro.props;
 
-/* 段头那个「N 首」数的是**可见**的曲，不是 list.length（2026-11-16 主人指出）：
-   已结束的限时曲默认是藏起来的（前端 isEndedLimited 判 data-lu），而 list 里带着它们，
-   直接数 list.length 就会写出「105 首」、肉眼只看到 103 张卡。卡片本身仍然照渲染
-   （勾「显示限时曲」要能露出来），只把计数按同一口径扣掉。
-   判据与前端同源，都用 song-view.ts 的 isLimitedEnded，别在这里另写一份。 */
-const visibleCount = list.filter((s) => !isLimitedEnded(s)).length;
+/* 段头那个「N 首」= list.length（2026-11-18 改回全量计数）：
+   删除曲现在默认是**显示**的（只盖 Removed 遮罩），所以服务端渲染的这一屏就是全量，
+   数 list.length 才与肉眼可见张数一致；勾「隐藏删除曲」后由前端把命中的卡藏掉、
+   顺手把这里写的数字一起改小（apply 里 cnt.textContent = hitGen + ' 首'），两处始终同值。
+   isLimitedEnded 因此不再参与计数——它现在只决定画不画遮罩（见 SongCard）。 */
+const visibleCount = list.length;
 
 // 说明：content-visibility 的占位高度（contain-intrinsic-size）不在这里算。
 // 列数由 .sc-grid 的 auto-fill 随容器宽度连续变化，服务端拿不到，只能由页面脚本

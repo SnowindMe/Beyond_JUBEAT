@@ -75,6 +75,166 @@
     outline-offset: 2px;
 }
 
+/* ---------- 删除曲（2026-11-18 主人要求） ----------
+   删除曲 = 已过期的限时曲。**默认显示**，勾「隐藏删除曲」才藏；显示时整卡盖一层
+   灰遮罩 + 右上角 Removed 小徽章，读起来就是「这条不能玩了但仍在库里」。
+
+   层级（同一张卡里从下往上）：曲绘/文字 0 → .sc-rm 遮罩 1 → 角标（.sc-pick 与 .sc-hold
+   都在 1 之上，靠各自的 1/2 先后）→ .sc-link 点击层 1 …… 具体做法是：
+   遮罩给 z-index 0（卡片内容都靠不定位或更低），两个角标各抬到遮罩之上（主人要求
+   「pick up 标识和长押标识在 REMOVED 遮罩下面」——即遮罩盖住它们 → 角标必须更低）。
+   但遮罩同时又要 pointer-events: none 且不高于 .sc-link，否则整卡点不进详情。 */
+.sc-card.is-rm .sc-j img,
+.sc-card.is-rm .sc-t,
+.sc-card.is-rm .sc-a,
+.sc-card.is-rm .sc-lv {
+    opacity: 0.5;
+}
+/* 遮罩：盖住整张卡（含两个角标）。用 --ink 混 30% 的灰而不是写死色，
+   深/浅主题下都只是"一层灰"，不会变成一块脏黑；再叠一层同色 --ink 让角标发闷。
+   灰面之上再压一组 45° 斜纹（2026-11-18 主人「单单灰色还是太单调了，添加几条斜向条纹吧」）：
+   只加条纹会显得像贴纸，所以底色仍留 26%（略降），条纹用同一色再深一档、缝很宽——
+   远看是"被划掉的封条"，近看才看清是斜线，不妨碍辨认底下的曲名。 */
+.sc-rm-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: var(--r-sm);
+    background-color: color-mix(in srgb, var(--ink) 26%, transparent);
+    background-image: repeating-linear-gradient(
+        45deg,
+        color-mix(in srgb, var(--ink) 22%, transparent) 0 6px,
+        transparent 6px 16px
+    );
+    pointer-events: none;
+}
+/* Removed 徽章：**居中压在遮罩上**（主人 2026-11-18「REMOVED 徽章居中在遮罩上」），
+   比遮罩再高一层好读清；水平垂直都用 auto 定位 + translate 居中，不靠 flex 撑。 */
+.sc-rm {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    white-space: nowrap;
+    padding: 4px 10px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-data);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: #f4f8fb;
+    background: color-mix(in srgb, #04141b 72%, transparent);
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    pointer-events: none;
+}
+/* 删除曲里，两个角标都压到遮罩之下：长押 2 → 0，PICK UP 1 → 0（同为 0 时按 DOM 顺序，
+   角标都在遮罩之前渲染，于是被遮罩盖住）。 */
+.sc-card.is-rm .sc-hold,
+.sc-card.is-rm .sc-pick {
+    z-index: 0;
+}
+/* 范围那一行：范围 chips 靠左，「隐藏删除曲」方开关靠右 */
+/* 特异性要压过 .sc-pf 的 column（它在本文件更靠后定义），否则整行还是竖排 */
+.sc-pf.sc-scope-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+/* 「范围」标题独占一行（主人 2026-11-18：「范围选项在范围标题下面」）——
+   其它 .sc-pf 是 column 自然上下排，这一行是 row，所以得显式让标题占满整行，
+   后面的 chips 与开关才会落到第二行。 */
+.sc-pf.sc-scope-row > .sc-pf-k {
+    flex: 0 0 100%;
+}
+.sc-scope-row .sc-scope {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.sc-toggle-row {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+/* 【方形开关】（2026-11-18 主人：「做成方形开关而不是选择」）
+   自己画一个 34×20 的方轨 + 16px 方块，勾上时方块滑到右边、轨道变强调色底。
+   不用 input 的默认复选框外形：那个是"选择"的样子，会让它和上面那排 chip 混成一类。
+   真控件仍是原生 checkbox（可聚焦、可空格切换），只是外观透明、铺满整个轨。
+   圆角给 3px 而不是胶囊：方形在全是胶囊的站里才是"开关"这个语义。 */
+.sc-sw {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+    user-select: none;
+}
+.sc-sw input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+.sc-sw-track {
+    position: relative;
+    flex: none;
+    width: 34px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid var(--line2);
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+/* 滑块：方块，贴左内缩 2px；勾上时右移 14px（34 - 16 - 2*2） */
+.sc-sw-track::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--ink2);
+    transition: transform 0.16s ease, background 0.16s ease;
+}
+.sc-sw input:checked + .sc-sw-track {
+    background: color-mix(in srgb, var(--acc) 88%, transparent);
+    border-color: transparent;
+}
+.sc-sw input:checked + .sc-sw-track::after {
+    transform: translateX(14px);
+    background: #fff;
+}
+.sc-sw input:focus-visible + .sc-sw-track {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+.sc-sw:hover .sc-sw-track {
+    border-color: var(--ink2);
+}
+/* 【筛选控件统一字号字重（2026-11-18 主人要求）】
+   面板里的"选项类"文字一律 12.5px / 700 —— 与 .sc-chip 对齐。
+   原来是三套（chip 12.5/700、下拉 13/600、开关 12.5/400），
+   同屏三档粗细，读起来像三个层级的控件，其实它们是同一层。 */
+.sc-sw-txt {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink2);
+}
+.sc-sw input:checked ~ .sc-sw-txt {
+    color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-sw-track,
+    .sc-sw-track::after { transition: none; }
+}
+
 .sc-chip {
     display: inline-flex;
     align-items: center;
@@ -2771,10 +2931,11 @@ html[data-lum="light"] .sd-gauge {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
+    /* 右侧 72px 给清空键与问号键（各 30 宽 + 间距），别让长曲子名钻到图标底下 */
     /* 44px：WCAG 2.5.5 触控目标下限。先前写 38 是按"桌面鼠标够用"来的，
        但触屏笔记本/平板横屏也是这个断点，别省这 6px。 */
     height: 44px;
-    padding: 0 40px 0 34px;
+    padding: 0 74px 0 34px;
     font: inherit;
     font-size: 13px;
     color: var(--ink);
@@ -2805,7 +2966,8 @@ html[data-lum="light"] .sd-gauge {
 /* 清空按钮：真按钮，可 Tab 聚焦；有内容才出现（hidden 由脚本切换） */
 .sc-q-x {
     position: absolute;
-    right: 9px;
+    /* 问号键占住最右 30px，清空键让到它左边 */
+    right: 40px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2831,7 +2993,86 @@ html[data-lum="light"] .sd-gauge {
     color: var(--ink);
     background: color-mix(in srgb, var(--ink) 10%, transparent);
 }
+/* 搜索语法问号键：与清空键同一形状，但常驻（不受输入内容影响）。
+   视觉压到 --ink3，不跟输入框抢——它是说明书，不是操作。 */
+.sc-q-h {
+    position: absolute;
+    right: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--ink3);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 0.18s, background 0.18s;
+}
+.sc-q-h svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.sc-q-h:hover,
+.sc-q-h[aria-expanded="true"] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+/* 气泡：从问号键的位置**向右上**展开（2026-11-18 主人「出现在搜索框的右边上部分向上展开」），
+   所以右对齐到键、底边贴在框上方，transform-origin 落在右下角，缩放时像从键里长出来。
+   开合走 opacity + visibility + translate/scale，dispay 不参与过渡所以不用 hidden。 */
+.sc-q-hp {
+    position: absolute;
+    right: 7px;
+    bottom: calc(100% + 8px);
+    z-index: 12;
+    width: max-content;
+    min-width: 190px;
+    max-width: min(300px, calc(100vw - 44px));
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(6px) scale(0.96);
+    transform-origin: 100% 100%;
+    transition: opacity 0.16s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.16s;
+    padding: 10px 13px;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--ink2);
+    background: color-mix(in srgb, var(--glass2) 92%, transparent);
+    border: 1px solid var(--edge2);
+    border-radius: var(--r-sm);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+}
+.sc-q-hp[data-open] {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-q-hp { transition: opacity 0.16s, visibility 0.16s; transform: none; }
+}
+.sc-q-hp-t {
+    margin: 0 0 4px;
+    color: var(--ink);
+    font-weight: 700;
+}
+.sc-q-hp ul {
+    margin: 0;
+    padding-left: 16px;
+    list-style: disc;
+}
+.sc-q-hp li::marker {
+    color: var(--ink3);
+}
 .sc-q-x:focus-visible,
+.sc-q-h:focus-visible,
 .sc-btn:focus-visible,
 .sc-chip:focus-visible,
 .sc-sort-in:focus-visible,
@@ -3101,32 +3342,36 @@ html[data-lum="light"] .sd-gauge {
     background: transparent;
     cursor: pointer;
 }
+/* 【方块形滑轨与拇指（2026-11-18 主人：「滑块做成方块状」）】
+   圆拇指 + 胶囊轨是滑块最常见的默认长相；改成 3px 圆角的方轨 + 方形拇指，
+   与同一面板里的方开关（.sc-sw）同一套"方块 = 开关/挡位"的语汇。
+   拇指 14×14 比原来的 16 圆略小：方的四角外扩，同宽会显得比圆的大一圈。 */
 .sc-band-in::-webkit-slider-runnable-track {
     height: 4px;
-    border-radius: var(--pill);
+    border-radius: 3px;
     background: color-mix(in srgb, var(--ink) 14%, transparent);
 }
 .sc-band-in::-moz-range-track {
     height: 4px;
-    border-radius: var(--pill);
+    border-radius: 3px;
     background: color-mix(in srgb, var(--ink) 14%, transparent);
 }
 .sc-band-in::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
-    margin-top: -6px;      /* (4 - 16) / 2：拇指压在轨道正中 */
-    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;      /* (4 - 14) / 2：拇指压在轨道正中 */
+    border-radius: 2px;
     border: 1px solid color-mix(in srgb, var(--acc) 70%, transparent);
     background: var(--acc);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
     transition: transform 0.14s ease;
 }
 .sc-band-in::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
     border: 1px solid color-mix(in srgb, var(--acc) 70%, transparent);
     background: var(--acc);
 }
@@ -3158,18 +3403,27 @@ html[data-lum="light"] .sd-gauge {
 /* 刻度：住在滑条**上方**（2026-11-17 主人「这些挡位表示可以放到滑条上面」）。
    仍靠左右 padding 对齐拇指行程、等宽排布让每一格位置正对刻度值；
    字号压到 10px，7 格在窄屏（可用宽 ~200）也不会挤在一起。 */
+/* 刻度必须跟拇指行程严格同位：
+   原生 range 的拇指中心只能从 thumb/2 走到 width-thumb/2（这里是 7px 到 W-7px），
+   所以容器左右各内缩 7px（= 拇指宽 / 2），space-between 就把 7 个分布点落在
+   拇指可能停的 7 个位置上。每格宽压成 0 再让内容居中，分布点之间才是等距的
+   （格子自带宽度会吃掉空隙、越往右累积偏移，窄屏能差到十几像素）。 */
 .sc-band-ticks {
     display: flex;
     justify-content: space-between;
-    padding: 0 8px 2px;
+    padding: 0 7px 2px;
     font-size: 10px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--ink3);
 }
 .sc-band-ticks span {
+    /* 宽 0 + 内容居中：文字以分布点为中心向两侧溢出，热区仍在文字上 */
+    width: 0;
+    display: flex;
+    justify-content: center;
     cursor: pointer;
-    padding: 2px 3px;
+    padding: 4px 0 2px;
     border-radius: var(--r-hair);
     transition: color 0.16s;
 }
@@ -3288,8 +3542,9 @@ html[data-lum="light"] .sd-gauge {
     height: 40px;
     padding: 0 12px;
     font: inherit;
-    font-size: 13px;
-    font-weight: 600;
+    /* 与 .sc-chip 同一档（见 .sc-sw-txt 上的说明），不是独立一层 */
+    font-size: 12.5px;
+    font-weight: 700;
     color: var(--ink);
     text-align: left;
     background-color: color-mix(in srgb, var(--ink) 4%, transparent);
@@ -3390,8 +3645,9 @@ html[data-lum="light"] .sd-gauge {
     height: 26px;
     padding: 0 9px;
     font: inherit;
-    font-size: 12px;
-    font-weight: 600;
+    /* 与面板其它选项同档（12.5 / 700，见 .sc-sw-txt 的说明） */
+    font-size: 12.5px;
+    font-weight: 700;
     color: var(--ink2, var(--ink));
     background-color: color-mix(in srgb, var(--ink) 6%, transparent);
     border: 1px solid var(--edge2);
@@ -3420,7 +3676,7 @@ html[data-lum="light"] .sd-gauge {
     color: var(--acc);
     background-color: color-mix(in srgb, var(--acc) 14%, transparent);
     border-color: var(--acc);
-    font-weight: 600;
+    font-weight: 700;
 }
 .sc-cal-sel:focus-visible {
     outline: 2px solid var(--acc);
@@ -3450,7 +3706,8 @@ html[data-lum="light"] .sd-gauge {
     height: 36px;
     padding: 0 2px;
     font: inherit;
-    font-size: 12px;
+    font-size: 12.5px;
+    font-weight: 700;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
     color: var(--ink2, var(--ink));
@@ -3543,7 +3800,8 @@ html[data-lum="light"] .sd-gauge {
     aspect-ratio: 1;
     padding: 0;
     font: inherit;
-    font-size: 12px;
+    font-size: 12.5px;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
     background-color: color-mix(in srgb, var(--ink) 4%, transparent);
@@ -3693,9 +3951,11 @@ html[data-lum="light"] .sd-gauge {
     background-clip: content-box;
     background-color: color-mix(in srgb, var(--ink3) 45%, transparent);
 }
-/* 面板里的 chip 比工具条上的小一号：它们是二级控件，不该和分区 chips 一样重 */
+/* 面板里的 chip 原先比工具条上的小一号（11.5），2026-11-18 主人要求
+   「统一一下筛选选项的文字大小和粗细」——同屏的选项一律 12.5 / 700，
+   不再靠字号分主次（体积差由 padding 与位置表达）。 */
 .sc-chip-sm {
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 700;
     /* 面板里的 chip 是二级控件，视觉上小一号，但可点区域同样给足 44 */
     min-height: 44px;
@@ -3910,7 +4170,8 @@ html[data-lum="light"] .sd-gauge {
     }
     .sc-pf-in {
         height: 44px;
-        font-size: 13px;
+        /* 与其它选项同档（12.5 / 700），窄屏不另放大字号 */
+        font-size: 12.5px;
     }
     .sc-chip-sm {
         /* 窄屏上这些 chip 是主要筛选入口，必须够 44 高 */
