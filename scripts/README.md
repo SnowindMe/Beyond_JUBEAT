@@ -15,7 +15,8 @@
 
 ## 数据分离（data）
 
-- `data/push.cjs` / `data/pull.cjs`：把白名单内的数据文件推到私有 R2 / 拉回来。见 README「数据与代码分离」节
+- `data/push.cjs` / `data/pull.cjs`：把白名单内的数据文件推到私有 R2 / 拉回来。
+  push 平时要带 `--changed`（按 md5 比远端 ETag，只传变化的）；CI 里由 `data-push.yml` 自动跑。见 README「数据与代码分离」节
 
 ## 抓取（ub / yyj / remy）
 

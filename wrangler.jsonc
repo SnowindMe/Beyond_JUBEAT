@@ -3,14 +3,21 @@
   "name": "beyond-jubeat",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  // 可观测性：打开 Workers Logs（请求日志 + 持久化），供 Workers 控制台/Logpush 排查。
-  // traces 与 issues 先关闭，避免额外采样开销；需要时把对应 enabled 改成 true。
+  // 【2026-11-19 主人要求关闭 workers.dev 与 preview URL、关闭 Workers 日志】
+  // 两条 *.workers.dev 地址改为不通，只留自定义域名（wiki.byd-ub.top / wiki-cn.byd-ub.top）。
+  // workers_dev 关的是 <name>.<sub>.workers.dev，preview_urls 关的是每个版本那条
+  // <version>-<name>.<sub>.workers.dev。两者都要显式 false：不写等于开着。
+  "workers_dev": false,
+  "preview_urls": false,
+  // 可观测性：2026-11-19 整体关闭（下列子项的真实生效值仍是显式写的，
+  // 改回时把顶层 enabled 与 logs.enabled 一起改 true，只改一个会只开一半。
+  // traces 与 issues 原就是关的，保持不动）。
   "observability": {
     // 顶层 enabled 是旧的整体开关，不写时线上会返回 false（虽不影响子项生效，
-    // 但控制台会显示成关闭，容易误判）。显式打开，实际采样由下面的子项决定。
-    "enabled": true,
+    // 但控制台会显示成关闭，容易误判）。显式关闭。
+    "enabled": false,
     "logs": {
-      "enabled": true,
+      "enabled": false,
       "head_sampling_rate": 1,
       "invocation_logs": true,
       "persist": true

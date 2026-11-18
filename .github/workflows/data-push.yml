@@ -1,0 +1,59 @@
+name: data-push
+
+# 【2026-11-19 主人「不想每次都要全量推送数据，可不可以加入个专用 github action」】
+# 数据在 R2 私有桶里，本机每一次改数据都全量重推要十几分钟（96 个文件、238 MB，大头是音频），
+# 改一个覆盖层也得等整车跑完。这里把「代码改动引起的数据变化」交给 Action 自动做掉：
+#   1. pull 取回当前远端数据（以一个完整基线覆盖 compare）
+#   2. 按代码重建（覆盖层、映射表、常量一类的改动只有跑了管线才落到产物上）
+#   3. 只推内容真变了的（--changed 按 sha256 比远端 ETag，一致就跳过）
+#
+# 只在与数据相关的路径变动时触发：纯样式/文档的 push 不该重算一遍曲库。
+# 手动改的覆盖层文件在本地、Action 看不到，仍由本机 `npm run data:push -- --changed` 推（同样只传变化的）。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/**'
+      - 'scripts/db/**'
+      - 'scripts/build-data.cjs'
+      - 'scripts/ci/**'
+      - 'db/schema.sql'
+      - '.github/workflows/data-push.yml'
+  workflow_dispatch:
+
+# 同一时刻只跑一份，避免两次推送互相覆盖。
+concurrency:
+  group: data-push
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: 拉取当前远端数据
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run data:pull
+
+      # 与 CI 的 verify 同一条命令：库是生成物、不入库，脏库也得先从源重建。
+      - name: 重建本地曲库与产物
+        run: |
+          node scripts/db/build-db.cjs
+          node scripts/build-data.cjs
+
+      # --changed：逐条与远端 ETag 比 sha256，一致就跳过。没有变化时脚本正常退出、不打补丁。
+      - name: 只推变化的数据
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run data:push -- --changed

@@ -4,7 +4,10 @@ jubeat（音乐魔方）中文资料站。收录日服 12 个世代与国服 1 �
 
 ![deploy](https://img.shields.io/badge/Cloudflare_Workers-live-F38020) ![astro](https://img.shields.io/badge/Astro-7.4-ff5d01) ![repo](https://img.shields.io/badge/GitHub-Beyond__JUBEAT-181717)
 
-线上：<https://wiki.byd-ub.top> · 备用：<https://beyond-jubeat.1945743455.workers.dev>
+线上：<https://wiki.byd-ub.top> · 国内加速：<https://wiki-cn.byd-ub.top>
+
+> 2026-11-19 起关闭 `*.workers.dev` 与 preview URL（`wrangler.jsonc` 的 `workers_dev` / `preview_urls` 均为 false），
+> 两条 workers.dev 地址已不通，只能走上面两个自有域名。Workers Logs 也一并关闭。
 
 ---
 
@@ -134,7 +137,7 @@ docs/                         库表与灌库规则、站点结构、术语表�
 | `npm run check` | 八段自检，任何一段红都不能放行                                   |
 | `npm run opt`   | 压缩 `public/assets/images` 下的图片                             |
 | `npm run data:pull` | 从 R2 拉回被移出版本库的数据（`prebuild` 会自动跑）          |
-| `npm run data:push` | 把本地数据推到 R2（改过 `data/` 后必须跑）                   |
+| `npm run data:push -- --changed` | 把本地改过的数据推到 R2：按 md5 比远端 ETag，没变的跳过 |
 
 **改曲库不要手改 `data/jubeat.db`**：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json`，跑 `npm run db`，再跑 `npm run patch` 把生成的补丁灌进 D1。
 
@@ -149,7 +152,12 @@ docs/                         库表与灌库规则、站点结构、术语表�
 理由：仓库是 PUBLIC 的，数据留在库里等于把整站源码可读的副本白送出去；而且每改一首曲都要在几十个数据文件上留下 diff，功能 review 会被淹掉；数据还在每次更新里让仓库持续变大。
 
 - **克隆后**：`npm run data:pull` 拉回（`prebuild` 已挂上，`npm run build` 会自动先跑它，缺凭据时跳过并打印提示）。
-- **改完数据**：`npm run data:push` 推回去，否则 CI 与别人的 clone 拿不到你的改动。
+- **改完数据**：`npm run data:push -- --changed` 推回去，否则 CI 与别人的 clone 拿不到你的改动。
+  加 `--changed` 是必须的——不加会全量重推 96 个文件（238 MB，大头是音频），跑十几分钟。
+  它逐条比内容的 md5 与远端 ETag，没变的不传；想要全量才省略这个参数。
+- **代码引起的数据变化不用手动推**：`.github/workflows/data-push.yml` 在 push main 后自动
+  pull → 重建 → `--changed` 推，只在 `data/`、`scripts/db/`、`schema.sql` 一类路径变动时触发。
+  覆盖层这类只在本地改的文件它看不到，仍由本机推。
 - 需要 `CLOUDFLARE_API_TOKEN`（R2 Read/Write）与 `CLOUDFLARE_ACCOUNT_ID` 两个环境变量；CI 里是仓库 secret。
 - 白名单在 `scripts/data/push.cjs` 的 `WHITELIST`：新增长期数据文件时要登记，否则推不上去。`db/schema.sql` 与 `src/data/site.json` 仍留在仓库——它们跟代码一起 review 才有意义。
 - R2 免费额度足够：对象数只有几十个、总量 5.5 MB，且只有构建与手动推送会访问，不对外暴露读端点，天然不担心被刷。
