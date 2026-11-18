@@ -34,7 +34,22 @@
 // 缓存键用**实际请求的 origin**：同一份音频从 wiki.byd-ub.top 与 workers.dev
 // 进来时各存一份（Cache API 只对当前 zone 生效），但绝不能用写死的第三方域名
 // 当 key——那样 put 会「成功」而 match 永远 MISS。
+// 【2026-11-18 音源改从 R2 供，上游降为回退】
+// 主人给了 63 首国服音乐魔方曲的原始 mp3，要求「优先使用 R2 音源，如果 R2 没有再取 ub」。
+// 上游 ub.thregren.world 是别人的站、跨墙线路，冷 PoP 首播要 1–5 秒；R2 与 Worker 同一张网，
+// 同一 PoP 内取对象是毫秒级，钱也几乎不花（Class B 操作免费额度 1000 万/月，
+// 而这里每个对象还会被 Cache API 兜住）。
+// 顺序因此是：**Cache API → R2 → 上游**。上游那条老路一行没删，
+// 没搬过来的 1150 多首仍照旧走它，回退路径也保证 R2 缺对象时不会变成 404。
+//
+// 防盗刷（2026-11-18 主人要求）：R2 桶是私有的，音频只能经本端点出去，于是
+//   ① Referer 必须来自本站（空 Referer 放行，直接开地址、curl 验收要用）；
+//   ② id 走白名单正则，未命中映射直接 404 不转发；
+//   ③ 只放行 GET / HEAD，不透传任何查询参数——上游没有、R2 也没有参数语义，
+//      留着只会让人构造无数种 URL 把边缘缓存打散。
 import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import r2MapJson from '../../../data/audio-map.json';
 import audioMap from '../../../data/ub-audio.json';
 
 export const prerender = false;
@@ -42,6 +57,24 @@ export const prerender = false;
 const UPSTREAM = 'https://ub.thregren.world';
 
 const MAP = audioMap as Record<string, string>;
+/** R2 里的 key 前缀 + 本地已搬过来的曲目（id → key） */
+const R2_MAP = r2MapJson as Record<string, string>;
+const AUDIO_BUCKET = (env as { AUDIO?: R2Bucket }).AUDIO;
+
+/** 站内来源：两个自有域名、workers.dev 预览、本机开发。与曲绘反代同一套判据。 */
+const SITE_HOST = /(^|\.)byd-ub\.top$/;
+const DEV_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/;
+
+function refererAllowed(request: Request): boolean {
+  const raw = request.headers.get('referer');
+  if (!raw) return true;
+  try {
+    const host = new URL(raw).hostname;
+    return SITE_HOST.test(host) || DEV_HOST.test(host);
+  } catch {
+    return false; // 有头但解析不出来：宁可拒
+  }
+}
 
 // 只接受 10000036 / 11000228 / BTA-83105461 这类 id：字母数字与连字符、1-24 位。
 // 用白名单而不是「拒绝 ..」——编码绕过、路径穿越、头部注入都进不到 URL 拼接里。
@@ -94,6 +127,16 @@ export const HEAD: APIRoute = ({ params, request, locals }) => serve(params, req
 /** 缓存键：固定用请求 origin + 规范路径，不带查询串 */
 function cacheKey(id: string, origin: string) {
   return new Request(origin + '/api/audio/' + encodeURIComponent(id), { method: 'GET' });
+}
+
+/** R2 里有没有这个对象、多大。用 head() 而不是 get()：只取元数据，不下行字节。 */
+async function headR2(key: string): Promise<R2Object | null> {
+  try {
+    return await AUDIO_BUCKET.head(key);
+  } catch (e) {
+    console.warn('[audio] r2 head failed', String(e));
+    return null;
+  }
 }
 
 /** 把上游相对路径拼成绝对 URL；路径里有中文与空格，只在这里编码一次，不二次转义 */
@@ -165,7 +208,13 @@ async function serve(
   if (!ID_OK.test(id)) return notFound('bad songId');
 
   const rel = MAP[id];
-  if (!rel) return notFound('no audio for this song');
+  const r2Key = R2_MAP[id];
+  // 两条来源都没有才算无音源。命中 R2 的曲不要求上游也有映射。
+  if (!rel && !r2Key) return notFound('no audio for this song');
+
+  // 防盗刷：来源不对就 403，且**不查不写缓存**——否则热链的人一多，
+  // 本站用户反而会吃到缓存里的 403（曲绘反代同一套处理，见该文件注释）。
+  if (!refererAllowed(request)) return forbidden();
 
   // 【2026-10-30 分段计时】同一个接口测出过 4ms 与 17.6s 两个值，无法判断改动是否有效。
   // 先给每一步打时间戳，用 x-timing 头返回，用于区分耗时属于「我们的代码」还是
@@ -189,10 +238,16 @@ async function serve(
       const size = Number(hit.headers.get('content-length') ?? 0);
       return new Response(null, {
         status: 200,
-        headers: baseHeaders(hit.headers.get('content-type') || 'audio/ogg', size, true),
+        headers: baseHeaders(hit.headers.get('content-type') || 'audio/ogg', size, true, hit.headers.get('x-audio-source') || 'ub.thregren.world'),
       });
     }
+    // R2 有对象就直接给长度，不碰上游（mp3 的 content-type 固定 audio/mpeg）
+    const head = r2Key ? await headR2(r2Key) : null;
+    if (head) {
+      return new Response(null, { status: 200, headers: baseHeaders('audio/mpeg', head.size, false) });
+    }
     try {
+      if (!rel) return notFound('no upstream audio for this song');
       const up = await fetch(upstreamUrl(rel), { method: 'HEAD', headers: UA, redirect: 'follow' });
       if (!up.ok) throw new HttpError(up.status === 404 ? 404 : 502, 'upstream ' + up.status);
       const size = Number(up.headers.get('content-length') ?? 0);
@@ -213,6 +268,7 @@ async function serve(
   // ===================================================================
   if (hit) {
     const type = hit.headers.get('content-type') || 'audio/ogg';
+    const src = hit.headers.get('x-audio-source') || 'ub.thregren.world';
     const size = Number(hit.headers.get('content-length') ?? 0) || 0;
     const body = hit.body;
     if (!body) return notFound('cached body empty');
@@ -224,12 +280,12 @@ async function serve(
         const buf = await hit.arrayBuffer();
         return new Response(buf, {
           status: 200,
-          headers: baseHeaders(type, buf.byteLength, true),
+          headers: baseHeaders(type, buf.byteLength, true, src),
         });
       }
       return new Response(body, {
         status: 200,
-        headers: { ...baseHeaders(type, size, true), 'x-timing': mark.join(' ') },
+        headers: { ...baseHeaders(type, size, true, src), 'x-timing': mark.join(' ') },
       });
     }
 
@@ -245,7 +301,7 @@ async function serve(
       return new Response(sliceStream(body, r.start, r.end), {
         status: 206,
         headers: {
-          ...baseHeaders(type, r.end - r.start + 1, true),
+          ...baseHeaders(type, r.end - r.start + 1, true, src),
           'content-range': `bytes ${r.start}-${r.end}/${size}`,
           'x-timing': mark.join(' '),
         },
@@ -254,12 +310,57 @@ async function serve(
 
     // 没有 size 或 Range 语法不认识：整份回，交给浏览器自己处理
     const buf = await hit.arrayBuffer();
-    return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, true) });
+    return new Response(buf, { status: 200, headers: baseHeaders(type, buf.byteLength, true, src) });
   }
 
   // ===================================================================
+  // ---- 缓存未命中时先问 R2 ----
+  // 【顺序的理由】R2 同网、毫秒级，且 Class B 操作在免费额度内；上游跨墙 1–5 秒。
+  // 搬过来的 63 首走这条，其余照旧走下面的上游分支——R2 缺对象(404)只代表"这首没搬"，
+  // 不是终结，所以**回落到上游**而不是直接 404。
+  // 取回来的对象同样 tee 一份进边缘缓存：下一跳就该是 cache HIT，不再碰 R2。
+  if (r2Key && AUDIO_BUCKET) {
+    const obj = await AUDIO_BUCKET.get(r2Key);
+    if (obj) {
+      lap('r2=HIT');
+      const size = obj.size;
+      // body 是流、只能读一次：缓存写与本次响应各要一份，先 tee 成两支。
+      // （第一版直接把 obj.body 交给 cache.put 又拿它做响应，日志报
+      //   "This ReadableStream is disturbed ... cannot be used as a body"。）
+      const [forCache, forClient] = obj.body.tee();
+      const shell = new Response(forCache, { headers: cacheShellHeaders('audio/mpeg', size, 'r2') });
+      locals.cfContext?.waitUntil?.(
+        cache.put(key, shell).catch((e) => console.warn('[audio] r2 cache write failed', String(e)))
+      );
+      const headers: Record<string, string> = baseHeaders('audio/mpeg', size, false, 'r2');
+      headers['x-timing'] = mark.join(' ');
+      // Range 由我们自己切：R2 的 body 是流，sliceStream 按闭区间跳读，不整份驻留
+      const r = rangeHeader ? parseRange(rangeHeader, size) : null;
+      if (r === 'invalid') {
+        forClient.cancel?.().catch(() => {});
+        return new Response(null, {
+          status: 416,
+          headers: { 'content-range': 'bytes */' + size, 'cache-control': 'no-store' },
+        });
+      }
+      if (r) {
+        return new Response(sliceStream(forClient, r.start, r.end), {
+          status: 206,
+          headers: {
+            ...headers,
+            'content-length': String(r.end - r.start + 1),
+            'content-range': `bytes ${r.start}-${r.end}/${size}`,
+          },
+        });
+      }
+      return new Response(forClient, { status: 200, headers });
+    }
+  }
+
   // 情况 B：缓存未命中
   // ===================================================================
+  // 走到这里说明 R2 也没有：只有上游映射能兜底，没有就到此为止。
+  if (!rel) return notFound('r2 miss and no upstream audio');
   const target = upstreamUrl(rel);
 
   try {
@@ -382,16 +483,24 @@ async function cacheFullInBackground(cache: Cache, key: Request, target: string)
    match() 永远拿不到。本地库能直接看到症状：expiration 与 date 是同一个时刻。
    这正是 2026-10-30 记「tee 分支 put 后 HEAD 全 MISS」的第二层原因
    （第一层是 content-length 缺失会退回 chunked）。两条都补上才真的命中。 */
-function cacheShellHeaders(type: string, size: number): Record<string, string> {
-  return { 'content-type': type, 'content-length': String(size), 'cache-control': CACHE_CONTROL, 'accept-ranges': 'bytes' };
+/* source 也要存进壳：命中分支靠它还原 x-audio-source，否则从 R2 落进缓存的那条
+   下一跳会被标成 ub.thregren.world，验收时看不出真实来源（2026-11-18 本地实撞）。 */
+function cacheShellHeaders(type: string, size: number, source = 'ub.thregren.world'): Record<string, string> {
+  return {
+    'content-type': type,
+    'content-length': String(size),
+    'cache-control': CACHE_CONTROL,
+    'accept-ranges': 'bytes',
+    'x-audio-source': source,
+  };
 }
 
-function baseHeaders(type: string, size: number, hit: boolean): Record<string, string> {
+function baseHeaders(type: string, size: number, hit: boolean, source = 'ub.thregren.world'): Record<string, string> {
   const h: Record<string, string> = {
     'content-type': type,
     'cache-control': CACHE_CONTROL,
     'accept-ranges': 'bytes',
-    'x-audio-source': 'ub.thregren.world',
+    'x-audio-source': source,
     // 验收用：HIT = 这次吃的是本站边缘缓存，MISS = 回了一次上游
     'x-cache': hit ? 'HIT' : 'MISS',
   };
@@ -413,6 +522,14 @@ class HttpError extends Error {
     super(message);
     this.status = status;
   }
+}
+
+/** 来源不合法：与曲绘反代一致，不缓存、只留一行说明 */
+function forbidden(): Response {
+  return new Response('hotlink denied', {
+    status: 403,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+  });
 }
 
 function notFound(msg: string): Response {

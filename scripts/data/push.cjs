@@ -27,6 +27,7 @@ const WHITELIST = [
   'data/upstream',
   'data/remy',
   'data/audio-overrides.json',
+  'src/data/audio-map.json',
   'data/chart-overrides.json',
   'data/cn-extra-songs.json',
   'data/cn-online-overrides.json',
@@ -35,6 +36,8 @@ const WHITELIST = [
   'data/title-overrides.json',
   'db/seed.sql',
   'public/data/songs.json',
+  // 音频原文件（2026-11-18 起）：key 就是 public/songs/<songId>.mp3，与运行时映射一致
+  'public/songs',
   'src/data/data.json',
   'src/data/songs.json',
   'src/data/songs-version.json',
@@ -48,6 +51,15 @@ const WHITELIST = [
 // 这两个不进库但也别带上去：build-stamp 由构建现写、site.json 是站点配置（含版本号，
 // 跟代码一起 review 才有意义）。
 const dry = process.argv.includes('--dry');
+
+/* content-type 按扩展名给：原先一律 application/json，2026-11-18 加入音频后
+   一度让 mp3 也带着 JSON 类型（浏览器靠嗅探也播得出来，但 <audio> 的
+   media type 判定、以及部分代理的转码判断都会看它，给错是隐患）。 */
+function contentType(f) {
+  if (f.endsWith('.mp3')) return 'audio/mpeg';
+  if (f.endsWith('.sql')) return 'text/plain; charset=utf-8';
+  return 'application/json';
+}
 
 function walk(target, acc) {
   const abs = path.join(ROOT, target);
@@ -86,7 +98,7 @@ function main() {
     try {
       execFileSync(
         process.platform === 'win32' ? 'npx.cmd' : 'npx',
-        ['wrangler', 'r2', 'object', 'put', `${BUCKET}/${f}`, `--file=${f}`, '--remote', '--content-type=application/json'],
+        ['wrangler', 'r2', 'object', 'put', `${BUCKET}/${f}`, `--file=${f}`, '--remote', `--content-type=${contentType(f)}`],
         // shell: true 是必须的：Windows 上 spawnSync 直接执行 npx.cmd 会 EINVAL（2026-11-18 实撞），
         // 交给 shell 解析才能起得来。路径里没有空格，不必额外加引号。
         { cwd: ROOT, shell: true, stdio: ['ignore', 'ignore', 'pipe'] }

@@ -216,6 +216,8 @@ data/upstream/*.json ───────────────────�
 2. 中间件边缘缓存，只对白名单路径、只对 GET、**带 `Set-Cookie` 的绝不入库**（`src/middleware.ts`）。首页与 `/songs/frag` 还要看登录态（运势用 `user.id` 当种子），行长时绕过。**非 200 不入库但也不重渲**：快照带着原本的 status 直接交出去（2026-11-12 前的写法是遇到非 200 就再 `next()` 一次，第二次渲染会把 `Astro.response.status=404` 吃掉，表现为不存在的 songId 回 200 + 404 页）
 3. BGM 反代进 `caches.default`，缓存完整 200，Range 由缓存字节本地切 206；Range 未命中时先透传，**6 秒后**在 `waitUntil` 里补一份整份缓存（延迟 + 单飞，不抢首播带宽）
 
+**音频来源顺序是 缓存 → R2 → 上游**：国服音乐魔方代那 63 首原文件已搬进 R2（`beyond-jubeat-data/public/songs/<id>.mp3`，与数据同桶、`AUDIO` 绑定只读），命中就直接从 R2 流出去并 `tee` 一份进边缘缓存，下一跳起就是 HIT。R2 没对象（其余一千多首）照旧回落到 ub.thregren.world，回退路径一行没删。R2 那条的 `content-type` 固定 `audio/mpeg`——传对象时必须按扩展名给，否则默认的 `application/json` 会被 `<audio>` 当成未知类型。
+
 > 流式响应要进 `caches.default`，壳里**必须同时带 `content-length` 与 `cache-control`**。缺 `content-length` 会退回 chunked 存储、HEAD 拿不到长度；缺 `cache-control` 则 TTL 取 0，写进去下一毫秒就过期——两层都要有，否则表现为「在库里但永远 MISS」。
 
 `public/_headers` 管静态资源头，**但 CF 的 `_headers` 不作用于 Worker 生成的响应**，所以 SSR 页与 API 的头由 `src/lib/csp.ts` 在中间件里补，两份值必须逐字一致、同时改。

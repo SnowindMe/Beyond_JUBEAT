@@ -22,6 +22,9 @@ import { env } from 'cloudflare:workers';
 // BGM 试听映射（本站 songId → 上游相对路径），由 scripts/ub/build-ub-audio.cjs 生成。
 // 打包期内联进 Worker，运行时不读文件；未命中的曲目说明上游没有音源，不渲染播放器。
 import audioMap from '../../data/ub-audio.json';
+// 已搬进 R2 的音源（id → key）。2026-11-18 起国服音乐魔方代 63 首走 R2，
+// 优先于上游；这里只用来判「有没有音源」，取用顺序在 /api/audio 里。
+import r2AudioMap from '../../data/audio-map.json';
 // 谱面密度数据**不再 import 进 Worker 包**。
 // 【2026-11-01 主人「能不能不需要全量获得谱面，进入到歌曲详情页才加载」】
 // 原先把整张表（1.07MB）import 进来，实测详情页 chunk 3.3MB，
@@ -160,7 +163,11 @@ const coverSrc = song?.cover ? jacketUrl(song.id, song.cover) : null;
 // 有没有音源：映射表命中才渲染试听条。1248 首里 1185 首有（上游是日服谱面站，
 // 国服原创曲、拿不到官方 id 的 BTA- 占位曲、以及 2026-10-29 刚上架那 7 首——
 // 上游还没收录——本就没有），未命中的不摆空控件。
-const hasAudio = !!(song && (audioMap as Record<string, string>)[String(song.id)]);
+const hasAudio = !!(
+  song &&
+  ((r2AudioMap as Record<string, string>)[String(song.id)] ||
+    (audioMap as Record<string, string>)[String(song.id)])
+);
 
 // ---------------------------------------------------------------------------
 // 谱面密度数据（2026-11-01 主人「要不去 ub 拉取谱面文件吧，做个如图所示的 bar 条」）

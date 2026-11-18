@@ -80,6 +80,16 @@
   },
   // 适配器默认会给 Astro Sessions 挂一个名为 SESSION 的 KV 绑定（我们暂未用会话），
   // 不在这里写死 id 的话，构建产物里的 bindings 会缺 id，wrangler deploy 会失败。
+  // 音频（BGM）从 R2 供（2026-11-18 主人要求）。
+  //   主人明确「不要另建桶」：音频就放既有的数据桶 beyond-jubeat-data 的 public/songs/ 下，
+  //   两个绑定指向同一个桶、只是用途不同——DATA 给构建期脚本读写，AUDIO 给运行时读。
+  //   桶是私有的，音频只经 /api/audio 出去，靠 Referer + Range + 边缘缓存控流。
+  "r2_buckets": [
+    {
+      "binding": "AUDIO",
+      "bucket_name": "beyond-jubeat-data"
+    }
+  ],
   "kv_namespaces": [
     {
       "binding": "SESSION",
