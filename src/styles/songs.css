@@ -4140,10 +4140,20 @@ html[data-lum="light"] .sd-gauge {
         height: 44px;
         font-size: 14px;
     }
+    /* 清空键让到问号键左边（问号常驻，右缘 4；清空占 44..88），
+       否则两个都贴 right 会完全叠在一起。 */
     .sc-q-x {
         width: 32px;
         height: 32px;
-        right: 6px;
+        right: 62px;
+    }
+    .sc-q-h {
+        width: 36px;
+        height: 36px;
+        right: 4px;
+    }
+    .sc-q-in {
+        padding-right: 96px;
     }
     .sc-btn,
     .sc-sort-in {
@@ -4340,11 +4350,19 @@ html.sc-js .sc-panel[hidden] {
 
     /* 搜索框清空按钮 30×30 → 44×44。
        它是 absolute 的圆形按钮，不放 padding（会让图标偏心），
-       直接放大盒子并把 right 从 9 收到 2，图标仍在输入框右缘同一位置。 */
+       直接放大盒子；right 由 2 挪到 46，给右边的问号键（44 宽、right 0）让位。 */
     .sc-q-x {
         width: 44px;
         height: 44px;
-        right: 2px;
+        right: 46px;
+    }
+    .sc-q-h {
+        width: 44px;
+        height: 44px;
+        right: 0;
+    }
+    .sc-q-in {
+        padding-right: 100px;
     }
     .sc-q-x svg {
         width: 15px;
