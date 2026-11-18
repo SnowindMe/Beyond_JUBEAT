@@ -519,11 +519,15 @@ const bpmText = String(bpm ?? '')
         root.classList.add('is-loading');
         // 上一发还在缓冲时再点＝重试：load() 会中止旧请求重新拉，否则再点只是又喊一次
         // play()，卡住的那条连接仍占着，看起来就是"点了没反应"。
-        if (!idle && a.readyState < 3) { try { a.load(); } catch (e) {} }
+        var retry = !idle && a.readyState < 3;
+        if (retry) { try { a.load(); } catch (e) {} }
         // 走 play() 的 promise：被浏览器策略拦下时把转圈收回，不留假加载状态
         var p = a.play();
         if (p && p.catch) {
-          p.catch(function () {
+          p.catch(function (err) {
+            // load() 打断了上一次 play()，它会以 AbortError 拒绝——这一发仍在拉流，
+            // 转圈不能撤，撤了就成了"点了变回原样"的假失败（2026-11-19 实测）。
+            if (err && err.name === 'AbortError' && retry) return;
             root.classList.remove('is-loading', 'is-playing');
           });
         }
