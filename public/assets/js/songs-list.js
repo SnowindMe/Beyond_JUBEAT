@@ -1292,17 +1292,21 @@
       // 视觉上一个箭头是指向过去还是未来，随视图变——年视图要按年份方向走。
       function calSyncNav(y, m) {
         var show = calMode !== 'month';
+        // 天视图到年份两端（2008-01 / 2030-12）就把对应箭头置灰——不然箭头点得动、
+        // 却翻到范围外的月份，而那几个月一格可选日期都没有。
+        // 年视图的页码边界由 calRenderYears 自己覆盖（它在 calSyncNav 之后调）。
+        var atMin = calMode === 'day' && y === CAL_YEAR_MIN && m === 1;
+        var atMax = calMode === 'day' && y === CAL_YEAR_MAX && m === 12;
         if (calPrev) {
           calPrev.hidden = !show;
-          calPrev.disabled = false;
+          calPrev.disabled = atMin;
           calPrev.setAttribute('aria-label', calMode === 'year' ? '上一页年份' : '上个月');
         }
         if (calNext) {
           calNext.hidden = !show;
-          calNext.disabled = false;
+          calNext.disabled = atMax;
           calNext.setAttribute('aria-label', calMode === 'year' ? '下一页年份' : '下个月');
         }
-        void y; void m;
       }
       var DATE_ALL_LABEL = '全部日期';
       // 可选日期集合（Set 查询 O(1)，日历每月重绘上百格时省一次线性查找）
@@ -1455,8 +1459,13 @@
               return;
             }
             var y = Number(calMonth.slice(0, 4));
-            var m = Number(calMonth.slice(5, 7)) - 1 + step;
-            var d2 = new Date(y, m, 1); // 跨年交给 Date 进位，别手算字符串
+            var m0 = Number(calMonth.slice(5, 7)) - 1;
+            // 年份范围是硬边界（2008–2030，见 CAL_YEAR_MIN/MAX）：到头的那个月再点就停在原地，
+            // 别再让 Date 进位把视图带到 2007-12 / 2031-01（那样箭头明明已 disabled 还能翻天，
+            // 且翻出来的月份点不出任何日期）。年视图的页码边界在 calRenderYears 里另管。
+            if (step < 0 && y === CAL_YEAR_MIN && m0 === 0) return;
+            if (step > 0 && y === CAL_YEAR_MAX && m0 === 11) return;
+            var d2 = new Date(y, m0 + step, 1); // 跨年交给 Date 进位，别手算字符串
             calMonth = d2.getFullYear() + '-' + String(d2.getMonth() + 1).padStart(2, '0') + '-01';
             calRender();
             return;

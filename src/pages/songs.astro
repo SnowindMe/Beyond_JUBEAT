@@ -75,8 +75,10 @@ const CAT_GENS: Record<string, Record<string, string[]>> = {
 // 曲库数据里没有「收录日」这一列，也推不出来，所以是常量；某一服上新后要手动改这里。
 // 文案主人定的是「Latest：」（首版写成 Lastest，2026-11-14 当场纠正）。
 const SRV_CARDS = [
-  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
-  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
+  /* 卡片名只留 JP / CN（2026-11-18 主人：改用「服务器图标 + JP/CN」）。
+     全称放在 title 里，读屏与悬停仍能读到；视觉上省下的宽度让名称与计数挤得进一行。 */
+  { id: 'jp', name: 'JP', full: 'Server · JP', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
+  { id: 'cn', name: 'CN', full: 'Server · CN', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
 ] as const;
 
 // 按 视图服务器 → 分区 → 世代 建桶。
@@ -437,8 +439,8 @@ const TYPES = [
             <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
             {/* 名称与总曲数并排两枚小徽章（主人 2026-10-22：总曲数放到名称右边，两个都做成徽章）。 */}
             <span class="sc-srv-meta">
-              <b class="sc-tag sc-tag-n">{s.name}</b>
-              <b class="sc-tag sc-tag-c">{srvTotal(s.id)}<i>首</i></b>
+              <b class="sc-tag sc-tag-n" title={s.full}><svg class="sc-tag-ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2" y="2.5" width="12" height="5" rx="1.2"/><rect x="2" y="8.5" width="12" height="5" rx="1.2"/><circle cx="4.6" cy="5" r=".85" fill="currentColor" stroke="none"/><circle cx="4.6" cy="11" r=".85" fill="currentColor" stroke="none"/></svg>{s.name}</b>
+              <b class="sc-tag sc-tag-c">{srvTotal(s.id)}<i>Songs</i></b>
             </span>
           </button>
         ))}

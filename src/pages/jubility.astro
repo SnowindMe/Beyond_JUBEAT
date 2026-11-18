@@ -43,8 +43,8 @@ Astro.response.headers.set(
 // latest = 该服最近一次收录新曲的日期，与 /songs/ 的 SRV_CARDS 同值同源口径
 // （各自页面各有一份常量，改一处要记得改另一处；值由主人 2026-11-14 提供）。
 const SRVS = [
-  { id: 'jp', name: '日服', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
-  { id: 'cn', name: '国服', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
+  { id: 'jp', name: 'JP', full: 'Server · JP', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
+  { id: 'cn', name: 'CN', full: 'Server · CN', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
 ] as const;
 const DEFAULT_SRV: (typeof SRVS)[number]['id'] = 'jp';
 
@@ -109,7 +109,7 @@ const pickCharts = (srv: (typeof SRVS)[number]['id']) =>
           <b class="sc-tag sc-tag-l"><i class="sc-tag-l-k">Latest：</i><i class="sc-tag-l-d">{s.latest}</i></b>
           <img class={`sc-srv-logo${s.line ? ' sc-line' : ''}`} src={`/assets/images/logo/${s.logo}.webp`} alt="" width="176" height="60" loading="eager" decoding="async" />
           <span class="sc-srv-meta">
-            <b class="sc-tag sc-tag-n">{s.name}</b>
+            <b class="sc-tag sc-tag-n" title={s.full}><svg class="sc-tag-ico" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2" y="2.5" width="12" height="5" rx="1.2"/><rect x="2" y="8.5" width="12" height="5" rx="1.2"/><circle cx="4.6" cy="5" r=".85" fill="currentColor" stroke="none"/><circle cx="4.6" cy="11" r=".85" fill="currentColor" stroke="none"/></svg>{s.name}</b>
             <b class="sc-tag sc-tag-c">{VIEW[s.id].theory.total}<i>pt</i></b>
           </span>
         </button>

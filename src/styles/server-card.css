@@ -47,13 +47,18 @@
     transition: opacity 0.2s;
 }
 
-/* 名称 + 总曲数两枚并排小徽章 */
+/* 名称 + 总曲数两枚并排小徽章。
+   【2026-11-18 主人要求两者同一行】卡宽固定 200、内宽只有 170，
+   而「Server · CN」(99) + 缝 + 计数(76) 原本 181 就溢出、被 wrap 折成两行；
+   所以 nowrap 定死一行，并把这行的缝和内距一起收紧到放得下。
+   溢出时宁可让两枚徽章各自窄一点，也不要折行（折行会让两张卡的名称/计数上下错位）。 */
 .sc-srv-meta {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    flex-wrap: wrap;
+    gap: 4px;
+    flex-wrap: nowrap;
+    max-width: 100%;
 }
 
 .sc-tag {
@@ -63,9 +68,9 @@
     font: inherit;
     font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     line-height: 1;
-    padding: 5px 10px;
+    padding: 5px 6px;
     border-radius: var(--pill);
     border: 1px solid var(--edge);
     background: color-mix(in srgb, var(--glass2) 62%, transparent);
@@ -80,6 +85,9 @@
 .sc-tag-c {
     font-family: var(--font-data);
     font-size: 11.5px;
+    /* 计数的左右也要留白（2026-11-18 主人「两枚徽章内部左右两边要留出空白」）。
+       通用 .sc-tag 为了收缩宽度把内距压到 6px，数字贴着边顯得挤。 */
+    padding: 5px 10px;
     color: var(--ink2);
     /* 「1150 首」不能被拆成两行 */
     white-space: nowrap;
@@ -106,8 +114,11 @@
     max-width: 100%;
     justify-content: center;
     gap: 2px;
-    padding-right: 6px;
-    padding-left: 6px;
+    /* 左右内距 2px（2026-11-18 主人「左右 padding 感觉给多了」）。
+       这一枚本来就是 align-self:stretch 撑满卡内宽的，内距只决定日期离边框多远，
+       收窄后日期更靠中间、也不影响断行（两段都是 nowrap 的独立 flex item）。 */
+    padding-right: 2px;
+    padding-left: 2px;
 }
 
 .sc-tag-l-k,
@@ -127,6 +138,35 @@
    判据只认 data-lum——原先六层 :not([data-g=...]) 每加一套浅色主题都得补一层。 */
 html[data-lum="dark"] .sc-line {
     filter: invert(1);
+}
+
+/* 名称徽章现在只有「JP / CN」两个字母，前缀信息交给左侧的服务器图标。
+   【2026-11-18 两轮方案】先写全称 Server · JP 时太长、两枚徽章被挤到两行，
+   缩字号能塞下但文字变小发闷；主人改口「服务器图标+JP/CN，可以不降字号」，
+   于是字号回到通用 12px，宽度靠缩短文案 + 图标拿回来。
+   全称放在 title 上，悬停与读屏仍可读到 Server · JP / Server · CN。 */
+.sc-tag-n {
+    /* 通用 .sc-tag 是 baseline 对齐（两枚徽章并排时按字底对齐），
+       但这一枚里有 svg，svg 的基线在方框底部 → 图标会吊在字母下方。
+       这里单独改 center，让图标与字母中线对齐。 */
+    align-items: center;
+    /* 图标与字母之间留出空格的距离（2026-11-18 主人要求）：8px 约等于 12px 字的一个空格宽，
+       再宽就散成两截了。 */
+    gap: 8px;
+    padding: 5px 11px;
+    letter-spacing: 0.04em;
+}
+/* 图标：两片服务器架，细线描边跟文字同色，12px 见方。
+   stroke-width 1.2 是为了 12px 下不糊；描边色走 currentColor，随徽章配色变。 */
+.sc-tag-ico {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    /* 大写字母的视觉重心在行盒中心偏上约 1px，图标跟着抬一点才不显得往下掉 */
+    margin-top: -1px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.2;
 }
 
 .sc-srv-b:hover .sc-tag-c,
@@ -200,6 +240,16 @@ html[data-lum="dark"] .sc-line {
     }
     /* 【2026-10-28 迁入】计数徽章窄屏降一档。原先这条只写在 songs.css 的媒体查询里，
        /jubility/ 没有 → 窄屏下同一个控件两页字号不同。控件自身的规则应跟控件一起走。 */
+    /* 窄屏名称徽章：文案已经只有两个字母，宽度够，不再降字号（跟通用 12px 一致），
+       只收内距与图标尺寸，给计数徽章腾地方。 */
+    .sc-tag-n {
+        gap: 6px;
+        padding: 4px 6px;
+    }
+    .sc-tag-ico {
+        width: 11px;
+        height: 11px;
+    }
     .sc-tag-c {
         font-size: 12px;
     }

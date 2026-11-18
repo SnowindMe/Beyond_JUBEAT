@@ -239,6 +239,8 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
+    /* 范围/分区是"可选值"，不是导航：圆角矩形（2026-11-18 主人「改为圆角矩形而不是胶囊」）。
+       用 --r-xs(7px) 而不是 --r-hair(4px)，44 高的盒子上 4px 几乎看不出来。 */
     /* 实测 91×34 / 66×34：分区筛选片高度不够 44。改成 44 高定高盒，
        纵向 padding 归 0 由 min-height 撑住，横向不变（视觉宽度一模一样）。 */
     min-height: 44px;
@@ -248,7 +250,7 @@
     color: var(--ink2);
     background: color-mix(in srgb, var(--glass2) 62%, transparent);
     border: 1px solid var(--edge);
-    border-radius: var(--pill);
+    border-radius: var(--r-xs);
     padding: 0 13px;
     cursor: pointer;
     transition: color 0.2s, border-color 0.2s, background 0.2s;
@@ -4140,12 +4142,12 @@ html[data-lum="light"] .sd-gauge {
         height: 44px;
         font-size: 14px;
     }
-    /* 清空键让到问号键左边（问号常驻，右缘 4；清空占 44..88），
-       否则两个都贴 right 会完全叠在一起。 */
+    /* 清空键让到问号键左边（问号常驻、右缘 4；清空右缘 44），两者贴边相邻，
+       缝只有 4px —— 太宽会显得两个键各自漂在框里（主人 2026-11-18 反馈）。 */
     .sc-q-x {
         width: 32px;
         height: 32px;
-        right: 62px;
+        right: 44px;
     }
     .sc-q-h {
         width: 36px;
@@ -4153,7 +4155,7 @@ html[data-lum="light"] .sd-gauge {
         right: 4px;
     }
     .sc-q-in {
-        padding-right: 96px;
+        padding-right: 84px;
     }
     .sc-btn,
     .sc-sort-in {
@@ -4350,19 +4352,28 @@ html.sc-js .sc-panel[hidden] {
 
     /* 搜索框清空按钮 30×30 → 44×44。
        它是 absolute 的圆形按钮，不放 padding（会让图标偏心），
-       直接放大盒子；right 由 2 挪到 46，给右边的问号键（44 宽、right 0）让位。 */
+       直接放大盒子；right 由 2 挪到 44，紧贴右边的问号键（44 宽、right 0），
+       两个热区刚好邻接、中间不留空档（主人 2026-11-18「间距有些宽」）。 */
     .sc-q-x {
         width: 44px;
         height: 44px;
-        right: 46px;
+        right: 44px;
     }
     .sc-q-h {
         width: 44px;
         height: 44px;
         right: 0;
     }
+    /* 热区挨着，图标不能跟着挨着：各往自己那侧收 3px，视觉上仍是一道缝。
+       输入框右内边距只留到问号左缘（88），文字不会钻到键底下。 */
+    .sc-q-x svg {
+        transform: translateX(9px);
+    }
+    .sc-q-h svg {
+        transform: translateX(-9px);
+    }
     .sc-q-in {
-        padding-right: 100px;
+        padding-right: 88px;
     }
     .sc-q-x svg {
         width: 15px;
