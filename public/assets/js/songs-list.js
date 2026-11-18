@@ -469,10 +469,10 @@
            所以只要「有筛选条件 + 还有骨架块」，就先补拉再算。
 
            三条边界：
-             · lazyState === 1（正在补拉）：直接返回，补拉结束会自己再调一次 apply，
-               否则这里会被连续触发、把补拉请求也放大好几倍；
+             · 同一次补拉不重复发起：loadFrag 一进去就打 data-req，pendingFrags 会跳过它，
+               所以下面每敲一个字重进 apply 也不会把请求放大好几倍；
              · 首屏那次 apply（无筛选）**不触发**补拉，否则懒加载等于不存在；
-             · 只补拉一次（成功后 lazyState = 2），失败也不再重试，避免死循环。 */
+             · 每段只补一次：失败打 data-fail，不再重试，避免死循环。 */
         /* 【2026-11-02 晚修「查询要等一会才出结果」】
            原先这里是「一旦要补拉就直接 return」，于是整个补拉期（14 段 SSR，好网 0.7s、
            冷网更久）用户的每一次输入都被吞掉，页面上只有一条「正在加载剩余 N 个世代」，
@@ -480,15 +480,19 @@
            已经加载出来的卡片先按条件算一遍立刻出结果，等补拉完再算一次把数字补全。
            代价是补拉期间的数字偏小（骨架块里没有卡片可匹配，故这一段不计数），
            这是有意的：宁可先给个量级，也不要让输入框看起来没反应。 */
-        if (lazyState === 0 && hasFilters() && hasSkeletons()) {
-          lazyState = 1;
+        /* 【2026-11-18 主人「筛选到指定世代就只加载对应世代，不需要全部都加载完」】
+           原实现是 ensureAll() —— 一有筛选就把十四个骨架全拉一遍，哪怕用户已经把
+           世代收窄到某一段。现在先算 pendingFrags()：泛筛选（关键词/分区/难度…）
+           仍然要全量，因为命中数得扫全库；但**带了世代条件就只补这一段**，其余骨架
+           在下面的遍历里直接藏掉。切回「全部世代」时它们还没标过 req，会重新入列。 */
+        var needFrags = hasFilters() ? pendingFrags() : [];
+        if (needFrags.length) {
           /* 这里的「…」与「正在加载剩余 N 个世代」原先是就地写的，但同一个 apply 往下走
              两屏之后会把它们覆盖成本轮数字与耗时（那里的判据改用 pendingLoad 了）。
              同一份信息两处写、还有一处是错的，所以只留下面那一处，这里只管状态。 */
-          ensureAll().then(function () {
-            lazyState = 2;
+          ensureList(needFrags).then(function () {
             apply();
-          }).catch(function () { lazyState = 2; });
+          });
         }
         // 耗时从「用户操作」到「列表已更新」为准，取 performance.now() 的差值。
         // 注意只能量到 JS 这一层（改 hidden / 写 CSS order），不含浏览器重绘与图片解码 ——
@@ -548,8 +552,21 @@
               var genEl = gens[g];
               /* 骨架块：没有卡片可匹配，但它代表 data-count 首真实曲目。
                  不走下面那套「匹配卡片」逻辑，直接按 data-count 计。
-                 能走到这里说明当前没有筛选（有筛选时 apply 开头已先 ensureAll 换成真卡片）。 */
+                 能走到这里说明这段不是本次要补的（没筛选，或世代条件把它排除掉了）。 */
               if (genEl.className.indexOf('sc-gen-ph') !== -1) {
+                // 【2026-11-18】收窄了世代就只认这一段：不匹配的骨架藏掉、也不计数。
+                // 藏而不删，是因为切回「全部」时还要靠它去补拉（数据本身没丢）。
+                if (state.gen !== 'all' && genEl.getAttribute('data-gen') !== state.gen) {
+                  genEl.hidden = true;
+                  continue;
+                }
+                /* 【2026-11-18】hidden 的骨架没有布局盒，IntersectionObserver 判不出相交；
+                   被藏过再显示回来（切回「全部世代」）就再也不会触发惰性加载。
+                   这里在每次显示时重新 observe 一遍（同一个 target 重复 observe 是幂等的）。 */
+                if (genEl.hidden) {
+                  genEl.hidden = false;
+                  ioWatch(genEl);
+                }
                 // 【2026-11-02 晚】有筛选时不再一律当成「全部命中」：
                 // 补拉期间每敲一个字都会走到这里，若还按 data-count 全算，
                 // 命中数会先虚高（搜「りんとして」显示 1129 首）再突然掉到 1，
@@ -604,10 +621,13 @@
         // 常常是 0 —— 空态就会先亮一下「没有找到符合条件的曲目」，等片段回来又被结果顶掉。
         // 这不是「没有」，只是「还没算完」，所以不显示空态；正在打字（typing）同理。
         //
-        // 判据取「还有没有骨架块」而不是「lazyState 是否 === 1」：后者只覆盖「正在补拉」，
-        // 一旦某段片段失败、懒状态被置成 2 而骨架还留在页面上，就会重新误报（2026-11-12 晚补）。
+        // 判据取「还有没有**该补的**骨架」：按懒状态判会漏掉「失败后骨架仍留在页面上」的情形
+        // （2026-11-12 晚实撞），而失败段现在带 data-fail，天然被排除在待补之外。
         // 有骨架 = 数据不完整 = 不下结论；补拉结束后 apply 会再跑一次，那才是最终裁决。
-        var pendingLoad = lazyState === 1 || typing || hasSkeletons();
+        /* 【2026-11-18】判据从「还有任何骨架」换成「还有**该补的**骨架」：
+           收窄世代后页面上仍留着十几个被藏起来的骨架，按老判据空态永远不出现，
+           而那十几个恰恰是这次不该加载的。 */
+        var pendingLoad = typing || hasPending();
         if (emptyBox) emptyBox.hidden = totalMine > 0 || pendingLoad;
         /* 【2026-11-13 主人「旋转环可能用户看不见，建议在空白处加加载动画」】
            只有「正在加载 + 手上一条结果都没有」才显示：有结果时用户看的是结果，
@@ -1732,14 +1752,33 @@
       // 骨架块 → 滚到附近 → 取该世代的 SSR 片段（/songs/frag）→ 替换骨架。
       // 为什么是「SSR 片段」而不是客户端用 JSON 现画：卡片结构（徽章/难度条/PICK UP）
       // 全在 SongCard.astro 里，客户端重画等于再写一份，两份必然漂。
-      var lazyState = 0; // 0=正常 / 1=正在全部补拉 / 2=已补拉完（不再尝试）
+      /* 懒状态（2026-11-18 起只给 IntersectionObserver 的降级分支用）：
+         真正的「还要不要补拉」由 pendingFrags() 现算——收窄世代时只剩一段该拉。
+         data-req = 已发起过；data-fail = 拉过且失败（不再重试，免得来回打）。
+         两个标记都挂在**骨架**上：骨架被真实块替换后标记自然消失。 */
+      var lazyState = 0;
       function hasSkeletons() { return !!root.querySelector('.sc-gen-ph'); }
+      /** 当前还该补拉的骨架。带世代条件时只认那一段（主人 2026-11-18 的要求）。 */
+      function pendingFrags() {
+        var list = root.querySelectorAll('.sc-gen-ph:not([data-req]):not([data-fail])');
+        var out = [];
+        for (var i = 0; i < list.length; i++) {
+          if (state.gen !== 'all' && list[i].getAttribute('data-gen') !== state.gen) continue;
+          out.push(list[i]);
+        }
+        return out;
+      }
+      function hasPending() { return pendingFrags().length > 0; }
+      var skelIO = null;
+      /** 把一段骨架重新挂回惰性加载观察器（见 apply 里"藏过的骨架再显示"那条注释）。 */
+      function ioWatch(el) { if (skelIO) skelIO.observe(el); }
       function hasFilters() {
         return !!(state.q || state.cat !== 'all' || state.gen !== 'all' || state.diff ||
           (state.band !== 'all' && state.band !== 'lt7') || state.scope !== 'all' || state.type !== 'all' || state.date);
       }
       /** 把一个骨架块换成真实世代块。失败时保留骨架（比留一片空白好）。 */
       function loadFrag(ph) {
+        ph.setAttribute('data-req', '1');
         var srv = ph.getAttribute('data-srv') || 'jp';
         var gen = ph.getAttribute('data-gen') || '';
         var url = '/songs/frag?srv=' + encodeURIComponent(srv) + '&gen=' + encodeURIComponent(gen);
@@ -1806,6 +1845,7 @@
                所以不该让空态/命中数装作算完了（宁可停在「…」并说明原因）；
                块内那句「加载中…」由 CSS 按 data-fail 改成「加载失败，刷新重试」。 */
             ph.setAttribute('data-fail', '1');
+            ph.removeAttribute('data-req');
             // 骨架里那句 status 是给读屏的（视觉上 1px 裁掉，多一行会撑高占位），
             // 所以「失败」只能靠这条文案与命中条上的说明，别在这里加可见文字。
             var st = ph.querySelector('.sc-ph-status');
@@ -1829,17 +1869,22 @@
         }
       }
 
-      /** 拉齐所有骨架（筛选用）。并发 3：每一段都是一次 SSR，太多会把 Worker 打回原形。 */
+      /** 拉齐所有骨架。并发 3：每一段都是一次 SSR，太多会把 Worker 打回原形。
+          2026-11-18 起筛选路径改成 ensureList(只拉该拉的)，这个仍然给降级分支用。 */
       function ensureAll() {
         var list = root.querySelectorAll('.sc-gen-ph');
         var todo = [];
         for (var i = 0; i < list.length; i++) todo.push(list[i]);
+        return ensureList(todo);
+      }
+      /** 按给定骨架列表补拉（并发 3）。已发起过的跳过，交给它自己的 then 收尾。 */
+      function ensureList(todo) {
         var idx = 0;
         function worker() {
           if (idx >= todo.length) return Promise.resolve();
           var el = todo[idx++];
           // 已被 IntersectionObserver 换掉的就跳过（它已经不在文档里）
-          if (!el.parentNode) return worker();
+          if (!el.parentNode || el.hasAttribute('data-req')) return worker();
           return loadFrag(el).catch(function () {}).then(worker);
         }
         var runs = [];
@@ -1855,7 +1900,7 @@
           return;
         }
         // rootMargin 1200px：提前一屏多开始拉，滚到那里时通常已经就位
-        var io = new IntersectionObserver(function (entries) {
+        var io = (skelIO = new IntersectionObserver(function (entries) {
           for (var i = 0; i < entries.length; i++) {
             var e = entries[i];
             if (!e.isIntersecting) continue;
@@ -1863,13 +1908,13 @@
             loadFrag(e.target)
               .then(function (node) {
                 // 若此刻有筛选条件，新到的卡片要重新参与匹配：
-                // 把状态打回 0，让 apply 的守卫去走「先补拉再一次算完」
-                if (hasFilters()) { lazyState = 0; apply(); }
+                // 已落地的这一段不必再补；有没有别的段要拉由 apply 现算（pendingFrags）
+                if (hasFilters()) apply();
                 else hideEndedLimited(node);
               })
               .catch(function () {});
           }
-        }, { rootMargin: '1200px 0px' });
+        }, { rootMargin: '1200px 0px' }));
         var nodes = root.querySelectorAll('.sc-gen-ph');
         for (var n = 0; n < nodes.length; n++) io.observe(nodes[n]);
       }

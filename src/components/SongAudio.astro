@@ -407,6 +407,21 @@ const bpmText = String(bpm ?? '')
       }, 8000);
     }
 
+    /* 【2026-11-18 主人「优化一下音源加载速度」】
+       两件都不影响首屏：①手指/鼠标一碰按钮就先建 Audio（preload 只取文件头），
+       省掉点击那一刻的创建与连接建立；②页面空闲时发一个 1 字节的 Range 请求把音源
+       推进本站边缘缓存——Worker 拿到 R2 对象后是整份 tee 进缓存的，所以这一发等于
+       把后面的分段请求都变成 HIT，而浏览器只花 1 字节。失败一律静默。 */
+    function warm() { try { ensure(); } catch (e) { /* 预热失败不影响正常播放 */ } }
+    btn.addEventListener('pointerenter', warm);
+    btn.addEventListener('pointerdown', warm);
+    btn.addEventListener('focus', warm);
+    function prewarm() {
+      fetch(src, { headers: { Range: 'bytes=0-0' }, credentials: 'same-origin' }).catch(function () {});
+    }
+    if ('requestIdleCallback' in window) requestIdleCallback(prewarm, { timeout: 4000 });
+    else setTimeout(prewarm, 2500);
+
     function ensure() {
       if (audio) return audio;
       // 首次点击才创建并拉流：1241 首的详情页若都预载，流量与首屏都不划算
