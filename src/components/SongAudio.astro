@@ -3,7 +3,9 @@
 //
 // 音源来自 ub.thregren.world，但**不直连**：统一走本站 /api/audio/<songId>
 // 反代，音频落在 CF 边缘缓存里（见 src/pages/api/audio/[songId].ts 的说明）。
-// 没有映射到音源的曲目不渲染本组件——详情页宁可少一个控件，也不摆一个点了没反应的按钮。
+// 【2026-11-19 主人「无论有无音源都显示播放条」】没有音源的曲目现在也渲染本组件，
+// 但整条走禁用态（虚线轨道、播放键置灰、时间位改「暂无音源」），位置与有音源时一致，
+// 不做「有就多一块、没有就少一块」的版面跳动。
 //
 // 为什么不用原生 <audio controls>：
 //   原生控件三件套（播放键 / 进度条 / 音量）是浏览器各自的皮肤，
@@ -14,20 +16,37 @@ interface Props {
   songId: string;
   /** 曲库里的 BPM 字串（可能是区间或带括注的旧脏值），画成播放条左上角的徽章 */
   bpm?: string | null;
+  /** 有没有音源；false 时整条走禁用态，位置照旧（见文件头 2026-11-19 注释） */
+  hasAudio?: boolean;
+  /** 音源来自哪里：r2=Jack大本 的投稿、ub=上游 thregren；null 表示没有音源 */
+  source?: 'r2' | 'ub' | null;
 }
-const { songId, bpm } = Astro.props;
+const { songId, bpm, hasAudio = true, source = null } = Astro.props;
 
 // 【2026-10-31 主人第 4 条】BPM 徽章只显示数字或区间：
 // 库里的值仍可能带括注（如「170 (beatmania IIDX …)」），括注留给详情页信息块，
-// 播放条上只留数字主体；取不到值就整块不渲染。
-const bpmText = String(bpm ?? '')
-  .replace(/\([^)]*\)/g, ' ')
-  .trim()
-  .slice(0, 16);
+// 播放条上只留数字主体。
+// 【2026-11-19 主人「当没有 bpm 数据时，bpm 徽章默认数值显示 --」】不再整块省略：
+// 缺席也是一条信息，省略会让人以为这个位置本来就没有东西；给一个「--」占位，
+// 徽章的宽度与其它曲目一致，跨曲目扫视时不会跳。
+const bpmText = (String(bpm ?? '').replace(/\([^)]*\)/g, ' ').trim().slice(0, 16)) || '--';
+// 来源徽章的文案：两种来源各自对应一个给谱面的人（主人 2026-11-19 指定写法）
+const SRC_LABEL = { r2: 'Jack大本', ub: 'Thregren' } as const;
+const srcLabel = source ? SRC_LABEL[source] : '';
 ---
 
-<div class="sda" data-audio={"/api/audio/" + songId} data-song={songId}>
-  <button class="sda-play" type="button" aria-label="试听 BGM" title="试听 BGM">
+<div
+  class:list={['sda', hasAudio ? '' : 'is-empty']}
+  data-audio={hasAudio ? '/api/audio/' + songId : undefined}
+  data-song={songId}
+>
+  <button
+    class="sda-play"
+    type="button"
+    aria-label={hasAudio ? '试听 BGM' : '暂无音源'}
+    title={hasAudio ? '试听 BGM' : '暂无音源'}
+    disabled={!hasAudio}
+  >
     <svg class="sda-ico sda-ico-play" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M8 5.5v13l11-6.5z" />
     </svg>
@@ -39,18 +58,31 @@ const bpmText = String(bpm ?? '')
 
   <div class="sda-main">
     <div class="sda-meta">
+      <span class="sda-bpm" title={"BPM " + bpmText} data-empty={bpmText === '--' ? '' : undefined}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10 5.6h4l4 13.9H6z" />
+          <path d="M13.6 3.4 9.1 16.4" />
+        </svg>
+        <b>{bpmText}</b>
+      </span>
+      {/* 【2026-11-19 主人「在 bpm 徽章右边新增一个来源徽章，文案『来源：XXX』」】
+          R2 音源是 Jack大本 的投稿，上游走 thregren——两者都是"谁给的这份音源"，
+          所以跟 BPM 一样做成徽章并排；没有音源时不摆来源徽章。 */}
       {
-        bpmText ? (
-          <span class="sda-bpm" title={"BPM " + bpmText}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10 5.6h4l4 13.9H6z" />
-              <path d="M13.6 3.4 9.1 16.4" />
-            </svg>
-            <b>{bpmText}</b>
+        srcLabel ? (
+          <span class="sda-src" title={'音源来源：' + srcLabel}>
+            <i>来源：</i>
+            <b>{srcLabel}</b>
           </span>
         ) : null
       }
-      <span class="sda-time"><b class="sda-cur">0:00</b><i>/</i><span class="sda-dur">--:--</span></span>
+      {
+        hasAudio ? (
+          <span class="sda-time"><b class="sda-cur">0:00</b><i>/</i><span class="sda-dur">--:--</span></span>
+        ) : (
+          <span class="sda-time sda-none">暂无音源</span>
+        )
+      }
     </div>
 
     <div
@@ -225,6 +257,11 @@ const bpmText = String(bpm ?? '')
     color: var(--ink2);
     font-variant-numeric: tabular-nums;
   }
+  /* 没有 BPM 的占位「--」：降一档权重，别让占位符比真数据还显眼 */
+  .sda-bpm[data-empty] b {
+    color: var(--ink3);
+    font-weight: 400;
+  }
 
   /* 进度轨道：可点可拖。上下留出更多命中区域（伪元素撑高），
      不然 4px 高的细条在手机上根本按不准。 */
@@ -296,6 +333,53 @@ const bpmText = String(bpm ?? '')
     opacity: 0.5;
   }
 
+  /* 【2026-11-19 来源徽章】跟 BPM 同一档的细徽章，字号与内距都略收，
+     它是附注不是读数。 */
+  .sda-src {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    flex: none;
+    padding: 3px 9px;
+    border: 1px solid var(--edge);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    font-size: 11px;
+    color: var(--ink3);
+    white-space: nowrap;
+  }
+  .sda-src b {
+    font-weight: 700;
+    color: var(--ink2);
+  }
+
+  /* 【2026-11-19 无音源】轨道改灰色虚线、按钮与读数降权。
+     虚线用的是 border 而不是背景条纹：轨道本身只有 4px，条纹会糊成实心。 */
+  .sda.is-empty .sda-play {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .sda.is-empty .sda-track {
+    background: none;
+    border-top: 2px dashed color-mix(in srgb, var(--ink) 20%, transparent);
+    height: 0;
+    cursor: default;
+  }
+  .sda.is-empty .sda-fill,
+  .sda.is-empty .sda-knob {
+    display: none;
+  }
+  .sda.is-empty .sda-none {
+    color: var(--ink3);
+    font-family: inherit;
+    font-size: 11.5px;
+  }
+  .sda.is-empty .sda-cur,
+  .sda.is-empty .sda-dur,
+  .sda.is-empty .sda-time i {
+    display: none;
+  }
+
   /* 失败态：整条降权 + 一句说明，不弹窗、不 Toast */
   .sda.is-error .sda-track {
     cursor: default;
@@ -333,8 +417,18 @@ const bpmText = String(bpm ?? '')
          要让它离曲绘底边约 24px，需 margin-top = 24 + (261-245) = 40。
          （差值 16 = 曲绘比艺人段多出来的高度，随字号/行数变化，改文案时要重测。） */
       margin-top: 40px;
+      /* 【2026-11-19 主人「移动端视图下，当曲名有两行时，应减少 div.sda 的 margin-top」】
+         40px 是按「曲名一行」量出来的气口（见上）。曲名折成两行时，艺人段整体
+         已被推下一行高度，再加上 40 就成了双份留白。这里按行数回落：
+         曲名脚本在折成两行时给 <html> 挂 is-title-2l，这里据此收到 22px
+         （40 - 一行高度 ≈ 18，剩下的气口与一行时相当）。 */
+      margin-top: 40px;
       margin-left: calc(-1 * var(--sd-main-offset));
       width: calc(100% + var(--sd-main-offset));
+    }
+    /* 曲名两行时收紧上间距（见上面 margin-top 的说明） */
+    :global(html.is-title-2l) .sda {
+      margin-top: 22px;
     }
   }
 </style>
@@ -351,6 +445,11 @@ const bpmText = String(bpm ?? '')
     var curEl = root.querySelector('.sda-cur');
     var durEl = root.querySelector('.sda-dur');
     var src = root.getAttribute('data-audio');
+
+    // 【2026-11-19】没有音源时整条是禁用态：按钮已 disabled，事件挂上去也无从触发，
+    // 直接不初始化播放器（省掉没用的 Audio 创建与预热请求）。
+    // 预热那发 Range 尤其要跳——它会让 API 404 一次。
+    if (!src) return;
 
     var audio = null;
     var dragging = false;
@@ -444,8 +543,13 @@ const bpmText = String(bpm ?? '')
       // 一个 readyState 复查，两个条件都满足才撤掉转圈。
       function clearLoadingIfReady() {
         if (!audio) return;
+        // 【2026-11-19 主人「有时点击后要等加载动画结束几秒才开始自动播放」】
+        // 原判据只看 readyState>=3 就撤转圈，但「数据够」到「真的出声」之间还有一段
+        // （解码 + 打开输出设备，慢网/慢机上肉眼可见数秒）。那段里转圈已经没了、
+        // 图标也还不是暂停，看起来就是"加载完了却干等"。
+        // 现在要求两件事同时成立：readyState 达标 **且** 已经 'playing'。
         // 3 = HAVE_FUTURE_DATA（有当前帧 + 后续数据），比 2（HAVE_CURRENT_DATA）更稳
-        if (audio.readyState >= 3) {
+        if (audio.readyState >= 3 && root.classList.contains('is-playing')) {
           root.classList.remove('is-loading');
         }
       }

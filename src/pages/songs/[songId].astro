@@ -160,7 +160,17 @@ const coverSrc = song?.cover ? jacketUrl(song.id, song.cover) : null;
 // 这三项全部来自库里已有字段（notecounts / holds / bpm），1248 首 100% 有键数，
 // 不再新增任何数据列，也就不存在"线上 D1 忘灌导致静默失效"的风险。
 
-// 有没有音源：映射表命中才渲染试听条。1248 首里 1185 首有（上游是日服谱面站，
+// 音源来源：R2 优先（Jack大本 的投稿），否则上游 thregren；都没有则 null。
+// 播放条上的「来源：XXX」徽章与 hasAudio 都取自这里，两处口径不能各算一份。
+const audioSource: 'r2' | 'ub' | null = song
+  ? (r2AudioMap as Record<string, string>)[String(song.id)]
+    ? 'r2'
+    : (audioMap as Record<string, string>)[String(song.id)]
+      ? 'ub'
+      : null
+  : null;
+
+// 有没有音源：映射表命中才算。1222 首有（上游是日服谱面站，
 // 国服原创曲、拿不到官方 id 的 BTA- 占位曲、以及 2026-10-29 刚上架那 7 首——
 // 上游还没收录——本就没有），未命中的不摆空控件。
 const hasAudio = !!(
@@ -388,7 +398,14 @@ const metaFoot: Meta[] = song
             顺序改为：曲名 → 艺人 → 试听条 → 定数条。理由（主人给的版面图）：
             播放是"听到这首"的入口，紧挨作品信息；定数条是数据区，压到下面。
             没有音源时试听条整块不渲染，定数条位置照旧。 */}
-        {hasAudio ? <SongAudio songId={String(song.id)} bpm={song.bpm} /> : null}
+        {/* 【2026-11-19 主人「无论有无音源都显示播放条」】不再条件渲染：没有音源的曲目
+            也走这一块，由组件内部切成禁用态（虚线轨道 + 置灰键 + 「暂无音源」）。 */}
+        <SongAudio
+          songId={String(song.id)}
+          bpm={song.bpm}
+          hasAudio={hasAudio}
+          source={audioSource}
+        />
 
         {/* 【2026-11-09 别名块】玩家给曲目起的俗称（喇叭口、通称），参与全站搜索。
             主人定的位置：曲绘 / 播放条**下面**，不挤在曲名与艺人之间——
@@ -719,8 +736,13 @@ const metaFoot: Meta[] = song
           guardM++;
         }
         if (inner && countLines(btn) > 2) inner.classList.add('is-clamp');
+        /* 【2026-11-19 主人「曲名有两行时应减少 div.sda 的 margin-top」】
+           两行的事实交给 CSS 用（.sda 的窄屏 margin-top 据此回落），
+           挂在 <html> 上是因为 .sda 在组件 scoped 样式里、无法向父级回溯。 */
+        document.documentElement.classList.toggle('is-title-2l', countLines(btn) >= 2);
         return;
       }
+      document.documentElement.classList.remove('is-title-2l');
       var avail = wrap.clientWidth;
       var guard = 0;
       while (wrap.scrollWidth > avail + 1 && fs - 1 >= 20 && guard < 80) {
