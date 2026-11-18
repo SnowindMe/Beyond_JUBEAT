@@ -507,10 +507,19 @@ const bpmText = String(bpm ?? '')
 
     btn.addEventListener('click', function () {
       var a = ensure();
-      if (a.paused) {
+      // 【2026-11-19 主人「第一次点加载不出、第二次没反应、第三次才播」】
+      // 根因：play() 一发出 a.paused 就变 false（此时还在缓冲），第二次点击于是走了
+      // "正在播 → 暂停"那条分支，把还在加载的流掐掉，看起来就是点了没反应；
+      // 第三次点击 a.paused 才又为 true 才播成。判据改为「还没真正出声」时再点继续播。
+      // 只有 is-playing（'playing' 事件置上的类）才算在播、才允许暂停。
+      var idle = a.paused;
+      if (idle || !root.classList.contains('is-playing')) {
         // 先上转圈，再发起播放：顺序反了会出现"资源秒到、转圈来不及显示"的闪烁。
         // 只有 'playing' 事件（真正能出声）才会清掉它，见 ensure() 里的监听。
         root.classList.add('is-loading');
+        // 上一发还在缓冲时再点＝重试：load() 会中止旧请求重新拉，否则再点只是又喊一次
+        // play()，卡住的那条连接仍占着，看起来就是"点了没反应"。
+        if (!idle && a.readyState < 3) { try { a.load(); } catch (e) {} }
         // 走 play() 的 promise：被浏览器策略拦下时把转圈收回，不留假加载状态
         var p = a.play();
         if (p && p.catch) {
