@@ -277,7 +277,9 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 > 【2026-11-04 复查】索引从 11 涨到 15 是热度与限流那批表带来的，不是随手加的。
 > 同一天删掉了 idx_hot_hits_day_song（主键 (day, song_id, visitor) 的最左前缀与它完全重复）；
 > idx_songs_jp_gen / idx_songs_cn_cat 留着——收益确实归零，但连带面大
-> （理由记在 docs/database-review-2026-11-04.md 的 P0-4）。
+> idx_songs_jp_gen / idx_songs_cn_cat 收益归零仍留着的理由：它们被查询层按「服务端 + 世代 / 分类」
+> 直接拼进 WHERE，删掉要同时改四处查询与三份口径文档，收益只是几百 KB——2026-11-04 复查时判定
+> 不值这个连带面。
 
 复算：
 
@@ -313,7 +315,10 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 只输出受影响行的 INSERT / UPDATE（仅变化列）/ DELETE（带主键条件）。
 脚本末尾有两条自检：patch 里出现整表 DELETE 直接 FAIL；解析行数必须等于 seed 自己标注的行数。
 
-详见 [docs/data-pipeline.md §6.3](data-pipeline.md)。
+patch 的边界（2026-11-16 定稿）：时间字段只逐行写值，不做「整列回填」；一次 patch 里只要出现
+`DELETE FROM songs;`（无 WHERE）就算失败。灌线上时 token 需 D1 Edit 权限，走 REST `/query`
+分批（每批 100 条、失败即停），不要用 `wrangler d1 execute --file` 直接跑整文件——
+它会在上传后因 API 超时中断，而中断时 SQL 可能已经执行了一半，得改成逐条 `--command`。
 
 ---
 

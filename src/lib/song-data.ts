@@ -3,7 +3,7 @@
 // 注意与 src/lib/db.ts 的分工（后者只剩最近更改）：
 // 两处都导出 `type Song`，页面从本文件 import 类型，别再引 db.ts。
 //
-// 为什么（成本账，见 docs/database-review-2026-11-04.md P0-1）：
+// 为什么（成本账，见 docs/database-schema.md 的查询口径段）：
 // songs 表 1248 行，全表扫一次就记 1248 rows read，而 D1 免费额度是 5,000,000/天。
 // songs.astro:30、songs/frag.astro:28、jubility.astro:30 每请求各扫一遍，
 // 日 PV 4000 就吃光。曲目数据本来就是构建期产物（scripts/build-data.cjs 每次构建重写

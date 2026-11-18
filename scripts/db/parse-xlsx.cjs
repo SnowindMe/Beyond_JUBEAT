@@ -8,11 +8,11 @@
  *
  * 输入（受版本控制）：data/xlsx/source.xlsx
  *   源文件名本来是「音乐魔方更新歌曲.xlsx」，入库改名 source.xlsx 以避免非 ASCII 路径问题；
- *   原始 sha256 与采集时间见 docs/data-pipeline.md。
+ *   原始 sha256 与采集时间见 docs/database-schema.md。
  * 产物（受版本控制）：data/xlsx/sheet1.json … sheet7.json + all.json
  *
  * 不再依赖 scripts/tmp：ZIP 由本脚本用 node:zlib 的 inflateRaw 自己解，省掉手工解压这一步，
- * 新机器 clone 后一条命令即可重建（见 docs/data-pipeline.md）。
+ * 新机器 clone 后先 npm run data:pull 拉数据，再 npm run db 重建（见 README 的数据与代码分离节）。
  *
  * 解析覆盖：共享字符串（含富文本多 run）、inlineStr、数字/布尔/公式缓存值、
  *          &#10; 等数字实体、&amp;/&quot; 等命名实体、合并单元格空洞、空 <c/> 单元格。
@@ -323,7 +323,7 @@ function main() {
   const OUT = outArg ? path.resolve(ROOT, outArg.slice(6)) : DEFAULT_OUT;
 
   if (!fs.existsSync(XLSX)) {
-    throw new Error('缺少输入 ' + path.relative(ROOT, XLSX) + '（源文件说明见 docs/data-pipeline.md）');
+    throw new Error('缺少输入 ' + path.relative(ROOT, XLSX) + '（源文件说明见 README 的数据与代码分离节）');
   }
   const files = readZip(XLSX);
   const sha256 = crypto.createHash('sha256').update(fs.readFileSync(XLSX)).digest('hex');

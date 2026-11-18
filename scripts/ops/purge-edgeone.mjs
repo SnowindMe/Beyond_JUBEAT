@@ -18,7 +18,7 @@
  *
  * 所需环境变量：
  *   TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY  腾讯云子账号密钥（只需 EO 刷新权限）
- *   EDGEONE_ZONE_ID                                   站点 ID（zone-3we3ellu1uc3）
+ *   EDGEONE_ZONE_ID                                   站点 ID（CI 里取自仓库 variable）
  *   EXPECT_VERSION                                    期望的 src/data/site.json 版本号
  * 用法：
  *   node scripts/ops/purge-edgeone.mjs            # 等版本上线后刷新
@@ -41,7 +41,9 @@ const args = new Set(process.argv.slice(2));
 const dry = args.has('--dry');
 const now = args.has('--now');
 
-const zone = process.env.EDGEONE_ZONE_ID || 'zone-3we3ellu1uc3';
+// 站点 ID 只认环境变量（2026-11-18 主人要求不再写字面量）；CI 里取自仓库 variable。
+const zone = process.env.EDGEONE_ZONE_ID;
+if (!zone) { console.error('缺 EDGEONE_ZONE_ID'); process.exit(2); }
 const expect = process.env.EXPECT_VERSION
   || JSON.parse(fs.readFileSync(new URL('../../src/data/site.json', import.meta.url), 'utf8')).version;
 

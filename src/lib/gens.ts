@@ -1,6 +1,6 @@
 // 世代的静态元信息（key / URL slug / 服务器 / 上线日）。
 // 曲目数据在 D1，但「世代 → 年份」这类口径不是数据库里的列，
-// 与 scripts/db/build-db.cjs 的 GEN_ORDER 保持一致（CONTEXT.md 定的口径）。
+// 与 scripts/db/build-db.cjs 的 GEN_ORDER 保持一致（docs/CONTEXT.md 定的口径）。
 //
 // slug（2026-10-23 加）是 /songs/gen/<slug>/ 的稳定网址段：
 //   * 不用中文、空格和点号——URL 里出现 %20 / 编码串既难看也容易被复制坏；

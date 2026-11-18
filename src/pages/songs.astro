@@ -237,7 +237,7 @@ const PRELOAD_SONGS = eagerOf(DEFAULT_SRV).slice(0, 2).filter((s) => !!s.cover);
 // 【2026-11-02 分段加载】首屏只 SSR 渲染前若干世代，其余世代先出骨架。
 //
 // 为什么：每请求渲染 1683 张卡要 1.7MB HTML、2.5 万 DOM 节点，缓存只能兜住并发，
-// 兜不住单次渲染成本（详见 docs/audit-2026-11-02.md）。主人选了 B 方案：
+// 兜不住单次渲染成本（2026-11-02 审计，文档已删）。主人选了 B 方案：
 // 首屏 SSR + 其余世代骨架 + 滚到附近再拉该段 SSR 片段（/songs/frag）。
 //
 // 分界按「累计卡数」而不是「固定几个世代」：世代大小差很多（jubeat 20 首、
@@ -269,7 +269,7 @@ const FIRST_LOAD: Record<Srv, Set<string>> = { jp: firstLoadGens('jp'), cn: firs
 // UI 删掉后这段统计没有任何消费者，一并删除——它每次请求都要遍历 1248 行，
 // 留着只是白烧 CPU。曲师仍可用搜索框直接打名字（matchCard 的 hay 里包含 data-a）。
 
-// 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 CONTEXT.md）
+// 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 docs/CONTEXT.md）
 const GEN_OPTS = GEN_ORDER;
 
 // 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BAND_KEYS / BANDS 一一对应，改一处必须改两处。

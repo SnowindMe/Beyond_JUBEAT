@@ -101,6 +101,8 @@ check-out*.txt
 cloudflare.config.ts.bak
 public/data/songs.json
 src/data/songs-version.json
+# 2026-11-18 主人放进来的整批 BGM 原文件（63 个 mp3，228 MB），同样走 R2
+public/songs/
 miniflare-email-store/
 
 # 【2026-11-18 数据与前端分离】仓库是 PUBLIC 的，曲库源数据与生成物全部移出，

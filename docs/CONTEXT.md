@@ -2,6 +2,9 @@
 
 一个 jubeat 音乐魔方的资料站，涵盖曲目库、谱面定数、Jubility 理论值与世代沿革。
 本文件是**术语表**，只定义这个领域里的概念，不记录实现细节。
+2026-11-18 从仓库根移进 `docs/`，同时把历次审查台账（audit-* / database-review-* /
+dev-plan-* / measurement-caliber / data-pipeline / cn-update-xlsx）全删，
+口径并入 `docs/database-schema.md` 与 `docs/site-structure.md`。
 
 ## Language
 

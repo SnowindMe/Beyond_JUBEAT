@@ -2,7 +2,7 @@
 //   node scripts/db/build-db.cjs                 只建本地库
 //   node scripts/db/build-db.cjs --seed          同时导出 db/seed.sql（给 D1）
 //   node scripts/db/build-db.cjs --out=data/x.db 建到指定路径
-// 输入约定与全链路口径见 docs/data-pipeline.md；一条命令重建用 npm run db。
+// 输入约定与全链路口径见 docs/database-schema.md；一条命令重建用 npm run db。
 const fs = require('fs');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
@@ -10,7 +10,7 @@ const { DatabaseSync } = require('node:sqlite');
 const ROOT = path.join(__dirname, '..', '..');
 const SCHEMA_PATH = path.join(ROOT, 'db/schema.sql');
 // 三个输入都在受版本控制的目录，新机器 clone 后无需 archive/ 与 scripts/tmp 即可重建。
-//   data/upstream/jp-resolved.json  日服全量 1150 首（冻结快照，见 docs/data-pipeline.md）
+//   data/upstream/jp-resolved.json  日服全量 1150 首（冻结快照，见 docs/database-schema.md）
 //   data/upstream/wiki-v3-songs.json 旧站 v3 的 513 首快照（补 BPM / 上线日期 / 解禁信息）
 //   data/xlsx/sheet*.json           国服 xlsx 的解析产物（由 parse-xlsx.cjs 从 source.xlsx 生成）
 const JP_PATH = path.join(ROOT, 'data/upstream/jp-resolved.json');
@@ -28,7 +28,7 @@ const SEED_PATH = path.join(ROOT, 'db/seed.sql');
 
 // 世代 → 服务器归属。日服 12 代（server_jp），国服 1 代（server_cn）；
 // 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI」分区（2026-10-24 改名，原名 KONAMI原创）；
-// 两服 song_id 体系不同，同曲只能按 dualKey 归一化标题+艺人匹配（见 docs/data-pipeline.md §5）。
+// 两服 song_id 体系不同，同曲只能按 dualKey 归一化标题+艺人匹配（见 docs/database-schema.md §1）。
 const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.'];
 const CN_GENS = ['音乐魔方'];
 
@@ -682,7 +682,7 @@ function readTitleOverrides() {
 }
 
 // sheet1「国框更新日服歌曲进度」：H 列（索引 7）为 '√' 的行 = 国服已上线。
-// 表头占前 2 行，数据从第 3 行（索引 2）起；每行结构见 docs/cn-update-xlsx.md。
+// 表头占前 2 行，数据从第 3 行（索引 2）起；每行结构见下文的列位说明。
 // 国服已上线的人工覆盖（2026-10-29 建立）。
 //
 // 为什么需要：国服「已上线」的两个来源（sheet2 同曲、sheet1 H 列 √）都依赖

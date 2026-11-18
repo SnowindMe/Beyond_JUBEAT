@@ -62,5 +62,7 @@ jobs:
         env:
           TENCENTCLOUD_SECRET_ID: ${{ secrets.TENCENTCLOUD_SECRET_ID }}
           TENCENTCLOUD_SECRET_KEY: ${{ secrets.TENCENTCLOUD_SECRET_KEY }}
-          EDGEONE_ZONE_ID: zone-3we3ellu1uc3
+          # 站点 ID 也不再写字面量：换成仓库 variable（Settings → Variables），
+          # 换加速站或换账号时只改配置，不用再动 workflow 文件。
+          EDGEONE_ZONE_ID: ${{ vars.EDGEONE_ZONE_ID }}
         run: node scripts/ops/purge-edgeone.mjs

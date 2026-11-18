@@ -118,8 +118,8 @@ src/
 public/                       _headers · manifest · sw.js · assets（背景/曲绘/站标/字体/js）
 data/                         管线输入（xlsx 源表、上游快照）与本地库（**不入库**，见下）
 db/                           schema · seed · 迁移 · 增量补丁
-scripts/                      构建、抓取、CI 自检
-docs/                         统计口径、库表说明、管线、站点结构、审计记录
+scripts/                      构建、数据管线、抓取、CI 自检、运维（清单见 scripts/README.md）
+docs/                         库表与灌库规则、站点结构、术语表（只有这三份）
 ```
 
 ## 脚本
@@ -166,7 +166,7 @@ data/upstream/*.json ───────────────────�
 
 `data/jubeat.db` 是本地权威曲库（约 580 KB，生成物、不入库，`npm run db` 随时重建，不需要网络）。线上真实数据在 Cloudflare D1 库 `beyond-jubeat`，内容与之一致。
 
-**日常改线上数据用 `npm run patch` 生成的增量补丁，不要重放 `db/seed.sql`**——后者会 `DELETE FROM songs` 再整表插入。细节见 [docs/data-pipeline.md](docs/data-pipeline.md)。
+**日常改线上数据用 `npm run patch` 生成的增量补丁，不要重放 `db/seed.sql`**——后者会 `DELETE FROM songs` 再整表插入。细节见 [docs/database-schema.md](docs/database-schema.md) §6。
 
 抓取类脚本需要联网，**不进 build 流程**，曲库更新后手动重跑并提交产物：
 
@@ -302,11 +302,11 @@ Turnstile secret 用 `npx wrangler secret put TURNSTILE_SECRET --name beyond-jub
 
 ## 文档
 
-`docs/` 下有几份**开工前该读**的：`measurement-caliber.md`（任何计数前先读，含 grep 陷阱与口径判据）、`database-schema.md`（表结构）、`data-pipeline.md`（管线与 D1 上线顺序）、`site-structure.md`（页面层级）。`CONTEXT.md` 是术语表，写代码命名前对一下。`docs/audit-*.md` 与 `docs/database-review-*.md` 是历次审查的台账——每条问题后面都跟着处理结论，接手时按它对齐进度，别重做已收口的条目。
+`docs/` 只留三份**开工前该读**的：`database-schema.md`（表结构与灌库规则，任何计数前先读，含 grep 陷阱与口径判据）、`site-structure.md`（页面层级）、`CONTEXT.md`（术语表，写代码命名前对一下）。历次审查的台账（audit / database-review / data-pipeline / measurement-caliber 等）2026-11-18 已合并进这三份，剩下的一律从 git 历史取。
 
 ## 说明
 
-`archive/` 是四代旧项目与候选素材（约 738 MB）：根 `.gitignore:77` 整体忽略该目录，`archive/.gitignore` 再忽略其中的 `materials/` 与 `legacy/`，只有目录说明与一份留档模板仍在版本控制里。本地留副本即可。
+`archive/` 是四代旧项目与候选素材（约 738 MB），2026-11-18 起**整个目录不再入库**（根 `.gitignore` 忽略），本地留副本即可。
 
 ---
 

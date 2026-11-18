@@ -1,7 +1,7 @@
 // CI 用：曲目编辑面板的规则与越权分支自检（不联网、不起 workerd）。
 //   node scripts/ci/check-song-edits.mjs
 //
-// 为什么要有这个脚本：本地起不了 workerd（见 docs/dev-plan-2026-10-23.md §四.4），
+// 为什么要有这个脚本：本地起不了 workerd（本地起不了 workerd 的来由见 docs/CONTEXT.md），
 // 「越权分支返回 401/403」这种结论不能只靠 code review 说出来，得跑出来。
 // 做法：src/lib/song-admin-server.ts 里不含任何 Astro / cloudflare:workers 依赖，
 // 这里用 node:sqlite 造一个内存库冒充 D1，直接调 handleSongUpdate 断言返回值。

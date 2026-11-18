@@ -1,8 +1,8 @@
 # Beyond ↑ JUBEAT · 网站层级结构
 
 > 状态图例：**✅ 已上线** · **💭 待做**（含「规划中」与「候选」两类；v1.9.1 起未做的页面**不再挂导航**，没有死链）
-> 生成依据：`src/pages/` 实际文件、`src/components/Header.astro:10` 导航、`src/data/data.json` 字段、`README.md:15-21` 的下线说明、历史项目 `archive/legacy/jubeat-wiki-v2` 的页面清单。
-> 日期：2026-10-21
+> 生成依据：`src/pages/` 实际文件、`src/components/Header.astro:10` 导航、`src/data/data.json` 字段（生成物，2026-11-18 起不入库，`npm run data:pull` 拉回）、`README.md` 的下线说明、历史项目 `archive/legacy/jubeat-wiki-v2` 的页面清单。
+> 日期：2026-10-21 立稿；2026-11-18 跟随仓库精简更新（docs 只留三份、`archive/` 不再入库、脚本目录精简）。
 
 ---
 
@@ -148,6 +148,9 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 ## 三、层级与数据字段的对应关系
 
+> 2026-11-18 起数据与代码分离：下表提到的 `data.json` 与全部 `src/data/*.json` 都是生成物，
+> 已移出版本库、改存 R2 私有桶（`npm run data:pull` 拉回），仓库里只剩代码与 DDL。
+
 | 页面层级 | 需要的字段 | 现状 |
 | --- | --- | --- |
 | 首页统计卡 | `stat.songs` `stat.charts` `stat.gens` `gen10` | ✅ 已有 |
@@ -164,7 +167,7 @@ Jubility / Emblem / 伙伴 / 成就 / 关于 / 登录 六条在 v1.9.0 及以前
 
 ## 四、与历史项目的层级对照
 
-历史项目页面清单（`archive/legacy/jubeat-wiki-v2/src/pages/`），可作为新站层级的参照：
+历史项目页面清单（`archive/legacy/jubeat-wiki-v2/src/pages/`）——`archive/` 自 2026-11-18 起不入库，本地无副本时从 git 历史取，可作为新站层级的参照：
 
 | v2 页面 | 标题 | 新站对应 | 差异 |
 | --- | --- | --- | --- |

@@ -153,7 +153,7 @@ const handle: MiddlewareHandler = async (context, next) => {
 
   /* ---- Worker 侧边缘缓存 v2（2026-11-02 改造：stale-while-revalidate + 单飞）----
      背景：CF 的共享 CDN 不缓存 Worker 响应，所以 2026-10-25 用 caches.default 自己存一份。
-     审计压测（docs/audit-2026-11-02.md 第一节）暴露两个缺口：
+     审计压测（2026-11-02 审计第一节，文档已删）暴露两个缺口：
 
        ① **并发穿透**：缓存过期（s-maxage=300）或冷 PoP 上，N 个请求同时 MISS，
           就会同时跑 N 次「1683 张卡」的 SSR。实测并发 5 起约 20% 撞

@@ -19,7 +19,7 @@ const PUBLIC_DATA = path.join(ROOT, 'public/data');
 const JP_JACKETS = path.join(ROOT, 'data/beyond-the-ave/jackets');
 const CN_JACKETS = path.join(ROOT, 'archive/legacy/jubeat-wiki-v3/public/jackets');
 
-// 世代顺序：日服按年份从旧到新，国服当前唯一世代排最后（口径见 CONTEXT.md）。
+// 世代顺序：日服按年份从旧到新，国服当前唯一世代排最后（口径见 docs/CONTEXT.md）。
 const GEN_ORDER = [
   ['jubeat', 'jp', '2008'], ['ripples', 'jp', '2009'], ['knit', 'jp', '2010'],
   ['copious', 'jp', '2011'], ['saucer', 'jp', '2012'], ['saucer fulfill', 'jp', '2014'],
