@@ -102,3 +102,30 @@ cloudflare.config.ts.bak
 public/data/songs.json
 src/data/songs-version.json
 miniflare-email-store/
+
+# 【2026-11-18 数据与前端分离】仓库是 PUBLIC 的，曲库源数据与生成物全部移出，
+# 改存 Cloudflare R2 私有桶 beyond-jubeat-data，靠 scripts/data/pull.cjs 拉回、
+# push.cjs 推送（prebuild 会自动 pull，缺凭据时跳过）。
+# 移出的理由：①源码可读，跨站复制粘贴就能重建整站；②xlsx 原件与被引用的流行曲谱
+# 混在代码库里，review 一个功能会翻出几十个数据文件的 diff；③仓库体积随每次更新涨。
+# 表结构（db/schema.sql）与站点配置（src/data/site.json）仍留在库里——它们跟代码一起 review。
+# 注意：这里是「忽略」而非「删除」，pull 会按同一份清单补回来，本地照旧能构建。
+data/xlsx/
+data/upstream/
+data/remy/
+data/audio-overrides.json
+data/chart-overrides.json
+data/cn-extra-songs.json
+data/cn-online-overrides.json
+data/gen-overrides.json
+data/id-fixes.json
+data/title-overrides.json
+db/seed.sql
+src/data/data.json
+src/data/songs.json
+src/data/cdn.json
+src/data/search-keys.json
+src/data/difficulty-stats.json
+src/data/ub-charts.json
+src/data/ub-audio.json
+src/data/recent-changes.json

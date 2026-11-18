@@ -25,10 +25,20 @@ jobs:
 
       - run: npm ci
 
+      # 【2026-11-18 数据与前端分离】源数据与生成物已移出版本库（仓库是 PUBLIC 的），
+      # 改存 R2 私有桶 beyond-jubeat-data，跑 pull 取回。缺凭据时脚本自己跳过并警告，
+      # 不让整个 job 变红——但那样构建会因缺 data/ 失败，所以真正跑起来的 CI 必须配这两个 secret。
+      # 对象只有几十个、总量 5.5 MB，一次全量拉取，远在 R2 免费额度内。
+      - name: 拉取数据
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run data:pull
+
       # 【2026-11-04 CI 首跑实撞】data/jubeat.db 是本地库、被 data/.gitignore:13 挡在版本库外，
       # 干净 clone 里没有它，check-search-keys 与 check-schema-doc 会直接 ERR_SQLITE_ERROR。
       # 不把 580 KB 的库塞进仓库（它是生成物），改为在 CI 里按管线重建——
-      # 输入全在受版本控制的 data/xlsx/*.json 与 data/upstream/*.json，实测约 3 秒、不需要网络。
+      # 输入是上一步拉回的 data/xlsx/*.json 与 data/upstream/*.json，实测约 3 秒、不需要网络。
       # 只建库不导 seed：这一步要的是「库存在且与快照一致」，不是发布数据。
       - name: 重建本地曲库
         run: node scripts/db/build-db.cjs

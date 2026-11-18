@@ -114,9 +114,9 @@ src/
 ├─ worker.ts                 Worker 入口（fetch 转发 + scheduled）
 ├─ styles/                   theme · songs · fortune · jubility · auth · server-card
 ├─ lib/                      数据访问、认证、缓存、主题/世代表、算法
-└─ data/                     生成物：曲库快照、聚合数据、映射表
+└─ data/                     生成物：曲库快照、聚合数据、映射表（**不入库**，见下）
 public/                       _headers · manifest · sw.js · assets（背景/曲绘/站标/字体/js）
-data/                         管线输入（xlsx 源表、上游快照）与本地库
+data/                         管线输入（xlsx 源表、上游快照）与本地库（**不入库**，见下）
 db/                           schema · seed · 迁移 · 增量补丁
 scripts/                      构建、抓取、CI 自检
 docs/                         统计口径、库表说明、管线、站点结构、审计记录
@@ -133,12 +133,26 @@ docs/                         统计口径、库表说明、管线、站点结�
 | `npm run data`  | 只重生成 `src/data/` 的聚合数据与曲绘                            |
 | `npm run check` | 八段自检，任何一段红都不能放行                                   |
 | `npm run opt`   | 压缩 `public/assets/images` 下的图片                             |
+| `npm run data:pull` | 从 R2 拉回被移出版本库的数据（`prebuild` 会自动跑）          |
+| `npm run data:push` | 把本地数据推到 R2（改过 `data/` 后必须跑）                   |
 
 **改曲库不要手改 `data/jubeat.db`**：换 `data/xlsx/source.xlsx` 或 `data/upstream/*.json`，跑 `npm run db`，再跑 `npm run patch` 把生成的补丁灌进 D1。
 
 **改主题色是一处改七件 `theme.css` 令牌**（`--acc` `--focus` `--acc2` `--ink2` `--ink3` `--edge` `--glass` 一套），外加 `lib/themes.ts` 里的色点 `c`。只改 `--acc` 会留下半套旧色系。改完必须跑 `node scripts/ci/check-contrast.mjs`——它是唯一会拦住「强调色对比度不足 3:1」的关口。
 
 ⚠️ 主题相关的表必须写成 `html[data-g="x"][data-g]`。`check-contrast.mjs` 取每个主题**第一个** `html[data-g="x"]{` 块，同形选择器写在前面的会被抢先命中，取到只有一两个变量的空块、令牌全回退 `:root`，17 组断言全按深色算——**这是假绿灯，比红灯危险**。
+
+## 数据与代码分离
+
+**仓库里没有数据。** 2026-11-18 起，所有清单输入（`data/xlsx` 源表、`data/upstream` 上游快照、`data/remy` 谱面快照、各个覆盖层）与生成物（`db/seed.sql`、`src/data/*.json`）都移出版本库，改存 Cloudflare R2 私有桶 `beyond-jubeat-data`。
+
+理由：仓库是 PUBLIC 的，数据留在库里等于把整站源码可读的副本白送出去；而且每改一首曲都要在几十个数据文件上留下 diff，功能 review 会被淹掉；数据还在每次更新里让仓库持续变大。
+
+- **克隆后**：`npm run data:pull` 拉回（`prebuild` 已挂上，`npm run build` 会自动先跑它，缺凭据时跳过并打印提示）。
+- **改完数据**：`npm run data:push` 推回去，否则 CI 与别人的 clone 拿不到你的改动。
+- 需要 `CLOUDFLARE_API_TOKEN`（R2 Read/Write）与 `CLOUDFLARE_ACCOUNT_ID` 两个环境变量；CI 里是仓库 secret。
+- 白名单在 `scripts/data/push.cjs` 的 `WHITELIST`：新增长期数据文件时要登记，否则推不上去。`db/schema.sql` 与 `src/data/site.json` 仍留在仓库——它们跟代码一起 review 才有意义。
+- R2 免费额度足够：对象数只有几十个、总量 5.5 MB，且只有构建与手动推送会访问，不对外暴露读端点，天然不担心被刷。
 
 ## 数据管线
 
