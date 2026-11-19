@@ -905,43 +905,10 @@ const metaFoot: Meta[] = song
     /* 【2026-11-19 主人「已创建的标签右边不用加数字」】原先每个词后面跟一个人数 <b>，
        现在不显示了。bump() 与各处 b 构造一并删掉，不再留空节点。 */
 
-    function toggle(btn, diff, kind, name) {
-      if (btn.classList.contains('is-busy')) return;
-      btn.classList.add('is-busy');
-      var was = btn.classList.contains('is-mine');
-      var flip = function (mine) {
-        btn.classList.toggle('is-mine', mine);
-        btn.setAttribute('aria-pressed', mine ? 'true' : 'false');
-        /* 打上之后要补一个叉，取消之后要把叉收掉——叉是「已添加」的一部分，
-           两处状态必须同生同灭，否则会留下一个点不动的叉。 */
-        var x = btn.querySelector('.sd-tagw-x');
-        if (mine && !x) {
-          x = document.createElement('span');
-          x.className = 'sd-tagw-x';
-          x.dataset.del = kind;
-          x.setAttribute('role', 'button');
-          x.tabIndex = -1;
-          x.textContent = '×';
-          btn.appendChild(x);
-        } else if (!mine && x) {
-          x.remove();
-          btn.classList.remove('is-x-on');
-        }
-      };
-      flip(!was);
-      post(diff, kind, name, was)
-        .then(function (r) {
-          if (!r.ok && r.status !== 204) throw new Error('t');
-        })
-        .catch(function () {
-          flip(was);
-        })
-        .finally(function () {
-          setTimeout(function () {
-            btn.classList.remove('is-busy');
-          }, 260);
-        });
-    }
+    /* 【2026-11-20 主人「已添加的标签并不统计点击人数，所以点击已添加的标签应该无反应」】
+       词钮原先是 toggle：点一下投自己一票、再点取消。现在人数不显示了，
+       点它既看不到数字变化、又会莫名其妙多打一次请求，所以整枚词改**只读**——
+       点击只在有叉时走删除，别的什么都不做。toggle() 随之删掉。 */
 
     /* 点叉删除自己这一条（2026-11-19 主人要求）。
        与 toggle 的删除分支不同：这里是「明确要删」，不判当前状态，直接删一次，
@@ -1047,8 +1014,7 @@ const metaFoot: Meta[] = song
             nx.tabIndex = -1;
             nx.textContent = '×';
             btn.appendChild(nx);
-            /* 不挂单独监听：父级委托本来就覆盖这一段，再挂一次会让点叉先走
-               toggle（元素监听器先于委托冒泡），x 删除就被 is-busy 挡掉了。 */
+            /* 不挂单独监听：父级委托本来就覆盖这一段，命中 .sd-tagw-x 时按删除走。 */
             ws.insertBefore(btn, addBtn);
             addBtn.dataset.on = '';
             closeAdd(pop);
@@ -1156,7 +1122,7 @@ const metaFoot: Meta[] = song
             removeMyTag(btn, diff, btn.dataset.kind, btn.dataset.name);
             return;
           }
-          toggle(btn, diff, btn.dataset.kind, btn.dataset.name);
+          /* 剩下的情况就是「点词本身」：什么都不做（词钮只读）。 */
         });
       })(tagWraps[w]);
     }
