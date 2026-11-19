@@ -265,7 +265,7 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 | 列 | 说明 |
 | --- | --- |
 | song_id / diff / kind / name | 联合主键。diff 限 bsc/adv/ext，kind 限 cfg/lv/eval，name 是标签原文（词表在 src/lib/song-tags.ts，三处共用一份） |
-| count | 多少人打过这一条。同一人重复提交同一条被 IGNORE 吃掉，**去重靠主键不靠代码判断** |
+| count | 多少人打过这一条。同一人重复提交同一条被 IGNORE 吃掉，**去重靠主键不靠代码判断**。2026-11-20 起页面**不再印数字**，只用于排序与「是否还有别人」，别再拿它当展示字段 |
 | by_user | 首个打标者；只用来看「这条是不是我打的」，人数仍以 count 为准 |
 | created_at | 首次出现时间 |
 
