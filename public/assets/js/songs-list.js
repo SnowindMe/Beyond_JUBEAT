@@ -1444,9 +1444,20 @@
         // 面板一在页面上半就永远往下走，而这一项本来就在面板最后一行、向下还会压住列表；
         // 主人原话「建议无论【上线日期】在哪里，展开的日历依旧向上」。改成固定 data-drop="up"，
         // 不再按空间判断（也不用再量高度）。
+        // 【2026-11-19 主人：「无论【上线日期】在哪里，展开的日历依旧向上」】
+        // 向上展开撞到视口顶边时，日历整体（约 317px 高）会被裁掉上半截——
+        // 实测按钮在视口 31% 处时 calTop 已是 -77。方向不动，改为先把页面往上留出空间，
+        // 按钮随之下移、日历自然落回视口：与 ddOpen 的 deficit 处理同一套做法。
+        var CAL_GAP = 12; // 4px 间距 + 8px 呼吸位
+        var br0 = dateB.getBoundingClientRect();
+        var cw = cal.getBoundingClientRect().width || 244;
+        var ch = cal.getBoundingClientRect().height || 300;
+        var shortfall = ch + CAL_GAP - Math.max(0, br0.top - CAL_GAP);
+        if (shortfall > 0) window.scrollBy(0, -shortfall);
+        // 滚动后重新量按钮位置（必须基于滚动后的坐标）
+        var br = dateB.getBoundingClientRect();
         // 右边界：日历固定在按钮左沿向右展开，按钮太靠右时会顶出视口，改为向左对齐。
         // 窄屏的 2×2 让日期落在右列，这条几乎必中，所以不能只靠 CSS 的 right:0。
-        var cw = cal.getBoundingClientRect().width || 244;
         if (br.left + cw > window.innerWidth - 12) cal.setAttribute('data-align', 'right');
         else cal.removeAttribute('data-align');
       }
@@ -1768,7 +1779,17 @@
         }
         return out;
       }
-      function hasPending() { return pendingFrags().length > 0; }
+      /* 【2026-11-19 修「筛日期只报 8 首」】
+         pendingFrags 只算**没发起过**的骨架，已经在飞（data-req 但还没换成真块）的那些被跳过，
+         于是补拉窗口里 hasPending() 是 false、命中条按「算完了」报出一个偏小的数字
+         （主人筛 2026-11-16 撞到的就是这种中途读数：festo 那段还在路上，toy boxer / 1116
+         没落地，条上写 8 首）。这里把在飞的那部分也算进 pending——
+         换成真块后骨架节点已不在文档里，自然不再计数；失败打了 data-fail 也只是「等不到」，
+         由补拉失败那条分支单独说明，不算 pending。 */
+      function hasPending() {
+        if (pendingFrags().length > 0) return true;
+        return !!root.querySelector('.sc-gen-ph[data-req]:not([data-fail])');
+      }
       var skelIO = null;
       /** 把一段骨架重新挂回惰性加载观察器（见 apply 里"藏过的骨架再显示"那条注释）。 */
       function ioWatch(el) { if (skelIO) skelIO.observe(el); }

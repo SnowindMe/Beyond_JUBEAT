@@ -197,11 +197,20 @@ const themesJson = JSON.stringify(THEMES);
     tswBtn.setAttribute('aria-expanded',v?'true':'false');
     if(v){
       var target = tswPop.querySelector('button[aria-pressed="true"]') || tswPop.querySelector('button');
-      if(target) target.focus();
+      /* 【2026-11-19 视口补偿】弹层是 .top 里的 absolute（不是 fixed），顶栏本身又不吸顶，
+         所以滚到列表中部再开，弹层会整块跑到视口上方（实测滚到 sy=305 时 popTop=-242，
+         顶部 242px 被裁，视觉上就像「主题面板被世代条压住」）。
+         preventScroll 只保住滚动位置，救不了出屏，这里照 calOpen 的做法补一段位移：
+         弹层顶边高于 GAP 就往下滚回来。 */
+      var GAP = 8, pr = tswPop.getBoundingClientRect();
+      if(pr.top < GAP) window.scrollBy(0, pr.top - GAP);
+      /* 焦点照给，但别让浏览器再滚一次（preventScroll）——那会把上面这段补偿抵消掉 */
+      if(target) target.focus({preventScroll:true});
     } else if(!opts || opts.returnFocus!==false){
       // 只有焦点还在弹层里（或已掉到 body）时才还，避免和用户刚点的目标抢焦点
       var act=document.activeElement;
-      if(!act || act===document.body || tswPop.contains(act)) tswBtn.focus();
+      /* preventScroll：按钮在 .top 里，不防滚会把刚才补偿出来的位置又拽回去 */
+      if(!act || act===document.body || tswPop.contains(act)) tswBtn.focus({preventScroll:true});
     }
   }
   // 登记到互斥协调器：别的浮层打开时把我们收起来

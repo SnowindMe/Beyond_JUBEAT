@@ -209,7 +209,8 @@ const user = Astro.locals.user;
         btn.setAttribute('aria-expanded', v ? 'true' : 'false');
         if (v) {
           var first = pop.querySelector('a,button');
-          if (first) first.focus();
+          /* 【2026-11-19 preventScroll】同 ThemeScript：弹层在 .top 里，不防滚会把页面拽回页首 */
+          if (first) first.focus({ preventScroll: true });
         } else if (!opts || opts.returnFocus !== false) {
           var act = document.activeElement;
           if (!act || act === document.body || pop.contains(act)) btn.focus();
