@@ -70,6 +70,18 @@ CREATE TABLE song_tags (
 -- 详情页按一首曲一次查三档，前缀 (song_id) 即可全取
 CREATE INDEX idx_song_tags_song ON song_tags(song_id, diff, kind);
 
+-- 曲目别名（俗称，2026-11-20）。与 song_tags 一样是运行时数据、不进 seed。
+-- 无需审核（没有 pending 列）、不展示创建者（by_user 只用于「谁能删」）。
+DROP TABLE IF EXISTS song_alias;
+CREATE TABLE song_alias (
+  song_id    TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  by_user    TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (song_id, name)
+);
+CREATE INDEX idx_song_alias_song ON song_alias(song_id);
+
 DROP TABLE IF EXISTS recent_changes;
 CREATE TABLE recent_changes (
   change_id    INTEGER PRIMARY KEY AUTOINCREMENT,

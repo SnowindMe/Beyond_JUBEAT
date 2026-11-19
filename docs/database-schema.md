@@ -15,7 +15,7 @@
 | --- | --- | --- | --- |
 | **曲库数据** | songs | npm run db 从 data/ 全量推导 | **能**（重跑就有） |
 | **曲库缓存修订** | song_rev（单行） | 后台改曲目时 bump | **能**，从 0 起步即可 |
-| **运行时数据** | recent_changes / users / sessions / oauth_accounts / role_requests / song_tags | 站点运行中被写入 | **不能**，是真实用户与编辑记录 |
+| **运行时数据** | recent_changes / users / sessions / oauth_accounts / role_requests / song_tags / song_alias | 站点运行中被写入 | **不能**，是真实用户与编辑记录 |
 | **计数缓存** | hot_hits / hot_snapshots / hot_ip_days / hot_gaps / auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / auth_email_hours | 访问与登录时累加 | **能**，但会丢当天的热度与限流窗口 |
 
 这条区分不是洁癖，是 2026-10-28 实际踩出来的：seed.sql 曾带 DELETE FROM recent_changes;
@@ -273,9 +273,21 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 入库后以库里的 count 优先、覆盖种子；库里没有的词照样能提交（自填）。
 删除用 delete 标记（POST del:true），count 减到 0 即删行。线上增量脚本：db/migrate-song-tags.sql。
 
+## 3.10 song_alias —— 曲目别名（运行时表，2026-11-20）
+
+别名（俗称）复用标签的设计，但**无需审核、也不展示创建者**，词钮是复制按钮不是投票钮。
+
+| 列 | 说明 |
+| --- | --- |
+| song_id / name | 联合主键，name 是自由文本（上限 40 字，归一化见 src/lib/song-alias.ts），同名同曲自然去重 |
+| by_user | 创建者；只用来判断「这条是不是我加的、能不能删」，页面不印 |
+| created_at | 排序用 |
+
+同样不进 seed.sql，线上增量脚本：db/migrate-song-alias.sql。
+
 ---
 
-## 4. 全部索引清单（**16** 个）
+## 4. 全部索引清单（**17** 个）
 
 | 表 | 索引 |
 | --- | --- |
@@ -289,6 +301,7 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 | hot_ip_days | idx_hot_ip_days_day |
 | hot_gaps | idx_hot_gaps_exp |
 | song_tags | idx_song_tags_song（前缀 song_id，详情页一次取全） |
+| song_alias | idx_song_alias_song（同上） |
 
 > 【2026-11-04 复查】索引从 11 涨到 15 是热度与限流那批表带来的，不是随手加的。
 > 同一天删掉了 idx_hot_hits_day_song（主键 (day, song_id, visitor) 的最左前缀与它完全重复）；

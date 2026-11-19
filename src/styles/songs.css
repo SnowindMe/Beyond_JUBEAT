@@ -1525,9 +1525,13 @@ html[data-view="list"] .sc-ph-badges {
        gauge 从而成了横跨两栏的一条带，**内部**再分左右——所以这里回到两行：
        上一行 曲绘 / 作品信息，下一行 gauge 横跨（内部两栏）。
        附注带原来占 grid-area:side 的整行，现在搬进 gauge 左侧，side 行删除。 */
+    /* 【2026-11-20 主人「dl.sd-foot 的布局要放到 div.sd-gauge 的下面（与
+       div.sd-gauge 分离）」】第三行专给背签，横跨两栏、与 gauge 彻底分开。
+       gauge 内部也不再分左右（左栏的附注带随别名的搬走消失），gauge 只剩右栏读数。 */
     grid-template-areas:
         "aside main"
-        "gauge gauge";
+        "gauge gauge"
+        "foot foot";
     /* 【2026-10-29 主人「难度条要往左扩张」】
        把"右栏相对内容区左缘的偏移"算成一个变量，供 .sd-gauge / .sda 用负 margin
        反向抵消——这样难度条与播放条就能一直铺到曲绘左缘，不管视口怎么变。
@@ -1575,36 +1579,32 @@ html[data-view="list"] .sc-ph-badges {
    div.sd-gauge 的左侧 div」）。左是注释（别名、背签），右是读数（定数、
    Notes/Holds、标签），性质分明、互不抢注意力。
    它不再是 .sd-body 的网格项，所以没有 grid-area；宽度由 gauge 的两列各半决定。 */
+/* gauge 的左栏附注槽。别名与背签先后搬走，但**这一层保留**
+   （2026-11-20 主人「.sd-side 要保留，后续要加信息」）：先占好宽度，将来往里加东西
+   不必再改布局。现在它空着，不影响视觉。 */
 .sd-side {
     display: flex;
     flex-direction: column;
     gap: clamp(18px, 2.2vw, 26px);
     min-width: 0;
 }
-/* 底部背签：原先是横铺满宽的网格，随分栏收进左栏后改成竖排清单——
-   左栏只有 208px，横排的 auto-fit(130px) 会挤成两列碎块。
-   键在值上面、项与项之间用极淡细线，读起来像一张标签卡。 */
-.sd-foot {
+
+/* 左栏附注：服务器 / 两服上线 / 解禁 / 备注（2026-11-20 主人「把服务器，国服上线
+   这些数据放在 sd-side」——从 .sd-foot 原名搬回左栏，类名改 .sd-meta）。
+   左栏只有 208px，横排的 auto-fit(130px) 会挤成两列碎块，所以是竖排清单：
+   键在值上面、项与项之间极淡细线，读起来像一张标签卡。 */
+.sd-meta {
     display: flex;
     flex-direction: column;
     gap: 10px;
     margin: 0;
     padding-top: clamp(14px, 1.8vw, 20px);
     border-top: 1px solid var(--edge);
-    /* 【2026-10-28 第三版】从 flex-wrap 改成 auto-fit 网格。
-       旧版 flex 里项目宽度由内容决定，「BPM 178」和「解禁 解禁I - CHERRY」宽度差很多，
-       换行位置随机、右侧留白不齐。网格按最小宽度自动分列，8 项也能一次排开且左右对齐。 */
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 18px clamp(20px, 2.6vw, 40px);
-    margin: 0;
-    padding-top: clamp(20px, 2.6vw, 30px);
-    border-top: 1px solid var(--edge);
 }
-.sd-foot > div {
+.sd-meta > div {
     min-width: 0;
 }
-.sd-foot dt {
+.sd-meta dt {
     font-family: var(--font-data);
     font-size: 11px;
     letter-spacing: 0.14em;
@@ -1612,19 +1612,41 @@ html[data-view="list"] .sc-ph-badges {
     color: var(--ink3);
     line-height: 1.2;
 }
-.sd-foot dd {
+.sd-meta dd {
     margin: 3px 0 0;
     font-size: 13.5px;
     line-height: 1.4;
     color: var(--ink);
     overflow-wrap: anywhere;
 }
-/* 竖排后每项都独占一行，is-wide 不再需要跨列（网格已换成 flex 列） */
-.sd-foot dd.sd-num {
+.sd-meta dd.sd-num {
     font-family: var(--font-data);
     font-size: 13.5px;
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
+}
+
+/* 评论区（2026-11-20 主人「sd-foot 可以放评论区模块」）。
+   占 .sd-body 的 grid-area:foot 独立行：横跨整宽、在 gauge 之后，
+   与 gauge 之间靠网格行间距分开，自带分隔线自成一块。
+   先只立区块（标题 + 空态），接口与列表等后续再接。 */
+.sd-foot {
+    grid-area: foot;
+    margin: 0;
+    padding-top: clamp(20px, 2.6vw, 30px);
+    border-top: 1px solid var(--edge);
+}
+.sd-foot-h {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink3);
+}
+.sd-foot-ph {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink3);
 }
 
 /* 顶部行：返回 + 世代面包屑，用细线收尾而不是做成按钮条 */
@@ -1876,7 +1898,7 @@ html[data-bgm="playing"] .sd-disc-spin {
    第三版把左栏的元数据清单（songId/世代/分区/服务器）全部搬进底部 .sd-foot，
    aside 只剩封面。样式跟着元素一起删——留着就是「有规则没有元素」的死代码，
    而且日后有人照着它改会白改一轮（这条坑 2026-10-28 记在记忆里）。
-   底部条的 .sd-foot dt/dd/.sd-num 已继承同一套视觉口径。 */
+   底部条的 .sd-meta dt/dd/.sd-num 已继承同一套视觉口径。 */
 
 
 /* ---------- 曲名上方的 songId 行与两枚徽章（2026-10-29 主人第 2/3/4 条）---------- */
@@ -2084,165 +2106,135 @@ html[data-bgm="playing"] .sd-disc-spin {
     overflow-wrap: anywhere;
 }
 
-/* 别名块（2026-11-09 / 当晚重设计）
-   方向：不做药丸墙，做贴在内容区左缘的一栏**注释台账**——
-   一条 2px 竖标线把这块压成附注，与正文形成缩进关系；每行读作
-   「俗称 → 谁这么叫」，然后才是删除。视觉重量远低于曲名与曲师：
-   无底色差、无投影，行间只用极淡细线。
-   位置：grid-area:alias 独占一行横跨两栏（做法同 .sd-gauge），
-   横向天然从内容区左缘起，不再挤在右栏贴右。 */
-/* 【2026-11-16 主人「顺便把别名模块先隐藏了」】hidden 属性在网格项上照常生效，
-   但 .sd-alias 自带 margin-top / border-left，display 被重置回 block 后仍会占位，
-   所以这里补一条 display:none。整块的样式全部保留，恢复只删模板上的 hidden 与此条。 */
-.sd-alias[hidden] {
-    display: none;
-}
+/* 别名块（2026-11-09 上线，2026-11-16 曾整块 hidden，2026-11-20 重做并恢复）
+   【2026-11-20 主人给的新规格】「别名复用标签的设计（别名使用圆角矩形，无需每个别名
+   一行，别名默认为空，别名无需审核也无需展示创建者，已登录用户才能创建和删除别名，
+   点击别名可以复制别名）」——
+   · 形态：横排的圆角矩形药丸，不是标签那种竖排词钮，也不是旧版的「一行一个」台账；
+   · 交互：复用标签那一套（登录才有 ＋、自己加的右上角带圈小叉、电脑 hover /
+     手机长按才显形），未登录两样都没有；
+   · 不印创建者，所以旧版的 .sd-alias-by 整组规则删掉了；
+   · 点击是复制，不是投票。
+   位置：右栏读数区顶部（.sd-read 里、BSC 行之前），主人指定的位置。 */
 .sd-alias {
-    /* 【2026-11-19】随着侧栏一起进了左栏，不再是整行独立区（去掉 grid-area:alias
-       与那段抵消行间距的 margin-top——在 flex 列里由 gap 接管）。
-       宽度也不再靠 max-width 收：左栏本身就窄，天然是一栏附注的形状。 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 18px;
     padding-left: 11px;
     border-left: 2px solid color-mix(in srgb, var(--acc) 32%, transparent);
-}
-/* 窄屏：左栏塌成整宽后，竖标线再收一点，别名行不至于离左缘太远 */
-@media (max-width: 700px) {
-    .sd-alias {
-        padding-left: 10px;
-    }
 }
 .sd-alias-head {
     display: flex;
     align-items: baseline;
     gap: 7px;
-    margin-bottom: 12px;
 }
 .sd-alias-h {
+    /* 【2026-11-20 主人「『别名』标题字可以大些」】11 → 15：原来的 11px 是注脚体量，
+       跟下面 15px 的难度标签摆在一起，标题比内容还轻。颜色同时从 --ink3 提到 --ink2，
+       加大之后再用弱色会显得脏。 */
     margin: 0;
-    font-size: 11px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    color: var(--ink3);
-}
-.sd-alias-n {
-    font-family: var(--font-data);
-    font-size: 11px;
-    color: var(--ink3);
-    font-variant-numeric: tabular-nums;
-}
-.sd-alias-list {
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-.sd-alias-item {
-    display: flex;
-    align-items: baseline;
-    gap: 9px;
-    padding: 7px 2px 7px 0;
-    /* 分隔线只出现在两行之间，首行不留 */
-    border-top: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
-}
-.sd-alias-item:first-child {
-    border-top: 0;
-    padding-top: 2px;
-}
-.sd-alias-t {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--ink);
-    overflow-wrap: anywhere;
-}
-.sd-alias-by {
-    flex: 0 0 auto;
-    font-size: 10.5px;
-    color: var(--ink3);
-}
-/* 待审：整行降一档，俗称前挂一小段虚线，取代原来的虚线药丸 */
-.sd-alias-item.is-pending .sd-alias-t {
+    letter-spacing: 0.06em;
     color: var(--ink2);
 }
-.sd-alias-item.is-pending .sd-alias-t::before {
-    content: '';
-    display: inline-block;
-    width: 11px;
-    height: 0;
-    margin-right: 6px;
-    vertical-align: 4px;
-    border-top: 1px dashed currentColor;
+/* .sd-alias-n 已删（2026-11-20 主人「把别名旁边的计数去掉」）：标题旁不再印条数。 */
+/* 词行：横排、换行不换段 */
+.sd-alias-ws {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
 }
-.sd-alias-flag {
-    flex: 0 0 auto;
-    font-size: 9.5px;
-    letter-spacing: 0.06em;
+.sd-alias-ph {
+    font-size: 12px;
     color: var(--ink3);
-    border: 1px dashed color-mix(in srgb, var(--ink3) 70%, transparent);
-    border-radius: 3px;
-    padding: 1px 4px;
 }
-/* 删除：默认只有一根极淡的 ×，hover 才给底色，不跟俗称抢 */
-.sd-alias-del {
-    flex: 0 0 auto;
+/* 别名本体 = 圆角矩形药丸，点一下复制 */
+.sd-aliasw {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.3;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--edge) 45%, transparent);
+    border: 1px solid color-mix(in srgb, var(--edge) 90%, transparent);
+    border-radius: 999px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.sd-aliasw:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 加号钮：与词同形但要区分开——虚线边框、只有符号 */
+.sd-aliasw-add {
+    justify-content: center;
+    min-width: 26px;
+    padding: 3px 8px;
+    color: var(--ink3);
+    background: none;
+    border-style: dashed;
+}
+.sd-aliasw-add.is-open {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 未登录整颗加号不出现（节点留着，登录态翻 data-login 就能放回来） */
+.sd-alias[data-login='0'] .sd-aliasw-add {
+    display: none;
+}
+/* 删除叉：圆形包裹、压在药丸右上角，默认透明，hover / focus / 长按才显形 */
+.sd-aliasw-x {
+    position: absolute;
+    top: -6px;
+    right: -6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    margin-left: auto;
-    padding: 0;
-    font-size: 11px;
+    width: 15px;
+    height: 15px;
+    font-size: 10px;
     line-height: 1;
-    color: var(--ink3);
-    background: none;
-    border: 0;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s;
-}
-.sd-alias-del:hover {
     color: var(--ink);
-    background: color-mix(in srgb, var(--edge) 70%, transparent);
+    background: var(--bg);
+    border: 1px solid color-mix(in srgb, var(--edge) 90%, transparent);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s;
 }
-.sd-alias-del:focus-visible,
-.sd-alias-add:focus-visible,
+.sd-aliasw:hover .sd-aliasw-x,
+.sd-aliasw:focus-visible .sd-aliasw-x,
+.sd-aliasw.is-x-on .sd-aliasw-x {
+    opacity: 1;
+    pointer-events: auto;
+}
+.sd-aliasw-x:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 60%, transparent);
+}
+.sd-aliasw:focus-visible,
+.sd-aliasw-add:focus-visible,
 .sd-alias-ok:focus-visible,
 .sd-alias-cancel:focus-visible {
     outline: 2px solid var(--acc);
     outline-offset: 2px;
 }
-/* 加别名：列表末尾一整行虚线槽，左对齐文字，点开后原位置换成输入行 */
-.sd-alias-add {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    text-align: left;
-    font: inherit;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--ink3);
-    background: none;
-    border: 1px dashed color-mix(in srgb, var(--edge) 90%, transparent);
-    border-radius: 6px;
-    padding: 6px 10px;
-    cursor: pointer;
-    transition: color 0.2s, border-color 0.2s;
-}
-.sd-alias-add:hover {
-    color: var(--acc);
-    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
-}
-/* 输入态：就地展开，不弹层。
-   【[hidden] 必须自己兜住】下面几条写了 display，会盖掉 UA 的 [hidden]。 */
+/* 输入行：点加号后在词行下面展开，不弹层 */
 .sd-alias-form {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 .sd-alias-form[hidden],
-.sd-alias-add[hidden],
-.sd-alias-empty[hidden] {
+.sd-alias-ph[hidden] {
     display: none;
 }
 .sd-alias-input {
@@ -2276,15 +2268,7 @@ html[data-bgm="playing"] .sd-disc-spin {
 .sd-alias-cancel {
     color: var(--ink3);
 }
-.sd-alias-item-add {
-    margin-top: 9px;
-}
-.sd-alias-empty {
-    margin: 0;
-    padding: 2px 0 9px;
-    font-size: 12px;
-    color: var(--ink3);
-}
+
 
 /* 右栏：songId 行 → 曲名 → 艺术家（2026-10-29 主人重排）。
    注意：.sd-artist 与 .sd-title 的完整规则在上面「曲名上方的 songId 行」段里，
@@ -2361,10 +2345,14 @@ html[data-bgm="playing"] .sd-disc-spin {
     /* 【2026-11-19】gauge 内部两栏：左附注（别名 + 背签）、右读数（三档行 + 标签）。
        三档 .sd-lrow 现在挂在右栏 .sd-read 里，不再是 gauge 的直接子元素；
        它们各自的 grid-column:2 是对 .sd-lrow 内部网格写的，不受这里影响。 */
+    /* 【2026-11-20 主人「sd-main 的宽度不必跟随 sd-read」】右栏读数区不再等分整条带：
+       左附注吃剩余、右读数封顶 560（曲名与读数各行其宽，互不拉扯）。
+       左栏 .sd-side 现在空着也要留着占位（主人「后续要加信息」）。 */
     display: grid;
-    /* 【2026-11-19 主人「sd-main 的宽度不必跟随 sd-read」】右栏读数区不再等分整条带：
-       左附注吃剩余、右读数封顶 560（曲名与读数各行其宽，互不拉扯）。 */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+    /* 【2026-11-20 大纲式审查】701-930 这段（尤其 768 实测）左栏被右栏的 560 挤到 66px，
+       附注清单被压成一字一行的碎条。左栏补 150px 下限，右栏改用等分后再封顶：
+       768 下变成 150 / 465，读数区仍够宽；1440 下左栏吃满剩余、读数区照旧 560。 */
+    grid-template-columns: minmax(150px, 1fr) minmax(0, 560px);
     gap: 0 clamp(26px, 3.8vw, 60px);
     align-items: start;
 }
@@ -2374,6 +2362,8 @@ html[data-bgm="playing"] .sd-disc-spin {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     min-width: 0;
+    /* 【2026-11-20】gauge 不再分左右两栏后，读数区自己封顶——曲名那栏与它各走各的宽 */
+    max-width: 560px;
 }
 
 /* 【2026-10-29 主人「没有 bgm 的桌面端/移动端视图」——无音源时的版面修正】
@@ -2412,7 +2402,9 @@ html[data-lum="light"] .sd-gauge {
    三档之间的横向比较就不是原来那把尺了。 */
 .sd-lrow {
     display: grid;
-    grid-template-columns: 46px minmax(0, 1fr) 74px;
+    /* 第一栏 46 → 56：2026-11-20 等级标签加了圆角边框与 13px 字号，
+       46px 里「BSC」加内边距就贴边，边框贴着字没有气口。 */
+    grid-template-columns: 56px minmax(0, 1fr) 74px;
     gap: 4px 12px;
     align-items: center;
     /* 三行是一个读数区，行内要松、行间要紧。实测原 padding 12 + 密度图上边距 11
@@ -2428,14 +2420,28 @@ html[data-lum="light"] .sd-gauge {
 /* 等级标签保持难度色，但压到 10.5px 小字——它是「这一行是谁」的索引，
    不需要和定数抢注意力；难度色在这里只做辨识，不做强调。 */
 .sd-lrow-k {
+    /* 【2026-11-20 主人「内难度（BSC/ADV/EXT）字体可以大一些，等级可以用圆角矩形围个外围」】
+       放进网格第一列固定宽里居中，不再靠 letter-spacing 撑视觉——
+       边框本身已经把这一格框出来了，字距回到 0.08 让三个字母成团。
+       描边用该档难度色，是「这一行属于哪一档」的唯一彩色信号。
+       【2026-11-20 主人「把标签的底去掉、只留描边」】只留描边后色量落回一档，
+       等级框成为唯一的实心块——三行扫下来不再两处同时喊难度色。
+       描边因此从 52% 提到 62%，底没有了就得靠线自己立住。 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border: 1px solid color-mix(in srgb, var(--d-c) 62%, transparent);
+    border-radius: 7px;
+    background: none;
     font-family: var(--font-data);
-    /* 【2026-11-02 设计审计·字号阶统一】10.5 → 11：读数区定下 11/13/16/24 四级，
-       原先 9.5/10/10.5/11.5/19/24 六种混杂，同一屏里每块字都在「略小一点点」。 */
-    font-size: 11px;
+    /* 13 → 15：三字母是这一行的抬头，13px 还带着「注脚」的体量感，
+       15px 才和定数的 24px 处在同一块读数里。56px 列宽够（BSC 约 27px + 内距 12 + 边框 2）。 */
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.06em;
+    line-height: 1.15;
     color: var(--d-c);
-    opacity: 0.9;
 }
 .sd-lrow-track {
     position: relative;
@@ -2476,15 +2482,43 @@ html[data-lum="light"] .sd-gauge {
    色彩就失去了指向性——读者看到四个同色元素，等于没有强调。
    现在颜色只留给「条」这一处：一眼扫过去先比长度，再读数字。
    【2026-11-02】主人要缩小的是下面的谱面密度条（bar），定数原样保留。 */
+/* 【2026-11-20 主人「等级（7、8、9…）可以用圆角矩形围个外围」】
+   定数是整行的主读数，用一个圆角矩形把它圈起来，与左侧较弱的等级标签药丸成对。
+   描边取该档难度色的低透明度：只做归属提示，数值本身仍是 --ink，
+   「颜色只留给条」的旧口径不被破掉（见上一段注释）。
+   宽度不铺满 74px 列（1 位数的药丸会空得离谱）：靠右对齐 + min-width 兜底，
+   右缘三行始终齐平，条的长度也一格没动。 */
 .sd-lrow-v {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid color-mix(in srgb, var(--d-c) 30%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--d-c) 7%, transparent);
     font-family: var(--font-data);
     font-size: 24px;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    text-align: right;
     color: var(--ink);
     letter-spacing: -0.01em;
+}
+/* 空档（这一档没有谱面）：药丸照样在，但描边换成中性灰，数值是「—」。
+   不加这条的话，空档会跟有值档一样挂着难度色边框，三行看下来像是三档都有谱。
+   标签本来就没有底了（主人 2026-11-20「把标签的底去掉」），所以两者拆开写：
+   标签只换描边，只有等级框保留那层 4% 灰底。 */
+.sd-lrow.is-empty .sd-lrow-k {
+    border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+    color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.sd-lrow.is-empty .sd-lrow-v {
+    border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    color: var(--ink3);
 }
 .sd-lrow-bsc { --d-c: var(--d-bsc); }
 .sd-lrow-adv { --d-c: var(--d-adv); }
@@ -2862,9 +2896,13 @@ html[data-lum="light"] .sd-gauge {
            main 会被排到第二行，跟还留在第一列的曲绘错位。 */
         /* 【2026-11-19】附注带搬进 .sd-gauge 左侧后，不再有 side 网格行，
            只留「曲绘 | 信息」与横跨的 gauge。 */
+        /* 【2026-11-20 主人「在窄屏视图下，sd-foot 横跨一整列」】
+           补上 foot 行。缺这行时 .sd-foot 落到隐式列里，被塞进右侧那窄窄一列
+           （实测 500px 视口下 footW 只有 75、x=393），而不是整宽。 */
         grid-template-areas:
             "aside main"
-            "gauge gauge";
+            "gauge gauge"
+            "foot foot";
         /* 【2026-10-29 主人「移动端播放条靠近曲绘太近」】
            列间距 16 → 22：播放条的圆形按钮左缘原本几乎贴着曲绘右缘，
            视觉上像"粘"在一起。拉开 6px 后两者有明确边界，
@@ -2914,12 +2952,12 @@ html[data-lum="light"] .sd-gauge {
         min-height: 0;
         justify-content: flex-start;
     }
-    /* 【2026-11-19】窄屏附注带也吃满整行宽，横排回 auto-fit 网格更省高度。 */
-    .sd-foot {
+    /* 【2026-11-20】窄屏左栏塌成整宽，附注清单可以横排成 auto-fit 网格省高度。 */
+    .sd-meta {
+        display: grid;
         grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
         gap: 14px 16px;
     }
-    /* .sd-meta 已在文案里删掉（元数据搬进底部条），这条媒体查询残留一并去掉 */
     /* 【2026-11-02 主人「移动端视图的歌曲缩到两行」】
        390px 下最长曲名（"ALL MY HEART -この恋に、わたしの全てを賭ける-"）
        实测折 4 行、占 88px，把艺人、播放条、定数卡整块往下推。
@@ -2972,6 +3010,8 @@ html[data-lum="light"] .sd-gauge {
         grid-template-columns: minmax(0, 1fr);
         gap: 18px 0;
     }
+    /* 【2026-11-20】窄屏仍要顺序翻转：桌面是左右并排谁先都行，窄屏顺序就是阅读顺序，
+       读数是主内容（难度 + 别名）必须在附注（服务器/上线等元信息）之前。 */
     .sd-read { order: 1; }
     .sd-side { order: 2; }
     /* 【2026-10-29 主人画黄框：「定数条与播放器要横跨到左边图片下方」】
@@ -3013,13 +3053,16 @@ html[data-lum="light"] .sd-gauge {
        【2026-11-02】定数挪进副行后，第三栏仍保留 54px 空占位——
        理由见上方基础规则：条长不许变。 */
     .sd-lrow {
-        grid-template-columns: 38px minmax(0, 1fr) 54px;
+        /* 窄屏同样给边框留位置：38 → 50，填充条实得 219px 仍够读。 */
+        grid-template-columns: 50px minmax(0, 1fr) 54px;
         gap: 3px 8px;
         padding: 8px 0;
     }
+    /* 窄屏只降一档：13px 仍比旧版的 11px 大，
+       药丸内距收到 2/5 保住 50px 列宽里不贴边。 */
     .sd-lrow-k {
-        font-size: 11px;
-        letter-spacing: 0.06em;
+        font-size: 13px;
+        padding: 2px 5px;
     }
     .sd-lrow-track {
         height: 8px;
@@ -3039,8 +3082,13 @@ html[data-lum="light"] .sd-gauge {
     .sd-stat b {
         font-size: 15px;
     }
+    /* 窄屏定数药丸跟着降档：19px 字号、高 28、最小宽 42，54px 列里仍留得出边。 */
     .sd-lrow-v {
         font-size: 19px;
+        min-width: 42px;
+        height: 28px;
+        padding: 0 6px;
+        border-radius: 7px;
     }
     /* 参照条窄屏压到 2px 高：col2 只有约 256px，3px 的条在 15px 数字下显得抢 */
     .sd-stat-ref {
@@ -4640,7 +4688,7 @@ html.sc-js .sc-panel[hidden] {
     .sc-skip {
         padding: 12px 16px;
     }
-    .sd-foot dt {
+    .sd-meta dt {
         font-size: 12px;
     }
 }

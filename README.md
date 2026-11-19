@@ -287,6 +287,7 @@ npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-hot.sql    # �
 npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-auth.sql   # 鉴权限流：漏跑则登录/注册/改密全 500
 npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-p0.sql     # 限流计数表 + 删冗余索引
 npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-song-tags.sql  # 曲目标签：漏跑则详情页标签 500
+npx wrangler d1 execute beyond-jubeat --remote --file=db/migrate-song-alias.sql # 曲目别名：漏跑则详情页别名 500
 ```
 
 新开一份迁移要同时改 `db/schema.sql` 的对应段落，两份别分叉——本地靠 schema 一次建全，线上只能一条条跑迁移。
