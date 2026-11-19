@@ -51,6 +51,25 @@ CREATE INDEX idx_songs_title   ON songs(title);
 -- 免掉 TEMP B-TREE 全表排序（1241 行 ×16 列）。
 CREATE INDEX idx_songs_order ON songs(gen_name, ext DESC);
 
+-- 曲目标签（2026-11-19）。详情页每个难度下面一栏：配置 / 难度 / 评价。
+-- 与 songs 不同，这张表是**运行时数据**（玩家提交），不能靠 seed 重建，
+-- 所以和 recent_changes 一样不进 seed.sql 的清空范围。
+-- 主键 (song_id, diff, kind, name) 即去重：同一人重复提交同一条被 IGNORE 吃掉；
+-- 同一条被两个玩家各提交一次也只留一行，count 记人数。
+DROP TABLE IF EXISTS song_tags;
+CREATE TABLE song_tags (
+  song_id    TEXT NOT NULL,
+  diff       TEXT NOT NULL CHECK (diff IN ('bsc','adv','ext')),
+  kind       TEXT NOT NULL CHECK (kind IN ('cfg','lv','eval')),
+  name       TEXT NOT NULL,             -- 标签原文，如「桂马」「诈称」
+  count      INTEGER NOT NULL DEFAULT 1,-- 多少人打过这一条
+  by_user    TEXT,                      -- 首个打标的 user_id；NULL = 老数据
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (song_id, diff, kind, name)
+);
+-- 详情页按一首曲一次查三档，前缀 (song_id) 即可全取
+CREATE INDEX idx_song_tags_song ON song_tags(song_id, diff, kind);
+
 DROP TABLE IF EXISTS recent_changes;
 CREATE TABLE recent_changes (
   change_id    INTEGER PRIMARY KEY AUTOINCREMENT,

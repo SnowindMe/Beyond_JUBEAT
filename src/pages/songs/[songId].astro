@@ -11,6 +11,11 @@ import SongAudio from '../../components/SongAudio.astro';
 import HoldMarker from '../../components/HoldMarker.astro';
 import { getSongById, type Song } from '../../lib/song-data';
 import { LEVELS, gauge, dash as dashLv, HOLD_PCT_MAX } from '../../lib/difficulty';
+// 曲目标签（2026-11-19）：每档下面一栏「配置 / 难度 / 评价」，登录玩家可增删。
+// 词表在 lib 里、渲染在这里、校验在 /api/song-tags，三处只有一份词表。
+// 种子来自 data/song-tags.json（构建期内联），库里存的（玩家提交）优先并覆盖人数。
+import { TAG_KIND_LABEL, TAG_WORDS, KINDS_BY_DIFF, type TagKind } from '../../lib/song-tags';
+import tagSeed from '../../../data/song-tags.json';
 import { jacketUrl } from '../../lib/covers';
 // 键数分位 / 长押率基准：**构建期预计算**的静态数据，运行时只读。
 // 【2026-11-01 线上事故，别改回现算】最初写成每次请求调 buildDifficultyStats()，
@@ -44,6 +49,52 @@ const db = (env as { beyond_jubeat?: D1Database })?.beyond_jubeat;
 const song: Song | null = songId
   ? await getSongById((env as { ASSETS: Fetcher }).ASSETS, Astro.url.origin, songId, db, Astro.locals.cfContext)
   : null;
+
+// 【2026-11-19 曲目标签】先铺词表当骨架（三档 × 三类，全空），再把种子与库里的并进来。
+// 库里的覆盖种子：同名词取库里那条，种子里没有的也照样列出来——所以玩家新打的
+// 一条能在刷新后立刻出现，不必等谁去改 data/song-tags.json。
+// SSR 里直接查 D1 而不是像别名那样留给前端拉：标签是一屏 15 个格子，
+// 分两段跳太晃；量也不大（单曲最多几十条），且详情页本来就 SSR。
+const tagSeedOf = (tagSeed as { tags: Record<string, Record<string, Record<string, string[]>>> }).tags;
+const tagRows =
+  song && db
+    ? (
+        await db
+          .prepare('SELECT diff, kind, name, count FROM song_tags WHERE song_id = ? ORDER BY count DESC, name ASC')
+          .bind(String(song.id))
+          .all<{ diff: string; kind: string; name: string; count: number }>()
+      ).results ?? []
+    : [];
+const myTags = song && Astro.locals.user
+  ? new Set(
+      (
+        await db!
+          .prepare('SELECT diff, kind, name FROM song_tags WHERE song_id = ? AND by_user = ?')
+          .bind(String(song.id), Astro.locals.user.id)
+          .all<{ diff: string; kind: string; name: string }>()
+      ).results?.map((r) => r.diff + '|' + r.kind + '|' + r.name) ?? [],
+    )
+  : new Set<string>();
+
+/** 某档某类的最终列表：[{ name, count, mine, seeded }]，库里优先、种子补齐 */
+function tagsOf(diff: string, kind: TagKind): { name: string; count: number; mine: boolean; seeded: boolean }[] {
+  const out = new Map<string, { name: string; count: number; mine: boolean; seeded: boolean }>();
+  for (const w of TAG_WORDS[kind] ?? []) out.set(w, { name: w, count: 0, mine: false, seeded: true });
+  for (const w of tagSeedOf?.[String(song?.id)]?.[diff]?.[kind] ?? []) {
+    out.set(w, { name: w, count: 0, mine: myTags.has(diff + '|' + kind + '|' + w), seeded: true });
+  }
+  for (const r of tagRows) {
+    if (r.diff !== diff || r.kind !== kind) continue;
+    out.set(r.name, {
+      name: r.name,
+      count: r.count,
+      mine: myTags.has(diff + '|' + kind + '|' + r.name),
+      seeded: out.get(r.name)?.seeded ?? false,
+    });
+  }
+  // 已打的排前面（人数多的在前），未打的维持词表顺序
+  return [...out.values()].sort((a, b) => b.count - a.count);
+}
 
 // 【2026-11-01 键数 / 长押的参照系】分位拿**全站同档谱面**当分母，
 // 由 scripts/build-difficulty-stats.cjs 在构建期算好，这里只做查表。
@@ -418,50 +469,7 @@ const metaFoot: Meta[] = song
             它只是多出一个零高的行，不影响别的行。 */}
       </div>
 
-        <section class="sd-alias" aria-labelledby="sdAliasH" hidden>
-          <div class="sd-alias-head">
-            <h2 class="sd-alias-h" id="sdAliasH">别名</h2>
-            <span class="sd-alias-n">3</span>
-          </div>
-          <ul class="sd-alias-list">
-            <li class="sd-alias-item">
-              <span class="sd-alias-t">喇叭口</span>
-              <span class="sd-alias-by">雪将</span>
-            </li>
-            <li class="sd-alias-item">
-              <span class="sd-alias-t">ラッパ口</span>
-              <span class="sd-alias-by">なまず</span>
-            </li>
-            <li class="sd-alias-item is-pending">
-              <span class="sd-alias-t">喇叭のやつ</span>
-              <span class="sd-alias-by">kuma</span>
-              <span class="sd-alias-flag">待审</span>
-              <button type="button" class="sd-alias-del" title="删除这条别名">
-                <span aria-hidden="true">✕</span><span class="sd-sr">删除</span>
-              </button>
-            </li>
-            <li class="sd-alias-item-add">
-              <button type="button" class="sd-alias-add" title="为这首添加一个别名">
-                <span aria-hidden="true">＋</span>加别名
-              </button>
-              <form class="sd-alias-form" hidden>
-                <label class="sd-sr" for="sdAliasInput">别名</label>
-                <input
-                  id="sdAliasInput"
-                  class="sd-alias-input"
-                  type="text"
-                  maxlength="40"
-                  placeholder="俗称、通称、错记的写法…"
-                  autocomplete="off"
-                />
-                <button type="submit" class="sd-alias-ok">提交</button>
-                <button type="button" class="sd-alias-cancel">取消</button>
-              </form>
-            </li>
-          </ul>
-          <p class="sd-alias-empty" hidden>还没有别名，登录后可添加。</p>
-        </section>
-      {/* 【2026-11-03 主人「是这两个重叠」】定数区从 .sd-main 里提出来，成为 .sd-body
+{/* 【2026-11-03 主人「是这两个重叠」】定数区从 .sd-main 里提出来，成为 .sd-body
           的直接子节点。它原本靠负 margin 横向扩到曲绘下方，纵向位置却由右栏内容决定，
           右栏比曲绘矮时左扩的那半截就压在曲绘上（816px 宽实测重叠 17px）。
           现在它是独立网格行 grid-area:gauge（见 songs.css 的 .sd-body），
@@ -487,6 +495,72 @@ const metaFoot: Meta[] = song
             读的人拿不到新东西；真正有意义的密度要按谱面时长算，而时长库里没有。
             宁可少一项，也不摆一个看不出所以然的数字。 */}
         <div class={`sd-gauge${hasAudio ? '' : ' is-solo'}`} role="group" aria-label="难度信息">
+          {/* 【2026-11-19 主人「在 div.sd-gauge 开左右两个 div，别名、服务器、国服上线等等
+              应该放在左侧 div，难度、标签放在右侧 div，标签单独一个 div，给这个 div 的
+              左边框上主题色」】
+              所以 gauge 内部是两栏：左 .sd-side（附注：别名 + 背签），
+              右 .sd-read（读数：三档行 + 标签）。串行顺序（左先右后）只影响
+              窄屏堆叠与读屏朗读顺序——两者都该先读到「这是哪首、哪个服」再读到难度。
+              桌面上两栏靠 grid 并排，行的上下沿由 --sd-row-gap 之外的对齐规则管。 */}
+          <div class="sd-side">
+      <section class="sd-alias" aria-labelledby="sdAliasH">
+        <div class="sd-alias-head">
+          <h2 class="sd-alias-h" id="sdAliasH">别名</h2>
+          <span class="sd-alias-n">3</span>
+        </div>
+        <ul class="sd-alias-list">
+          <li class="sd-alias-item">
+            <span class="sd-alias-t">喇叭口</span>
+            <span class="sd-alias-by">雪将</span>
+          </li>
+          <li class="sd-alias-item">
+            <span class="sd-alias-t">ラッパ口</span>
+            <span class="sd-alias-by">なまず</span>
+          </li>
+          <li class="sd-alias-item is-pending">
+            <span class="sd-alias-t">喇叭のやつ</span>
+            <span class="sd-alias-by">kuma</span>
+            <span class="sd-alias-flag">待审</span>
+            <button type="button" class="sd-alias-del" title="删除这条别名">
+              <span aria-hidden="true">✕</span><span class="sd-sr">删除</span>
+            </button>
+          </li>
+          <li class="sd-alias-item-add">
+            <button type="button" class="sd-alias-add" title="为这首添加一个别名">
+              <span aria-hidden="true">＋</span>加别名
+            </button>
+            <form class="sd-alias-form" hidden>
+              <label class="sd-sr" for="sdAliasInput">别名</label>
+              <input
+                id="sdAliasInput"
+                class="sd-alias-input"
+                type="text"
+                maxlength="40"
+                placeholder="俗称、通称、错记的写法…"
+                autocomplete="off"
+              />
+              <button type="submit" class="sd-alias-ok">提交</button>
+              <button type="button" class="sd-alias-cancel">取消</button>
+            </form>
+          </li>
+        </ul>
+        <p class="sd-alias-empty" hidden>还没有别名，登录后可添加。</p>
+      </section>
+      {/* 底部背签：服务器 / 两服上线 / 解禁 / 备注。只渲染有值的项。
+          原先是横铺满宽的 .sd-foot，2026-11-19 随分栏挪进左栏，改成竖排清单。 */}
+      {metaFoot.length ? (
+        <dl class="sd-foot">
+          {metaFoot.map((m) => (
+            <div class={m.k === '备注' ? 'is-wide' : undefined}>
+              <dt>{m.k}</dt>
+              <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+          </div>
+
+          <div class="sd-read">
           {/* 【2026-11-02 主人「标记1的 5、10 可以不用」】顶部那把刻度尺整条删除。
               尺子本体只剩「5」「10」两个数字，去掉数字后它就不再承载信息了——
               0-11 的刻度仍由填充条上的 11 段细线表达（.sd-lrow-track::after），
@@ -509,112 +583,126 @@ const metaFoot: Meta[] = song
                 </span>
                 <span class="sd-lrow-v">{dash(lv)}</span>
 
-                {/* 副行：Notes / Holds 两枚数据徽章。
-                    【2026-11-02 主人三条】①「Notes XXX」「Holds XXX」并用徽章——
-                    原来是「282键 / 34长押 / 无长押」三种句式混排，读起来像三套写法；
-                    统一成「标签 + 数字」的徽章后，扫一列下来是对齐的。
-                    长押为 0 时不再写「无长押」，直接 Holds 0，仍是同一句式（数字压成灰）。
-                    分位小格与长押率条保留：它们给的是参照系，不是重复值。
-                    【2026-11-02 第二次纠正】定数**留在右栏**、尺寸不变——
-                    主人「我说让你把 bar 行缩小，没让你改变 bar」，这里的 bar 指的是
-                    下面那条**谱面密度条**，不是定数字。定数原样退回第 3 栏。 */}
+                {/* 副行：Notes / Holds 两块读数（2026-11-19 重做）。
+                    原来是两枚胶囊徽章 + 10 格分位 + 长押率条挤成一行，
+                    三项各是一种形状，读起来像三套写法。
+                    现在统一成一块「标签在上、数字在下、参照条垫底」的读数格：
+                    两块并排、组宽一致，扫一列下来数字与条都对齐。
+                    【2026-11-19 主人「没有 Holds 的也要表示出来，Holds 为 0」】
+                    长押为 0 现在也照常印出（此前按「重复值不占版面」藏掉了，
+                    结果绝大多数曲目整页只有一列 Notes、右边空着）。
+                    参照条与分位/长押率是参照系，照旧保留。 */}
                 <span class="sd-lrow-sub">
                   <span class="sd-facts">
                     {notes == null ? null : (
-                      <span class="sd-tag" title="总键数"><i>Notes</i><b>{fmtInt(notes)}</b></span>
-                    )}
-                    {st?.notesPctl != null ? (
-                      <>
-                        <span class="sd-pctl" aria-hidden="true">
-                          {Array.from({ length: 10 }, (_, i) => (
-                            <b class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></b>
-                          ))}
-                        </span>
-                        {/* 【2026-11-02 审计】裸「P13」没人能解：给 title 讲清口径，
-                            并补一段只给读屏的「键数分位」——视觉上仍是两个字符，
-                            不新增标签、不占版面。 */}
-                        <span class="sd-pctl-v" title={`键数分位：键数超过同档 ${st.notesPctl}% 的谱面`}>
-                          <span class="sd-sr">键数分位</span>P{st.notesPctl}
-                        </span>
-                      </>
-                    ) : null}
-                    {/* 【2026-11-02 审计】长押为 0 不再印徽章。
-                        ①「Holds 0」在全库 852 首里是同一个值，三档 × 每首重复三次，
-                          正是主人早前判过的「多行重复同一值就别占版面」；
-                        ②「这一档没有长押」这件事，用「没有那枚徽章」表达最省，
-                          与长押率百分比（holds > 0 才画）的规则也一致。
-                        未抓到（holds 为 null）同样不显示。 */}
-                    {holds != null && holds > 0 ? (
-                      <span class="sd-tag" title="长押数">
-                        <i>Holds</i><b>{fmtInt(holds)}</b>
+                      <span class="sd-stat">
+                        <i>Notes</i>
+                        <b>{fmtInt(notes)}</b>
+                        {st?.notesPctl != null ? (
+                          <span class="sd-stat-ref" aria-hidden="true">
+                            {Array.from({ length: 10 }, (_, i) => (
+                              <u class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></u>
+                            ))}
+                          </span>
+                        ) : null}
+                        {st?.notesPctl != null ? (
+                          <em title={`键数分位：键数超过同档 ${st.notesPctl}% 的谱面`}>
+                            <span class="sd-sr">键数分位</span>P{st.notesPctl}
+                          </em>
+                        ) : null}
                       </span>
-                    ) : null}
-                    {holds != null && holds > 0 && st?.holdPct != null ? (
-                      /* 条与百分比包成一组：窄屏放不下时两者一起换行，
-                         不会出现「条留在上行、百分比被挤到下一行」的断体。 */
-                      <span class="sd-holdbarwrap">
-                        <span class="sd-holdbar" aria-hidden="true"
-                              style={`--w:${Math.min(100, (st.holdPct / HOLD_PCT_MAX) * 100)}%;--med:${
-                                st.holdBaseline ? (st.holdBaseline.medianPct / HOLD_PCT_MAX) * 100 : 0
-                              }%`}>
-                          {st.holdBaseline ? <u></u> : null}<i></i>
-                        </span>
-                        <span class="sd-pctl-v" title={`长押率：长押音符占全谱 ${st.holdPct.toFixed(1)}%`}>
-                          <span class="sd-sr">长押率</span>{st.holdPct.toFixed(1)}%
-                        </span>
+                    )}
+                    {/* 【2026-11-19 主人「没有 Holds 的也要表示出来，Holds 为 0」】
+                        原来 0 与未抓到都不渲染这块，全库 852 首是 0 →
+                        整页只剩一列 Notes，右边空着。现在只要抓到过就照常渲染，
+                        0 也一样印出来；未抓到（holds 为 null）仍然不印，
+                        免得拿 0 冒充"没有"。 */}
+                    {holds != null ? (
+                      <span class="sd-stat">
+                        <i>Holds</i>
+                        <b>{fmtInt(holds)}</b>
+                        {/* 参照条改成与 Notes 同构的 10 格：Holds 为 0 时整条是空的，
+                            仍然画出来当刻度（原来的单条填充在 0 时宽度 0%，等于没有）。 */}
+                        {st?.holdPct != null ? (
+                          <span class="sd-stat-ref" aria-hidden="true">
+                            {Array.from({ length: 10 }, (_, i) => (
+                              <u
+                                class={
+                                  i < Math.round((st.holdPct! / HOLD_PCT_MAX) * 10) ? 'is-on' : undefined
+                                }
+                              ></u>
+                            ))}
+                          </span>
+                        ) : null}
+                        {st?.holdPct != null ? (
+                          <em title={`长押率：长押音符占全谱 ${st.holdPct.toFixed(1)}%`}>
+                            <span class="sd-sr">长押率</span>{st.holdPct.toFixed(1)}%
+                          </em>
+                        ) : null}
                       </span>
                     ) : null}
                   </span>
                 </span>
 
-                {/* 谱面密度条（2026-11-01，按 jubeat 官方口径）：
-                    · 固定 115 列等分时间轴，柱高封顶 8 层，画**绝对颗数**、不按本曲峰值归一化
-                    · 物量 = 单点×1 + 长押×2，长押的头判与尾判各落一列
-                      （所以列合计 == 物量，两个独立算法互验）
-                    · 格子是正方形，整张图等比缩放后居中（见 songs.css 的 --cell）
-                    0 颗的列不画任何东西——曲中间的静音段本身就是信息。
-                    版本对不上（chartOf 返回 null）就整块不渲染，不给假图。 */}
-                {(() => {
-                  const c = chartOf(key);
-                  if (!c) return null;
-                  return (
-                    // 【空列必须占位】115 列是等分时间轴，空列（这一小段没有音符）
-                    // 也要占住自己的宽度，否则柱子挤在一起、时间轴就失真了——
-                    // 实测症状是「柱子之间没有间隔、节奏形态读不出来」。
-                    // is-rest 只负责保持列宽，不画任何方块。
-                    // 【柱高要按颗数】给每列传一个 --n（这一列有几颗，封顶 8）。
-                    // 不传的话方块各自 flex:1 会撑满整列，结果每根柱都顶到天花板、
-                    // 全都一样高 —— 主人原话「全部撑满很难看的，而且也不直观」。
-                    <span class="sd-chart" aria-hidden="true">
-                      {c.cols.map((v) => {
-                        const n = Math.min(MAX_LAYERS, v);
-                        return (
-                          <span class="sd-col" style={`--n:${n}`}>
-                            {Array.from({ length: n }, () => <b></b>)}
-                          </span>
-                        );
-                      })}
-                    </span>
-                  );
-                })()}
+                {/* 【2026-11-19 主人「标签单独一个div」→ 随即又纠正「对应难度的
+                    div.sd-tags 要在对应难度的 div.sd-lrow 下」】
+                    标签块仍自成一个 div（左侧主题色边框），但挂在**自己那一档的行内**，
+                    不再在 .sd-read 末尾另排三段——那样看不出标签属于哪一档。
+                    三类三行，词表来自 lib/song-tags.ts；已打的高亮带人数。
+                    未登录也渲染，点一下跳登录。data-diff 仍留着，脚本回读不必猜。 */}
+                <div
+                  class={`sd-tags is-${key}`}
+                  data-tags
+                  data-diff={key}
+                  data-login={Astro.locals.user ? '1' : '0'}
+                >
+                  {KINDS_BY_DIFF[key].map((kind) => {
+                    const words = tagsOf(key, kind);
+                    /* 【2026-11-19 主人「标签默认为空」】默认只渲染真被打过的词
+                       （count>0 或自己打过），词表不再预先铺满——一屏几十个灰词压着，
+                       读的人分不清哪些是这首的共识。词表改作「点＋后的候选」。 */
+                    const shown = words.filter((w) => w.count > 0 || w.mine);
+                    const pool = words.filter((w) => !w.count && !w.mine).map((w) => w.name);
+                    return (
+                      <div class="sd-tag-k" data-pool={JSON.stringify(pool)}>
+                        <span class="sd-tag-kl">{TAG_KIND_LABEL[kind]}</span>
+                        <span class="sd-tag-ws">
+                          {/* 自己打过的词右侧带一个 x（2026-11-19 主人要求），
+                              电脑 hover 出现、手机长按出现，未登录两样都不出现。
+                              x 用 span 而不是 button：它挂在 button 里，button 套 button 非法。 */}
+                          {shown.length === 0 ? <span class="sd-tag-ph">暂无</span> : null}
+                          {shown.map((w) => (
+                            <button
+                              type="button"
+                              class={`sd-tagw${w.mine ? ' is-mine' : ''}`}
+                              data-kind={kind}
+                              data-name={w.name}
+                              aria-pressed={w.mine ? 'true' : 'false'}
+                            >
+                              {w.name}
+                              {w.count > 0 ? <b>{w.count}</b> : null}
+                              {w.mine ? (
+                                <span class="sd-tagw-x" data-del={kind} aria-label={`删除标签 ${w.name}`} role="button" tabindex="-1">
+                                  ×
+                                </span>
+                              ) : null}
+                            </button>
+                          ))}
+                          <button type="button" class="sd-tagw sd-tagw-add" data-add={kind} title="添加标签">
+                            ＋
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
+
+          </div>
         </div>
 
-      {/* 底部横向信息条：BPM / 上线 / 解禁 / 备注。
-          放在底板下缘横铺，既填满右半宽度、又把左栏过长的纵向清单压回去，
-          让整体从「左重右空」变成两栏均衡。只渲染有值的项。 */}
-      {metaFoot.length ? (
-        <dl class="sd-foot">
-          {metaFoot.map((m) => (
-            <div class={m.k === '备注' ? 'is-wide' : undefined}>
-              <dt>{m.k}</dt>
-              <dd class={m.mono ? 'sd-num' : undefined}>{m.v}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
     </div>
     </div>
   </section>
@@ -645,8 +733,13 @@ const metaFoot: Meta[] = song
       document.body.appendChild(toastEl);
       return toastEl;
     }
-    function showToast() {
+    /* 【2026-11-19】文案可传：复制是「已复制」，未登录点＋是「需要登录后才能添加标签」。
+       同一个 toast 复用，图标按类型换（勾 / 锁），不另起一套提示。 */
+    function showToast(msg, kind) {
       var t = ensureToast();
+      t.classList.toggle('is-warn', kind === 'warn');
+      t.querySelector('.sd-toast-ico path').setAttribute('d', kind === 'warn' ? 'M12 4v10m0 4v.5' : 'M4 12.5l5 5L20 6.5');
+      t.querySelector('span').textContent = msg || '已复制';
       // 先移除再强制回流，连点也能重播滑入动画
       t.classList.remove('is-on');
       void t.offsetWidth;
@@ -779,6 +872,330 @@ const metaFoot: Meta[] = song
       if (fitTimer) clearTimeout(fitTimer);
       fitTimer = setTimeout(fitText, 120);
     });
+
+
+    /* ── 标签栏（2026-11-19）────────────────────────────────────────
+       点一下 = 打/撤一票。后端是 /api/song-tags/<id>，POST 里 del 字段表示撤销。
+       交互取舍：
+       · 只改被点的这一枚按钮（高亮 + 人数 ±1），不重拉整块——重绘会让
+         刚点的那枚失焦，连点几枚时手感很碎；
+       · 请求期间给按钮加 is-busy 并忽略重复点击，避免连点打出双份票；
+       · 未登录（页面没有登录态）直接跳登录页，带上 return 回本页；
+       · 失败就把刚才的乐观改动回滚，不弹窗——标签是低风险操作，
+         一次失败不值得打断阅读，高亮自己退回去已经说明问题了。
+       · 「＋」是自填输入：点了就地变成 input，回车提交、Esc 取消。 */
+    /* 【2026-11-19 标签块从难度行里提出来、按档拆成三段（各带 data-diff），
+       所以这里从「一个容器」改成「按容器分别挂委托」：每段各自知道自己是哪一档，
+       不用再靠 closest('.sd-lrow') 去猜。 */
+    var tagWraps = document.querySelectorAll('[data-tags]');
+    var songId = location.pathname.split('/').filter(Boolean).pop();
+    /* 登录态走 .sd-tags 的 data-login（is:inline 脚本里写不了 Astro 插值），
+       由模板在渲染期写好；三段取值相同，读第一段即可。 */
+    var LOGGED = tagWraps.length ? tagWraps[0].getAttribute('data-login') === '1' : false;
+
+    function post(diff, kind, name, del) {
+      return fetch('/api/song-tags/' + songId, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ diff: diff, kind: kind, name: name, del: !!del }),
+      });
+    }
+
+    function bump(btn, up) {
+      var b = btn.querySelector('b');
+      var n = b ? parseInt(b.textContent, 10) || 0 : 0;
+      n = Math.max(0, n + (up ? 1 : -1));
+      if (n > 0) {
+        if (!b) {
+          b = document.createElement('b');
+          btn.appendChild(b);
+        }
+        b.textContent = String(n);
+      } else if (b) {
+        b.remove();
+      }
+    }
+
+    function toggle(btn, diff, kind, name) {
+      if (btn.classList.contains('is-busy')) return;
+      btn.classList.add('is-busy');
+      var was = btn.classList.contains('is-mine');
+      var flip = function (mine) {
+        btn.classList.toggle('is-mine', mine);
+        btn.setAttribute('aria-pressed', mine ? 'true' : 'false');
+        bump(btn, mine);
+        /* 打上之后要补一个叉，取消之后要把叉收掉——叉是「已添加」的一部分，
+           两处状态必须同生同灭，否则会留下一个点不动的叉。 */
+        var x = btn.querySelector('.sd-tagw-x');
+        if (mine && !x) {
+          x = document.createElement('span');
+          x.className = 'sd-tagw-x';
+          x.dataset.del = kind;
+          x.setAttribute('role', 'button');
+          x.tabIndex = -1;
+          x.textContent = '×';
+          btn.appendChild(x);
+        } else if (!mine && x) {
+          x.remove();
+          btn.classList.remove('is-x-on');
+        }
+      };
+      flip(!was);
+      post(diff, kind, name, was)
+        .then(function (r) {
+          if (!r.ok && r.status !== 204) throw new Error('t');
+        })
+        .catch(function () {
+          flip(was);
+        })
+        .finally(function () {
+          setTimeout(function () {
+            btn.classList.remove('is-busy');
+          }, 260);
+        });
+    }
+
+    /* 点叉删除自己这一条（2026-11-19 主人要求）。
+       与 toggle 的删除分支不同：这里是「明确要删」，不判当前状态，直接删一次。
+       人数减到 0 时词就没有意义了，整枚撤掉；仍是别人也在打的，只减人数、词留下，
+       并把叉一并去掉（已经不是自己的了）。失败就还原。 */
+    function removeMyTag(btn, diff, kind, name) {
+      btn.classList.add('is-busy');
+      var b = btn.querySelector('b');
+      var prev = b ? parseInt(b.textContent, 10) || 0 : 1;
+      var x = btn.querySelector('.sd-tagw-x');
+      var n = Math.max(0, prev - 1);
+      if (n > 0) {
+        if (b) b.textContent = String(n);
+      } else if (b) {
+        b.remove();
+      }
+      post(diff, kind, name, true)
+        .then(function (r) {
+          if (!r.ok && r.status !== 204) throw new Error('t');
+          btn.classList.remove('is-mine', 'is-x-on');
+          btn.setAttribute('aria-pressed', 'false');
+          if (x) x.remove();
+          if (n <= 0) {
+            var k = btn.closest('.sd-tag-k');
+            btn.remove();
+            if (k && !k.querySelector('.sd-tagw:not(.sd-tagw-add)')) {
+              var ws = k.querySelector('.sd-tag-ws');
+              if (ws && !ws.querySelector('.sd-tag-ph')) {
+                var ph = document.createElement('span');
+                ph.className = 'sd-tag-ph';
+                ph.textContent = '暂无';
+                ws.insertBefore(ph, ws.firstChild);
+              }
+            }
+          }
+        })
+        .catch(function () {
+          if (n <= 0 && b == null) {
+            b = document.createElement('b');
+            btn.appendChild(b);
+          }
+          if (b) b.textContent = String(prev);
+        })
+        .finally(function () {
+          setTimeout(function () {
+            btn.classList.remove('is-busy');
+          }, 260);
+        });
+    }
+
+    /* 【2026-11-19】点「＋」在词行下方展开一枚候选面板：上面是词表里还没人打的词，
+       下面一个输入框可以自填。选候选 / 回车提交都走同一条 POST。
+       面板挂在 .sd-tag-k 之后而不是塞进词行——塞进去会和输入框的 blur 打架
+       （点候选先触发 blur 把面板收起，候选就点不到了）。 */
+    function closeAdd(pop) {
+      if (!pop) return;
+      pop.remove();
+      var k = document.querySelector('.sd-tag-k.is-open');
+      if (k) k.classList.remove('is-open');
+      var a = document.querySelector('.sd-tagw-add.is-open');
+      if (a) a.classList.remove('is-open');
+    }
+    function inlineAdd(addBtn, diff, kind) {
+      if (addBtn.dataset.on === '1') {
+        addBtn.dataset.on = '';
+        closeAdd(document.querySelector('.sd-tag-pop'));
+        return;
+      }
+      closeAdd(document.querySelector('.sd-tag-pop'));
+      addBtn.dataset.on = '1';
+
+      var k = addBtn.closest('.sd-tag-k');
+      var ws = addBtn.parentNode;
+      if (!k) return;
+      k.classList.add('is-open');
+      addBtn.classList.add('is-open');
+
+      var pool = [];
+      try {
+        pool = JSON.parse(k.getAttribute('data-pool') || '[]');
+      } catch (err) {
+        pool = [];
+      }
+
+      var pop = document.createElement('div');
+      pop.className = 'sd-tag-pop';
+      pop.setAttribute('role', 'group');
+      pop.setAttribute('aria-label', '可选标签');
+
+      var line = document.createElement('div');
+      line.className = 'sd-tag-pop-l';
+
+      /* 提交一枚词：成功后收面板，并把它补进词行（人数 1、高亮）。 */
+      function submit(name, candBtn) {
+        name = (name || '').trim().slice(0, 20);
+        if (!name) return;
+        if (candBtn) candBtn.classList.add('is-busy');
+        post(diff, kind, name, false)
+          .then(function (r) {
+            if (!r.ok && r.status !== 204) throw new Error('t');
+            var ph = ws.querySelector('.sd-tag-ph');
+            if (ph) ph.remove();
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sd-tagw is-mine';
+            btn.dataset.kind = kind;
+            btn.dataset.name = name;
+            btn.setAttribute('aria-pressed', 'true');
+            btn.textContent = name;
+            var b = document.createElement('b');
+            b.textContent = '1';
+            btn.appendChild(b);
+            var nx = document.createElement('span');
+            nx.className = 'sd-tagw-x';
+            nx.dataset.del = kind;
+            nx.setAttribute('role', 'button');
+            nx.tabIndex = -1;
+            nx.textContent = '×';
+            btn.appendChild(nx);
+            /* 不挂单独监听：父级委托本来就覆盖这一段，再挂一次会让点叉先走
+               toggle（元素监听器先于委托冒泡），x 删除就被 is-busy 挡掉了。 */
+            ws.insertBefore(btn, addBtn);
+            addBtn.dataset.on = '';
+            closeAdd(pop);
+          })
+          .catch(function () {
+            if (candBtn) candBtn.classList.remove('is-busy');
+          });
+      }
+
+      for (var p = 0; p < pool.length; p++) {
+        var cb = document.createElement('button');
+        cb.type = 'button';
+        cb.className = 'sd-tagw sd-tagc';
+        cb.dataset.cand = pool[p];
+        cb.textContent = pool[p];
+        cb.addEventListener('click', function () {
+          submit(this.getAttribute('data-cand'), this);
+        });
+        line.appendChild(cb);
+      }
+
+      pop.appendChild(line);
+
+      /* 输入框单独一行：候选会折成两三行，混在词流里的话它会浮在半空、
+         位置随候选数量漂。独占一行后位置固定，也自然和上面「选现成词」分开。 */
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.maxLength = 20;
+      input.className = 'sd-tagw-in';
+      input.placeholder = pool.length ? '或自己填一个' : '输入新标签';
+      input.setAttribute('aria-label', '新标签');
+      pop.appendChild(input);
+      k.parentNode.insertBefore(pop, k.nextSibling);
+      input.focus();
+      /* 候选很多时滚到候选区顶部，别让输入框把面板撑出屏外 */
+      pop.scrollTop = 0;
+
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          addBtn.dataset.on = '';
+          closeAdd(pop);
+          addBtn.focus();
+          return;
+        }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        submit(input.value);
+      });
+    }
+
+    /* 【2026-11-19 触屏】手机上点一下是 toggle，长按 450ms 才让叉显形。
+       长按结束后浏览器还会补一个 click，必须吞掉，否则刚按出来的叉立刻被 toggle 收走。
+       长按只在「自己打过的词」上生效，未登录 / 别人的词按了没反应。 */
+    var lpTimer = null;
+    var lpFire = false;
+    var lpBtn = null;
+    function lpClear() {
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    }
+    for (var w = 0; w < tagWraps.length; w++) {
+      (function (wrap) {
+        wrap.addEventListener('touchstart', function (e) {
+          var btn = e.target.closest('.sd-tagw.is-mine');
+          if (!LOGGED || !btn) return;
+          lpBtn = btn;
+          lpFire = false;
+          lpClear();
+          lpTimer = setTimeout(function () {
+            lpFire = true;
+            var old = wrap.querySelector('.sd-tagw.is-x-on');
+            if (old && old !== btn) old.classList.remove('is-x-on');
+            btn.classList.add('is-x-on');
+          }, 450);
+        }, { passive: true });
+        wrap.addEventListener('touchmove', lpClear, { passive: true });
+        wrap.addEventListener('touchend', function () {
+          lpClear();
+          /* 长按已经亮过叉：这一次的 click 只用来「收」，不做事 */
+          if (lpFire) setTimeout(function () { lpFire = false; }, 0);
+        });
+        wrap.addEventListener('click', function (e) {
+          var btn = e.target.closest('.sd-tagw');
+          if (!btn || !wrap.contains(btn)) return;
+          if (lpFire && !e.target.closest('.sd-tagw-x')) return;
+          /* 【2026-11-19 主人「未登录用户点击加号需要提示需要登录才能添加标签」】
+             不再一点就跳登录页——直接把人弹走会丢失「他本来在看这首」的上下文。
+             改成先给一句 toast；再点一次才去登录（带 next 回本页）。 */
+          if (!LOGGED) {
+            if (btn.classList.contains('sd-tagw-add')) {
+              showToast('需要登录才能添加标签', 'warn');
+              btn.classList.add('is-nudge');
+              setTimeout(function () {
+                btn.classList.remove('is-nudge');
+              }, 600);
+              return;
+            }
+            location.href = '/login/?next=' + encodeURIComponent(location.pathname);
+            return;
+          }
+          /* 档位由所在段自己的 data-diff 给出（三段各写死一档）。 */
+          var diff = wrap.getAttribute('data-diff');
+          if (!diff) return;
+          if (btn.classList.contains('sd-tagw-add')) {
+            inlineAdd(btn, diff, btn.dataset.add);
+            return;
+          }
+          /* 点叉＝删除自己这一条。叉没有自己的监听器（它是 span 嵌在按钮里），
+             靠最外层这一处委托统一判：命中 .sd-tagw-x 就按删除走，
+             不再走 toggle——否则点叉会先 toggle 再删，白打两次请求。 */
+          if (e.target.closest('.sd-tagw-x')) {
+            if (btn.classList.contains('is-busy')) return;
+            removeMyTag(btn, diff, btn.dataset.kind, btn.dataset.name);
+            return;
+          }
+          toggle(btn, diff, btn.dataset.kind, btn.dataset.name);
+        });
+      })(tagWraps[w]);
+    }
 
     var targets = document.querySelectorAll('[data-copy]');
     for (var i = 0; i < targets.length; i++) {

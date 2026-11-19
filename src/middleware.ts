@@ -195,7 +195,14 @@ const handle: MiddlewareHandler = async (context, next) => {
      /songs/、/recent/、/jubility/ 页面层 0 处 Astro.locals，登录态是顶栏客户端拉
      /api/auth/me 补的（Header.astro:223），这三页按纯公共处理、不判 cookie。
      万一哪天有人在白名单页里读 locals，兜底是红线①：响应带 Set-Cookie 就谁也不缓存。 */
-  const LOGIN_DEPENDENT = url.pathname === '/' || url.pathname === '/songs/frag';
+  /* 【2026-11-19 补：详情页 /songs/<id>/ 也按登录态渲染】标签块要印出「我的标签」
+     并给它们挂删除叉（.sd-tagw.is-mine / data-login），依据是 Astro.locals.user。
+     它不在上面的零处 locals 之列，一旦让登录用户吃到游客缓存，本人就看不到自己的标签、
+     也点不出叉。曲目详情只渲一首，绕开缓存的代价可接受；游客仍照常吃缓存。 */
+  const LOGIN_DEPENDENT =
+    url.pathname === '/' ||
+    url.pathname === '/songs/frag' ||
+    /^\/songs\/[^/]+\/$/.test(url.pathname);
   const hasSession = !!token;
   const isRead = context.request.method === 'GET' || context.request.method === 'HEAD';
 

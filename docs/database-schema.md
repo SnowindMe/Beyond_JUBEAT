@@ -9,13 +9,13 @@
 
 ## 0. 一句话总览
 
-十六张表，分三类，**性质完全不同，绝不能同框清空**：
+十七张表，分三类，**性质完全不同，绝不能同框清空**：
 
 | 类别 | 表 | 数据来源 | 清空后能否重建 |
 | --- | --- | --- | --- |
 | **曲库数据** | songs | npm run db 从 data/ 全量推导 | **能**（重跑就有） |
 | **曲库缓存修订** | song_rev（单行） | 后台改曲目时 bump | **能**，从 0 起步即可 |
-| **运行时数据** | recent_changes / users / sessions / oauth_accounts / role_requests | 站点运行中被写入 | **不能**，是真实用户与编辑记录 |
+| **运行时数据** | recent_changes / users / sessions / oauth_accounts / role_requests / song_tags | 站点运行中被写入 | **不能**，是真实用户与编辑记录 |
 | **计数缓存** | hot_hits / hot_snapshots / hot_ip_days / hot_gaps / auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / auth_email_hours | 访问与登录时累加 | **能**，但会丢当天的热度与限流窗口 |
 
 这条区分不是洁癖，是 2026-10-28 实际踩出来的：seed.sql 曾带 DELETE FROM recent_changes;
@@ -258,6 +258,21 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 限流排在 Turnstile 之前——Turnstile token 一次性，先验再被 429 挡掉就得重新过人机。
 窗口外的旧行由 dropSweep 随请求清掉、挂 waitUntil。线上增量脚本：db/migrate-auth.sql。
 
+## 3.9 song_tags —— 曲目标签（运行时表，2026-11-19）
+
+详情页每个难度下面一栏（配置 / 难度 / 评价），玩家点一下即投一票。
+
+| 列 | 说明 |
+| --- | --- |
+| song_id / diff / kind / name | 联合主键。diff 限 bsc/adv/ext，kind 限 cfg/lv/eval，name 是标签原文（词表在 src/lib/song-tags.ts，三处共用一份） |
+| count | 多少人打过这一条。同一人重复提交同一条被 IGNORE 吃掉，**去重靠主键不靠代码判断** |
+| by_user | 首个打标者；只用来看「这条是不是我打的」，人数仍以 count 为准 |
+| created_at | 首次出现时间 |
+
+它是运行时数据，**不进 seed.sql**：重灌曲库不清它。词表种子在 data/song-tags.json，
+入库后以库里的 count 优先、覆盖种子；库里没有的词照样能提交（自填）。
+删除用 delete 标记（POST del:true），count 减到 0 即删行。线上增量脚本：db/migrate-song-tags.sql。
+
 ---
 
 ## 4. 全部索引清单（**15** 个）
@@ -273,6 +288,7 @@ auth_ip_minutes / auth_ip_hours / auth_email_ip_hours / auth_email_ip_days / aut
 | hot_hits | idx_hot_hits_day_ip（主键已覆盖 day+song，不再另建） |
 | hot_ip_days | idx_hot_ip_days_day |
 | hot_gaps | idx_hot_gaps_exp |
+| song_tags | idx_song_tags_song（前缀 song_id，详情页一次取全） |
 
 > 【2026-11-04 复查】索引从 11 涨到 15 是热度与限流那批表带来的，不是随手加的。
 > 同一天删掉了 idx_hot_hits_day_song（主键 (day, song_id, visitor) 的最左前缀与它完全重复）；

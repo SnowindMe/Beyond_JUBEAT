@@ -1509,18 +1509,25 @@ html[data-view="list"] .sc-ph-badges {
     display: grid;
     /* 【2026-10-28 第三版】左栏 260 → 208：元数据搬去底部条后，左栏只剩封面，
         按封面宽度定栏宽即可，多出来的宽度全给右栏（曲名 + 定数条才是主角）。 */
-    grid-template-columns: 208px minmax(0, 1fr);
+    /* 【2026-11-19 主人「桌面端左右栏应该各占一半」】曾改成 1fr 1fr 两栏等宽，
+       但同一句之后主人又提「div.sd-main 的宽度不必跟随 div.sd-read 的宽度」——
+       各半会让曲名/播放条那栏被读数区锁死在同一个宽度上。
+       终态：左栏回到按封面定的 208，右栏吃剩余；读数区自己在 gauge 里限宽（见 .sd-gauge）。 */
+    grid-template-columns: var(--sd-aside-w) minmax(0, 1fr);
     /* 【2026-11-03 主人「是这两个重叠」】定数区 .sd-gauge 原本是右栏里的一个 flex 子项，
        靠负 margin 向左扩到曲绘下方。它的**纵向位置**由右栏内容决定（曲名+艺人+播放条），
        一旦右栏比曲绘矮（816px 宽实测：曲绘到 378、定数区从 361 开始），
        被负 margin 拉过去的左半截就直接压在曲绘上。
        现在把它提成独立的网格行，横跨两栏 —— 纵向位置由网格决定，结构上不可能再回贴到曲绘；
        横向铺满内容区的效果不变（原来那 -239px 负 margin 就是在模拟这个）。 */
+    /* 【2026-11-19 主人「在 div.sd-gauge 开左右两个 div，别名、服务器、国服上线等等
+       放左侧，难度、标签放右侧，标签单独一个 div，左边框上主题色」】
+       gauge 从而成了横跨两栏的一条带，**内部**再分左右——所以这里回到两行：
+       上一行 曲绘 / 作品信息，下一行 gauge 横跨（内部两栏）。
+       附注带原来占 grid-area:side 的整行，现在搬进 gauge 左侧，side 行删除。 */
     grid-template-areas:
         "aside main"
-        "alias alias"
-        "gauge gauge"
-        "foot  foot";
+        "gauge gauge";
     /* 【2026-10-29 主人「难度条要往左扩张」】
        把"右栏相对内容区左缘的偏移"算成一个变量，供 .sd-gauge / .sda 用负 margin
        反向抵消——这样难度条与播放条就能一直铺到曲绘左缘，不管视口怎么变。
@@ -1564,9 +1571,26 @@ html[data-view="list"] .sc-ph-badges {
     justify-content: center;
     min-height: 208px;
 }
-/* 底部信息条：横铺满宽，用细线上缘和主内容分开，不再逐个加框 */
+/* gauge 的左栏附注带（2026-11-19 主人「别名、服务器、国服上线等等应该放在
+   div.sd-gauge 的左侧 div」）。左是注释（别名、背签），右是读数（定数、
+   Notes/Holds、标签），性质分明、互不抢注意力。
+   它不再是 .sd-body 的网格项，所以没有 grid-area；宽度由 gauge 的两列各半决定。 */
+.sd-side {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(18px, 2.2vw, 26px);
+    min-width: 0;
+}
+/* 底部背签：原先是横铺满宽的网格，随分栏收进左栏后改成竖排清单——
+   左栏只有 208px，横排的 auto-fit(130px) 会挤成两列碎块。
+   键在值上面、项与项之间用极淡细线，读起来像一张标签卡。 */
 .sd-foot {
-    grid-area: foot;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding-top: clamp(14px, 1.8vw, 20px);
+    border-top: 1px solid var(--edge);
     /* 【2026-10-28 第三版】从 flex-wrap 改成 auto-fit 网格。
        旧版 flex 里项目宽度由内容决定，「BPM 178」和「解禁 解禁I - CHERRY」宽度差很多，
        换行位置随机、右侧留白不齐。网格按最小宽度自动分列，8 项也能一次排开且左右对齐。 */
@@ -1595,10 +1619,7 @@ html[data-view="list"] .sc-ph-badges {
     color: var(--ink);
     overflow-wrap: anywhere;
 }
-/* 「备注」这类长文本不该挤在一格里换成一堆短行——横跨剩余全部列 */
-.sd-foot > div.is-wide {
-    grid-column: 1 / -1;
-}
+/* 竖排后每项都独占一行，is-wide 不再需要跨列（网格已换成 flex 列） */
 .sd-foot dd.sd-num {
     font-family: var(--font-data);
     font-size: 13.5px;
@@ -2031,6 +2052,12 @@ html[data-bgm="playing"] .sd-disc-spin {
     transform: translate(-50%, 0);
     opacity: 1;
 }
+/* 提示型 toast（未登录点＋）：不走主题色，改成中性深底浅字——
+   主题色在页面上到处都是，染色的话看起来像「成功」，而这里是「还差一步」。 */
+.sd-toast.is-warn {
+    background: color-mix(in srgb, var(--ink) 88%, #000);
+    color: var(--bg);
+}
 .sd-toast-ico {
     width: 13px;
     height: 13px;
@@ -2071,19 +2098,15 @@ html[data-bgm="playing"] .sd-disc-spin {
     display: none;
 }
 .sd-alias {
-    grid-area: alias;
-    /* 网格行间距已给 var(--sd-row-gap)，这里减回去，净气口才是目标值 */
-    margin-top: calc(clamp(16px, 2vw, 22px) - var(--sd-row-gap));
-    padding-left: 13px;
+    /* 【2026-11-19】随着侧栏一起进了左栏，不再是整行独立区（去掉 grid-area:alias
+       与那段抵消行间距的 margin-top——在 flex 列里由 gap 接管）。
+       宽度也不再靠 max-width 收：左栏本身就窄，天然是一栏附注的形状。 */
+    padding-left: 11px;
     border-left: 2px solid color-mix(in srgb, var(--acc) 32%, transparent);
-    /* 台账形状靠宽度定：一行只放「俗称 + 谁这么叫 + 删除」，
-       再宽下去行会拉成跑道、左侧竖标线也失去「一栏附注」的意思。 */
-    max-width: 36ch;
 }
-/* 窄屏：42ch 的宽度限制在 390px 下会把整块压到半屏，放开成全宽 */
+/* 窄屏：左栏塌成整宽后，竖标线再收一点，别名行不至于离左缘太远 */
 @media (max-width: 700px) {
     .sd-alias {
-        max-width: none;
         padding-left: 10px;
     }
 }
@@ -2335,9 +2358,22 @@ html[data-bgm="playing"] .sd-disc-spin {
        没删干净，新结构是「一行一个难度、每行内部再分三栏」，于是三档被横着排成了三列
        （实测 BSC 在 left 209、ADV 在 576、EXT 在 943），整块高度还翻了一倍。
        这里必须是**单列**：每行自己管理内部栏位，父级只负责纵向堆叠。 */
+    /* 【2026-11-19】gauge 内部两栏：左附注（别名 + 背签）、右读数（三档行 + 标签）。
+       三档 .sd-lrow 现在挂在右栏 .sd-read 里，不再是 gauge 的直接子元素；
+       它们各自的 grid-column:2 是对 .sd-lrow 内部网格写的，不受这里影响。 */
+    display: grid;
+    /* 【2026-11-19 主人「sd-main 的宽度不必跟随 sd-read」】右栏读数区不再等分整条带：
+       左附注吃剩余、右读数封顶 560（曲名与读数各行其宽，互不拉扯）。 */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+    gap: 0 clamp(26px, 3.8vw, 60px);
+    align-items: start;
+}
+/* 右栏：三档行 + 标签。单列，行与行之间靠 .sd-lrow + .sd-lrow 的细线收口。 */
+.sd-read {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
+    min-width: 0;
 }
 
 /* 【2026-10-29 主人「没有 bgm 的桌面端/移动端视图」——无音源时的版面修正】
@@ -2465,88 +2501,266 @@ html[data-lum="light"] .sd-gauge {
 }
 .sd-facts {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 5px 8px;
+    align-items: flex-start;
+    gap: 14px;
 }
-/* 数据徽章：Notes / Holds。
-   与页头的世代/分区徽章同一族（胶囊 + 等宽数据字体），只是压小一号——
-   它是「行内读数」，不是「本曲身份」。标签用 ink3、数字用 ink，
-   一眼先读数字、再回看标签，扫一列下来数字对齐。 */
-.sd-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: 18px;
-    padding: 0 7px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-    border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
+/* 【2026-11-19 主人「重做 Notes 和 Holds 显示」，并「去除 sd-pctl、sd-pctl-v、
+   sd-holdbarwrap 和 bar 条」】原来 Notes/Holds 是两枚胶囊徽章 + 一串 10 格分位 +
+   一条长押率条，三项三种形状。现在统一成两格「读数块」：
+     <i>标签  →  <b>数字  →  参照条  →  <em>参照值
+   两块同宽并排（flex 等分），扫一列下来数字与条都对齐，形状也不再各说各话。
+   参照条仍是原来的语义：Notes 亮到第 N 格 = 超过同档 N 成谱面；
+   Holds 按长押率占满比例、竖线是基准。它们给数字一个可比较的刻度，
+   所以即使形状统一了也保留，不做成「数字更漂亮的徽章」。
+   【2026-11-19】Holds 为 0 也渲染（主人要求），不再按"没有长押就不占版面"藏掉。 */
+.sd-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1 1 0;
+    min-width: 0;
+    /* 【2026-11-19 主人「左右栏各占一半」后】不再封顶 132px：
+       两栏已经各占一半、读数区本来就宽，封顶只在左边留一截空。
+       改为两块各吃一半，数字与参照条都能拉直。 */
+    max-width: 220px;
+}
+.sd-stat i {
+    font-style: normal;
     font-family: var(--font-data);
-    /* 9.5 → 10.5：徽章标签是「说明数字是什么」，太小就只剩灰点 */
     font-size: 10.5px;
     font-weight: 600;
-    line-height: 1;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
     color: var(--ink3);
 }
-.sd-tag i { font-style: normal; }
-.sd-tag b {
-    font-size: 12.5px;
+.sd-stat b {
+    font-family: var(--font-data);
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: 0;
+    line-height: 1;
+    letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums;
     color: var(--ink);
 }
-/* 【2026-11-02 审计】.sd-tag.is-zero 已删除：长押为 0 时模板不再渲染这枚徽章，
-   那套「把 0 压灰」的样式没有触发者，留着只会让人以为页面上还有这个状态。 */
-/* 分位小格：10 格，亮到第 N 格 = 超过同档约 N 成谱面 */
-.sd-pctl { display: inline-flex; gap: 1.5px; }
-.sd-pctl b {
-    width: 2.5px;
-    height: 7px;
-    border-radius: 0.5px;
+/* 参照条：垫在数字下面，高度只留 3px——它是刻度不是主体，压过数字就抢戏 */
+.sd-stat-ref {
+    display: flex;
+    gap: 1.5px;
+    height: 3px;
+}
+.sd-stat-ref u {
+    flex: 1 1 0;
+    border-radius: 1px;
     background: color-mix(in srgb, var(--ink) 12%, transparent);
 }
-.sd-pctl b.is-on { background: color-mix(in srgb, var(--d-c) 80%, #fff 20%); }
-.sd-pctl-v {
+.sd-stat-ref u.is-on {
+    background: color-mix(in srgb, var(--d-c) 78%, transparent);
+}
+.sd-stat em {
+    font-style: normal;
     font-family: var(--font-data);
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 10.5px;
     font-variant-numeric: tabular-nums;
     color: var(--ink3);
 }
-/* 长押率「条 + 百分比」作为一组，换行时一起走 */
-.sd-holdbarwrap {
+
+/* 标签块（2026-11-19 主人「标签单独一个div，给这个 div 的左边框上主题色」，
+   紧接着又纠正「对应难度的 .sd-tags 要在对应难度的 .sd-lrow 下」）。
+   于是它仍是独立 div（左侧主题色竖线），但**挂在各自那一档的行内**：
+   行内跨满三栏、排在该档读数之下，就近说明「这一档别人怎么评」。
+   竖线按档取难度色（.is-bsc/adv/ext），与 .sd-lrow-k 同色系。
+   视觉上比读数轻：小一号字、无底色、只有极淡左线。 */
+.sd-tags {
+    /* 行内网格是「等级 | 条 | 定数」三栏，标签块自己占一整行 */
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    /* 段首档位名已去掉（行首的 .sd-lrow-k 就在三行之前，再印一遍是重复），
+       所以这里只剩缩进与竖线；上下各留 6/10 的气口，免得贴住下一档的条。 */
+    margin: 6px 0 10px;
+    padding-left: 12px;
+    border-left: 2px solid color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 三档不再相邻（中间隔着各自的行），原来的 .sd-tags + .sd-tags 虚线规则删掉；
+   档与档之间由 .sd-lrow + .sd-lrow 的细线收口。 */
+.sd-tags.is-bsc { border-left-color: color-mix(in srgb, var(--d-bsc) 55%, transparent); }
+.sd-tags.is-adv { border-left-color: color-mix(in srgb, var(--d-adv) 55%, transparent); }
+.sd-tags.is-ext { border-left-color: color-mix(in srgb, var(--d-ext) 55%, transparent); }
+.sd-tag-k {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.sd-tag-kl {
+    flex: 0 0 42px;
+    padding-top: 5px;
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    color: var(--ink3);
+}
+.sd-tag-ws {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-width: 0;
+}
+.sd-tagw,
+.sd-tagw-add {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: var(--r-xs);
+    border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    background: transparent;
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--ink2);
     white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
-/* 长押率条：竖线是基准（有长押谱面的中位率），短于线 = 偏疏、长过线 = 偏密。
-   【2026-11-02】原来外面还有一个 .sd-holdwrap 把「长押数 + 条 + 百分比」包成一串；
-   长押数改成 Holds 徽章后不再需要那层包裹（徽章自己是一个 flex 项），整条删除。 */
-.sd-holdbar {
-    position: relative;
-    width: 52px;
-    height: 5px;
-    border-radius: 1px;
-    background: color-mix(in srgb, var(--ink) 7%, transparent);
+.sd-tagw b {
+    font-family: var(--font-data);
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink3);
 }
-.sd-holdbar i {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    border-radius: 1px;
-    width: var(--w);
-    background: color-mix(in srgb, var(--d-c) 72%, transparent);
+.sd-tagw:hover {
+    border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+    color: var(--ink);
 }
-.sd-holdbar u {
-    position: absolute;
-    top: -2px; bottom: -2px;
-    left: var(--med);
-    width: 1px;
-    background: color-mix(in srgb, var(--ink) 42%, transparent);
+.sd-tagw.is-mine {
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+    color: var(--acc);
+}
+.sd-tagw.is-mine b { color: inherit; }
+
+/* 删除叉（2026-11-19 主人要求：已添加的标签右上角一个小 x，x 外面套圆形）。
+   默认不占位、靠负外边距挂到词尾，只有 hover / 长按 / 聚焦时才显形——
+   常驻的话每个已打词都多一个叉，词行会变脏。
+   圆形是 14px 的实心圈：词只有 22px 高，叉本身很小，没有圈在密集词流里认不出是个按钮。
+   位置用「右上角」：贴住词的右上、自己往右下偏 3px 压住边线，出界部分由 .sd-tags 的 padding 容纳。 */
+.sd-tagw-x {
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    margin: -12px -6px 0 -4px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--acc) 88%, #000);
+    color: #07131a;
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.sd-tagw.is-mine:hover .sd-tagw-x,
+.sd-tagw.is-mine:focus-visible .sd-tagw-x,
+.sd-tagw.is-mine.is-x-on .sd-tagw-x {
+    opacity: 1;
+    transform: none;
+}
+/* 触屏长按：脚本给词加 is-x-on；手机上也没有 hover，所以叉出现后要停留一会儿 */
+.sd-tagw.is-mine.is-x-on {
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+}
+/* 加号：虚线描边，与实词的实线区分——它是「还能补一个」而不是已有共识 */
+.sd-tagw-add {
+    border-style: dashed;
+    color: var(--ink3);
+}
+.sd-tagw-add:hover { color: var(--ink); }
+/* 空态：这一档这一类还没人打过。用一句极轻的「暂无」占住位置，
+   比留一片空白更能说明「这里是空的、不是没渲染」。 */
+.sd-tag-ph {
+    font-size: 11.5px;
+    line-height: 22px;
+    color: color-mix(in srgb, var(--ink3) 78%, transparent);
+}
+
+/* 候选面板（2026-11-19 主人「标签默认为空」→ 点＋才展开）：
+   词表不再常驻，改在这儿当候选；最下面一个输入框可自填。
+   体量限制在词行下方一条，词多时自己滚，不把页面顶长。 */
+.sd-tag-pop {
+    /* 面板是 .sd-tag-k 的兄弟、在 .sd-tags 的 flex 列里，本来就满宽 */
+    margin-top: 6px;
+    max-height: 118px;
+    overflow-y: auto;
+    padding: 8px;
+    border-radius: var(--r-xs);
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    background: color-mix(in srgb, #000 26%, transparent);
+    backdrop-filter: blur(2px);
+}
+/* 输入框独占第二行，靠上分隔线与候选分开 */
+.sd-tag-pop .sd-tagw-in {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding-top: 0;
+}
+.sd-tag-pop-l {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+/* 候选词与已打词同形，但虚线描边——「可以点、但还没成为这首的标记」 */
+.sd-tagc {
+    border-style: dashed;
+    color: var(--ink2);
+}
+.sd-tagc.is-busy { opacity: 0.6; }
+/* 加号打开态：变成实线主题色，表示「这个面板就是它开的」，再点是收起 */
+.sd-tagw-add.is-open {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--acc) 62%, transparent);
+    color: var(--acc);
+}
+/* 未登录点「＋」时抖一下加号本身：toast 在顶部，视线在下面，
+   光有顶部提示对得上号的地方不够，得让被点的那个东西也有回应。 */
+.sd-tagw-add.is-nudge {
+    border-color: color-mix(in srgb, var(--acc) 70%, transparent);
+    color: var(--acc);
+}
+
+/* 自填输入框：与词同高同圆角，但用 --acc 描边标出「正在编辑」 */
+.sd-tagw-in {
+    height: 22px;
+    width: 88px;
+    padding: 0 8px;
+    border-radius: var(--r-xs);
+    border: 1px solid color-mix(in srgb, var(--acc) 55%, transparent);
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink);
+}
+.sd-tagw-in:focus {
+    outline: 2px solid color-mix(in srgb, var(--acc) 45%, transparent);
+    outline-offset: 1px;
+}
+/* 请求在路上：压一点透明度，连点时手感有回应，也标记 in-flight */
+.sd-tagw.is-busy {
+    opacity: 0.6;
+}
+@media (max-width: 700px) {
+    /* 窄屏整块只有一列，标签区左右都没有邻栏，左竖线收窄到 2px 就够了 */
+    .sd-tags { padding-left: 10px; margin-top: 4px; }
+    .sd-tag-kl { flex-basis: 38px; }
+    .sd-tagw, .sd-tagw-add { height: 24px; font-size: 12px; }
 }
 
 /* 【2026-11-02 主人「标记1的 5、10 可以不用」】.sd-scale 整块删除。
@@ -2640,11 +2854,15 @@ html[data-lum="light"] .sd-gauge {
              aside 固定宽度（放封面），main 吃剩余。
            底部背签仍独占一行。 */
         grid-template-columns: auto minmax(0, 1fr);
+        /* 【2026-11-19】窄屏按主人的话上下分：曲绘与标题并排在第一行（沿用原来的
+           左图右信息），难度模块整条下移独占第二行，附注带收在最后。
+           注意 areas 必须与两列的列数对齐——写成单列 "aside"/"main" 时
+           main 会被排到第二行，跟还留在第一列的曲绘错位。 */
+        /* 【2026-11-19】附注带搬进 .sd-gauge 左侧后，不再有 side 网格行，
+           只留「曲绘 | 信息」与横跨的 gauge。 */
         grid-template-areas:
             "aside main"
-            "alias alias"
-            "gauge gauge"
-            "foot  foot";
+            "gauge gauge";
         /* 【2026-10-29 主人「移动端播放条靠近曲绘太近」】
            列间距 16 → 22：播放条的圆形按钮左缘原本几乎贴着曲绘右缘，
            视觉上像"粘"在一起。拉开 6px 后两者有明确边界，
@@ -2694,6 +2912,7 @@ html[data-lum="light"] .sd-gauge {
         min-height: 0;
         justify-content: flex-start;
     }
+    /* 【2026-11-19】窄屏附注带也吃满整行宽，横排回 auto-fit 网格更省高度。 */
     .sd-foot {
         grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
         gap: 14px 16px;
@@ -2745,7 +2964,14 @@ html[data-lum="light"] .sd-gauge {
     }
     .sd-gauge {
         max-width: none;
+        /* 【2026-11-19】窄屏退回单列。顺序与桌面相反：先读数（难度是主内容）、
+           附注带垫后——桌面是左右并排，谁先谁后无所谓；窄屏顺序就是阅读顺序，
+           把别名/背签摆在前会把难度推到两屏之外。 */
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px 0;
     }
+    .sd-read { order: 1; }
+    .sd-side { order: 2; }
     /* 【2026-10-29 主人画黄框：「定数条与播放器要横跨到左边图片下方」】
        图片只有 108 高，而右侧信息（曲名+艺人）比它更早结束，
        【2026-10-29 主人「播放条要在曲绘右边」——这条已收窄为"只有定数条扩张"】
@@ -2778,7 +3004,8 @@ html[data-lum="light"] .sd-gauge {
        不横跨的话右侧会显得孤立；桌面本来就有足够的横向空间容纳横跨。
        注意顺序：这条必须写在上面的横跨规则之后，靠后者覆盖前者。 */
     /* 【2026-11-03】窄屏 is-solo 的 44px 兜底同样作废（定数区已在曲绘行之下）。 */
-    /* 【2026-11-01 难度行·窄屏】390px 下右栏可用约 327px（横跨曲绘后）。
+    /* 【2026-11-01 难度行·窄屏】390px 下右栏可用约 327px（当时定数区横跨曲绘；
+       2026-11-19 起 gauge 只在右栏、不再横跨，这里的列宽仍按 col2 的实际余量收）。
        网格收窄：等级 46→38、定数位 74→54、间距 12→8，留给填充条约 227px。
        实测此宽度下副行不折行、密度条 104 柱仍可分辨。
        【2026-11-02】定数挪进副行后，第三栏仍保留 54px 空占位——
@@ -2795,50 +3022,27 @@ html[data-lum="light"] .sd-gauge {
     .sd-lrow-track {
         height: 8px;
     }
-    /* 徽章与副行在 390px 里要挤进 col2（扣掉等级 38 + 定数位 54 + 间距后约 256px）。
-       【2026-11-02 实测】原始尺寸下 ADV/EXT 会把长押百分比挤到第二行、行高翻倍，
-       于是整体收一档：徽章 9→8.5px、内边距 6→5、间距 8→6，分位小格 2→1.5px、长押条 38→30px。
-       实测收窄后三档都能在一行内排完。 */
+    /* 读数块落在 col2（扣掉等级 38 + 定数位 54 + 间距后约 256px），
+       两块等分、间距收成 10px：390px 下仍是一行，不必再压字号换整齐。 */
     .sd-facts {
-        gap: 4px 6px;
+        gap: 10px;
     }
     /* 【2026-11-02 审计】窄屏徽章原来压到 8.5/10.5px，是为了「不折行」——
        但 8.5px 已经到了「看不清但还占位」的程度，属于拿可读性换整齐。
        现在抬到 9.5/11.5，并靠 gap 再收 1px 补回宽度。
        【顺带】这里原本有两条 .sd-pctl b（1.5px 与 2px），后者覆盖前者，
        注释写的还是 1.5 —— 合并成一条 2px。 */
-    .sd-tag {
-        height: 17px;
-        padding: 0 5px;
-        font-size: 9.5px;
-        gap: 3px;
-    }
-    .sd-tag b {
-        font-size: 11.5px;
-    }
-    .sd-pctl {
-        gap: 1px;
-    }
-    .sd-pctl b {
-        width: 2px;
-        height: 7px;
+    /* 【2026-11-19 重做读数块后】窄屏只收数字一档（16→15px），
+       两块仍并排——132px 上限在 390px 的 col2 里放得下，实测不折行。 */
+    .sd-stat b {
+        font-size: 15px;
     }
     .sd-lrow-v {
         font-size: 19px;
     }
-    /* 【2026-11-02】窄屏把长押率那条小条藏掉：390px 下副行只有约 256px 宽，
-       徽章 + 分位格 + 长押条 + 百分比必然折行，实测行高从 88 涨到 112。
-       百分比数字本身已经说清「占全谱几张」，小条在这里只是把同一条信息画第二遍。 */
-    .sd-holdbar {
-        display: none;
-    }
-    /* 密度条·窄屏：宽度已经由容器决定（width:100% + aspect-ratio），
-       这里只把上间距收一点、并把块高压矮，避免窄屏占掉太多纵向空间。 */
-    .sd-chart {
-        margin-top: 6px;
-        max-height: 52px;
-        /* 窄屏整条本来就只有 250 上下，再收就只剩 1px 一列了，不再压宽度 */
-        max-width: none;
+    /* 参照条窄屏压到 2px 高：col2 只有约 256px，3px 的条在 15px 数字下显得抢 */
+    .sd-stat-ref {
+        height: 2px;
     }
     /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
        在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */
@@ -4412,15 +4616,10 @@ html.sc-js .sc-panel[hidden] {
         padding: 0 9px;
         font-size: 12px;
     }
-    /* 难度行副行：徽章字号 9 → 10px、数字 11 → 12px；分位数字 10 → 11px */
-    .sd-tag {
-        font-size: 10px;
-    }
-    .sd-tag b {
-        font-size: 12px;
-    }
-    .sd-pctl-v {
-        font-size: 12px;
+    /* 难度行副行：标签与参照值 10.5 → 11px */
+    .sd-stat i,
+    .sd-stat em {
+        font-size: 11px;
     }
     /* 等级标签 10.5 → 12：38px 列宽里 BSC/ADV/EXT 仍放得下（实测不折行） */
     .sd-lrow-k {
