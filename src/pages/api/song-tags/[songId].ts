@@ -47,21 +47,29 @@ async function bumpIp(db: D1Database, day: string, ipHash: string, minute: strin
   return { n: row?.n ?? 1, minN: row?.min_n ?? 1 };
 }
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, locals }) => {
   const db = (env as Ctx)?.beyond_jubeat;
   const songId = String(params.songId ?? '');
   if (!db || !/^[0-9]{1,12}$/.test(songId)) return new Response('{}', { status: 400, headers: JSON_NO_STORE });
 
+  /* 【2026-11-19 补 mine】详情页 HTML 会过 EdgeOne/CDN 缓存、可能发给没有登录态的另一份，
+     于是页面上的 is-mine 与叉随时会错人。这里把「是不是我打的」一并给出，
+     客户端拿到 /api/auth/me 的登录态后可以用本接口重画一遍，不必信任缓存里的 HTML。 */
+  const uid = locals.user?.id ?? null;
   const rows = await db
-    .prepare('SELECT diff, kind, name, count FROM song_tags WHERE song_id = ? ORDER BY count DESC, name ASC')
+    .prepare('SELECT diff, kind, name, count, by_user FROM song_tags WHERE song_id = ? ORDER BY count DESC, name ASC')
     .bind(songId)
-    .all<{ diff: string; kind: string; name: string; count: number }>();
+    .all<{ diff: string; kind: string; name: string; count: number; by_user: string | null }>();
 
   // 前端按 diff → kind 分组直接用，不在客户端再折一次
-  const out: Record<string, Record<string, { name: string; count: number }[]>> = {};
+  const out: Record<string, Record<string, { name: string; count: number; mine: boolean }[]>> = {};
   for (const r of rows.results ?? []) {
     (out[r.diff] ??= {})[r.kind] ??= []; // 三种 kind 恒定存在，空数组也要有，前端才不用判空
-    (out[r.diff] as Record<string, { name: string; count: number }[]>)[r.kind].push({ name: r.name, count: r.count });
+    (out[r.diff] as Record<string, { name: string; count: number; mine: boolean }[]>)[r.kind].push({
+      name: r.name,
+      count: r.count,
+      mine: !!uid && r.by_user === uid,
+    });
   }
   for (const d of Object.keys(out)) for (const k of TAG_KINDS) out[d][k] ??= [];
 

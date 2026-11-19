@@ -664,7 +664,7 @@ const metaFoot: Meta[] = song
                     const shown = words.filter((w) => w.count > 0 || w.mine);
                     const pool = words.filter((w) => !w.count && !w.mine).map((w) => w.name);
                     return (
-                      <div class="sd-tag-k" data-pool={JSON.stringify(pool)}>
+                      <div class="sd-tag-k" data-kind={kind} data-pool={JSON.stringify(pool)} data-pool-all={JSON.stringify(words.map((w) => w.name))}>
                         <span class="sd-tag-kl">{TAG_KIND_LABEL[kind]}</span>
                         <span class="sd-tag-ws">
                           {/* 自己打过的词右侧带一个 x（2026-11-19 主人要求），
@@ -680,7 +680,6 @@ const metaFoot: Meta[] = song
                               aria-pressed={w.mine ? 'true' : 'false'}
                             >
                               {w.name}
-                              {w.count > 0 ? <b>{w.count}</b> : null}
                               {w.mine ? (
                                 <span class="sd-tagw-x" data-del={kind} aria-label={`删除标签 ${w.name}`} role="button" tabindex="-1">
                                   ×
@@ -889,8 +888,10 @@ const metaFoot: Meta[] = song
        不用再靠 closest('.sd-lrow') 去猜。 */
     var tagWraps = document.querySelectorAll('[data-tags]');
     var songId = location.pathname.split('/').filter(Boolean).pop();
-    /* 登录态走 .sd-tags 的 data-login（is:inline 脚本里写不了 Astro 插值），
-       由模板在渲染期写好；三段取值相同，读第一段即可。 */
+    /* 登录态先信模板写的 data-login，但**不能只信它**：详情页 HTML 会过
+       EdgeOne/CDN 缓存，一个游客的请求渲出的版本可能被发给已登录的人（反之亦然），
+       于是「登录了却被告知要登录」或「明明登录却没叉」。下面用 /api/auth/me
+       校正一次，登录态一翻就按真实身份重画标签块。 */
     var LOGGED = tagWraps.length ? tagWraps[0].getAttribute('data-login') === '1' : false;
 
     function post(diff, kind, name, del) {
@@ -901,20 +902,8 @@ const metaFoot: Meta[] = song
       });
     }
 
-    function bump(btn, up) {
-      var b = btn.querySelector('b');
-      var n = b ? parseInt(b.textContent, 10) || 0 : 0;
-      n = Math.max(0, n + (up ? 1 : -1));
-      if (n > 0) {
-        if (!b) {
-          b = document.createElement('b');
-          btn.appendChild(b);
-        }
-        b.textContent = String(n);
-      } else if (b) {
-        b.remove();
-      }
-    }
+    /* 【2026-11-19 主人「已创建的标签右边不用加数字」】原先每个词后面跟一个人数 <b>，
+       现在不显示了。bump() 与各处 b 构造一并删掉，不再留空节点。 */
 
     function toggle(btn, diff, kind, name) {
       if (btn.classList.contains('is-busy')) return;
@@ -923,7 +912,6 @@ const metaFoot: Meta[] = song
       var flip = function (mine) {
         btn.classList.toggle('is-mine', mine);
         btn.setAttribute('aria-pressed', mine ? 'true' : 'false');
-        bump(btn, mine);
         /* 打上之后要补一个叉，取消之后要把叉收掉——叉是「已添加」的一部分，
            两处状态必须同生同灭，否则会留下一个点不动的叉。 */
         var x = btn.querySelector('.sd-tagw-x');
@@ -956,46 +944,35 @@ const metaFoot: Meta[] = song
     }
 
     /* 点叉删除自己这一条（2026-11-19 主人要求）。
-       与 toggle 的删除分支不同：这里是「明确要删」，不判当前状态，直接删一次。
-       人数减到 0 时词就没有意义了，整枚撤掉；仍是别人也在打的，只减人数、词留下，
-       并把叉一并去掉（已经不是自己的了）。失败就还原。 */
+       与 toggle 的删除分支不同：这里是「明确要删」，不判当前状态，直接删一次，
+       叉一并去掉（已经不是自己的了）。失败就还原。
+       【人数计数已不显示（同日主人「已创建的标签右边不用加数字」），
+       所以这里只剩「叉还在不在」一个状态要管；「人数减到 0 就整枚撤掉」照旧。 */
     function removeMyTag(btn, diff, kind, name) {
       btn.classList.add('is-busy');
-      var b = btn.querySelector('b');
-      var prev = b ? parseInt(b.textContent, 10) || 0 : 1;
       var x = btn.querySelector('.sd-tagw-x');
-      var n = Math.max(0, prev - 1);
-      if (n > 0) {
-        if (b) b.textContent = String(n);
-      } else if (b) {
-        b.remove();
-      }
+      if (x) x.remove();
       post(diff, kind, name, true)
         .then(function (r) {
           if (!r.ok && r.status !== 204) throw new Error('t');
           btn.classList.remove('is-mine', 'is-x-on');
           btn.setAttribute('aria-pressed', 'false');
-          if (x) x.remove();
-          if (n <= 0) {
-            var k = btn.closest('.sd-tag-k');
-            btn.remove();
-            if (k && !k.querySelector('.sd-tagw:not(.sd-tagw-add)')) {
-              var ws = k.querySelector('.sd-tag-ws');
-              if (ws && !ws.querySelector('.sd-tag-ph')) {
-                var ph = document.createElement('span');
-                ph.className = 'sd-tag-ph';
-                ph.textContent = '暂无';
-                ws.insertBefore(ph, ws.firstChild);
-              }
-            }
-          }
+          /* 人数已经不显示了，本地算不出「这枚词是不是只剩我」——
+             交给接口回读：repaint() 按最新数据重画，别人还打过的词留着、只剩我的自动消失，
+             空出来时它自己会补「暂无」。比本地猜准，也不多写一套删词逻辑。 */
+          repaint();
         })
         .catch(function () {
-          if (n <= 0 && b == null) {
-            b = document.createElement('b');
-            btn.appendChild(b);
+          /* 失败：把叉放回去（词钮本来就没被撤，除非它已被移除） */
+          if (btn.isConnected && !btn.querySelector('.sd-tagw-x')) {
+            var nx = document.createElement('span');
+            nx.className = 'sd-tagw-x';
+            nx.dataset.del = kind;
+            nx.setAttribute('role', 'button');
+            nx.tabIndex = -1;
+            nx.textContent = '×';
+            btn.appendChild(nx);
           }
-          if (b) b.textContent = String(prev);
         })
         .finally(function () {
           setTimeout(function () {
@@ -1063,9 +1040,6 @@ const metaFoot: Meta[] = song
             btn.dataset.name = name;
             btn.setAttribute('aria-pressed', 'true');
             btn.textContent = name;
-            var b = document.createElement('b');
-            b.textContent = '1';
-            btn.appendChild(b);
             var nx = document.createElement('span');
             nx.className = 'sd-tagw-x';
             nx.dataset.del = kind;
@@ -1162,21 +1136,11 @@ const metaFoot: Meta[] = song
           var btn = e.target.closest('.sd-tagw');
           if (!btn || !wrap.contains(btn)) return;
           if (lpFire && !e.target.closest('.sd-tagw-x')) return;
-          /* 【2026-11-19 主人「未登录用户点击加号需要提示需要登录才能添加标签」】
-             不再一点就跳登录页——直接把人弹走会丢失「他本来在看这首」的上下文。
-             改成先给一句 toast；再点一次才去登录（带 next 回本页）。 */
-          if (!LOGGED) {
-            if (btn.classList.contains('sd-tagw-add')) {
-              showToast('需要登录才能添加标签', 'warn');
-              btn.classList.add('is-nudge');
-              setTimeout(function () {
-                btn.classList.remove('is-nudge');
-              }, 600);
-              return;
-            }
-            location.href = '/login/?next=' + encodeURIComponent(location.pathname);
-            return;
-          }
+          /* 【2026-11-19 主人「未登录用户标签不出现 +」＋「删除提示」】
+             游客看不到加号，所以这里只剩「点已有词去登录」一条路；
+             加号分支不再需要 toast，直接由可见性表达「不可加」。
+             （is-nudge 与 .sd-tagw-add.is-nudge 样式暂留，供别处复用。） */
+          if (!LOGGED) return;
           /* 档位由所在段自己的 data-diff 给出（三段各写死一档）。 */
           var diff = wrap.getAttribute('data-diff');
           if (!diff) return;
@@ -1195,6 +1159,106 @@ const metaFoot: Meta[] = song
           toggle(btn, diff, btn.dataset.kind, btn.dataset.name);
         });
       })(tagWraps[w]);
+    }
+
+    /* ── 按真实登录态重画标签块（2026-11-19）──────────────────────────
+       起因：详情页 HTML 会过 EdgeOne 缓存，缓存版本里的 data-login 与 is-mine
+       可能不属于当前这个人。所以登录态一律以 /api/auth/me 为准，
+       一翻就重拉 /api/song-tags 重画，不信任 HTML 里的那份。 */
+    function applyLogin(on) {
+      /* 登录态一致也要重画一次：缓存里的 is-mine 可能属于上一个登录的人。 */
+      if (on === LOGGED) {
+        if (on) repaint();
+        return;
+      }
+      LOGGED = on;
+      for (var t = 0; t < tagWraps.length; t++) tagWraps[t].setAttribute('data-login', on ? '1' : '0');
+      repaint();
+    }
+
+    /* 用接口数据重画三段：每档三类，先清空词行再按 count / mine 铺回去。
+       词表候选池（data-pool）也一并按最新结果重算——否则刚打过的词还会留在候选里。 */
+    function repaint() {
+      if (!tagWraps.length) return;
+      fetch('/api/song-tags/' + songId, { headers: { accept: 'application/json' } })
+        .then(function (r) {
+          return r.ok ? r.json() : null;
+        })
+        .then(function (data) {
+          if (!data) return;
+          for (var t = 0; t < tagWraps.length; t++) {
+            var wrap = tagWraps[t];
+            var d = wrap.getAttribute('data-diff');
+            var byDiff = data[d] || {};
+            var rows = wrap.querySelectorAll('.sd-tag-k');
+            for (var q = 0; q < rows.length; q++) {
+              var row = rows[q];
+              var ws = row.querySelector('.sd-tag-ws');
+              var addBtn = ws.querySelector('.sd-tagw-add');
+              if (!ws || !addBtn) continue;
+              var list = byDiff[row.getAttribute('data-kind')] || [];
+              var mineNames = [];
+              var pool = [];
+              var have = {};
+              for (var i = 0; i < list.length; i++) have[list[i].name] = true;
+              var all = [];
+              try {
+                all = JSON.parse(row.getAttribute('data-pool-all') || '[]');
+              } catch (err2) {
+                all = [];
+              }
+              for (var j = 0; j < all.length; j++) {
+                if (all[j] && !have[all[j]]) pool.push(all[j]);
+              }
+              row.setAttribute('data-pool', JSON.stringify(pool));
+              /* 清掉词钮（加号留着），再按最新数据重建 */
+              var olds = ws.querySelectorAll('.sd-tagw:not(.sd-tagw-add)');
+              for (var k = 0; k < olds.length; k++) olds[k].remove();
+              var ph = ws.querySelector('.sd-tag-ph');
+              if (list.length && ph) ph.remove();
+              if (!list.length && !ph) {
+                ph = document.createElement('span');
+                ph.className = 'sd-tag-ph';
+                ph.textContent = '暂无';
+                ws.insertBefore(ph, ws.firstChild);
+              }
+              for (var m = 0; m < list.length; m++) {
+                var it = list[m];
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'sd-tagw' + (it.mine ? ' is-mine' : '');
+                btn.dataset.kind = row.getAttribute('data-kind');
+                btn.dataset.name = it.name;
+                btn.setAttribute('aria-pressed', it.mine ? 'true' : 'false');
+                btn.textContent = it.name;
+                if (it.mine) {
+                  var x = document.createElement('span');
+                  x.className = 'sd-tagw-x';
+                  x.dataset.del = row.getAttribute('data-kind');
+                  x.setAttribute('role', 'button');
+                  x.tabIndex = -1;
+                  x.textContent = '×';
+                  btn.appendChild(x);
+                }
+                ws.insertBefore(btn, addBtn);
+              }
+            }
+          }
+        })
+        .catch(function () {});
+    }
+
+    /* 一进页面就用权威接口校正登录态。模板那份来自可能被缓存的 HTML，不可信。 */
+    if (tagWraps.length) {
+      fetch('/api/auth/me', { headers: { accept: 'application/json' } })
+        .then(function (r) {
+          return r.ok ? r.json() : null;
+        })
+        .then(function (d) {
+          if (!d) return;
+          applyLogin(!!d.user);
+        })
+        .catch(function () {});
     }
 
     var targets = document.querySelectorAll('[data-copy]');

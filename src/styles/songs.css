@@ -2625,13 +2625,8 @@ html[data-lum="light"] .sd-gauge {
     cursor: pointer;
     transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
 }
-.sd-tagw b {
-    font-family: var(--font-data);
-    font-size: 10px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink3);
-}
+/* 词后的人数已不显示（2026-11-19 主人「已创建的标签右边不用加数字」），
+   原先的 .sd-tagw b 规则一并删掉；比重仍靠排序表达，不再印数字。 */
 .sd-tagw:hover {
     border-color: color-mix(in srgb, var(--ink) 26%, transparent);
     color: var(--ink);
@@ -2682,6 +2677,13 @@ html[data-lum="light"] .sd-gauge {
     color: var(--ink3);
 }
 .sd-tagw-add:hover { color: var(--ink); }
+/* 【2026-11-19 主人「未登录用户标签不出现 +」】未登录时加号整个不渲染。
+   判断走 .sd-tags 的 data-login（模板渲染期写好），三段都一样。
+   保留 DOM 节点而不是删掉，是因为登录态是客户端补的：万一 HTML 被缓存成游客版、
+   真实用户已登录，脚本可以只翻这个属性把加号放出来，不用重建整块。 */
+.sd-tags[data-login='0'] .sd-tagw-add {
+    display: none;
+}
 /* 空态：这一档这一类还没人打过。用一句极轻的「暂无」占住位置，
    比留一片空白更能说明「这里是空的、不是没渲染」。 */
 .sd-tag-ph {
