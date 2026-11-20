@@ -2609,7 +2609,13 @@ html[data-lum="light"] .sd-gauge {
    它量的是整块（标题 + 数字）的高度，不再是吊在数字右边的 27px 小柱子。 */
 .sd-stat {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    /* 【2026-11-21 主人「把红色框的小组件移动到黄色框（条在左文字在右）」】
+       原来是 minmax(0,1fr) auto：第 1 栏吃满、把参照组顶到整块最右边
+       （数字与柱之间隔着 139px 空白，读数被拉成两截）。
+       改成两栏都 max-content + justify-content:start，参照组紧贴数字右侧，
+       「值 → 刻度 → 分位」回到一条紧凑的链上。 */
+    grid-template-columns: max-content max-content;
+    justify-content: start;
     grid-template-rows: auto auto;
     column-gap: 6px;
     row-gap: 4px;
