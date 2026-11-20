@@ -132,3 +132,7 @@ src/data/ub-charts.json
 src/data/ub-audio.json
 src/data/recent-changes.json
 src/data/audio-map.json
+
+# 【2026-11-20】验收截图目录与临时调试接口：过程物，不进版本库
+_shots/
+src/pages/api/dbg-alias.ts

@@ -2493,7 +2493,13 @@ html[data-lum="light"] .sd-gauge {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 52px;
+    /* 【2026-11-20 主人「每个难度的等级定数的外边框宽度都是固定的，按等级为 10.X 的宽度」】
+       宽度定死，不再跟位数走：1 位数（7）与 3 个字位（10.2）的边框一样宽，
+       三行右缘才是一条竖线，扫一列下来不会因为「这首是 7 还是 10」而参差。
+       58px = 「10.2」在 24px Bahnschrift Bold 下的实测字宽 38.3 + 左右内距 8×2 + 边框 1×2 = 56.3，取整并留 1.7 余量；
+       border-box 下 padding 与 border 都吃在这 58 里，字号再大也不会撑破。
+       定宽后不再需要靠 min-width 兜底位数少的档。 */
+    width: 58px;
     height: 34px;
     padding: 0 8px;
     border: 1px solid color-mix(in srgb, var(--d-c) 30%, transparent);
@@ -2535,7 +2541,16 @@ html[data-lum="light"] .sd-gauge {
 }
 .sd-facts {
     display: flex;
-    align-items: flex-start;
+    /* 【2026-11-20 主人「notes/holds 标题和各自的总数，位置改为标题在上总数在下」，
+       紧接着又补「notes 数据在左，holds 数据在右」】
+       两块之间仍是左右并排（只短暂试过一版上下叠），
+       「标题在上、总数在下」只作用在每块**内部**（见 .sd-stat），
+       不改变两块之间的左右关系。 */
+    flex-direction: row;
+    /* 【2026-11-20 主人「标签折叠按钮的高度也与 sd-stat 高度一致」】
+       两侧都拉到同一格高（stretch）：读数块与它左边的按钮顶底同时对齐，
+       不再一块 36.8、另一块 32.8 差出一截。 */
+    align-items: stretch;
     gap: 14px;
 }
 /* 【2026-11-19 主人「重做 Notes 和 Holds 显示」，并「去除 sd-pctl、sd-pctl-v、
@@ -2559,6 +2574,8 @@ html[data-lum="light"] .sd-gauge {
     max-width: 220px;
 }
 .sd-stat i {
+    grid-column: 1;
+    grid-row: 1;
     font-style: normal;
     font-family: var(--font-data);
     font-size: 10.5px;
@@ -2576,16 +2593,64 @@ html[data-lum="light"] .sd-gauge {
     font-variant-numeric: tabular-nums;
     color: var(--ink);
 }
-/* 参照条：垫在数字下面，高度只留 3px——它是刻度不是主体，压过数字就抢戏 */
+/* 【2026-11-20 主人「参照条改为由下往上的条，与分位文字一起放在 Notes/Holds 右边」】
+   读数块改成横排两段：左边 .sd-stat-main（标签 + 数字，主体），右边 .sd-stat-side（条 + 分位，参照）。
+   条改成**竖向柱**：底边对齐、逐格向上亮，读的是「柱有多高」而不是「横条有多长」——
+   竖向柱与上面那条横向定数填充条形成方向区分，不会和定数条混成一种读法。 */
+/* 【2026-11-20 主人「notes/holds 标题和各自的总数，位置改为标题在上总数在下」】
+    一块读数拆成两层：上层 .sd-stat-main 只有标签与数字（竖着叠），
+    下层 .sd-stat-bd 放数字行——数字在左、参照柱与分位跟在它右边。
+    标题与数字的上下关系是主人点名的；数字与参照还留在同一行，
+    读起来仍是「值 → 刻度 → 分位」一条链，只是整条挪到了标题下面。 */
+/* 【2026-11-20 主人「sd-stat-side 不应该在 sd-stat-bd 里面，应该移出来在 sd-stat 里，
+   高度与 sd-stat 一致」】
+   一块读数改成两列两行的网格：左列「标题 / 数字」两行，右列参照柱整列贯通。
+   侧栏跨两行、align-self:stretch，柱因此与整块读数**同高**——
+   它量的是整块（标题 + 数字）的高度，不再是吊在数字右边的 27px 小柱子。 */
+.sd-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 6px;
+    row-gap: 4px;
+    align-items: end;
+}
+/* 数字那一格：柱与分位在右列（.sd-stat-side），这里只放数字本身。 */
+.sd-stat-bd {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 0;
+}
+/* 侧栏跨满两行、拉到与整块同高；分位值贴着底线站，与柱脚同底。 */
+.sd-stat-side {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: stretch;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+}
+/* 参照柱：10 格竖排，底格在最下，亮的格数 = 分位 ÷ 10。
+   26px 高里均分 10 格每格只剩 1.2px，会糊成一串碎线；抬到 30px、缝 1px，
+   每格约 2px 才数得清「亮了几格」。 */
 .sd-stat-ref {
     display: flex;
-    gap: 1.5px;
-    height: 3px;
+    flex-direction: column-reverse;
+    gap: 1px;
+    width: 9px;
+    /* 高度交给 .sd-stat-side 撑（与整块读数同高），柱子跟着长——
+       定死 27px 时十格每格只有 1.7px，跟着长才数得清「亮了几格」。 */
+    height: 100%;
 }
 .sd-stat-ref u {
     flex: 1 1 0;
-    border-radius: 1px;
-    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    width: 100%;
+    border-radius: 0.5px;
+    /* 暗格必须能数出「一共十格」：12% 在深色砖底上完全贴地，25% 才看得出格 */
+    background: color-mix(in srgb, var(--ink) 25%, transparent);
 }
 .sd-stat-ref u.is-on {
     background: color-mix(in srgb, var(--d-c) 78%, transparent);
@@ -2596,6 +2661,64 @@ html[data-lum="light"] .sd-gauge {
     font-size: 10.5px;
     font-variant-numeric: tabular-nums;
     color: var(--ink3);
+    white-space: nowrap;
+}
+
+/* 【2026-11-20 主人「在难度标签（BSC/ADV/EXT）的下面加一个评价标签展开收缩按钮（默认收起）」】
+   按钮钉在第 1 栏第 2 行：正落在标签药丸底下，不参与读数块的横向排布，
+   展开与否都不挤动 Notes/Holds 那一行。
+   配色跟标签药丸同一套（难度色描边 + 难度色字），比药丸弱一档——
+   它是「这一档还有话没说完」的入口，不是第三个难度标签。
+   高度 24px 够戳，56px 列宽里铺满，点起来不挑位置。 */
+.sd-tags-toggle {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    /* 【2026-11-20 主人「标签折叠按钮的高度也与 sd-stat 高度一致」】
+       不写死高度：align-self:stretch 让它吃满这一行的高度，
+       Notes/Holds 那块多高它就多高，两个控件在同一条基线上等长。 */
+    align-self: stretch;
+    /* 读数块的外层 .sd-lrow-sub 有 2px 上距（它与填充条之间的气口），
+       按钮跟同一个 2px 才能跟读数块的顶边齐平，否则会高出 2px。 */
+    margin-top: 2px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--d-c) 30%, transparent);
+    border-radius: 7px;
+    background: none;
+    font-family: var(--font-data);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    color: color-mix(in srgb, var(--d-c) 80%, transparent);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+.sd-tags-toggle:hover {
+    border-color: color-mix(in srgb, var(--d-c) 55%, transparent);
+    background: color-mix(in srgb, var(--d-c) 10%, transparent);
+}
+.sd-tags-toggle:focus-visible {
+    outline: 2px solid var(--d-c);
+    outline-offset: 2px;
+}
+/* 箭头：收起朝下、展开朝上，只转不换图，一帧内交代状态 */
+.sd-tags-chev {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.18s;
+}
+.sd-tags-toggle[aria-expanded='true'] .sd-tags-chev {
+    transform: rotate(180deg);
 }
 
 /* 标签块（2026-11-19 主人「标签单独一个div，给这个 div 的左边框上主题色」，
@@ -2607,6 +2730,8 @@ html[data-lum="light"] .sd-gauge {
 .sd-tags {
     /* 行内网格是「等级 | 条 | 定数」三栏，标签块自己占一整行 */
     grid-column: 1 / -1;
+    /* 收起态由 [hidden] 摘出布局；展开后接在读数块下面（第 3 行）。 */
+    grid-row: 3;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -2618,6 +2743,11 @@ html[data-lum="light"] .sd-gauge {
 }
 /* 三档不再相邻（中间隔着各自的行），原来的 .sd-tags + .sd-tags 虚线规则删掉；
    档与档之间由 .sd-lrow + .sd-lrow 的细线收口。 */
+/* [hidden] 必须显式压回来：.sd-tags 自己的 display:flex 是类选择器，
+   比 UA 样式表里的 [hidden]{display:none} 更具体，收起态会「收了个寂寞」。 */
+.sd-tags[hidden] {
+    display: none;
+}
 .sd-tags.is-bsc { border-left-color: color-mix(in srgb, var(--d-bsc) 55%, transparent); }
 .sd-tags.is-adv { border-left-color: color-mix(in srgb, var(--d-adv) 55%, transparent); }
 .sd-tags.is-ext { border-left-color: color-mix(in srgb, var(--d-ext) 55%, transparent); }
@@ -3082,17 +3212,25 @@ html[data-lum="light"] .sd-gauge {
     .sd-stat b {
         font-size: 15px;
     }
-    /* 窄屏定数药丸跟着降档：19px 字号、高 28、最小宽 42，54px 列里仍留得出边。 */
+    /* 窄屏定数药丸跟着降档：19px 字号、高 28、定宽 46。
+       46 = 「10.2」在 19px 下的实测字宽 30.3 + 内距 6×2 + 边框 2 = 44.3，取整并留余量；
+       与桌面同一条规则——宽度只跟「10.X 这个最宽值」走，不跟当前位数走。
+       54px 列宽放 46px 的药丸仍留得出 8px 边。 */
     .sd-lrow-v {
         font-size: 19px;
-        min-width: 42px;
+        width: 46px;
         height: 28px;
         padding: 0 6px;
         border-radius: 7px;
     }
-    /* 参照条窄屏压到 2px 高：col2 只有约 256px，3px 的条在 15px 数字下显得抢 */
+    /* 参照柱窄屏收一档：宽 7→6、高 26→21，col2 只有约 256px，
+        横排之后这块要跟数字抢宽度，柱子矮一点、窄一点才不顶到分位字 */
     .sd-stat-ref {
-        height: 2px;
+        width: 6px;
+    }
+    .sd-stat {
+        column-gap: 5px;
+        row-gap: 3px;
     }
     /* 曲名之外的字号也同步收一档：窄屏上 14px 的艺人名与 11.5px 的徽章
        在 203px 宽里都显得重，各降 1px，与曲名 clamp 的下限呼应。 */

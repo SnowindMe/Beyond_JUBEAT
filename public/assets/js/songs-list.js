@@ -255,13 +255,16 @@
                     (card.getAttribute('data-a') || '').toLowerCase() + '\n' +
                     (card.getAttribute('data-id') || '').toLowerCase() + '\n' +
                     (card.getAttribute('data-lv') || '').toLowerCase();
-          // 读音索引（假名/罗马字）：多数卡的 data-sk 是空串，取一次就够，别在循环里反复 getAttribute。
+          // 读音索引（假名/罗马字）与别名索引（2026-11-20）：多数卡两列都是空串，
+          // 取一次就够，别在循环里反复 getAttribute。
           var sk = (card.getAttribute('data-sk') || '').toLowerCase();
+          var al = (card.getAttribute('data-al') || '').toLowerCase();
           var forms = queryForms();
           var matched = false;
           for (var fi = 0; fi < forms.length && !matched; fi++) {
             matched = hay.indexOf(forms[fi]) !== -1 ||
-                      (sk !== '' && sk.indexOf(forms[fi]) !== -1);
+                      (sk !== '' && sk.indexOf(forms[fi]) !== -1) ||
+                      (al !== '' && al.indexOf(forms[fi]) !== -1);
           }
           if (!matched) return false;
         }

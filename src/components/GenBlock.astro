@@ -18,9 +18,11 @@ type Props = {
   srv?: 'jp' | 'cn';
   /** 是否在卡片上画 PICK UP 标记（只有 /songs/ 传 true，世代页不画），见 SongCard 的说明 */
   markPick?: boolean;
+  /** 别名索引（song_id → 别名串），整页取一次往下传，卡片不各自查库 */
+  aliasIndex?: Map<string, string>;
 };
 
-const { gen, list, date, eager, srv = 'jp', markPick = false } = Astro.props;
+const { gen, list, date, eager, srv = 'jp', markPick = false, aliasIndex } = Astro.props;
 
 /* 段头那个「N 首」= list.length（2026-11-18 改回全量计数）：
    删除曲现在默认是**显示**的（只盖 Removed 遮罩），所以服务端渲染的这一屏就是全量，
@@ -53,7 +55,13 @@ const visibleCount = list.length;
   </div>
   <div class="sc-grid">
     {list.map((s) => (
-      <SongCard song={s} eager={eager.has(s.id)} srv={srv} markPick={markPick} />
+      <SongCard
+        song={s}
+        eager={eager.has(s.id)}
+        srv={srv}
+        markPick={markPick}
+        alias={aliasIndex?.get(s.id) ?? ''}
+      />
     ))}
   </div>
 </div>

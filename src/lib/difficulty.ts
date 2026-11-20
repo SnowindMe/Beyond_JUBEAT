@@ -19,8 +19,13 @@ export const LEVELS = [
 
 export type LevelKey = (typeof LEVELS)[number]['key'];
 
-/** 定数空值统一显示破折号 */
-export const dash = (v: number | null) => (v == null ? '—' : String(v));
+/** 定数空值统一显示破折号。
+ *  【2026-11-20 主人「等级定数为 9.0 和 10.0 这两个时，要完整写 9.0 和 10.0」】
+ *  String(9) 会掉成 "9"，和同一列里的 9.1 / 10.1 摆在一起像是另一个量级（整数 vs 小数）。
+ *  9 与 10 是唯一会被写成整数的两位数区间，特判成一位小数；
+ *  1-8 档的整数是常态（7 就写 7），不加小数点。 */
+export const dash = (v: number | null) =>
+  v == null ? '—' : Number.isInteger(v) && v >= 9 ? v.toFixed(1) : String(v);
 
 // ---------------------------------------------------------------------------
 // 【2026-11-01 主人「现在键数和长押数的展示也很简陋」——给每个数字配参照系】

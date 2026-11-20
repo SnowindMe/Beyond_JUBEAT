@@ -25,6 +25,7 @@ import { GEN_ORDER, GEN_JP, GEN_CN } from '../lib/gens';
 import { getAllSongs, type Song } from '../lib/song-data';
 import { CATS, catOf, countedIn, isLimitedEnded, isPickUp, todayISO, viewRows, type Srv } from '../lib/song-view';
 import { env } from 'cloudflare:workers';
+import { loadAliasIndex } from '../lib/song-alias';
 
 // 这一页是唯一需要运行时数据的页面，其余页面仍是构建期静态页。
 export const prerender = false;
@@ -36,6 +37,11 @@ const ALL: Song[] = await getAllSongs(
   (env as { beyond_jubeat?: D1Database })?.beyond_jubeat,
   Astro.locals.cfContext
 );
+
+// 别名索引（2026-11-20 主人「曲名搜索关键词应支持别名搜索」）：一次全表取回，
+// 按 song_id 落到卡片的 data-al 上，前端 matchCard 把它并进匹配串。
+// 与搜索读音（search-keys.json，构建期产物）分开两列——别名是运行时数据，加完要能立刻搜到。
+const ALIAS_INDEX = await loadAliasIndex((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
 
 // 数据变化很慢：允许浏览器短缓存，边缘可缓存更久（stale-while-revalidate 兜底）
 Astro.response.headers.set(
@@ -803,7 +809,7 @@ const TYPES = [
           </header>
           {srvGenOrder(srv).map((gen) =>
             FIRST_LOAD[srv].has(gen) ? (
-              <GenBlock gen={gen} list={byGen[srv][gen]} date={dateOf(gen)} eager={EAGER} srv={srv} markPick />
+              <GenBlock gen={gen} list={byGen[srv][gen]} date={dateOf(gen)} eager={EAGER} srv={srv} markPick aliasIndex={ALIAS_INDEX} />
             ) : (
               /* 首屏之外的世代：只出骨架。真实卡片由 /songs/frag 在滚到时补上（见页面末尾脚本）。
                  data-count 让脚本算得出精确占位高度 —— 骨架块长得和真块一样高，滚动后不会跳。 */

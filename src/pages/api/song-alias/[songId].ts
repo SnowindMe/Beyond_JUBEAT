@@ -9,7 +9,8 @@
 
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { ALIAS_MAX_LEN, normAlias } from '../../../lib/song-alias';
+import { ALIAS_MAX_LEN, normAlias, aliasChangeText } from '../../../lib/song-alias';
+import { logRecentChange } from '../../../lib/song-admin';
 
 export const prerender = false;
 
@@ -81,23 +82,39 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     const { n, minN } = await bumpIp(db, day, ipHash, minute);
     if (n > IP_PER_DAY || minN > IP_PER_MIN) return new Response(null, { status: 204 });
 
+    // 曲名只用于最近更改里的「曲目：<曲名>」；查不到就退回用 id，记录仍能写。
+    const songRow = await db
+      .prepare('SELECT title FROM songs WHERE song_id = ?')
+      .bind(songId)
+      .first<{ title: string }>();
+    const song = { id: songId, title: songRow?.title ?? songId };
+
     if (body?.del) {
       // 只允许删自己加的那条（别名没有人数概念，删就是删）
-      await db
+      const res = await db
         .prepare('DELETE FROM song_alias WHERE song_id = ? AND name = ? AND by_user = ?')
         .bind(songId, name, user.id)
         .run();
+      // 【2026-11-20 主人「添加/删除别名或标签之后都要在最近更改里加一条记录」】
+      // 只有真删掉了才记：点别人的别名出叉也点得到，删不动还记一条就是假账。
+      if (res.meta.changes > 0) {
+        await logRecentChange(db, song, user.name, aliasChangeText('del', name), now);
+      }
       return new Response(null, { status: 204 });
     }
 
     // 加：同一条已存在就什么都不做
-    await db
+    const res = await db
       .prepare(
         `INSERT INTO song_alias (song_id, name, by_user, created_at) VALUES (?, ?, ?, ?)
          ON CONFLICT(song_id, name) DO NOTHING`,
       )
       .bind(songId, name, user.id, now)
       .run();
+    // 同一条被重复添加（ON CONFLICT 命中）也不记——那一次什么都没变。
+    if (res.meta.changes > 0) {
+      await logRecentChange(db, song, user.name, aliasChangeText('add', name), now);
+    }
     return new Response(null, { status: 204 });
   } catch {
     return new Response(null, { status: 204 });

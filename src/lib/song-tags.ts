@@ -36,5 +36,23 @@ export const TAG_MAX_LEN = 20;
 
 export const isDiff = (v: string): v is Diff => (DIFFS as readonly string[]).includes(v);
 
+/**
+ * 标签增删写进【最近更改】的文案（2026-11-20 主人「添加/删除别名或标签之后
+ * 都要在最近更改里加一条记录」）。
+ *
+ * 标签与别名的差别：标签还带档位与类别（「EXT 配置」），一起写进 summary，
+ * 否则一条「添加标签」看不出改的是哪一档的哪一类。
+ * 文案在这里、INSERT 在 song-admin.ts 的 logRecentChange，两处不重叠。
+ */
+export function tagChangeText(action: 'add' | 'del', diff: Diff, kind: TagKind, name: string) {
+  const add = action === 'add';
+  const where = `${diff.toUpperCase()} ${TAG_KIND_LABEL[kind]}`;
+  return {
+    summary: `${add ? '添加' : '删除'}标签（${where}）`,
+    before: add ? null : name,
+    after: add ? name : null,
+  };
+}
+
 /** 归一化：去首尾空白、合并连续空格、全角空格转半角。词里没有空格，但玩家会手填。 */
 export const normTag = (v: string) => v.replace(/\u3000/g, ' ').replace(/\s+/g, ' ').trim();

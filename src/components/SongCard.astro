@@ -13,6 +13,9 @@
 // data-lv 是三档定数拼成的一串（"7 10.5 10.9"），只给搜索用：
 // 用户常直接打「10.5」找歌，光靠曲名/曲师/songId 三个字段搜不到。
 // data-lu（2026-10-28）：限时结束日 YYYY-MM-DD，空串 = 非限时。
+// data-al（2026-11-20 主人「曲名搜索关键词应支持别名搜索」）：该曲全部别名拼成的串，
+//   小写、换行分隔。与 data-sk 分开两列：读音是构建期转写、别名是运行时数据，
+//   来源与新鲜度都不同，混在一列以后没法单独排查。
 // data-sk（2026-10-30）：搜索读音索引（平假名 + 罗马字，无空白小写），空串 = 与原文相同。
 //   汉字曲名「凛として咲く花の如く」靠它才能被「りんとして」「rintoshite」搜到；
 //   值由 scripts/build-search-key.cjs 算好、src/lib/db.ts 按下标挂上，这里只负责落到 DOM。
@@ -36,9 +39,12 @@ interface Props {
       「拿不到服务器上下文」的调用方留的口子：整页同标或全不标都会误导。
       范围值本身仍写进 data-scope，筛不筛是另一回事，不受这里影响。 */
   markPick?: boolean;
+  /** 搜索用的别名串（小写、\n 分隔，见 lib/song-alias.ts 的 loadAliasIndex）。
+      由页面查好后传进来；不传就是空串——卡片本身不查库。 */
+  alias?: string;
 }
 
-const { song: s, eager = false, srv = 'jp', markPick = false } = Astro.props;
+const { song: s, eager = false, srv = 'jp', markPick = false, alias = '' } = Astro.props;
 // 范围（PICK UP / COMMON）：与分区正交的第二个维度，判定在 lib/song-view.ts 的 isPickUp()，
 // 这里只把它落成 data-scope 供前端筛选，顺带决定要不要画标记。
 const pick = isPickUp(s, srv);
@@ -65,6 +71,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-scope={pick ? 'pick' : 'common'}
   data-lu={s.lu ?? ''}
   data-sk={s.sk ?? ''}
+  data-al={alias}
   {/* 谱面类型筛选用的两个判据（2026-10-31）：data-hh = 长押三态（'1' / '0' / '' 库里未知），
       data-alt = 是否是 [ 2 ] 谱面变体。二者互不代替（[ 2 ] ≠ 长押，主人 2026-10-30 明确过）。 */}
   data-hh={s.hasHold == null ? '' : (s.hasHold === 1 ? '1' : '0')}

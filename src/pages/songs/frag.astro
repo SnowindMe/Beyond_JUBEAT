@@ -16,6 +16,7 @@
 import GenBlock from '../../components/GenBlock.astro';
 import { getAllSongs } from '../../lib/song-data';
 import { viewRows, groupByGen, type Srv } from '../../lib/song-view';
+import { loadAliasIndex } from '../../lib/song-alias';
 import { GEN_ORDER } from '../../lib/gens';
 import { env } from 'cloudflare:workers';
 
@@ -32,6 +33,9 @@ const ALL = await getAllSongs(
   Astro.locals.cfContext
 );
 const list = groupByGen(viewRows(ALL, srv))[gen] ?? [];
+// 别名索引同样要带上：这一块是**滚到附近才插进 DOM** 的，首屏那批卡有 data-al，
+// 续载的这批没有的话，同一个搜索词会只命中前几个世代——比整页都没有更难发现。
+const ALIAS_INDEX = await loadAliasIndex((env as { beyond_jubeat?: D1Database })?.beyond_jubeat);
 
 // 世代 key 必须存在（防任意查询串把缓存撑爆 / 让 Worker 白跑一遍渲染）
 if (!GEN_ORDER.some((g) => g.k === gen)) {
@@ -50,5 +54,5 @@ const EAGER_FRAG = 2;
 const eager = new Set(list.slice(0, EAGER_FRAG).map((s) => s.id));
 ---
 {list.length > 0 && (
-  <GenBlock gen={gen} list={list} date={GEN_ORDER.find((g) => g.k === gen)?.date ?? ''} eager={eager} srv={srv} markPick />
+  <GenBlock gen={gen} list={list} date={GEN_ORDER.find((g) => g.k === gen)?.date ?? ''} eager={eager} srv={srv} markPick aliasIndex={ALIAS_INDEX} />
 )}

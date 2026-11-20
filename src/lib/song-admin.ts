@@ -351,6 +351,44 @@ export const SQL_RECENT_INSERT = `INSERT INTO recent_changes
    (changed_at, user, target_label, target_href, summary, before_text, after_text)
  VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
+/**
+ * 直接写一条最近更改（不经过字段 diff）。
+ *
+ * 【为什么单开一个而不是复用 buildRecentChangeRow】那个函数是给「曲目字段编辑」用的：
+ * summary 固定拼成「修改 N 项：<字段名>…」。而别名 / 标签的增删没有字段名，
+ * 一次只有一个动作 + 一个词，硬套会拼出「修改 1 项：」这种空话。
+ *
+ * 【2026-11-20 主人「添加/删除别名或标签之后都要在最近更改里加一条记录」】
+ * 调用方必须只在**真改了库**之后调（DELETE/INSERT 的 meta.changes > 0），
+ * 点了个叉但那是别人加的、删不动，也记一条就是假账。
+ *
+ * 留痕是附属品：写失败吞掉，不能让已经成功的正文操作变成报错。
+ */
+export async function logRecentChange(
+  db: D1Database,
+  song: { id: string; title: string },
+  actor: string,
+  entry: { summary: string; before?: string | null; after?: string | null },
+  nowIso: string
+): Promise<void> {
+  try {
+    await db
+      .prepare(SQL_RECENT_INSERT)
+      .bind(
+        nowIso,
+        actor,
+        `曲目：${song.title}`,
+        `/songs/${song.id}/`,
+        cap(entry.summary),
+        entry.before ? cap(entry.before) : null,
+        entry.after ? cap(entry.after) : null
+      )
+      .run();
+  } catch {
+    /* 留痕失败不影响主流程 */
+  }
+}
+
 // ---------- 错误码 ----------
 
 /** 编辑相关的错误码 → 人话（与 auth-messages.ts 同一套风格：接口只回 code） */

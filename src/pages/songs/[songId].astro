@@ -553,6 +553,9 @@ const metaFoot: Meta[] = song
               <h2 class="sd-alias-h" id="sdAliasH">别名</h2>
             </div>
             <div class="sd-alias-ws" data-alias-ws>
+              {/* 【2026-11-20 空态「暂无」】服务端判空直出，脚本拿到真数据后：有别名就把它删掉，
+                  一条都没有则留着。原先试过无条件先铺「加载中…」，主人认为多余（本机 D1 命中很快，
+                  那句话基本一闪而过），已改回直出结论。 */}
               {aliasRows.length === 0 ? <span class="sd-alias-ph" data-alias-ph>暂无</span> : null}
               {aliasRows.map((r) => (
                 <button
@@ -624,19 +627,27 @@ const metaFoot: Meta[] = song
                   <span class="sd-facts">
                     {notes == null ? null : (
                       <span class="sd-stat">
+                        {/* 【2026-11-20 主人「notes/holds 标题和各自的总数，位置改为标题在上总数在下」】
+                            标题单独一层在上，数字与参照条一起落到下一层的 .sd-stat-bd：
+                            上下关系按主人点的来，数字与它的刻度仍是同一行，不拆散。 */}
                         <i>Notes</i>
-                        <b>{fmtInt(notes)}</b>
+                        <span class="sd-stat-bd">
+                          <b>{fmtInt(notes)}</b>
+                        </span>
+                        {/* 【2026-11-20 主人「参照条改成由下往上的条，跟分位文字一起放到右边」】
+                            条与分位值都在数字右边：数字是主体，条与分位是它的参照，
+                            横着排在右侧读起来是「值 → 刻度 → 分位」一条链。 */}
                         {st?.notesPctl != null ? (
-                          <span class="sd-stat-ref" aria-hidden="true">
-                            {Array.from({ length: 10 }, (_, i) => (
-                              <u class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></u>
-                            ))}
+                          <span class="sd-stat-side">
+                            <span class="sd-stat-ref" aria-hidden="true">
+                              {Array.from({ length: 10 }, (_, i) => (
+                                <u class={i < Math.round(st.notesPctl! / 10) ? 'is-on' : undefined}></u>
+                              ))}
+                            </span>
+                            <em title={`键数分位：键数超过同档 ${st.notesPctl}% 的谱面`}>
+                              <span class="sd-sr">键数分位</span>P{st.notesPctl}
+                            </em>
                           </span>
-                        ) : null}
-                        {st?.notesPctl != null ? (
-                          <em title={`键数分位：键数超过同档 ${st.notesPctl}% 的谱面`}>
-                            <span class="sd-sr">键数分位</span>P{st.notesPctl}
-                          </em>
                         ) : null}
                       </span>
                     )}
@@ -648,24 +659,26 @@ const metaFoot: Meta[] = song
                     {holds != null ? (
                       <span class="sd-stat">
                         <i>Holds</i>
-                        <b>{fmtInt(holds)}</b>
+                        <span class="sd-stat-bd">
+                          <b>{fmtInt(holds)}</b>
+                        </span>
                         {/* 参照条改成与 Notes 同构的 10 格：Holds 为 0 时整条是空的，
                             仍然画出来当刻度（原来的单条填充在 0 时宽度 0%，等于没有）。 */}
                         {st?.holdPct != null ? (
-                          <span class="sd-stat-ref" aria-hidden="true">
-                            {Array.from({ length: 10 }, (_, i) => (
-                              <u
-                                class={
-                                  i < Math.round((st.holdPct! / HOLD_PCT_MAX) * 10) ? 'is-on' : undefined
-                                }
-                              ></u>
-                            ))}
+                          <span class="sd-stat-side">
+                            <span class="sd-stat-ref" aria-hidden="true">
+                              {Array.from({ length: 10 }, (_, i) => (
+                                <u
+                                  class={
+                                    i < Math.round((st.holdPct! / HOLD_PCT_MAX) * 10) ? 'is-on' : undefined
+                                  }
+                                ></u>
+                              ))}
+                            </span>
+                            <em title={`长押率：长押音符占全谱 ${st.holdPct.toFixed(1)}%`}>
+                              <span class="sd-sr">长押率</span>{st.holdPct.toFixed(1)}%
+                            </em>
                           </span>
-                        ) : null}
-                        {st?.holdPct != null ? (
-                          <em title={`长押率：长押音符占全谱 ${st.holdPct.toFixed(1)}%`}>
-                            <span class="sd-sr">长押率</span>{st.holdPct.toFixed(1)}%
-                          </em>
                         ) : null}
                       </span>
                     ) : null}
@@ -678,11 +691,30 @@ const metaFoot: Meta[] = song
                     不再在 .sd-read 末尾另排三段——那样看不出标签属于哪一档。
                     三类三行，词表来自 lib/song-tags.ts；已打的高亮带人数。
                     未登录也渲染，点一下跳登录。data-diff 仍留着，脚本回读不必猜。 */}
+                {/* 【2026-11-20 主人「在难度标签（BSC/ADV/EXT）的下面加一个标签展开收缩按钮（默认收起）」】
+                    按钮落在第 1 栏、标签的正下方（grid-row 2），与读数块同一行起势；
+                    展开的是**这一档整块**标签（图一那三行配置/难度/评价只是一个开关管着的整体）。
+                    默认收起：收起后三行标签不再各占一截高度，展开状态由 aria-expanded 承担。 */}
+                <button
+                  type="button"
+                  class="sd-tags-toggle"
+                  data-tags-toggle
+                  aria-expanded="false"
+                  aria-controls={`sdTags-${song.id}-${key}`}
+                  title="展开标签"
+                >
+                  <span class="sd-tags-toggle-l">标签</span>
+                  <svg class="sd-tags-chev" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M3 4.5L6 7.5L9 4.5" />
+                  </svg>
+                </button>
                 <div
                   class={`sd-tags is-${key}`}
+                  id={`sdTags-${song.id}-${key}`}
                   data-tags
                   data-diff={key}
                   data-login={Astro.locals.user ? '1' : '0'}
+                  hidden
                 >
                   {KINDS_BY_DIFF[key].map((kind) => {
                     const words = tagsOf(key, kind);
@@ -1169,6 +1201,25 @@ const metaFoot: Meta[] = song
       })(tagWraps[w]);
     }
 
+    /* ── 标签的展开 / 收起（2026-11-20 主人「在难度标签的下面加一个
+       标签展开收缩按钮（默认收起）」）───────────────────────────────
+       收起态靠 [hidden] 摘出布局，不在 CSS 里留 max-height 过渡的中间态：
+       标签行数不定（有人只打一个词、也有人铺满三行），量不出固定高度。
+       按钮自己管 aria-expanded（读屏据此播报开合），文案与 title 也跟着换。 */
+    var tagToggles = document.querySelectorAll('[data-tags-toggle]');
+    for (var g = 0; g < tagToggles.length; g++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var box = document.getElementById(btn.getAttribute('aria-controls'));
+          if (!box) return;
+          var open = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+          btn.title = open ? '展开标签' : '收起标签';
+          box.hidden = open;
+        });
+      })(tagToggles[g]);
+    }
+
     /* ── 按真实登录态重画标签块（2026-11-19）──────────────────────────
        起因：详情页 HTML 会过 EdgeOne 缓存，缓存版本里的 data-login 与 is-mine
        可能不属于当前这个人。所以登录态一律以 /api/auth/me 为准，
@@ -1310,13 +1361,16 @@ const metaFoot: Meta[] = song
           if (!list) return;
           var olds = aliasWrap.querySelectorAll('.sd-aliasw:not(.sd-aliasw-add)');
           for (var i = 0; i < olds.length; i++) olds[i].remove();
+          /* 空态句「暂无」：服务端只在真的没别名时才铺（见模板里的说明）。
+             拿到真数据后有别名 → 删掉；一条都没有 → 补上（本地加完又删掉、或缓存的旧 HTML
+             说「暂无」而库里其实已经有人加了，都要靠这里兜正）。 */
           var ph = aliasWrap.querySelector('[data-alias-ph]');
-          if (list.length && ph) ph.remove();
-          if (!list.length && !ph) {
+          if (list.length) {
+            if (ph) ph.remove();
+          } else if (!ph) {
             ph = document.createElement('span');
             ph.className = 'sd-alias-ph';
             ph.setAttribute('data-alias-ph', '');
-            ph.textContent = '暂无';
             aliasWrap.insertBefore(ph, aliasWrap.firstChild);
           }
           for (var m = 0; m < list.length; m++) {
