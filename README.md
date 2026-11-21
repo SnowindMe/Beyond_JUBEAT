@@ -291,6 +291,8 @@ tag 命名：
 - 该版本号已被**别的提交**占着（版本号没变就继续提交）时，默认 **silent 模式跳过**、日志写明「已指向 abc1234」——同一版本号的后续提交本来就还属于这次发布，tag 只代表这个版本号第一次出现。
 - 要在每个提交上都留标记就换 **strict 模式**：退化成 `v1.2.3-abc1234`，可追溯、不静默丢弃。两种模式都**不移动**已存在的标签，所以标签永远指向某个真实出厂过的提交。
 
+注释标签要作者身份，而 runner 上没有全局 `git config`（2026-11-22 首次真跑死在 `fatal: empty ident name`）。脚本用 `git -c user.name/user.email` 就地给 `github-actions[bot]`，只作用于那一条命令，不写 runner 的全局配置。
+
 失败是红的，不是 `continue-on-error`——tag 是发布凭据，静默失败比红更坏。失败的 step 会把 stderr 原文和补救命令写进 job summary：
 
 ```bash
