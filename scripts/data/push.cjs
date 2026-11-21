@@ -121,6 +121,13 @@ function md5(f) {
   return crypto.createHash('md5').update(fs.readFileSync(path.join(ROOT, f))).digest('hex');
 }
 
+// 交给 shell 解析命令行，含空格的参数必须带双引号。文件名里若出现引号/换行直接抛错，
+// 不让它拼进 shell（本项目文件名来自曲名，理论上不会出现，但拼字符串前先守住）。
+function shq(v) {
+  if (/["\n]/.test(v)) throw new Error('参数里有引号或换行，拒绝拼进 shell：' + v);
+  return '"' + v + '"';
+}
+
 async function main() {
   if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
     console.error('缺 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID');
@@ -162,9 +169,11 @@ async function main() {
     try {
       execFileSync(
         process.platform === 'win32' ? 'npx.cmd' : 'npx',
-        ['wrangler', 'r2', 'object', 'put', `${BUCKET}/${f}`, `--file=${f}`, '--remote', `--content-type=${contentType(f)}`],
+        // 2026-11-22：曲名里有空格（如「kors k - Good Vibrations.mp3」），shell:true 会把空格
+        // 拆成多个参数、wrangler 报 Unknown arguments。key 与 --file 一律加双引号（见 shq）。
+        ['wrangler', 'r2', 'object', 'put', shq(`${BUCKET}/${f}`), shq(`--file=${f}`), '--remote', shq(`--content-type=${contentType(f)}`)],
         // shell: true 是必须的：Windows 上 spawnSync 直接执行 npx.cmd 会 EINVAL（2026-11-18 实撞），
-        // 交给 shell 解析才能起得来。路径里没有空格，不必额外加引号。
+        // 交给 shell 解析才能起得来。
         { cwd: ROOT, shell: true, stdio: ['ignore', 'ignore', 'pipe'] }
       );
     } catch (e) {
