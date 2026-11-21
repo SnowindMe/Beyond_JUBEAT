@@ -291,13 +291,34 @@ tag 命名：
 - 该版本号已被**别的提交**占着（版本号没变就继续提交）时，默认 **silent 模式跳过**、日志写明「已指向 abc1234」——同一版本号的后续提交本来就还属于这次发布，tag 只代表这个版本号第一次出现。
 - 要在每个提交上都留标记就换 **strict 模式**：退化成 `v1.2.3-abc1234`，可追溯、不静默丢弃。两种模式都**不移动**已存在的标签，所以标签永远指向某个真实出厂过的提交。
 
+### 版本说明
+
+Release 正文取自 `docs/releases/v<版本号>.md`（随代码提交，一份发版一个文件），末尾自动附上「上一个标签…本标签」的提交对比链接。发版前把这份文件写好，别人在 Releases 页面就能直接看出这一版改了什么。
+
+- 文件名的版本号必须与 `site.json` 的 `version` 一致，否则不算写到（会被当成没写）。
+- 没写的时候不会留空白页：正文退化成自动整理的提交列表，并在顶部与 job summary 里都标出「这一版没有写版本说明」——是兜底，不是免写。
+- 已经发出去的版本要补说明：`gh release edit v1.2.3 --notes-file docs/releases/v1.2.3.md`。
+
+模板（`docs/releases/v1.67.2.md` 是现成例子）：
+
+```markdown
+## 新增
+
+- **做了什么**：为什么改、改完用户看到什么变化。
+
+## 修复
+
+- **现象**：一句话说清原来哪里不对，以及现在的行为。
+```
+
+本地先看一眼正文长什么样：`node scripts/ops/release-tag.mjs --ref HEAD --dry`（会打印 tag 名与正文前 24 行）。
 注释标签要作者身份，而 runner 上没有全局 `git config`（2026-11-22 首次真跑死在 `fatal: empty ident name`）。脚本用 `git -c user.name/user.email` 就地给 `github-actions[bot]`，只作用于那一条命令，不写 runner 的全局配置。
 
 失败是红的，不是 `continue-on-error`——tag 是发布凭据，静默失败比红更坏。失败的 step 会把 stderr 原文和补救命令写进 job summary：
 
 ```bash
 git push origin refs/tags/v1.2.3                    # 标签建了但没推上去
-gh release create v1.2.3 --verify-tag --generate-notes   # 标签推上去了但 Release 建失败
+gh release create v1.2.3 --verify-tag --notes-file docs/releases/v1.2.3.md   # 标签推上去了但 Release 建失败
 gh workflow run release-tag -f sha=<commit> -f mode=strict   # 那次构建没被触发，整段漏跑
 ```
 
