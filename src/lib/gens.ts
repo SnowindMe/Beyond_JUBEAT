@@ -9,7 +9,7 @@
 //     主题是视觉皮肤（clan 一个世代拆 4 套），slug 只指世代本身，和曲目数据一一对应。
 //     所以这里用「能读懂的短横线写法」，不套主题文件名。
 //
-// 【两张表别混】GEN_ORDER 是世代（13 条，曲库归属，等于 build-db.cjs 的口径），
+// 【两张表别混】GEN_ORDER 是世代（14 条，曲库归属，等于 build-db.cjs 的口径），
 // themes.ts 的 THEMES 是主题皮肤（clan 拆成四色，条数多于世代）。
 // 想要世代数就取 GEN_ORDER.length / GEN_JP.length / GEN_CN.length，想要主题套数取 THEMES.length。
 // 【2026-10-31 主人要求】世代标题里的年份从「2008」改成完整「年-月-日」，
@@ -18,7 +18,10 @@
 // 主人明确「APPEND 代年月日不写」：本站曲库的世代只到基代、没有 APPEND 这一档，
 // 所以这里不给 APPEND 建条目，也别把子代的日期安到基代头上。
 // 音乐魔方不在那个时间轴上，日期由主人直接给出（2025-12-27）。
-export type GenMeta = { k: string; slug: string; s: 'jp' | 'cn'; /** 上线日，写死成 YYYY-MM-DD */ date: string };
+// 【2026-11-22 U'nit】新世代的正式上线日官方还没给（RemyWiki 的 Release date 是 TBA），
+// 主人交代「上线日先定为 Soon」。所以 date 不再只接受 YYYY-MM-DD：
+// 非日期字面量（当前只有 'Soon'）由 GenBlock 原样显示在世代名右侧，data-date 属性同样原样写入。
+export type GenMeta = { k: string; slug: string; s: 'jp' | 'cn'; /** 上线日：YYYY-MM-DD，或未定时的字面量 'Soon' */ date: string };
 
 export const GEN_ORDER: GenMeta[] = [
   { k: 'jubeat', slug: 'jubeat', s: 'jp', date: '2008-07-24' },
@@ -33,6 +36,10 @@ export const GEN_ORDER: GenMeta[] = [
   { k: 'festo', slug: 'festo', s: 'jp', date: '2018-09-05' },
   { k: 'Ave.', slug: 'ave', s: 'jp', date: '2022-08-03' },
   { k: 'beyond the Ave.', slug: 'beyond-the-ave', s: 'jp', date: '2023-09-20' },
+  // 【2026-11-22】U'nit：日服新世代，曲目源 RemyWiki 的 Location Test Songs（14 首，
+  // 占位 songId unit-001..unit-014，数据在 data/unit-songs.json）。
+  // 上线日官方未公布（TBA），主人定「先写 Soon」；正式日期公布后只改这一处。
+  { k: "U'nit", slug: 'unit', s: 'jp', date: 'Soon' },
   { k: '音乐魔方', slug: 'yinyue-mofang', s: 'cn', date: '2025-12-27' },
 ];
 

@@ -28,7 +28,9 @@ export const prerender = false;
 const MAP: Record<string, string> = (cdn as { jackets?: Record<string, string> }).jackets ?? {};
 
 // 只接受规范名：id + 数字 + .webp。白名单比「拒绝 ..」更省心，编码绕过也进不来。
-const NAME_OK = /^id\d{1,12}\.webp$/;
+// 【2026-11-22】U'nit 世代的曲目还没有官方 songId（占位 unit-001..unit-014），
+// 规范名因此是 idunit-NNN.webp —— 与 id<数字>.webp 同属「id 前缀」家族，一起放行。
+const NAME_OK = /^id(\d{1,12}|unit-\d{3})\.webp$/;
 
 /** 我们自己发的缓存头。一曲一图、内容永不改，所以 immutable。 */
 const CACHE_CONTROL = 'public, max-age=604800, s-maxage=2592000, immutable';

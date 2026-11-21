@@ -46,6 +46,9 @@ export const THEMES: Theme[] = [
   { k: 'festo', n: 'festo', f: 'G', c: '#ffd166', b: '#12100c', l: 'dark' },
   { k: 'ave', n: 'Ave.', f: 'F', c: '#2ee8e8', b: '#0a1418', l: 'dark' },
   { k: 'bta', n: 'Beyond the Ave.', f: 'F', c: '#ffa23c', b: '#190f08', l: 'dark' },
+  // 【2026-11-22 U'nit】浅色主题：底色取自背景图主色（米白 #f0f0f0 为主、金黄 #f0d000 次之），
+  // 主色点用背景里那抹金黄压暗到能过对比度。
+  { k: 'unit', n: "U'nit", f: 'F', c: '#e0a800', b: '#fdf8ec', l: 'light' },
   { k: 'yymf', n: '音乐魔方', f: 'F', c: '#8fd0ff', b: '#e9eefb', l: 'light' },
 ];
 

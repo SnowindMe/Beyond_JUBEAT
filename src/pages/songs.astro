@@ -275,7 +275,7 @@ const FIRST_LOAD: Record<Srv, Set<string>> = { jp: firstLoadGens('jp'), cn: firs
 // UI 删掉后这段统计没有任何消费者，一并删除——它每次请求都要遍历 1248 行，
 // 留着只是白烧 CPU。曲师仍可用搜索框直接打名字（matchCard 的 hay 里包含 data-a）。
 
-// 世代下拉：全库 13 个世代、跨分区（任务书写「15 个」是主题套数口径，见 docs/CONTEXT.md）
+// 世代下拉：全库 14 个世代、跨分区（任务书写「15 个」是主题套数口径，见 docs/CONTEXT.md）
 const GEN_OPTS = GEN_ORDER;
 
 // 定数区间 / 难度档 / 排序选项。区间值与脚本里的 BAND_KEYS / BANDS 一一对应，改一处必须改两处。

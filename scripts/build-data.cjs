@@ -25,6 +25,9 @@ const GEN_ORDER = [
   ['copious', 'jp', '2011'], ['saucer', 'jp', '2012'], ['saucer fulfill', 'jp', '2014'],
   ['prop', 'jp', '2015'], ['Qubell', 'jp', '2016'], ['clan', 'jp', '2017'],
   ['festo', 'jp', '2018'], ['Ave.', 'jp', '2022'], ['beyond the Ave.', 'jp', '2024'],
+  // 【2026-11-22】U'nit：日服新世代（正式上线日未公布，年份先按 2026 排）。
+  // 注意这里与 src/lib/gens.ts、build-db.cjs 的 JP_GENS 是第三份世代清单，加世代三处同改。
+  ["U'nit", 'jp', '2026'],
   ['音乐魔方', 'cn', '2023'],
 ];
 

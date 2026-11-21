@@ -29,7 +29,7 @@ const SEED_PATH = path.join(ROOT, 'db/seed.sql');
 // 世代 → 服务器归属。日服 12 代（server_jp），国服 1 代（server_cn）；
 // 双服都有（server_jp=1 且 server_cn=1）的行页面归「KONAMI」分区（2026-10-24 改名，原名 KONAMI原创）；
 // 两服 song_id 体系不同，同曲只能按 dualKey 归一化标题+艺人匹配（见 docs/database-schema.md §1）。
-const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.'];
+const JP_GENS = ['jubeat','ripples','knit','copious','saucer','saucer fulfill','prop','Qubell','clan','festo','Ave.','beyond the Ave.',"U'nit"];
 const CN_GENS = ['音乐魔方'];
 
 // 日服分类：源数据里的 license / original 两分。
@@ -73,6 +73,7 @@ function main() {
   // 国服独有新增曲（2026-10-29）：日服曲库没有、xlsx 快照也没赶上的曲目，
   // 只能靠人工表补齐。见 data/cn-extra-songs.json 的文件头说明。
   const cnExtraSongs = readCnExtraSongs();
+  const unitSongs = readUnitSongs();
 
   // 世代人工覆盖（2026-10-25）：上游 origin 是首发世代，改版曲/替代谱面的
   // 归属应是新版上线的世代，只能靠人工维护。见 readGenOverrides 的注释。
@@ -270,6 +271,28 @@ function main() {
       stat.cnExtra = (stat.cnExtra || 0) + 1;
     }
 
+    // ---- 日服 U'nit 世代（2026-11-22 加）----
+    // 数据源 RemyWiki 的 Location Test Songs（见 data/unit-songs.json 文件头）。
+    // 一律 server_jp=1 / server_cn=0，id_kind 记 synthetic（占位 id，官方号公布后再走 id-fixes 改）。
+    // 谱面数据（notecounts / holds / has_hold）单独 UPDATE：ins 的列里没有这三列，
+    // 与 RemyWiki 回填同一套写法，避免为一份新输入改三处 INSERT 的列序。
+    const updUnitChart = db.prepare('UPDATE songs SET has_hold = ?, notecounts = ?, holds = ? WHERE song_id = ?');
+    for (const [id, v] of unitSongs) {
+      ins.run(
+        id, 'synthetic', String(v.title), v.artist ? String(v.artist) : null,
+        v.bpm ? String(v.bpm) : null, "U'nit", 1, 0, v.category,
+        num(v.bsc), num(v.adv), num(v.ext), 0, String(v.cover),
+        isoDate(v.date), null, null, null
+      );
+      updUnitChart.run(
+        v.holds ? 1 : null,
+        v.notecounts ? JSON.stringify(v.notecounts) : null,
+        v.holds ? JSON.stringify(v.holds) : null,
+        id
+      );
+      stat.unit = (stat.unit || 0) + 1;
+    }
+
     // ---- RemyWiki 谱面数据回填（2026-10-31）----
     // 为什么是 UPDATE 一趟、而不是给上面三条 INSERT 各加三个参数：
     // 这份输入是按 song_id 归并好的快照，与「日服 / 国服 / 国服独有新增曲」三条插入路径无关；
@@ -380,19 +403,28 @@ function main() {
     // 人工覆盖表条数：期望=表里写了几条，实测=实际命中几个存在的 songId
     cnOverride: cnOnlineOverrides.size,
     // 曲目总数的期望值：全部从源输入推算，不写死
-    total: jp.songs.length + cnRows.length + cnExtraSongs.size,
+    total: jp.songs.length + cnRows.length + cnExtraSongs.size + unitSongs.size,
+    // 【2026-11-22】日服行数原先写死 1151，加 U'nit 那 14 首后就假红了。
+    // 改成从源输入推算：日服快照的曲数 + 占位 id 的 U'nit 曲数 + sheet2 里被标成双服的国服行
+    // （Big Daddy 那行也带 server_jp=1，原来那 1151 里就含着它）。
+    jpTotal: jp.songs.length + unitSongs.size + cnRows.filter((r) => cnIsDual(r)).length,
+    unit: unitSongs.size,
     // 【2026-10-31 RemyWiki】期望值全从 data/remy/by-song-id.json 现算，不写死 —— 重抓一轮就变。
     // remyUnknown 用「总行数 − 有键数的行数」推：哪天回填逻辑把「没抓到」静默写成 0，这条会 FAIL。
     //
     // 【同日追加】人工补录表（chart-overrides）的数据**也是有效数据**，必须算进期望值，
     // 否则一加补录这四条就会假红。用并集推：快照有键数 ∪ 补录表里有键数。
+    // 【2026-11-22】U'nit 那 14 首的谱面数据来自 data/unit-songs.json，不是 remy 快照，
+    // 但落库后同样计入「有键数行 / 长押谱」这两个实测值 —— 不并进来就会假红。
     remyRows: Object.keys({
       ...Object.fromEntries(Object.entries(remy).filter(([, v]) => v.notecounts)),
       ...Object.fromEntries([...chartOverrides.keys()].map((id) => [id, true])),
+      ...Object.fromEntries([...unitSongs].filter(([, v]) => v.notecounts).map(([id]) => [id, true])),
     }).length,
     remyHold: Object.entries({
       ...Object.fromEntries(Object.entries(remy).filter(([, v]) => v.has_hold === 1)),
       ...Object.fromEntries([...chartOverrides].filter(([, v]) => v.has_hold === 1).map(([id]) => [id, true])),
+      ...Object.fromEntries([...unitSongs].filter(([, v]) => v.holds).map(([id]) => [id, true])),
     }).length,
     // bpm 空值的期望 = 「回填前为 NULL，且快照和补录表里都没有 bpm」的条数。
     // 必须用 remyById（已按 id-fixes 翻译成库内 id）而不是裸 remy：占位 id 改号后，
@@ -402,7 +434,11 @@ function main() {
         && !(chartOverrides.has(id) && chartOverrides.get(id).bpm)
     ).length,
   };
-  expect.remyUnknown = expect.total - expect.remyRows;
+  // 「长押未知」= 完全没谱面数据的行 + 有键数但不知道有没有长押的行。
+  // U'nit 那 14 首都有键数，其中只有 2 首（Myth Collapse / 荒海の戦い）公布了 holds 数量，
+  // 剩下 12 首 has_hold 为 NULL —— 必须补进来，否则期望恒为 0、断言永远红。
+  expect.remyUnknown = expect.total - expect.remyRows
+    + [...unitSongs.values()].filter((v) => v.notecounts && !v.holds).length;
   // id 修正表自检：每条都必须真的生效（旧 id 已不存在、新 id 已存在），
   // 并且新 id 不能被两条修正挤到同一个（否则 INSERT OR REPLACE 会静默吞掉一条）。
   const usedNewIds = new Map();
@@ -745,6 +781,32 @@ function readCnExtraSongs() {
   return map;
 }
 
+// 【2026-11-22 U'nit】日服新世代的曲目表（data/unit-songs.json）。
+// 为什么单列一张表：这批曲在 jp-resolved 快照里还没有（新世代刚 Location Test），
+// songId 也还没公布官方值，只能先用占位 unit-NNN。三条既有插入路径都塞不进：
+// 日服路径要求快照里有该曲、国服两条都是国服口径。
+// 自检口径同覆盖层：字段不全、id 形态不对、cover 缺映射都直接抛错，不静默丢。
+function readUnitSongs() {
+  const p = path.join(ROOT, 'data/unit-songs.json');
+  if (!fs.existsSync(p)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+  const map = new Map();
+  const bad = [];
+  for (const v of raw.songs || []) {
+    const sid = String(v.id || '');
+    if (!/^unit-\d{3}$/.test(sid)) { bad.push(sid + ' id 形态不对（应为 unit-NNN）'); continue; }
+    if (!v.title) { bad.push(sid + ' 缺 title'); continue; }
+    if (![v.bsc, v.adv, v.ext].every((x) => typeof x === 'number' && x > 0)) {
+      bad.push(sid + ' 难度非法 ' + JSON.stringify([v.bsc, v.adv, v.ext])); continue;
+    }
+    if (!v.cover) { bad.push(sid + ' 缺 cover'); continue; }
+    if (!['授权', '原创'].includes(v.category)) { bad.push(sid + ' category 非法 ' + JSON.stringify(v.category)); continue; }
+    map.set(sid, v);
+  }
+  if (bad.length) throw new Error('data/unit-songs.json 校验失败：\n  ' + bad.join('\n  '));
+  return map;
+}
+
 function readCnOldFrameIds() {
   const p = path.join(XLSX_DIR, 'sheet1.json');
   if (!fs.existsSync(p)) {
@@ -851,7 +913,8 @@ function selfCheck(db, stat, problems, expect, cnOverrideHit) {
     // 期望 = 日服行数 + sheet2 国服行数 + 国服独有新增曲数，全部从源输入推算。
     ['曲目总数', total, expect.total],
     // 双服曲在两边各有一行谱面（Big Daddy：日服行 + 国服行都标双），所以各 +1
-    ['  日服（含双服行）', jpN, 1151],
+    ['  日服（含双服行）', jpN, expect.jpTotal],
+    ["  U'nit 曲目", q("SELECT COUNT(*) c FROM songs WHERE gen_name = 'U''nit'").c, expect.unit],
     // 国服行数不再是固定 92：2026-10-24 起 sheet1 打 √ 的旧框已有曲（432 首）也算国服上线。
     // 期望值 = 双服重合行（dualN，含旧框曲与既有双服曲）+ 国服独有行（cnN - dualN）。
     // 这里不做独立推算，直接令期望等于实测，只保留「必须 ≥ 此前的 92」这个下限守卫，

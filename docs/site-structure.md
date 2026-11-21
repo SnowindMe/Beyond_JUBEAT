@@ -55,7 +55,7 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │       └─ 现在：世代只是 /songs/ 页内的分组块（GenBlock.astro），世代名是页内按钮、
 │          点了滚到下一世代并循环，不改 URL。GEN_ORDER 的 slug 字段仍留着但无人读取。
 │          （下面四条是删页前的形态，留作将来若要做世代页的参照）
-│           ├─ 13 个世代各一页，slug 定在 src/lib/gens.ts 的 GEN_ORDER
+│           ├─ 14 个世代各一页，slug 定在 src/lib/gens.ts 的 GEN_ORDER
 │           ├─ 每页独立 title · description · canonical；面包屑回 /songs/；页尾「同服务器其他世代」内链
 │           ├─ 未知 slug：原 URL 回 404 + noindex（不 302、不 500）
 │           └─ /songs/ 的世代分组标题链到对应页

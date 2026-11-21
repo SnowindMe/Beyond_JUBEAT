@@ -1,0 +1,248 @@
+{
+  "_note": "日服【U'nit】世代曲目（Location Test Songs，源 https://remywiki.com/AC_jb_U%27nit，2026-11-22 采集）。songId 为占位 unit-NNN（官方 id 未公布）。cover 是曲绘文件名，映射见 src/data/cdn.json；没有官方曲绘的曲目共用占位图 unit-placeholder.webp。local 字段只是本地待上传的源文件提示，build-db 不读。",
+  "songs": [
+    {
+      "id": "unit-001",
+      "title": "朧",
+      "artist": "白上フブキ",
+      "bpm": "149",
+      "category": "授权",
+      "bsc": 3,
+      "adv": 7,
+      "ext": 9.2,
+      "notecounts": {
+        "bsc": 266,
+        "ext": 806
+      },
+      "holds": null,
+      "cover": "idunit-001.webp",
+      "local": null
+    },
+    {
+      "id": "unit-002",
+      "title": "GOLD RUSH (Legendary jubeat \"GOLDEN ERA\" Limited-Epic Edition)",
+      "artist": "DJ YOSHITAKA-G feat.Michael a la mode",
+      "bpm": "162",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 7,
+      "ext": 9.1,
+      "notecounts": {
+        "bsc": 183,
+        "adv": 447,
+        "ext": 649
+      },
+      "holds": null,
+      "cover": "idunit-002.webp",
+      "local": null
+    },
+    {
+      "id": "unit-003",
+      "title": "Good Vibrations",
+      "artist": "kors k",
+      "bpm": "170",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 6,
+      "ext": 9.5,
+      "notecounts": {
+        "ext": 879
+      },
+      "holds": null,
+      "cover": "idunit-003.webp",
+      "local": null
+    },
+    {
+      "id": "unit-004",
+      "title": "jubilant again",
+      "artist": "SYUNN & S-C-U",
+      "bpm": "175",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 6,
+      "ext": 9.3,
+      "notecounts": {
+        "bsc": 220,
+        "adv": 475,
+        "ext": 702
+      },
+      "holds": null,
+      "cover": "idunit-004.webp",
+      "local": null
+    },
+    {
+      "id": "unit-005",
+      "title": "Mermaid girl",
+      "artist": "Cream puff",
+      "bpm": "140",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 6,
+      "ext": 8,
+      "notecounts": {
+        "bsc": 157,
+        "adv": 272,
+        "ext": 370
+      },
+      "holds": null,
+      "cover": "idunit-005.webp",
+      "local": "mermaid.png"
+    },
+    {
+      "id": "unit-006",
+      "title": "Myth Collapse",
+      "artist": "HuΣeR",
+      "bpm": "222",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 6,
+      "ext": 9.7,
+      "notecounts": {
+        "ext": 855
+      },
+      "holds": {
+        "ext": 43
+      },
+      "cover": "idunit-006.webp",
+      "local": "myth.png"
+    },
+    {
+      "id": "unit-007",
+      "title": "Prophet Vibe 2026",
+      "artist": "Sota Fujimori feat. Calin",
+      "bpm": "154",
+      "category": "原创",
+      "bsc": 4,
+      "adv": 6,
+      "ext": 8,
+      "notecounts": {
+        "ext": 753
+      },
+      "holds": null,
+      "cover": "idunit-007.webp",
+      "local": null
+    },
+    {
+      "id": "unit-008",
+      "title": "荒海の戦い",
+      "artist": "めめめ",
+      "bpm": "180",
+      "category": "原创",
+      "bsc": 5,
+      "adv": 9.1,
+      "ext": 10.4,
+      "notecounts": {
+        "ext": 914
+      },
+      "holds": {
+        "ext": 71
+      },
+      "cover": "idunit-008.webp",
+      "local": null
+    },
+    {
+      "id": "unit-009",
+      "title": "アルレシャ",
+      "artist": "溟海ゾディアック",
+      "bpm": "200",
+      "category": "原创",
+      "bsc": 4,
+      "adv": 6,
+      "ext": 9.4,
+      "notecounts": {
+        "ext": 752
+      },
+      "holds": null,
+      "cover": "idunit-009.webp",
+      "local": null
+    },
+    {
+      "id": "unit-010",
+      "title": "《カルメン》第一幕への前奏曲",
+      "artist": "Mutsuhiko Izumi",
+      "bpm": "150-200",
+      "category": "原创",
+      "bsc": 4,
+      "adv": 7,
+      "ext": 10.3,
+      "notecounts": {
+        "bsc": 237,
+        "adv": 520,
+        "ext": 875
+      },
+      "holds": null,
+      "cover": "idunit-010.webp",
+      "local": null
+    },
+    {
+      "id": "unit-011",
+      "title": "Wow Wow VENUS 2026",
+      "artist": "VENUS",
+      "bpm": "157",
+      "category": "原创",
+      "bsc": 3,
+      "adv": 6,
+      "ext": 9.3,
+      "notecounts": {
+        "bsc": 279,
+        "adv": 588,
+        "ext": 920
+      },
+      "holds": null,
+      "cover": "idunit-011.webp",
+      "local": "venus.png"
+    },
+    {
+      "id": "unit-012",
+      "title": "ZETA～素数の世界と超越者～",
+      "artist": "Zektbach",
+      "bpm": "90-180",
+      "category": "原创",
+      "bsc": 5,
+      "adv": 7,
+      "ext": 10.3,
+      "notecounts": {
+        "bsc": 187,
+        "adv": 273,
+        "ext": 471
+      },
+      "holds": null,
+      "cover": "idunit-012.webp",
+      "local": null
+    },
+    {
+      "id": "unit-013",
+      "title": "HADES",
+      "artist": "Massive New Krew",
+      "bpm": "155",
+      "category": "原创",
+      "bsc": 5,
+      "adv": 7,
+      "ext": 10.4,
+      "notecounts": {
+        "bsc": 291,
+        "adv": 532,
+        "ext": 888
+      },
+      "holds": null,
+      "cover": "idunit-013.webp",
+      "local": "hades.png"
+    },
+    {
+      "id": "unit-014",
+      "title": "ROZA DE ANDALUCIA",
+      "artist": "SOUND HOLIC Vs. T.Kakuta feat. Nana Takahashi",
+      "bpm": "191",
+      "category": "原创",
+      "bsc": 4,
+      "adv": 7,
+      "ext": 10.4,
+      "notecounts": {
+        "ext": 999
+      },
+      "holds": null,
+      "cover": "idunit-014.webp",
+      "local": "roza.png"
+    }
+  ]
+}

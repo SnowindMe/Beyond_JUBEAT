@@ -116,6 +116,13 @@
     src: url("/assets/fonts/zcool-kuaile-400.woff2") format("woff2");
     font-weight: 400; font-style: normal; font-display: swap;
 }
+/* 【2026-11-22 U'nit】官方品牌字是 Jost，取 500 字重做标签字（与 Montserrat/Quicksand
+   同属几何无衬线，字重落在中等，正文字号下不会发飘）。 */
+@font-face {
+    font-family: "Jost Medium";
+    src: url("/assets/fonts/jost-500.woff2") format("woff2");
+    font-weight: 500; font-style: normal; font-display: swap;
+}
 
 /* 世代 → --font-label 映射（品牌字与 WELCOME TO 共用） */
 html[data-g="jubeat"][data-g] { --font-label: "Montserrat Bold", "Bahnschrift", sans-serif; }
@@ -133,6 +140,7 @@ html[data-g="clan_purple"][data-g] { --font-label: "Oswald Bold", "Arial Narrow"
 html[data-g="festo"][data-g] { --font-label: "Pacifico", "Segoe Script", cursive; }
 html[data-g="ave"][data-g] { --font-label: "Montserrat Medium", "Bahnschrift", sans-serif; }
 html[data-g="bta"][data-g] { --font-label: "Quicksand Medium", "Segoe UI", sans-serif; }
+html[data-g="unit"][data-g] { --font-label: "Jost Medium", "Segoe UI", sans-serif; }
 html[data-g="yymf"][data-g] { --font-label: "ZCOOL KuaiLe", "Microsoft YaHei", sans-serif; }
 
 /* WELCOME TO 的墨迹高度校准（2026-10-27）：14 款字体的 cap-height 各不相同，
@@ -154,6 +162,7 @@ html[data-g="clan_purple"][data-g] { --wl-ink: 0.9024; }  /* Oswald Bold: 墨迹
 html[data-g="festo"][data-g] { --wl-ink: 0.8409; }  /* Pacifico: 墨迹 0.88 → 0.74（实测 actualBoundingBox） */
 html[data-g="ave"][data-g] { --wl-ink: 1.0137; }  /* Montserrat Medium: 墨迹 0.73 → 0.74 */
 html[data-g="bta"][data-g] { --wl-ink: 1.0137; }  /* Quicksand Medium: 墨迹 0.73 → 0.74 */
+html[data-g="unit"][data-g] { --wl-ink: 1.0137; }  /* Jost Medium: 墨迹 0.73 → 0.74（与 Quicksand 同量级，见下条注释） */
 html[data-g="yymf"][data-g] { --wl-ink: 0.9867; }  /* ZCOOL KuaiLe: 墨迹 0.75 → 0.74 */
 
 * {
@@ -938,6 +947,9 @@ html[data-g="qubell"][data-g] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; }
 html[data-g="festo"][data-g] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; }
 html[data-g="ave"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
 html[data-g="bta"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+/* U'nit 字标 570×214：主体 jubeat 字母带在 y=36..108（连续 73 行跨度≥85%），
+   下方 y=150 那条是 U'nit 横条上缘，不属于字身带。 */
+html[data-g="unit"][data-g] { --bh: 0.3411; --bc: 0.3364; --bt: 0.1682; }
 html[data-g="yymf"][data-g] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; }
 html[data-g="clan_blue"],
 html[data-g="clan_green"],
@@ -970,6 +982,7 @@ html[data-g="clan_blue"][data-g] #wordLogo { aspect-ratio: 360 / 163; }
 html[data-g="festo"][data-g] #wordLogo { aspect-ratio: 287 / 210; }
 html[data-g="ave"][data-g] #wordLogo { aspect-ratio: 284 / 210; }
 html[data-g="bta"][data-g] #wordLogo { aspect-ratio: 285 / 210; }
+html[data-g="unit"][data-g] #wordLogo { aspect-ratio: 570 / 214; }
 html[data-g="yymf"][data-g] #wordLogo { aspect-ratio: 1180 / 593; }
 
 /* jubeat 字标是纯白：深蓝底上本来就够亮，但背景格架的青色高光会从字身
@@ -2064,6 +2077,34 @@ html[data-g="ripples"] {
     --glass2: rgba(255, 255, 255, 0.8);
 }
 
+/* U'nit（日服新世代）：底板是米白 + 金黄波浪 + 星星的亮图，走浅色主题。
+   主色点取背景里那抹金黄，压暗到能在米白底上读（#e0a800 在 #fdf8ec 上只有 2.03，
+   文字一律走 --acc-ink / --wl-acc 的 #8a6a00 = 4.78）。 */
+html[data-g="unit"] {
+    --acc-ink: #8a6a00;
+    --acc2-ink: #9a6a12;
+    color-scheme: light;
+    --wl-acc: #8a6a00;
+    --focus: #6f5400;
+    --bgop: 0.7;
+    /* 亮底上给一层很薄的暖黑纱，压住波浪高光，卡片玻璃才立得住 */
+    --veil: linear-gradient(180deg, rgba(40, 30, 0, 0.12) 0%, rgba(40, 30, 0, 0.10) 55%, rgba(40, 30, 0, 0.16) 100%);
+    --scrim: rgba(0, 0, 0, 0.3);
+    --base: #fdf8ec;
+    --acc: #e0a800;
+    --acc2: #f7d24a;
+    --title: #2a2410;
+    --tshadow: none;
+    --lede-shadow: none;
+    --ink: #2a2410;
+    --ink2: #5c5236;
+    --ink3: #6b6042;
+    --edge: rgba(40, 32, 12, 0.14);
+    --edge2: rgba(40, 32, 12, 0.26);
+    --glass: rgba(255, 252, 242, 0.6);
+    --glass2: rgba(255, 252, 242, 0.74);
+}
+
 /* 音乐魔方（国服）：底板是青→粉糖果亮图，和 ripples 同策——保留浅色主题，
    用淡薰衣草 veil 把背景压暗一档，保证深字与白卡片的对比。 */
 html[data-g="yymf"] {
@@ -2174,6 +2215,9 @@ html[data-g="jubeat"] {
 }
 html[data-g="ripples"] {
     --bgauto: url("/assets/images/bg/ripples.webp");
+}
+html[data-g="unit"] {
+    --bgauto: url("/assets/images/bg/unit.webp");
 }
 html[data-g="yymf"] {
     --bgauto: url("/assets/images/bg/yymf.webp");
