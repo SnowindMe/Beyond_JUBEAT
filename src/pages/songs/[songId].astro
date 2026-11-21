@@ -656,14 +656,17 @@ const metaFoot: Meta[] = song
                     参照条与分位/长押率是参照系，照旧保留。 */}
                 <span class="sd-lrow-sub">
                   <span class="sd-facts">
-                    {notes == null ? null : (
+                    {/* 【2026-11-22 主人「歌曲详情页的 Notes 数据没有也要显示，总数依旧写暂无」】
+                        与 Holds 同构：无条件渲染这一格，没抓到就印「暂无」+ is-none，
+                        两块读数始终等高；参照条与分位只在真有数据时出现。 */}
+                    {(
                       <span class="sd-stat">
                         {/* 【2026-11-20 主人「notes/holds 标题和各自的总数，位置改为标题在上总数在下」】
                             标题单独一层在上，数字与参照条一起落到下一层的 .sd-stat-bd：
                             上下关系按主人点的来，数字与它的刻度仍是同一行，不拆散。 */}
                         <i>Notes</i>
                         <span class="sd-stat-bd">
-                          <b>{fmtInt(notes)}</b>
+                          <b class={notes == null ? 'is-none' : undefined}>{notes == null ? '暂无' : fmtInt(notes)}</b>
                         </span>
                         {/* 【2026-11-20 主人「参照条改成由下往上的条，跟分位文字一起放到右边」】
                             条与分位值都在数字右边：数字是主体，条与分位是它的参照，

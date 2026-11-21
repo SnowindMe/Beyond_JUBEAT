@@ -83,7 +83,9 @@ const CAT_GENS: Record<string, Record<string, string[]>> = {
 const SRV_CARDS = [
   /* 卡片名只留 JP / CN（2026-11-18 主人：改用「服务器图标 + JP/CN」）。
      全称放在 title 里，读屏与悬停仍能读到；视觉上省下的宽度让名称与计数挤得进一行。 */
-  { id: 'jp', name: 'JP', full: 'Server · JP', gen: 'Beyond the Ave.', logo: 'bta', line: true, latest: '2026-09-20' },
+  /* 【2026-11-22 主人「曲目页的服务器 logo 也换成 unit 的 logo」】日服已经进到 U'nit，
+     卡片图标跟着换；gen 一并更新（这张卡上不显示，但它是「这一服现在到哪一代」的口径）。 */
+  { id: 'jp', name: 'JP', full: 'Server · JP', gen: "U'nit", logo: 'unit', line: true, latest: '2026-09-20' },
   { id: 'cn', name: 'CN', full: 'Server · CN', gen: '音乐魔方', logo: 'yymf', line: false, latest: '2026-11-16' },
 ] as const;
 

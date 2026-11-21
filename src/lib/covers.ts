@@ -27,7 +27,10 @@ export function jacketUrl(songId: string | number | null | undefined, cover?: st
   const bare = String(cover || '').split('/').pop() ?? '';
   // 调用方可能只有 cover、没有 songId（首页 top16 快照就没带 id）。
   // 规范名本身就是 idN.webp，从它里面抠 id 即可，不用为此改数据形状。
-  const id = String(songId ?? '') || (bare.match(/^id(\d+)\./)?.[1] ?? '');
+  // 【2026-11-22 修首页方阵 U'nit 曲绘不显示】原来只从 cover 里抠纯数字 id，
+  // 占位 id（idunit-013.webp）抠不出来 → id 为空 → 直接回退站内路径 → 404。
+  // 改成抠 id 前缀后的整段（数字或 unit-NNN），映射表就能命中、走 /api/jacket。
+  const id = String(songId ?? '') || (bare.match(/^id(.+)\.webp$/)?.[1] ?? '');
   if (!id) return bare ? BASE + bare : '';
   // 【2026-11-16 起不再直连图床】有映射就走站内反代 /api/jacket/<name>：
   // 图床给的是 5 小时缓存、没有防盗链，直连等于每个人的浏览器都要跨境取图、
@@ -35,5 +38,9 @@ export function jacketUrl(songId: string | number | null | undefined, cover?: st
   // 并在那一层做 Referer 防盗链（详见 src/pages/api/jacket/[name].ts 头注释）。
   // 映射缺项（还没搬的 54 张）仍回退站内原图，搬完自然全走反代。
   if (map[jacketName(id)]) return '/api/jacket/' + jacketName(id);
+  // 【2026-11-22】共享占位图这类「cover 名本身就是映射 key、和歌 id 无关」的图
+  // （国服缺曲绘统一用 idph-cn.webp）：规范名没命中时再看 cover 自己有没有映射，
+  // 否则会回退站内路径 → 404。
+  if (bare && map[bare]) return '/api/jacket/' + bare;
   return BASE + (bare || jacketName(id));
 }

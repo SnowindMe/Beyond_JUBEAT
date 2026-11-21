@@ -240,7 +240,7 @@ function main() {
         r.songId, 'official', r.title, r.artist || null, dashNull(r.bpm),
         '音乐魔方', dual, 1, cat2,
         num(r.bsc), num(r.adv), num(r.ext),
-        /\[\s*2\s*\]/.test(r.title) ? 1 : 0, webpCover(r.songId, r.cover),
+        /\[\s*2\s*\]/.test(r.title) ? 1 : 0, webpCover(r.songId, r.cover) || CN_COVER_PLACEHOLDER,
         null, isoDate(r.date) || CN_REMAINDER_DATE, dashNull(r.pool),
         // 国服行也按 songId 回查一次快照：限时曲实测都在国服（新年快乐、Will We Shine）
         limitedUntilOf(archiveById.get(String(r.songId)))
@@ -263,7 +263,7 @@ function main() {
         v.bpm ? String(v.bpm) : null, '音乐魔方', 0, 1, cat || '原创',
         num(v.bsc), num(v.adv), num(v.ext),
         /\[\s*2\s*\]/.test(String(v.title)) ? 1 : 0,
-        webpCover(id, v.cover),
+        webpCover(id, v.cover) || CN_COVER_PLACEHOLDER,
         null, isoDate(v.date) || CN_REMAINDER_DATE, dashNull(v.pool), null
       );
       if (v.cover) stat.cnCover++;
@@ -861,6 +861,13 @@ function readCnRows(archiveById) {
 // 补第三条判据：src/data/cdn.json 里已有「idN.webp → 图床 URL」映射的，就说明这张图
 // 当初确实转过、并已上传图床，站点走 jacketUrl() 直取 CDN，本地没有源文件也不影响。
 // cdn.json 同样在 R2 白名单里，CI 拉得到，判据与本地等价。
+/* 【2026-11-22 主人「国服曲目如果有曲绘缺失的使用 <png> 占位」】
+   国服 xlsx 里有些行没有曲绘（源表没导出图），此前 cover 落 NULL、卡片位空着。
+   统一给一张共享占位图：文件名 idph-cn.webp（不在 idN 家族里，所以 API 白名单单独放行），
+   映射写在 src/data/cdn.json —— covers.ts 会先按歌 id 查、未命中再看 cover 自己，
+   于是同一张占位图可以被任意多首曲共用。 */
+const CN_COVER_PLACEHOLDER = 'idph-cn.webp';
+
 function cnCoverFallback(songId) {
   const png = path.join(ROOT, 'archive/materials/songjackets', 'id' + songId + '.png');
   const webp = path.join(ROOT, 'public/assets/images/jackets', 'id' + songId + '.webp');

@@ -821,6 +821,11 @@ html[data-lum="light"] .mark b .til {
     /* 2026-10-26 主人反馈「桌面版还要大一些」，参考字号提到 26~44px。
        这个值同时决定：WELCOME TO 字号与字标字身带高度（~ 已于 2026-10-27 移除）。 */
     --wl-em: clamp(26px, 2.5vw, 44px);
+    /* 【2026-11-22 主人「其他世代的首页 logo 宽度要和 unit logo 一致，进行缩放」】
+       所有世代字标统一按这个宽度渲染：7.8086 = unit 那张（570/214，字身带 0.3411）
+       在「字身带 = 1em」下的宽高换算系数（ar / bh）。于是各代横向占位一致，
+       纵向高度按各自 aspect-ratio 反推，字身带仍对齐文字中线（见 .word-l 的 margin-top）。 */
+    --wl-w: calc(var(--wl-em, 22px) * 7.8086);
     animation: welcomeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* 前缀：「WELCOME TO」宽字距小标，字号跟字身带同高，读起来像「WELCOME TO jubeat」一句话 */
@@ -911,9 +916,10 @@ html[data-lum="light"] .wl-pre {
     min-width: 0;
     max-width: none;
     line-height: 0;
-    --wl-s: calc(1 / var(--bh, 0.5));
-    /* 上移量：把字身带中心（图高 × --bc 处）挪到视框中线（50%） */
-    margin-top: calc(var(--wl-em, 22px) * 0.5 - var(--wl-em, 22px) * var(--wl-s) * var(--bc, 0.5));
+    /* 上移量：把字身带中心（图高 × --bc 处）挪到视框中线（50%）。
+       图高不再是「em / --bh」，而是「统一宽度 / 该代宽高比」——宽度被拉齐后
+       高度得按各自比例反推，字身带才仍然压在中线上（2026-11-22）。 */
+    margin-top: calc(var(--wl-em, 22px) * 0.5 - var(--wl-w, 172px) / var(--wl-ar, 1.5) * var(--bc, 0.5));
 }
 .word-l #wordLogo {
     display: block;
@@ -924,8 +930,9 @@ html[data-lum="light"] .wl-pre {
        消失。字标是首屏识别物，宁可硬切也不能有「可能隐身」的状态。
        （原来的 animation: logoIn 0.4s ease both 就是这个隐患，本轮一并去掉。） */
     /* 整图高度 = 字身带高（1em）× (1 / --bh)，宽度按原图比例自动撑开视框 */
-    height: calc(var(--wl-em, 22px) * var(--wl-s));
-    width: auto;
+    /* 宽度由 --wl-w 统一定量（见 .word-line），高度交给上面的 aspect-ratio 反推 */
+    width: var(--wl-w, 172px);
+    height: auto;
     max-width: none;
 }
 /* ---------- 字标「jubeat 字身带」实测表（2026-10-26） ----------
@@ -936,25 +943,25 @@ html[data-lum="light"] .wl-pre {
    量法：逐行统计 alpha>40 的墨量 / 横向跨度 / 墨迹段数，取「段数≥4 且跨度≥85%」
    的连续带；带大装饰的世代（festo/ave/bta/yymf/qubell/clan）另放大标尺目测校正。
    改字标图或换 logo 时必须同步这三个值，否则标题行会错位。 */
-html[data-g="jubeat"][data-g] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; }
-html[data-g="ripples"][data-g] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; }
-html[data-g="knit"][data-g] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; }
-html[data-g="copious"][data-g] { --bh: 0.5547; --bc: 0.2773; --bt: 0; }
-html[data-g="saucer"][data-g] { --bh: 0.4759; --bc: 0.2517; --bt: 0.0138; }
-html[data-g="saucerfulfill"][data-g] { --bh: 0.4268; --bc: 0.2195; --bt: 0.0061; }
-html[data-g="prop"][data-g] { --bh: 0.4071; --bc: 0.2107; --bt: 0.0071; }
-html[data-g="qubell"][data-g] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; }
-html[data-g="festo"][data-g] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; }
-html[data-g="ave"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
-html[data-g="bta"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; }
+html[data-g="jubeat"][data-g] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; --wl-ar: 3.5735; }
+html[data-g="ripples"][data-g] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; --wl-ar: 3.3333; }
+html[data-g="knit"][data-g] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; --wl-ar: 3.4615; }
+html[data-g="copious"][data-g] { --bh: 0.5547; --bc: 0.2773; --bt: 0; --wl-ar: 2.8125; }
+html[data-g="saucer"][data-g] { --bh: 0.4759; --bc: 0.2517; --bt: 0.0138; --wl-ar: 2.4828; }
+html[data-g="saucerfulfill"][data-g] { --bh: 0.4268; --bc: 0.2195; --bt: 0.0061; --wl-ar: 2.1951; }
+html[data-g="prop"][data-g] { --bh: 0.4071; --bc: 0.2107; --bt: 0.0071; --wl-ar: 2.5714; }
+html[data-g="qubell"][data-g] { --bh: 0.3827; --bc: 0.2346; --bt: 0.0864; --wl-ar: 2.2222; }
+html[data-g="festo"][data-g] { --bh: 0.3381; --bc: 0.3428; --bt: 0.3476; --wl-ar: 1.3667; }
+html[data-g="ave"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; --wl-ar: 1.3524; }
+html[data-g="bta"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; --wl-ar: 1.3571; }
 /* U'nit 字标 570×214：主体 jubeat 字母带在 y=36..108（连续 73 行跨度≥85%），
    下方 y=150 那条是 U'nit 横条上缘，不属于字身带。 */
-html[data-g="unit"][data-g] { --bh: 0.3411; --bc: 0.3364; --bt: 0.1682; }
-html[data-g="yymf"][data-g] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; }
+html[data-g="unit"][data-g] { --bh: 0.3411; --bc: 0.3364; --bt: 0.1682; --wl-ar: 2.6636; }
+html[data-g="yymf"][data-g] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; --wl-ar: 1.9899; }
 html[data-g="clan_blue"],
 html[data-g="clan_green"],
 html[data-g="clan_purple"],
-html[data-g="clan_red"][data-g] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; }
+html[data-g="clan_red"][data-g] { --bh: 0.4417; --bc: 0.2331; --bt: 0.0123; --wl-ar: 2.2086; }
 /* 字标占位比例按世代写死：13 张 logo 的宽高比差 4 倍多（ave 1.35、knit 3.46、
    ripples 3.33、yymf 1.99），img 的 width/height 属性只能给一个兜底比例。
    在字标图解码完成之前按各自真实比例占位，图到货时高度不再跳一下。
