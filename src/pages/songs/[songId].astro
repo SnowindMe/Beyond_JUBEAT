@@ -199,6 +199,7 @@ const GEN_LOGO: Record<string, string> = {
   festo: 'festo',
   'Ave.': 'ave',
   'beyond the Ave.': 'bta',
+  "U'nit": 'unit',
   音乐魔方: 'yymf',
 };
 /* gen ink: saucer #37474F is 1.99:1 against #0b0f14 */
@@ -692,8 +693,8 @@ const metaFoot: Meta[] = song
                       <span class="sd-stat">
                         <i>Holds</i>
                         <span class="sd-stat-bd">
-                          <b class={holds == null ? 'is-none' : undefined}>
-                            {holds == null ? '暂无' : fmtInt(holds)}
+                          <b class={holds == null ? 'is-none' : undefined}>
+                            {holds == null ? '暂无' : fmtInt(holds)}
                           </b>
                         </span>
                         {/* 参照条改成与 Notes 同构的 10 格：Holds 为 0 时整条是空的，
