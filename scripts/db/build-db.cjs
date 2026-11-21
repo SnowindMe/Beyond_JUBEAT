@@ -50,6 +50,7 @@ const CN_CATEGORY = {
 };
 
 function main() {
+  loadMappedCovers();
   const jp = JSON.parse(fs.readFileSync(JP_PATH, 'utf8'));
   const archive = JSON.parse(fs.readFileSync(ARCHIVE, 'utf8'));
   const archiveById = new Map(archive.songs.map((s) => [String(s.songId), s]));
@@ -790,11 +791,46 @@ function readCnRows(archiveById) {
 }
 
 // 国服新曲的曲绘回退：素材库 png 或已转档的 webp，任一存在即认 idN.webp 为站点名。
+//
+// 【2026-11-22 CI 事故】前两条都是「本地磁盘上有这个文件」，而 archive/ 与
+// public/assets/images/jackets/ 都不入库、CI 里也没有——干净环境里恒为 false，
+// 于是这 14 首在 CI 重建时落成 NULL，data-push 又把空值写回 R2，最终 check-data-consistency
+// 的「top16 空 cover」当场 FAIL（run 44924967016，音乐魔方 / THRERROR）。
+// 补第三条判据：src/data/cdn.json 里已有「idN.webp → 图床 URL」映射的，就说明这张图
+// 当初确实转过、并已上传图床，站点走 jacketUrl() 直取 CDN，本地没有源文件也不影响。
+// cdn.json 同样在 R2 白名单里，CI 拉得到，判据与本地等价。
 function cnCoverFallback(songId) {
   const png = path.join(ROOT, 'archive/materials/songjackets', 'id' + songId + '.png');
   const webp = path.join(ROOT, 'public/assets/images/jackets', 'id' + songId + '.webp');
-  if (fs.existsSync(webp) || fs.existsSync(png)) return 'id' + songId + '.webp';
+  const name = 'id' + songId + '.webp';
+  // mapping 在 main() 里读一次后挂到模块级，避免每行都重新读 100 KB 的 JSON
+  if (mappedCovers && mappedCovers[name]) return name;
+  if (fs.existsSync(webp) || fs.existsSync(png)) return name;
   return null;
+}
+
+/* 图床映射表（src/data/cdn.json 的 jackets）。build-db 只读它当「这张曲绘存在过」的证据：
+   文件可能被转到图床后本地就删了，映射留着才是长期事实。读不到时为 null（老环境回退到只看文件）。 */
+let mappedCovers = null;
+function loadMappedCovers() {
+  // 自测开关：KV_NO_CDN_MAP=1 时假装映射不存在，用来反向验证下面的守卫真的会 FAIL
+  if (process.env.KV_NO_CDN_MAP === '1') { mappedCovers = null; return; }
+  try {
+    const p = path.join(ROOT, 'src/data/cdn.json');
+    mappedCovers = JSON.parse(fs.readFileSync(p, 'utf8')).jackets || {};
+  } catch {
+    mappedCovers = null;
+  }
+}
+
+// cover 为空但 cdn.json 里明明有它的映射 —— 空 cover 的唯一合法来源是「图从没转过」，
+// 映射在就说明转过。这里直接读文件而不用上面的模块级缓存：反向验证时 KV_NO_CDN_MAP=1
+// 会故意关掉缓存，守卫必须还能看见映射，否则它跟着一起瞎（第一次反向验证就是这么白跑的）。
+function coverNullWithMapping(db) {
+  let map = {};
+  try { map = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/data/cdn.json'), 'utf8')).jackets || {}; } catch { return 0; }
+  const rows = db.prepare('SELECT song_id FROM songs WHERE cover IS NULL').all();
+  return rows.filter((r) => map['id' + r.song_id + '.webp']).length;
 }
 
 function selfCheck(db, stat, problems, expect, cnOverrideHit) {
@@ -839,6 +875,10 @@ function selfCheck(db, stat, problems, expect, cnOverrideHit) {
     // 而不是「改了没生效」那种静默失败（2026-10-28 立的原则）。
     ['国服覆盖表命中数', cnOverrideHit.size, expect.cnOverride],
     ['国服分类未映射', stat.cnUnmapped, 0],
+    // 【2026-11-22 CI 事故的守卫】图床映射里有这张曲绘、库里却是 NULL ——
+    // 正是「CI 没有 archive/，cnCoverFallback 只看文件」造成的空 cover。判据用 cdn.json
+    // （源）而非文件系统，干净环境与本地等价。期望 0。
+    ['有图床映射却无 cover', coverNullWithMapping(db), 0],
     // 双服行 = sheet1 打√ 且真在日服库里的曲（432）+ sheet2 里能按曲名匹配到日服的那几行（2）。
     // 注意：sheet1 的 432 首本来就都是日服行，所以它们「server_jp=1 且 server_cn=1」；
     // sheet2 的 Big Daddy 是国服独有一行、把它自己的日服行也标成双服（共 2 行同曲）。
