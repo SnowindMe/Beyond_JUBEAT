@@ -43,6 +43,19 @@ jobs:
       - name: 重建本地曲库
         run: node scripts/db/build-db.cjs
 
+      # 【2026-11-22】微信网站管理员认证校验文件（public/<hash>.txt）原先入库。
+      # 那串内容等于账号级校验凭据，仓库是 PUBLIC 的，副本不该留在版本库里。
+      # 改为构建前从 secret 写入（printf 不加换行，校验方比对的是 40 字节原文）；
+      # 本地开发不生成、也不入库，缺 secret 时只警告不让 job 变红。
+      - name: 生成微信校验文件
+        env:
+          WECHAT_SITE_VERIFY: ${{ secrets.WECHAT_SITE_VERIFY }}
+        run: |
+          if [ -z "$WECHAT_SITE_VERIFY" ]; then
+            echo "::warning::缺 secret WECHAT_SITE_VERIFY，微信校验文件未生成"
+            exit 0
+          fi
+          printf '%s' "$WECHAT_SITE_VERIFY" > public/8c7bceecf5d6ebbe58a0e8482e448a50.txt
       - name: 构建
         run: npm run build
 

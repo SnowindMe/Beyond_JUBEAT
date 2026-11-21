@@ -136,3 +136,10 @@ src/data/audio-map.json
 # 【2026-11-20】验收截图目录与临时调试接口：过程物，不进版本库
 _shots/
 src/pages/api/dbg-alias.ts
+
+# 【2026-11-22】scripts/yyj 是本地抓取脚本（含本机录制/抓包），不再入库，磁盘上保留。
+scripts/yyj/
+
+# 【2026-11-22】微信网站管理员认证校验文件：账号级凭据，仓库是 PUBLIC 的，
+# 改为 CI 构建前从 secret 写入，仓库不留副本。
+public/8c7bceecf5d6ebbe58a0e8482e448a50.txt
