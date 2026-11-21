@@ -30,6 +30,8 @@ import audioMap from '../../data/ub-audio.json';
 // 已搬进 R2 的音源（id → key）。2026-11-18 起国服音乐魔方代 63 首走 R2，
 // 优先于上游；这里只用来判「有没有音源」，取用顺序在 /api/audio 里。
 import r2AudioMap from '../../data/audio-map.json';
+// 具体上传者登记（2026-11-22）：R2 里的音频不全是同一个人给的，来源徽章按曲目显示真名。
+import audioSources from '../../data/audio-sources.json';
 // 谱面密度数据**不再 import 进 Worker 包**。
 // 【2026-11-01 主人「能不能不需要全量获得谱面，进入到歌曲详情页才加载」】
 // 原先把整张表（1.07MB）import 进来，实测详情页 chunk 3.3MB，
@@ -161,6 +163,9 @@ const GEN_COLOR: Record<string, string> = {
   festo: '#ffd166',
   'Ave.': '#2ee8e8',
   'beyond the Ave.': '#ffa23c',
+  // 【2026-11-22 主人「U'nit 世代徽章底色会跟随主题变换而变色」】漏登记就落到 var(--acc)，
+  // 跟着当前主题跑。补上 theme.css 里 unit 的 --acc（#e0a800），徽章与唱片才钉在本代色上。
+  "U'nit": '#e0a800',
   音乐魔方: '#3f6fd8',
 };
 
@@ -242,6 +247,11 @@ const audioSource: 'r2' | 'ub' | null = song
     : (audioMap as Record<string, string>)[String(song.id)]
       ? 'ub'
       : null
+  : null;
+
+// 具体上传者：登记过就显示登记的名字（Fruity / Album …），没登记才回落到「Jack大本」。
+const audioUploader = song
+  ? ((audioSources as Record<string, string>)[String(song.id)] ?? null)
   : null;
 
 // 有没有音源：映射表命中才算。1222 首有（上游是日服谱面站，
@@ -483,6 +493,7 @@ const metaFoot: Meta[] = song
           bpm={song.bpm}
           hasAudio={hasAudio}
           source={audioSource}
+          sourceLabel={audioUploader}
         />
 
         {/* 【2026-11-09 别名块】玩家给曲目起的俗称（喇叭口、通称），参与全站搜索。

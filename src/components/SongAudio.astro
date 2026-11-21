@@ -20,8 +20,10 @@ interface Props {
   hasAudio?: boolean;
   /** 音源来自哪里：r2=Jack大本 的投稿、ub=上游 thregren；null 表示没有音源 */
   source?: 'r2' | 'ub' | null;
+  /** 具体上传者（2026-11-22）：R2 里的音频不全是同一个人给的，登记过就显示登记的名字 */
+  sourceLabel?: string | null;
 }
-const { songId, bpm, hasAudio = true, source = null } = Astro.props;
+const { songId, bpm, hasAudio = true, source = null, sourceLabel = null } = Astro.props;
 
 // 【2026-10-31 主人第 4 条】BPM 徽章只显示数字或区间：
 // 库里的值仍可能带括注（如「170 (beatmania IIDX …)」），括注留给详情页信息块，
@@ -35,7 +37,8 @@ const bpmText = (String(bpm ?? '').replace(/\([^)]*\)/g, ' ').trim().slice(0, 16
    两个来源各一枚：R2 是投稿站的云存储（画一个云），上游 thregren 是谱面/音源站（画一个碟）。
    图标自带 aria-hidden，来源名仍在 <b> 里，读屏读到的还是完整的人名。 */
 const SRC_LABEL = { r2: 'Jack大本', ub: 'Thregren' } as const;
-const srcLabel = source ? SRC_LABEL[source] : '';
+// 登记过具体上传者（src/data/audio-sources.json）就用它，没登记才回落到「谁给的这份音源」。
+const srcLabel = sourceLabel || (source ? SRC_LABEL[source] : '');
 ---
 
 <div
