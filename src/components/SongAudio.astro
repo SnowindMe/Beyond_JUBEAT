@@ -31,6 +31,9 @@ const { songId, bpm, hasAudio = true, source = null } = Astro.props;
 // 徽章的宽度与其它曲目一致，跨曲目扫视时不会跳。
 const bpmText = (String(bpm ?? '').replace(/\([^)]*\)/g, ' ').trim().slice(0, 16)) || '--';
 // 来源徽章的文案：两种来源各自对应一个给谱面的人（主人 2026-11-19 指定写法）
+/* 【2026-11-21 主人「把『来源：XXX』改为来源图标+XXX」】文案前缀换成图标。
+   两个来源各一枚：R2 是投稿站的云存储（画一个云），上游 thregren 是谱面/音源站（画一个碟）。
+   图标自带 aria-hidden，来源名仍在 <b> 里，读屏读到的还是完整的人名。 */
 const SRC_LABEL = { r2: 'Jack大本', ub: 'Thregren' } as const;
 const srcLabel = source ? SRC_LABEL[source] : '';
 ---
@@ -71,7 +74,18 @@ const srcLabel = source ? SRC_LABEL[source] : '';
       {
         srcLabel ? (
           <span class="sda-src" title={'音源来源：' + srcLabel}>
-            <i>来源：</i>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              {source === 'r2' ? (
+                /* 云：R2 桶里存的投稿录音 */
+                <path d="M7 18h9.5a3.5 3.5 0 0 0 .4-6.98A5 5 0 0 0 7.3 9.6 4.2 4.2 0 0 0 7 18Z" />
+              ) : (
+                /* 碟：上游 thregren 的曲库 */
+                <>
+                  <circle cx="12" cy="12" r="7.5" />
+                  <circle cx="12" cy="12" r="2" />
+                </>
+              )}
+            </svg>
             <b>{srcLabel}</b>
           </span>
         ) : null
@@ -335,10 +349,21 @@ const srcLabel = source ? SRC_LABEL[source] : '';
 
   /* 【2026-11-19 来源徽章】跟 BPM 同一档的细徽章，字号与内距都略收，
      它是附注不是读数。 */
+  .sda-src svg {
+    width: 11px;
+    height: 11px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.75;
+  }
   .sda-src {
     display: inline-flex;
-    align-items: baseline;
-    gap: 2px;
+    align-items: center;
+    gap: 4px;
     flex: none;
     padding: 3px 9px;
     border: 1px solid var(--edge);

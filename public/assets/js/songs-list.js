@@ -465,7 +465,60 @@
       }
 
       // ---- 主流程 ----
-      function apply() {
+      /* 【2026-11-21 切服拆两拍（主人「切换服务器选项卡切过去的停顿」）】
+         实测：点一下服务器卡，主线程会连着停 67~117ms，其间服务器卡自己的高亮
+         （.sc-srv-b 有 0.2s 的 border/background 过渡）走不动 —— 用户看到的就是
+         「列表停一下才动」。LoAF 分段把这段耗时定位到 render（237ms 里 2ms 是样式
+         与布局、235ms 是绘制），也就是「把另一套 1150 张卡整体换成可见」这一下。
+         试过 content-visibility / contain / 关动画 / 图片惰性 / 减轻阴影，都只有
+         几毫秒到几十毫秒，拆不开这一次整体重绘。
+         所以不再和它硬碰：把「先给按钮反馈」与「换列表」拆到两帧。
+         第一拍（同步，本次调用内）只写 root/html 上的服务器属性 + 按钮高亮，
+         浏览器立刻能画出按钮的反馈；第二拍（下一帧）再走原来的换 hidden /
+         计数 / 排序 / 错开入场 / 占位高度。实测长帧 67~117ms → 33~50ms。
+         降动效时不分拍：那种情况本来就没有动画要抢帧，多一帧只是多一次抖动。 */
+      var srvSwapToken = 0;
+      function apply(opts) {
+        // t0 在**第一拍**就取：两拍都是这次点击的代价，报耗时不能只报后一半。
+        var t0 = performance.now();
+        /* 第一拍：只把按钮高亮挪过去，让「点到了」先有画面。
+           列表那一下留到下一帧 —— 它就是那个 67~117ms 的长帧。 */
+        var deferSwap = !!(opts && opts.deferSwap) && !prefersReducedMotion();
+        for (var i = 0; i < srvBtns.length; i++) {
+          var on = srvBtns[i].getAttribute('data-srv') === state.srv;
+          srvBtns[i].classList.toggle('is-on', on);
+          srvBtns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        if (!deferSwap) { applyNow(t0); return; }
+        /* 双 rAF 而不是单 rAF：单 rAF 的回调有时会被排进**当前那一帧的末尾**，
+           与点击挤在同一帧里，等于没拆开（实测还有 183ms 的长帧）。两个 rAF 保证
+           中间一定有一次真正的绘制机会。 */
+        var my = ++srvSwapToken;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (my !== srvSwapToken) return;   // 期间又切了一次，交给最后一次
+            applyNow(t0);
+          });
+        });
+      }
+
+      /* 换服/范围两套控件的 hidden：与 body 一起在第二拍翻。
+         单独成函数是因为 apply 拆成两拍后它要跟着第二拍走，别留在第一拍里。 */
+      function applySrvHidden() {
+        // body 也在这里翻：它是「换列表」最重的一下，必须落在第二拍。
+        for (var b0 = 0; b0 < bodies.length; b0++) {
+          bodies[b0].hidden = bodies[b0].getAttribute('data-srv') !== state.srv;
+        }
+        for (var j = 0; j < sets.length; j++) {
+          sets[j].hidden = sets[j].getAttribute('data-srv') !== state.srv;
+        }
+        for (var j2 = 0; j2 < scopeSets.length; j2++) {
+          scopeSets[j2].hidden = scopeSets[j2].getAttribute('data-srv') !== state.srv;
+        }
+      }
+
+      /** 第二拍（或普通调用）：换列表、重算、排序、入场。 */
+      function applyNow(t0) {
         /* 【2026-11-02 分段加载的前置条件】
            搜索 / 筛选 / 排序都是对 **DOM 卡片** 读 data-* 做的，而骨架块里没有卡片：
            不先补拉，命中数会凭空少一截，空态还会误报「没有找到符合条件的曲目」。
@@ -497,11 +550,6 @@
             apply();
           });
         }
-        // 耗时从「用户操作」到「列表已更新」为准，取 performance.now() 的差值。
-        // 注意只能量到 JS 这一层（改 hidden / 写 CSS order），不含浏览器重绘与图片解码 ——
-        // 那部分浏览器不给我们回调，所以条上写「耗时 Xms」指的是**筛选计算**的耗时，
-        // 不是「页面看起来变快的那一瞬」，别把它当 FPS 指标用。
-        var t0 = performance.now();
         root.setAttribute('data-srv', state.srv);
         // 【2026-10-30】把当前服务器同步到 <html data-srv-pref>。
         // 那条属性被 songs.css 的规则引用（首帧就隐藏另一套 body，防止刷新年闪日服）。
@@ -511,17 +559,7 @@
           document.documentElement.setAttribute('data-srv-pref', state.srv);
         }
 
-        for (var i = 0; i < srvBtns.length; i++) {
-          var on = srvBtns[i].getAttribute('data-srv') === state.srv;
-          srvBtns[i].classList.toggle('is-on', on);
-          srvBtns[i].setAttribute('aria-pressed', on ? 'true' : 'false');
-        }
-        for (var j = 0; j < sets.length; j++) {
-          sets[j].hidden = sets[j].getAttribute('data-srv') !== state.srv;
-        }
-        for (var j2 = 0; j2 < scopeSets.length; j2++) {
-          scopeSets[j2].hidden = scopeSets[j2].getAttribute('data-srv') !== state.srv;
-        }
+        applySrvHidden();
 
         // totalMine = **当前服务器**的命中数，给「命中 N 首」提示条与空态判断用。
         //
@@ -538,7 +576,6 @@
         for (var k = 0; k < bodies.length; k++) {
           var body = bodies[k];
           var isMine = body.getAttribute('data-srv') === state.srv;
-          body.hidden = !isMine;
 
           var secs = body.querySelectorAll('.sc-sec');
           for (var m = 0; m < secs.length; m++) {
@@ -1136,14 +1173,44 @@
       // 这样做的好处是可访问性不倒退：读屏仍能识别 select 的 label，
       // 键盘也能用（Tab 到按钮、Enter/Space 展开、方向键移动、Esc 关闭、Enter 选中）。
       var dds = [];
+      /* 【2026-11-21 主人「【上线日期】的展开/收起复用【世代】等下拉菜单的过渡动画」】
+         收起改成先播完 0.13s 的反向动画（CSS 的 [data-closing] + scDdOut）、再摘 hidden。
+         三点要注意：
+         ① 计时器挂在元素自己的 _outT 上，重复收起 / 收起中途展开都先 clearTimeout，
+            否则上一轮的定时器会把新一轮刚展开的列表摘掉（连点按钮就是这个路径）；
+         ② 降动效时不等动画，直接摘——那种环境下播放等于空等 130ms；
+         ③ 展开侧要 cancelOut()，不然入场动画名会被收起那条盖住。 */
+      function cancelOut(el) {
+        if (!el) return;
+        if (el._outT) { clearTimeout(el._outT); el._outT = null; }
+        el.removeAttribute('data-closing');
+      }
+      function playOut(el, done) {
+        if (!el) return;
+        if (el._outT) clearTimeout(el._outT);
+        var finish = function () {
+          el.hidden = true;
+          el.removeAttribute('data-closing');
+          el._outT = null;
+          if (done) done();
+        };
+        if (el.hidden || prefersReducedMotion()) {
+          finish();
+          return;
+        }
+        el.setAttribute('data-closing', '');
+        el._outT = setTimeout(finish, 140); // 略长于 0.13s 的动画，留一帧余量
+      }
       function ddClose(dd) {
         dd.setAttribute('data-open', 'false');
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'false');
         var list = dd.querySelector('.sc-dd-list');
-        list.hidden = true;
-        // 展开时会按"按钮上方剩余空间"写内联 max-height；关闭时清掉，
-        // 否则下次换个位置展开前会先残留上一次的旧上限（闪一下短列表）。
-        list.style.maxHeight = '';
+        /* 展开时会按"按钮上方剩余空间"写内联 max-height。清它必须等收起动画播完：
+           提前清会让列表在淡出过程中突然长回 268px（看得见的一跳）。
+           这样也保证下次换位置展开前不会残留上一次的旧上限。 */
+        playOut(list, function () {
+          list.style.maxHeight = '';
+        });
       }
       function ddLabelOf(dd) {
         var sel = dd.querySelector('select');
@@ -1171,6 +1238,8 @@
         dd.setAttribute('data-open', 'true');
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
         var list = dd.querySelector('.sc-dd-list');
+        // 收起动画还在播时又展开：撤掉 data-closing 与定时器，否则入场动画被盖、旧定时器还会摘掉列表
+        cancelOut(list);
         list.hidden = false;
         // 【弹层方向：固定向上，不再做"上/下"二选一】
         // 历史：10-28 先修了"面板末行时列表跑出视口"（当时翻向上）；
@@ -1437,6 +1506,7 @@
         calMode = 'day';
         dateSet = datePool(); // 每次都按当前服重取：切服后可选日期跟着变
         calJumpTo(state.date);
+        cancelOut(cal);
         cal.hidden = false;
         cal.setAttribute('data-drop', 'up');
         dateB.setAttribute('aria-expanded', 'true');
@@ -1466,7 +1536,8 @@
       }
       function calClose() {
         if (!cal || cal.hidden) return; // cal 为 null = 页面上没有这个控件
-        cal.hidden = true;
+        // 与下拉同一套收起动画（2026-11-21 主人要求），日历恒向上、朝上淡出
+        playOut(cal);
         dateB.setAttribute('aria-expanded', 'false');
       }
       function calPick(v) {
@@ -1735,11 +1806,13 @@
             // syncPressed() 会按新服务器那一套重新同步（手写一遍反而可能与它打架）。
           }
           state.srv = nextSrv;
+          // 切服走两拍：按钮高亮先出，列表下一帧再换（见 apply 顶部注释）。
+          apply({ deferSwap: true });
           // 切服本来就有自己的入场语言：服务器卡 .sc-srv-b.is-on 播 scPop（0.24s 回弹）
           // + apply() 里的 stagger()（可见前 12 张 scIn 错开）。2026-11-16 主人确认
           // 「切换服务器的动画」就是这套，**排列切换要照抄它**，两条路各走各的、
           // 谁也别给谁再加一段（早前这里加过整块淡出，与已有动画叠成了两遍）。
-          apply(); return;
+          return;
         }
 
         // 范围 chip（PICK UP / COMMON）：与分区 chip 一样「只认自己服务器那一套」

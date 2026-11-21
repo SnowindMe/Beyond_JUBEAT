@@ -637,6 +637,21 @@ html[data-view-sw="in"] .sc-body:not([hidden]) .sc-sec:not([hidden]) {
     gap: 14px 12px;
 }
 .sc-card {
+    /* 【2026-11-21 切服卡顿·第四修：卡片级跳过屏外渲染】
+       切服务器的耗时实测 117–150ms，CDP 分段显示全部落在 layout，不是绘制也不是
+       JS 写入（翻 body.hidden 一次就够慢，跟重写 1693 张卡的 hidden 无关）。
+       原因：另一服那 1150 张卡一旦 display 回来，整个网格要重新排一遍。
+       在卡片上开 content-visibility:auto，屏外卡只按 contain-intrinsic-size 占位、
+       不进真布局，同一口径实测中位 117→67ms、p75 133→82ms。
+
+       卡高随视口宽度变（1264 实测 208px，375 两列时 224），占位取常见值 208px；
+       只影响从没渲染过的卡，渲染过一次就由 auto 记住真实值。实测 500 宽滚到底再回顶：
+       192 涨 1674px、208 只涨 95px；375 宽 192 涨 4432px、208 不涨。
+
+       更粗的 contain:paint / .sc-grid{both} / will-change 都试过，全在 ±5ms 内，
+       只有这条有效；CV 挂 .sc-gen（原有机制）反而在列表顶部更差，所以不动它。 */
+    content-visibility: auto;
+    contain-intrinsic-size: auto 208px;
     position: relative; /* .sc-link 铺满层的定位参照 */
     display: flex;
     flex-direction: column;
@@ -1134,6 +1149,9 @@ html[data-view="list"] .sc-ph-card {
    （卡片排列有曲绘自身的圆角与卡间空隙，不需要）。
    2026-11-14 主人：「歌曲列表内每首歌曲外围都有圆角边框」。 */
 html[data-view="list"] .sc-card {
+    /* 列表视图卡矮得多（83px，网格视图 192），跳过时的占位得跟着换，
+       否则一屏少的卡被估成 192、文档高会虚高一大截。 */
+    contain-intrinsic-size: auto 83px;
     border-color: var(--edge);
     border-radius: 10px;
     background: color-mix(in srgb, var(--ink) 3%, transparent);
@@ -1292,6 +1310,14 @@ html[data-view="list"] .sc-ph-badges {
     }
     html[data-view="list"] .sc-a {
         font-size: 12px;
+    }
+    /* 窄屏的卡都比桌面高：网格视图被两列撑到 208，列表视图曲名换行后 97
+       （桌面分别是 192 / 83）。占位不跟着换，切服/切排列时文档总高会抖几千像素。 */
+    html[data-view="grid"] .sc-card {
+        contain-intrinsic-size: auto 208px;
+    }
+    html[data-view="list"] .sc-card {
+        contain-intrinsic-size: auto 97px;
     }
 }
 /* 排列切换的过渡（2026-11-16 主人「卡片/列表视图切换过渡动画可以用服务器选项切换过渡动画」）：
@@ -1585,7 +1611,10 @@ html[data-view="list"] .sc-ph-badges {
 .sd-side {
     display: flex;
     flex-direction: column;
-    gap: clamp(18px, 2.2vw, 26px);
+    /* 【2026-11-21 主人「调 sd-gauge 内各模块间距」】左栏目前只有背签一块，
+       间距只在将来加第二块时才起作用，先收到 16（与 gauge 行距同档），
+       免得以后加东西时又冒出一截 26 的空档。 */
+    gap: 16px;
     min-width: 0;
 }
 
@@ -1598,8 +1627,11 @@ html[data-view="list"] .sc-ph-badges {
     flex-direction: column;
     gap: 10px;
     margin: 0;
-    padding-top: clamp(14px, 1.8vw, 20px);
-    border-top: 1px solid var(--edge);
+    /* 【2026-11-21 主人「去掉 dl.sd-meta 的上边框」】
+       左栏这条线原本是 .sd-side 里唯一的区分标记；去掉后靠项与项之间的间隙分条，
+       padding-top 一并归零——没有线还留着上气口，第一项会凭空浮在栏顶。 */
+    padding-top: 0;
+    border-top: 0;
 }
 .sd-meta > div {
     min-width: 0;
@@ -1968,6 +2000,10 @@ html[data-bgm="playing"] .sd-disc-spin {
     white-space: nowrap;
 }
 .sd-badge-gen {
+    /* 【2026-11-21 主人「有些世代看不清里面的字」】
+       世代色跨度太大（saucer #37474F 亮度仅 0.059，深字压上去 1.99:1）。
+       底色不动，字色改由页面按底色亮度算出的 --gen-ink 下发：深底给白字、浅底给深字，
+       两档都过 4.5:1，浅色世代不会变成白底白字。缺值时兜底深字。 */
     /* 【2026-10-29 主人两轮修正后的定稿】
        ① 底色不用 var(--acc)：那是**当前主题色**，切主题会跟着变；
           要的是**本曲所属世代**的固定色（看 jubeat 的歌，切到 ripples 主题也还是 jubeat 蓝）。
@@ -1975,7 +2011,7 @@ html[data-bgm="playing"] .sd-disc-spin {
        ② 文字色不能用 --acc-ink：它在深色世代等于 --acc，成了亮底亮字（第一版看不见的原因）。
           彩色底一律配固定深色字 #0b0f14，几套世代色（最浅的 saucerfulfill #c9d2d6）
           对它的对比度也有 11:1 以上，全部达标。 */
-    color: #0b0f14;
+    color: var(--gen-ink, #0b0f14);
     background: var(--gen-c, var(--acc));
 }
 .sd-badge-cat {
@@ -2055,7 +2091,7 @@ html[data-bgm="playing"] .sd-disc-spin {
     letter-spacing: 0.05em;
     white-space: nowrap;
     /* 彩色底 + 固定深色字：和世代徽章同一套对比度策略 */
-    color: #0b0f14;
+    color: var(--gen-ink, #0b0f14);
     background: var(--gen-c, var(--acc));
     box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.7);
     /* 【初始态：藏在视口上沿之外】用 translateY(-100%) 把自己整块推到可见区上方。
@@ -2174,6 +2210,42 @@ html[data-bgm="playing"] .sd-disc-spin {
     border-color: color-mix(in srgb, var(--acc) 55%, transparent);
 }
 /* 加号钮：与词同形但要区分开——虚线边框、只有符号 */
+/* 【2026-11-21 主人「别名默认最多两行，超出则在「＋」前放一个「v」展开更多」】
+   超两行的药丸由脚本打 .is-over 收起来。折叠只对药丸生效，
+   ∨ 与 ＋ 两枚按钮永远留在场上（否则一收起就没了「展开」的出口）。 */
+.sd-aliasw.is-over {
+    display: none;
+}
+/* ∨ 只在真的排到第三行时出现（脚本写 data-more），两行以内不留空按钮 */
+.sd-aliasw-more {
+    display: none;
+    justify-content: center;
+    min-width: 26px;
+    padding: 3px 8px;
+    color: var(--ink3);
+    background: none;
+    border-style: dashed;
+}
+.sd-alias[data-more='1'] .sd-aliasw-more {
+    display: inline-flex;
+}
+.sd-aliasw-more:hover {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+}
+.sd-aliasw-more svg {
+    width: 11px;
+    height: 11px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.18s;
+}
+.sd-aliasw-more[aria-expanded='true'] svg {
+    transform: rotate(180deg);
+}
 .sd-aliasw-add {
     justify-content: center;
     min-width: 26px;
@@ -2328,8 +2400,10 @@ html[data-bgm="playing"] .sd-disc-spin {
        两边都要留气口，否则线会贴着播放条或贴着绿色 BSC 条。
        注意 padding-top 不能写成 border-top 的简写——margin-left 的坑同源。 */
     /* 网格行间距已经给了 var(--sd-row-gap)，这里减掉它，净气口仍是 16-22px。 */
-    margin-top: calc(clamp(16px, 2vw, 22px) - var(--sd-row-gap));
-    padding-top: clamp(18px, 2.2vw, 24px);
+    /* 【2026-11-21 主人「调 sd-gauge 内各模块间距」】上下两段各收一档：
+       上 16-22 → 12-16、下 18-24 → 14-18，BSC 行不再离分隔线那么远。 */
+    margin-top: calc(clamp(12px, 1.5vw, 16px) - var(--sd-row-gap));
+    padding-top: clamp(14px, 1.8vw, 18px);
     /* 【2026-11-02 主人「细线有一部分被曲绘遮挡」】
        分隔线原来直接画在 .sd-gauge 的 border-top 上，而这块是负 margin 左扩到
        曲绘下方的——左半截正好落在曲绘背后，于是线在曲绘边缘"断"掉，看着像少了一段。
@@ -2353,7 +2427,8 @@ html[data-bgm="playing"] .sd-disc-spin {
        附注清单被压成一字一行的碎条。左栏补 150px 下限，右栏改用等分后再封顶：
        768 下变成 150 / 465，读数区仍够宽；1440 下左栏吃满剩余、读数区照旧 560。 */
     grid-template-columns: minmax(150px, 1fr) minmax(0, 560px);
-    gap: 0 clamp(26px, 3.8vw, 60px);
+    /* 【2026-11-21】左右两栏的横向气口也收一档：26-60 → 22-48，左栏不再被推到边上。 */
+    gap: 0 clamp(22px, 3.2vw, 48px);
     align-items: start;
 }
 /* 右栏：三档行 + 标签。单列，行与行之间靠 .sd-lrow + .sd-lrow 的细线收口。 */
@@ -2410,7 +2485,8 @@ html[data-lum="light"] .sd-gauge {
     /* 三行是一个读数区，行内要松、行间要紧。实测原 padding 12 + 密度图上边距 11
        让每行高到 151px，三行占去 453px，页面被这一块吃满。
        收到 10 / 8，行高约 138，仍然留得开气口。 */
-    padding: 10px 0;
+    /* 【2026-11-21】行内上下各收 2px：10/8 → 8/6，三行合计省 12px。 */
+    padding: 8px 0 10px;
 }
 /* 行与行之间用一条极淡的分隔线收口，而不是每行都套边框——
    三行本来就属于同一块读数区，线只用在「两档之间」，读起来是一条仪表面板而不是三张卡。 */
@@ -2661,6 +2737,13 @@ html[data-lum="light"] .sd-gauge {
 .sd-stat-ref u.is-on {
     background: color-mix(in srgb, var(--d-c) 78%, transparent);
 }
+/* 【2026-11-21 主人「holds 没数据也要显示暂无」】占位值降权：它不是读数，
+   字号跟数字差一档、颜色退到 --ink3，免得「暂无」看着像 0 一样实。 */
+.sd-stat b.is-none {
+    font-size: 13px;
+    color: var(--ink3);
+    letter-spacing: 0;
+}
 .sd-stat em {
     font-style: normal;
     font-family: var(--font-data);
@@ -2733,6 +2816,16 @@ html[data-lum="light"] .sd-gauge {
    行内跨满三栏、排在该档读数之下，就近说明「这一档别人怎么评」。
    竖线按档取难度色（.is-bsc/adv/ext），与 .sd-lrow-k 同色系。
    视觉上比读数轻：小一号字、无底色、只有极淡左线。 */
+/* 【2026-11-21 主人「详情页【标签】下拉的展开/收起加过渡动画」】
+   与列表页下拉同一套：入场淡入上移、收起淡出上移再摘 hidden。
+   高度不定（有人只打一个词、也有人铺满三行），所以不用 max-height，只动 opacity/transform。
+   用时 0.16s，比列表页那条 0.13s 略长：这里是自己点开的整块内容，慢一点更容易看清是它展开的。 */
+@keyframes sdTagsIn {
+    from { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes sdTagsOut {
+    to { opacity: 0; transform: translateY(-4px); }
+}
 .sd-tags {
     /* 行内网格是「等级 | 条 | 定数」三栏，标签块自己占一整行 */
     grid-column: 1 / -1;
@@ -2744,6 +2837,7 @@ html[data-lum="light"] .sd-gauge {
     /* 段首档位名已去掉（行首的 .sd-lrow-k 就在三行之前，再印一遍是重复），
        所以这里只剩缩进与竖线；上下各留 6/10 的气口，免得贴住下一档的条。 */
     margin: 6px 0 10px;
+    animation: sdTagsIn 0.16s ease;
     padding-left: 12px;
     border-left: 2px solid color-mix(in srgb, var(--acc) 55%, transparent);
 }
@@ -2753,6 +2847,15 @@ html[data-lum="light"] .sd-gauge {
    比 UA 样式表里的 [hidden]{display:none} 更具体，收起态会「收了个寂寞」。 */
 .sd-tags[hidden] {
     display: none;
+}
+/* 收起：播放期间 [hidden] 还没打上，这里把 [data-closing] 当作可见态压住
+   （播放中若被重新展开，JS 会同时撤掉 hidden 与 data-closing）。 */
+.sd-tags[data-closing] {
+    animation: sdTagsOut 0.16s ease forwards;
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sd-tags[data-closing] { animation: none; }
 }
 .sd-tags.is-bsc { border-left-color: color-mix(in srgb, var(--d-bsc) 55%, transparent); }
 .sd-tags.is-adv { border-left-color: color-mix(in srgb, var(--d-adv) 55%, transparent); }
@@ -4017,6 +4120,16 @@ html[data-lum="light"] .sd-gauge {
     top: auto;
     bottom: calc(100% + 4px);
 }
+/* 【2026-11-21 主人「【上线日期】的展开/收起复用下拉菜单的过渡动画」】
+   日历恒向上展开，所以收起也恒朝上淡出，与 .sc-dd-list 的入场/收起走同一对关键帧。
+   [data-closing] 期间由 JS 等动画结束再摘 hidden；降动效时 CSS 关掉、JS 也直接摘。 */
+.sc-cal[data-closing] {
+    animation: scDdOutUp 0.13s ease forwards;
+    pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sc-cal[data-closing] { animation: none; }
+}
 .sc-cal-h {
     display: flex;
     align-items: center;
@@ -4296,6 +4409,12 @@ html[data-lum="light"] .sd-gauge {
     bottom: calc(100% + 4px);
     animation-name: scDdInUp;
 }
+/* 收起方向要跟展开方向一致：向上展开的弹层也朝上淡出。
+   [data-closing] 由 JS 在播放期间打上；选择器比入场那条多一个属性，
+   同优先级下靠后即生效，不会互相打架。 */
+.sc-dd-list[data-drop="up"][data-closing] {
+    animation-name: scDdOutUp;
+}
 @keyframes scDdInUp {
     from { opacity: 0; transform: translateY(4px); }
 }
@@ -4306,8 +4425,26 @@ html[data-lum="light"] .sd-gauge {
 @keyframes scDdIn {
     from { opacity: 0; transform: translateY(-4px); }
 }
+/* 【2026-11-21 主人「【上线日期】的展开/收起复用【世代】等下拉菜单的过渡动画」】
+   原先只有入场（scDdIn），收起是把 hidden 一打、一帧消失。补两条对称的反向动画，
+   收起时由 JS 先播完这段再摘 hidden（见 songs-list.js 的 ddPlayOut / calPlayOut）。
+   0.13s 比入场 0.16s 略短：收起要利落，慢半拍会拖住下一次操作。
+   forwards 保住末帧的 opacity:0，避免播完到摘 hidden 之间回闪一帧。 */
+@keyframes scDdOut {
+    to { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes scDdOutUp {
+    to { opacity: 0; transform: translateY(4px); }
+}
+.sc-dd-list[data-closing] {
+    animation: scDdOut 0.13s ease forwards;
+    /* 播放期间不该还能点中里面已经淡掉的 li（尤其连点两次按钮时） */
+    pointer-events: none;
+}
 @media (prefers-reduced-motion: reduce) {
     .sc-dd-list { animation: none; }
+    /* 降动效时收起也不必等动画，JS 侧另有 prefersReducedMotion() 直接摘 */
+    .sc-dd-list[data-closing] { animation: none; }
     .sc-dd-ico { transition: none; }
 }
 .sc-dd-list li {
@@ -4815,6 +4952,10 @@ html.sc-js .sc-panel[hidden] {
     .sd-stat em {
         font-size: 11px;
     }
+    /* 【2026-11-21 占位「暂无」】窄屏跟着抬半档到 12px，仍比数字 19px 弱一档。 */
+    .sd-stat b.is-none {
+        font-size: 12px;
+    }
     /* 等级标签 10.5 → 12：38px 列宽里 BSC/ADV/EXT 仍放得下（实测不折行） */
     .sd-lrow-k {
         font-size: 12px;
@@ -4865,6 +5006,10 @@ html.sc-js .sc-panel[hidden] {
     /* 世代名可压缩：block + overflow 才让 text-overflow 生效
        （flex 容器自身不画省略号）；line-height 顶住 20px 高度，与分区徽章等高。 */
     .sd-idline .sd-badge-gen {
+    /* 【2026-11-21 主人「有些世代看不清里面的字」】
+       世代色跨度太大（saucer #37474F 亮度仅 0.059，深字压上去 1.99:1）。
+       底色不动，字色改由页面按底色亮度算出的 --gen-ink 下发：深底给白字、浅底给深字，
+       两档都过 4.5:1，浅色世代不会变成白底白字。缺值时兜底深字。 */
         display: block;
         line-height: 20px;
         flex: 0 1 auto;

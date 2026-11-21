@@ -201,6 +201,17 @@ const GEN_LOGO: Record<string, string> = {
   'beyond the Ave.': 'bta',
   音乐魔方: 'yymf',
 };
+/* gen ink: saucer #37474F is 1.99:1 against #0b0f14 */
+const inkOn = (hex) => {
+  if (!hex) return '#0b0f14';
+  const c = hex.replace('#', '');
+  const lin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const l =
+    0.2126 * lin(parseInt(c.slice(0, 2), 16) / 255) +
+    0.7152 * lin(parseInt(c.slice(2, 4), 16) / 255) +
+    0.0722 * lin(parseInt(c.slice(4, 6), 16) / 255);
+  return l < 0.3 ? '#ffffff' : '#0b0f14';
+};
 const genLogo = song ? GEN_LOGO[song.gen] : undefined;
 // clan 走 EXT 分段取色，其余世代用固定色（见上面两处注释）
 const genColor = song
@@ -367,7 +378,11 @@ const metaFoot: Meta[] = song
   {!song ? <NotFound /> : (
   // --gen-c = 本曲所属世代的固定色（与当前主题无关），由父级下发一次，
   // 后代 .sd-disc / .sd-badge-gen 都读它——"唱片颜色 = 世代徽章颜色"天然一致。
-  <section class="band sd" id="songRoot" style={genColor ? `--gen-c: ${genColor}` : undefined}>
+  <section
+  class="band sd"
+  id="songRoot"
+  style={genColor ? '--gen-c: ' + genColor + '; --gen-ink: ' + inkOn(genColor) : undefined}
+>
     {/* 顶部不再是「大圆角玻璃面板里塞一堆小方盒」，而是两栏唱片页式布局：
         左窄栏放曲绘与硬数据（像唱片封套背签），右栏让曲名与定数占据版面。
         曲绘原图只有 144px，放大必糊——所以不追求大图，做成贴合尺寸的实物感封面。 */}
@@ -572,6 +587,21 @@ const metaFoot: Meta[] = song
                   ) : null}
                 </button>
               ))}
+              {/* 【2026-11-21 主人「别名默认最多两行，超出则在「＋」前放一个「v」展开更多」】
+                  折叠靠给超出的药丸加 .is-over（display:none），不靠 max-height：
+                  行高随字号变，量出来写死的高度换个字号就切到半个词。
+                  只有真的超过两行才出现这枚 ∨（.sd-alias[data-more="1"] 时才显示）。 */}
+              <button
+                type="button"
+                class="sd-aliasw sd-aliasw-more"
+                data-alias-more
+                aria-expanded="false"
+                title="展开更多别名"
+              >
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M3 4.5L6 7.5L9 4.5" />
+                </svg>
+              </button>
               <button type="button" class="sd-aliasw sd-aliasw-add" data-alias-add title="添加别名">
                 ＋
               </button>
@@ -655,12 +685,16 @@ const metaFoot: Meta[] = song
                         原来 0 与未抓到都不渲染这块，全库 852 首是 0 →
                         整页只剩一列 Notes，右边空着。现在只要抓到过就照常渲染，
                         0 也一样印出来；未抓到（holds 为 null）仍然不印，
-                        免得拿 0 冒充"没有"。 */}
-                    {holds != null ? (
+                        免得拿 0 冒充"没有"。
+                    【2026-11-21 主人「holds 没数据也要显示暂无」】改成无条件占位：
+                    未抓到时印「暂无」并打 is-none，两块读数始终等高、不塌一半。 */}
+                    {(holds !== undefined) ? (
                       <span class="sd-stat">
                         <i>Holds</i>
                         <span class="sd-stat-bd">
-                          <b>{fmtInt(holds)}</b>
+                          <b class={holds == null ? 'is-none' : undefined}>
+                            {holds == null ? '暂无' : fmtInt(holds)}
+                          </b>
                         </span>
                         {/* 参照条改成与 Notes 同构的 10 格：Holds 为 0 时整条是空的，
                             仍然画出来当刻度（原来的单条填充在 0 时宽度 0%，等于没有）。 */}
@@ -1207,6 +1241,37 @@ const metaFoot: Meta[] = song
        标签行数不定（有人只打一个词、也有人铺满三行），量不出固定高度。
        按钮自己管 aria-expanded（读屏据此播报开合），文案与 title 也跟着换。 */
     var tagToggles = document.querySelectorAll('[data-tags-toggle]');
+    /* 【2026-11-21 主人「详情页【标签】下拉的展开/收起加过渡动画」】
+       与列表页下拉同一套（CSS 的 sdTagsIn / sdTagsOut + [data-closing]）：
+       收起先播 0.16s 再摘 hidden，播放期间用 _outT 计时、连点能中途反转。
+       渲染降动效时不等动画，直接摘。 */
+    var reduceMotion = window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+    function tagsCancelOut(box) {
+      if (!box) return;
+      if (box._outT) {
+        clearTimeout(box._outT);
+        box._outT = null;
+      }
+      box.removeAttribute('data-closing');
+    }
+    function tagsPlayOut(box) {
+      if (!box) return;
+      if (box._outT) clearTimeout(box._outT);
+      if (reduceMotion && reduceMotion.matches) {
+        box.hidden = true;
+        box.removeAttribute('data-closing');
+        box._outT = null;
+        return;
+      }
+      box.setAttribute('data-closing', '');
+      box._outT = setTimeout(function () {
+        box.hidden = true;
+        box.removeAttribute('data-closing');
+        box._outT = null;
+      }, 170); // 略长于 0.16s 的动画，留一帧余量
+    }
     for (var g = 0; g < tagToggles.length; g++) {
       (function (btn) {
         btn.addEventListener('click', function () {
@@ -1215,7 +1280,14 @@ const metaFoot: Meta[] = song
           var open = btn.getAttribute('aria-expanded') === 'true';
           btn.setAttribute('aria-expanded', open ? 'false' : 'true');
           btn.title = open ? '展开标签' : '收起标签';
-          box.hidden = open;
+          if (open) {
+            tagsPlayOut(box);
+          } else {
+            /* 收起动画还在播时又点开：先撤掉 data-closing 与旧计时器，
+               否则入场动画被收起那条盖住、且旧计时器到点仍会把块摘掉。 */
+            tagsCancelOut(box);
+            box.hidden = false;
+          }
         });
       })(tagToggles[g]);
     }
@@ -1340,6 +1412,7 @@ const metaFoot: Meta[] = song
     var aliasForm = document.querySelector('[data-alias-form]');
     var aliasInput = document.querySelector('[data-alias-input]');
     var aliasAddBtn = document.querySelector('[data-alias-add]');
+    var moreBtn = document.querySelector('[data-alias-more]');
 
     function aliasPost(name, del) {
       return fetch('/api/song-alias/' + songId, {
@@ -1347,6 +1420,69 @@ const metaFoot: Meta[] = song
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(del ? { name: name, del: true } : { name: name }),
       });
+    }
+
+    /* 【2026-11-21 主人「别名默认最多两行，超出则在「＋」前放一个「v」展开更多」】
+       折叠用 .is-over（display:none）而不是 max-height 裁切：行高随字号与缩放变，
+       写死一个高度必定在某档字号下切到半个词；按 offsetTop 分行则是量真实排版，
+       换字号、换宽度都自洽。
+       只有真的排到第三行才让 ∨ 出现（.sd-alias[data-more="1"]），两行以内不留空按钮。 */
+    var aliasExpanded = false;
+    var aliasSec = document.querySelector('.sd-alias');
+    /* ∨ 用 DOM 顺序摆位：收在第二行末而不是钉在 ＋ 前——窄屏 ＋ 独占一行时，
+       钉死的 ∨ 会孤零零落到第三行，看上去像“第三条别名”。null = 放回 ＋ 前。 */
+    function placeMore(before) {
+      if (!moreBtn || !aliasWrap) return;
+      aliasWrap.insertBefore(moreBtn, before || aliasAddBtn);
+    }
+    function aliasClamp() {
+      if (!aliasWrap || !aliasSec) return;
+      var pills = aliasWrap.querySelectorAll('.sd-aliasw:not(.sd-aliasw-add):not(.sd-aliasw-more)');
+      var i;
+      for (i = 0; i < pills.length; i++) pills[i].classList.remove('is-over');
+      aliasSec.removeAttribute('data-more');
+      /* 按 offsetTop 归纳出「行首」：同一行的药丸顶坐标相同 */
+      var tops = [];
+      for (i = 0; i < pills.length; i++) {
+        var t = pills[i].offsetTop;
+        var known = false;
+        for (var k = 0; k < tops.length; k++) if (Math.abs(tops[k] - t) <= 2) known = true;
+        if (!known) tops.push(t);
+      }
+      if (tops.length <= 2) {
+        aliasExpanded = false;
+        placeMore(null);
+        if (moreBtn) {
+          moreBtn.setAttribute('aria-expanded', 'false');
+          moreBtn.title = '展开更多别名';
+        }
+        return;
+      }
+      /* 有三行以上：∨ 留在场；尚未展开才把第三行起的药丸收起来 */
+      aliasSec.setAttribute('data-more', '1');
+      if (aliasExpanded || !moreBtn) {
+        placeMore(null);
+        return;
+      }
+      var cut = tops[2] - 2;
+      var firstHidden = null;
+      for (i = 0; i < pills.length; i++) {
+        if (pills[i].offsetTop >= cut) {
+          pills[i].classList.add('is-over');
+          if (!firstHidden) firstHidden = pills[i];
+        }
+      }
+      /* 先把 ∨ 摆到第二行末（插在第一个被收起词的前面），再看它有没有被挤下去。
+         行宽紧的时候宁可再多收一个词，也不让 ∨ 掉到第三行。 */
+      placeMore(firstHidden);
+      /* 判据是「∨ 有没有掉出第二行」，不是「∨ 顶是不是恰好等于第二行顶」：
+         ∨ 与药丸的 offsetTop 天然差几像素（不同盒模型），拿等式当门槛会一路把整行收光。
+         同一行的药丸 offsetTop 完全相同、跨行差一个行高，6px 容差两边都分得开。 */
+      var vis = [];
+      for (i = 0; i < pills.length; i++) if (!pills[i].classList.contains('is-over')) vis.push(pills[i]);
+      while (vis.length && moreBtn.offsetTop - tops[1] > 6) {
+        vis.pop().classList.add('is-over');
+      }
     }
 
     /* 按接口数据重画词行：清掉所有药丸（加号留着），按 mine 补回小叉。
@@ -1359,7 +1495,8 @@ const metaFoot: Meta[] = song
         })
         .then(function (list) {
           if (!list) return;
-          var olds = aliasWrap.querySelectorAll('.sd-aliasw:not(.sd-aliasw-add)');
+          // ∨ 与 ＋ 两枚按钮不参与重画，只清词
+          var olds = aliasWrap.querySelectorAll('.sd-aliasw:not(.sd-aliasw-add):not(.sd-aliasw-more)');
           for (var i = 0; i < olds.length; i++) olds[i].remove();
           /* 空态句「暂无」：服务端只在真的没别名时才铺（见模板里的说明）。
              拿到真数据后有别名 → 删掉；一条都没有 → 补上（本地加完又删掉、或缓存的旧 HTML
@@ -1390,9 +1527,10 @@ const metaFoot: Meta[] = song
               x.textContent = '×';
               btn.appendChild(x);
             }
-            aliasWrap.insertBefore(btn, aliasAddBtn);
+            // 新词要排在这两枚按钮之前（moreBtn 在 addBtn 前面，插到 addBtn 前会落到 ∨ 与 ＋ 之间）
+            aliasWrap.insertBefore(btn, moreBtn || aliasAddBtn);
           }
-
+          aliasClamp();
         })
         .catch(function () {});
     }
@@ -1428,6 +1566,14 @@ const metaFoot: Meta[] = song
         var btn = e.target.closest('.sd-aliasw');
         if (!btn || !aliasWrap.contains(btn)) return;
         if (alLpFire && !e.target.closest('.sd-aliasw-x')) return;
+        /* ∨ 展开钮（2026-11-21）：只管折叠状态，不是别名、不复制、也不进登录分支 */
+        if (btn.hasAttribute('data-alias-more')) {
+          aliasExpanded = !aliasExpanded;
+          btn.setAttribute('aria-expanded', aliasExpanded ? 'true' : 'false');
+          btn.title = aliasExpanded ? '收起别名' : '展开更多别名';
+          aliasClamp();
+          return;
+        }
         if (btn.classList.contains('sd-aliasw-add')) {
           if (!LOGGED) return;
           if (aliasForm.hidden) {
@@ -1462,6 +1608,17 @@ const metaFoot: Meta[] = song
         });
       });
     }
+
+    /* 首屏判一次折叠：服务端直出的药丸不会走 repaintAlias。
+       字体加载完再判一次（rAF 里字体可能还没就位，行宽会变）。 */
+    aliasClamp();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(aliasClamp);
+    /* 换宽度会重排行，折叠的切点也得跟着重算 */
+    var aliasRzT = null;
+    window.addEventListener('resize', function () {
+      if (aliasRzT) clearTimeout(aliasRzT);
+      aliasRzT = setTimeout(aliasClamp, 150);
+    });
 
     if (aliasForm) {
       aliasForm.addEventListener('submit', function (e) {

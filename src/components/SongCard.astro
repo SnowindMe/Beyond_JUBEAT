@@ -25,6 +25,7 @@ import type { Song } from '../lib/db';
 import { catOf, isLimitedEnded, isPickUp } from '../lib/song-view';
 import HoldMarker from './HoldMarker.astro';
 import { jacketUrl } from '../lib/covers';
+import { dash } from '../lib/difficulty';
 
 interface Props {
   song: Song;
@@ -54,8 +55,18 @@ const pick = isPickUp(s, srv);
    前端开关判的仍是运行时的真今天。遮罩是纯装饰（aria-hidden），点击穿透给下面铺满的
    .sc-link，进详情页不受影响。 */
 const removed = isLimitedEnded(s);
-// 徽章颜色按难度固定（2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰
-const dash = (v: number | null) => (v == null ? '—' : String(v));
+/* 【2026-11-21 主人「搜索整数定数（1-8、9.0、10.0）一律用 X.0 形式」】
+   搜索串里整数一律补成一位小数：打「7.0」「9.0」「10.0」都能命中。
+   为什么不像 dash() 那样只补 9/10：搜索是**输入口径**，用户照着卡片上的
+   「9.0」打时会出现「9」这种整档写法（1-8 档卡面就印 7），两边得对齐。
+   打「7」仍能命中——「7.0」里含子串「7」；命中的精度交给 queryForms 的原文形态。 */
+const lvSearch = (v: number | null) =>
+  v == null ? '' : Number.isInteger(v) ? v.toFixed(1) : String(v);
+// 徽章颜色按难度固定（2026-10-22）：BSC 绿 / ADV 黄 / EXT 红；空值灰。
+// 【2026-11-21 主人「曲目页定数 9、10 也显示成 9.0、10.0」】可见的字改成走 lib/difficulty 的
+// dash()（9 起带一位小数）——原来这里自己留着一份 String(v)，把 9 印成「9」，
+// 与同列的 9.1 并排像是两个量级。现在全站只有那一份口径。
+// 搜索串单独走下面 lvSearch()：那边要「所有整数都写 X.0」，与本地的显示口径不同。
 ---
 <article
   class={removed ? 'sc-card is-rm' : 'sc-card'}
@@ -67,7 +78,7 @@ const dash = (v: number | null) => (v == null ? '—' : String(v));
   data-bsc={s.lv.bsc ?? ''}
   data-adv={s.lv.adv ?? ''}
   data-ext={s.lv.ext ?? ''}
-  data-lv={`${s.lv.bsc ?? ''} ${s.lv.adv ?? ''} ${s.lv.ext ?? ''}`}
+  data-lv={`${lvSearch(s.lv.bsc)} ${lvSearch(s.lv.adv)} ${lvSearch(s.lv.ext)}`}
   data-scope={pick ? 'pick' : 'common'}
   data-lu={s.lu ?? ''}
   data-sk={s.sk ?? ''}
