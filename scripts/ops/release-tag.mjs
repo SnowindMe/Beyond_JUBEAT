@@ -117,12 +117,20 @@ if (dry) {
   process.exit(0);
 }
 
+/* 注释标签必须带作者身份，而 runner 上没有全局 git 配置：
+   2026-11-22 第一次真跑就死在 fatal: empty ident name（run 44928848974）。
+   用 -c 就地给身份：只作用于这一条命令，不改 runner 的全局配置，本地手跑也不受污染。 */
+const IDENT = [
+  '-c', 'user.name=' + (process.env.GIT_AUTHOR_NAME || 'github-actions[bot]'),
+  '-c', 'user.email=' + (process.env.GIT_AUTHOR_EMAIL || '41898282+github-actions[bot]@users.noreply.github.com'),
+];
+
 try {
-  sh('git', ['tag', '-a', tag, commit, '-m', 'release ' + version + ' (' + short + ')\n\n' + message]);
+  sh('git', [...IDENT, 'tag', '-a', tag, commit, '-m', 'release ' + version + ' (' + short + ')\n\n' + message]);
 } catch (e) {
   // 并发里另一份刚建过同一个标签：-f 安全，因为本模式从不移动已存在的标签（上面已判过）
   console.log('本地建标签失败，尝试覆盖重建：' + e.message.trim());
-  sh('git', ['tag', '-f', '-a', tag, commit, '-m', 'release ' + version + ' (' + short + ')\n\n' + message]);
+  sh('git', [...IDENT, 'tag', '-f', '-a', tag, commit, '-m', 'release ' + version + ' (' + short + ')\n\n' + message]);
 }
 
 try {
