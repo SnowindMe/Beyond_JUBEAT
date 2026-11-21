@@ -1220,6 +1220,13 @@
       // 把三个原生 select 的当前值刷新到自定义按钮上。
       // resetAll 与程序化改值都必须调它，否则按钮文字会停在旧值
       // （select.value 变了、可见的 .sc-dd-v 没变，用户会以为没重置）。
+      /* 日历的「立即关」，与 ddShutNow 对称，供 ddOpen 调用。 */
+      function calShutNow() {
+        if (!cal) return;
+        cancelOut(cal);
+        cal.hidden = true;
+        if (dateB) dateB.setAttribute('aria-expanded', 'false');
+      }
       function ddRefresh() {
         for (var i = 0; i < dds.length; i++) ddSync(dds[i]);
       }
@@ -1232,9 +1239,28 @@
           items[i].setAttribute('aria-selected', items[i].getAttribute('data-v') === cur ? 'true' : 'false');
         }
       }
+      /* 立即关掉一个下拉：不播 0.13s 淡出，直接打上 hidden。
+         用在「另一层要顶上来」的场合——淡出的那层会被新层整个盖住，播了也看不见，
+         还会留下 130ms 空档；不可省的是 cancelOut，否则上一轮的 _outT 会在新层
+         展开后把列表摘掉。 */
+      function ddShutNow(dd) {
+        var list = dd.querySelector('.sc-dd-list');
+        cancelOut(list);
+        dd.setAttribute('data-open', 'false');
+        dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'false');
+        list.hidden = true;
+        list.style.maxHeight = ''; // 展开时写过内联上限，关掉必须清，否则下次沿用旧值
+      }
       function ddOpen(dd) {
-        // 同时只允许一个展开：否则两个弹层会叠在一起
-        for (var i = 0; i < dds.length; i++) if (dds[i] !== dd) ddClose(dds[i]);
+        // 同时只允许一个展开：否则两个弹层会叠在一起。
+        // 关闭用 ddShutNow 而非 ddClose：同类弹层一个接一个点过去时，
+        // 播 0.13s 淡出的那一层会被新层整个盖住，白白多出一段两层同时在的窗口。
+        for (var i = 0; i < dds.length; i++) if (dds[i] !== dd) ddShutNow(dds[i]);
+        /* 【2026-11-21 主人「先点上线日期、再点世代，日历还开着」】
+           互斥原来只做了一半：calOpen 会关掉所有下拉，ddOpen 却不关日历，
+           于是「日历 → 下拉」这个方向的第二层照样叠上去。
+           两个方向写在一起才叫互斥，别只在一边拦。 */
+        calShutNow();
         dd.setAttribute('data-open', 'true');
         dd.querySelector('.sc-dd-b').setAttribute('aria-expanded', 'true');
         var list = dd.querySelector('.sc-dd-list');
@@ -1501,7 +1527,8 @@
         calGrid.innerHTML = html + '</div>';
       }
       function calOpen() {
-        for (var i = 0; i < dds.length; i++) ddClose(dds[i]); // 与 .sc-dd 互斥
+        // 与 .sc-dd 互斥（反方向见 ddOpen 里的 calShutNow）
+        for (var i = 0; i < dds.length; i++) ddShutNow(dds[i]);
         calMonth = '';
         calMode = 'day';
         dateSet = datePool(); // 每次都按当前服重取：切服后可选日期跟着变
