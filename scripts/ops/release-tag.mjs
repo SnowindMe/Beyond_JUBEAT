@@ -24,6 +24,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes('--' + name);
@@ -114,6 +116,8 @@ const message = sh('git', ['log', '-1', '--pretty=%s', commit]).trim().slice(0, 
 
 if (dry) {
   console.log('[dry] 将执行：git tag -a ' + tag + ' ' + short + ' -m <release 说明>');
+  // 正文也一起预览：说明文件写没写、取到的是哪一份，dry 阶段就该看出来
+  console.log('[dry] Release 正文预览：\n' + releaseBody(commit, version, tag).split('\n').slice(0, 24).join('\n'));
   process.exit(0);
 }
 
@@ -153,16 +157,59 @@ try {
 }
 console.log('已推送标签 ' + tag + ' → ' + short);
 
-// Release 自动生成说明：按提交归类 PR/作者，标题直接用版本号
+/* Release 正文：以人写的 docs/releases/v<版本号>.md 为准。
+   2026-11-22 首次真发布当场暴露：--generate-notes 在没有上一个标签时，只能生成一条
+   Full Changelog 链接，Release 页面等于空白——别人看不出这版改了什么。
+   缺文件时不静默留白：退化成从提交列表自动整理，并在正文顶部与 job summary 里都标出来。 */
+function releaseBody(rev, ver, tagName) {
+  const notePath = 'docs/releases/v' + ver + '.md';
+  let written = '';
+  try { written = sh('git', ['show', rev + ':' + notePath]).trim(); } catch { /* 没写就兜底 */ }
+  const slug = process.env.GITHUB_REPOSITORY || repoSlug();
+  let prev = '';
+  try { prev = sh('git', ['describe', '--tags', '--abbrev=0', '--match', 'v*', commit + '^']).trim(); } catch { /* 第一版没有上一标签 */ }
+  const range = prev ? prev + '..' + commit : commit;
+  let commits = '';
+  try {
+    commits = sh('git', ['log', '--no-merges', '--pretty=- %s（%h）', range + (prev ? '' : ' -n 20')]).trim();
+  } catch { /* ignore */ }
+  const link = prev
+    ? '**提交对比**：[`' + prev + '...' + tagName + '`](https://github.com/' + slug + '/compare/' + prev + '...' + tagName + ')'
+    : '**全部提交**：https://github.com/' + slug + '/commits/' + tagName;
+  if (written) return written + '\n\n---\n\n' + link + '\n';
+  console.warn('缺 ' + notePath + '，Release 正文退化成自动整理的提交列表。');
+  summary(['- ⚠️ 本次发版缺 `' + notePath + '`：Release 正文用的是自动整理的提交列表，建议补写后 `gh release edit ' + tagName + ' --notes-file ' + notePath + '`']);
+  return [
+    '> ⚠️ 这一版没有写版本说明（`' + notePath + '`）。下面是自动整理的提交列表，供参考。',
+    '',
+    commits || '- （取不到提交列表）',
+    '',
+    '---',
+    '',
+    link,
+    '',
+  ].join('\n');
+}
+
+function repoSlug() {
+  const url = sh('git', ['remote', 'get-url', 'origin']).trim();
+  const m = url.match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
+  return m ? m[1] : 'SnowindMe/Beyond_JUBEAT';
+}
+
+const bodyFile = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'release-body-' + tag + '.md');
+fs.writeFileSync(bodyFile, releaseBody(commit, version, tag), 'utf8');
+
+// 标题直接用版本号，正文来自上面组装的说明文件
 try {
-  console.log(sh('gh', ['release', 'create', tag, '--target', commit, '--verify-tag', '--title', 'v' + version, '--generate-notes']).trim());
+  console.log(sh('gh', ['release', 'create', tag, '--target', commit, '--verify-tag', '--title', 'v' + version, '--notes-file', bodyFile]).trim());
 } catch (e) {
   summary([
     '- 标签 ' + tag + ' 已成功推送，但创建 Release 失败',
     '```',
     (e.stderr ? String(e.stderr) : e.message).trim().slice(0, 2000),
     '```',
-    '- 补救：`gh release create ' + tag + ' --verify-tag --generate-notes` 会把 Release 补在这个标签上',
+    '- 补救：`gh release create ' + tag + ' --verify-tag --notes-file ' + bodyFile + '` 会把 Release 补在这个标签上',
   ]);
   process.exit(1);
 }
