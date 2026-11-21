@@ -279,6 +279,26 @@ push 到 main，Cloudflare 的 Git 集成自动构建 + 部署（`wrangler.jsonc
 
 **Worker 侧的 `caches.default` 不用管**：缓存 key 里带 `SITE_VERSION`（`src/middleware.ts` 的 `CACHE_PREFIX`），发版换版本号即自动换 key，旧条目自然失效。
 
+### 版本标签
+
+每次发版对应一个 git tag 和一个 GitHub Release，由 `.github/workflows/release-tag.yml` 自动生成——人工只改 `src/data/site.json` 的 `version`，不再手写 tag。它是 `build-check` 的 `workflow_run` 下游，只有 main 上的 push 且构建 + 自检全绿才打；构建失败的那一次不会有 tag。
+
+标签打在「这次构建对应的那个提交」上（`workflow_run.head_sha`），而**不是**此刻 main 的最新提交——发版提交后面又跟了一个样式提交时，两个 sha 会不一样。版本号从那个提交里的 `site.json` 读，和页脚同源。
+
+tag 命名：
+
+- 默认 `v1.2.3`，与 `site.json` 的版本号一致（不带前缀、不改写）。
+- 该版本号已被**别的提交**占着（版本号没变就继续提交）时，默认 **silent 模式跳过**、日志写明「已指向 abc1234」——同一版本号的后续提交本来就还属于这次发布，tag 只代表这个版本号第一次出现。
+- 要在每个提交上都留标记就换 **strict 模式**：退化成 `v1.2.3-abc1234`，可追溯、不静默丢弃。两种模式都**不移动**已存在的标签，所以标签永远指向某个真实出厂过的提交。
+
+失败是红的，不是 `continue-on-error`——tag 是发布凭据，静默失败比红更坏。失败的 step 会把 stderr 原文和补救命令写进 job summary：
+
+```bash
+git push origin refs/tags/v1.2.3                    # 标签建了但没推上去
+gh release create v1.2.3 --verify-tag --generate-notes   # 标签推上去了但 Release 建失败
+gh workflow run release-tag -f sha=<commit> -f mode=strict   # 那次构建没被触发，整段漏跑
+```
+
 **上线前必须先跑的迁移**（都是幂等的 `IF NOT EXISTS` / `IF EXISTS`，与 `db/schema.sql` 里对应的建表段逐字同源）：
 
 ```bash

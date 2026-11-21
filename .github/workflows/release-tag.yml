@@ -1,0 +1,80 @@
+name: release-tag
+
+# 【2026-11-22】发版即打 tag：版本号一变，自动打标签并建 Release。
+#
+# 版本号只有一个出处：src/data/site.json 的 version（页脚 v X.X.X 就读它、
+# EdgeOne 清缓存也在等它上线）。发布流程本来就是「改这个文件 + push main」→
+# Cloudflare Workers Builds 自动构建上线，所以「写 tag」也挂在这里，人工只改版本号。
+#
+# 位置选在 build-check 之后（workflow_run），不和它并行：构建没编译过、自检没过，
+# 就不该留下一个「已发布」的 tag。build-check 用默认并发组（按提交 sha），
+# 所以这里再触发一次同名 workflow 不会互相取消。
+#
+# 两个必须知道的边界：
+#   1. 版本号没变、main 继续提交（只改样式/文案）时，默认 silent 模式跳过、正常退出。
+#      要每个提交都留标记，用 --mode strict（或手动触发时选 strict），它会退化成
+#      v1.2.3-abc1234。两种模式都不移动已有 tag。
+#   2. 打不上 tag 时流程是**红的**（不是 continue-on-error），日志里有失败步骤、
+#      stderr 原文与补救命令。故意的：tag 是发布凭据，静默失败比红更坏。
+on:
+  workflow_run:
+    workflows: ['build-check']
+    types: [completed]
+    branches: [main]
+  # 补救出口：漏打/要补发时手动跑，显式给提交与模式
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 要打 tag 的提交 sha（留空 = main 最新）
+        required: false
+      mode:
+        description: silent = 版本号已被占用就跳过；strict = 退回 <tag>-<sha7>
+        type: choice
+        options: [silent, strict]
+        default: silent
+
+# tag 是主键：同一次发版的重复触发只跑一份，判重与 git push 都在这把锁里。
+concurrency:
+  group: release-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    # 只给「main 上的 push 且构建自检跑绿」放行。PR 的 build-check 也会触发本 workflow，
+    # 少这层过滤就会给 PR 提交打上版本号 tag。手动触发不受这些条件约束。
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # 打 tag、建 Release
+      actions: read # 读触发它的那次构建
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # gh release create 用
+      SHA: ${{ github.event.workflow_run.head_sha || github.event.inputs.sha }}
+      MODE: ${{ github.event.inputs.mode || 'silent' }}
+    steps:
+      # fetch-depth: 0 是必须的：脚本要判重、要把 tag 推到远端、要读提交信息当 Release 标题。
+      # 浅克隆下 refs/tags 与 ls-remote 之外的远端标签都看不到，判重会假阴性。
+      # checkout 的是「那次构建对应的提交」，不是此刻 main 的最新提交——两者在并发提交下会错位。
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.event.inputs.sha || 'main' }}
+          fetch-depth: 0
+
+      # scripts/ops/release-tag.mjs 只用 node 标准库 + git + gh，不需要 npm ci，也就不必付安装时间。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 打 tag 并建 Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --tags --force origin # 先把已存在的标签取全，判重才准
+          node scripts/ops/release-tag.mjs \
+            --ref "${SHA:-origin/main}" \
+            --mode "$MODE"
