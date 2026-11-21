@@ -32,6 +32,7 @@
 - `ci/check-song-edits.mjs`：曲目编辑面板的越权 / 校验 / 列名对齐（起内存库冒充 D1）
 - `ci/check-search-keys.cjs`：读音条目的孤儿键、缺条目、大小写
 - `ci/check-bar-coverage.cjs`、`ci/check-fortune-dist.mjs`：密度条覆盖率、运势分布
+- `ci/check-data-consistency.cjs`：数据产物自洽（top16 不许空 cover、cover 必须有图床映射、data.json 的 stat 不许过期、两份产物不许打架）。2026-11-21 首页方阵缺一格的复盘产物，改数据管线后必跑
 
 ## 其它
 
