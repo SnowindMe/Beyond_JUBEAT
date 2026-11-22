@@ -2,6 +2,7 @@
   "name": "beyond-jubeat",
   "version": "4.0.0",
   "private": true,
+  "license": "MIT",
   "description": "jubeat 音乐魔方中文资料站",
   "scripts": {
     "data": "node scripts/build-data.cjs && node scripts/build-search-key.cjs && node scripts/build-difficulty-stats.cjs",

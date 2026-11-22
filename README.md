@@ -6,7 +6,7 @@
 [![release](https://img.shields.io/github/v/release/SnowindMe/Beyond_JUBEAT)](https://github.com/SnowindMe/Beyond_JUBEAT/releases)
 ![Astro](https://img.shields.io/badge/Astro-7.4-ff5d01)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-live-F38020)
-![license](https://img.shields.io/badge/license-unlicensed-9ca3af)
+![license](https://img.shields.io/badge/license-MIT-green)
 
 线上：<https://wiki.byd-ub.top> · 国内加速：<https://wiki-cn.byd-ub.top>
 
@@ -481,7 +481,9 @@ Windows 上的已知坑，见[本机 workerd 的两个坑](#本机-workerd-的�
 
 ## 许可与致谢
 
-**许可**：本仓库**未附 LICENSE 文件**，因此默认保留所有权利，不构成开源授权；如需复用代码请先联系仓库所有者。站内的曲名、曲绘、音频、商标等版权归 KONAMI 及各权利人所有，本站为非官方资料站，与 KONAMI 无隶属关系。
+**许可**：本仓库的**代码**以 [MIT](LICENSE) 授权，可自由使用、修改、分发，保留版权与许可声明即可。
+
+但 MIT **不覆盖站内内容**：曲名、曲绘、音频、谱面数据、商标等版权归 KONAMI 及各权利人所有，本站为非官方资料站，与 KONAMI 无隶属关系。二次部署请自行确认内容的使用边界——「代码开源」不等于「内容可用」。
 
 **数据与素材来源**：
 
