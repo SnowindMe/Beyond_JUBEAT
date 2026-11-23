@@ -1,5 +1,5 @@
 ---
-// 首页 · Pop 调查投票浮标（2026-11-23 主人给了腾讯问卷的嵌入代码，要求改成站点风格）
+// 首页 · 最喜爱歌曲投票浮标（2026-11-23 主人给了腾讯问卷的嵌入代码，要求改成站点风格）
 //
 // 原代码是一块蓝底 #699ef5 的竖排小条，直接贴在页面左下。问题有三条：
 //   ① 蓝色是写死的，16 套世代主题切换时它一直是一块蓝，和主题打架；
@@ -10,8 +10,8 @@
 // 改法（只换皮，链接与文案不动）：
 //   · 容器改成站内玻璃板 —— 背景取 --glass2、描边取 --edge，主题一切换自动跟随；
 //   · 强调只留一条 3px 的 --acc 竖线（装饰线不承担可读性，浅色世代也不怕对比度）；
-//   · 桌面保持竖排（横条在左侧边缘会吃掉正文宽度）：字号收到 13px、字距放宽、条身 38px；
-//     竖排用 text-orientation: upright，否则 "Pop" 会整体躺倒、与竖着的汉字凑在一起很难读；
+//   · 桌面保持竖排（横条在左侧边缘会吃掉正文宽度）：字号收到 12.5px、条身 38px；
+//     竖排用 text-orientation: upright，否则拉丁字母/标点会整体躺倒、与竖着的汉字凑在一起很难读；
 //   · 窄屏反倒该横过来（实测竖条 38×142 正好压住「相关站点」与第一行友链），
 //     改成贴左下角的短药丸，只压卡片下沿空白；
 //   · 补 hover（整体外滑 3px、描边提亮）/ focus-visible（内描边 --focus）/
@@ -36,12 +36,12 @@ const url = 'https://wj.qq.com/s2/28779222/lblc/';
 </script>
 
 <div class="vf" id="voteFloat">
-  <button type="button" class="vf-x" id="voteFloatX" aria-label="关闭调查浮标" title="关闭">
+  <button type="button" class="vf-x" id="voteFloatX" aria-label="关闭投票浮标" title="关闭">
     <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" /></svg>
   </button>
 
-  <a class="vf-a" href={url} target="_blank" rel="noopener noreferrer" title="参与 Pop 调查（新窗口打开）">
-    <span class="vf-txt">Pop 调查</span>
+  <a class="vf-a" href={url} target="_blank" rel="noopener noreferrer" title="参与最喜爱歌曲投票（新窗口打开）">
+    <span class="vf-txt">最喜爱歌曲 · 投票</span>
     <svg class="vf-ico" viewBox="0 0 12 12" aria-hidden="true">
       <path d="M3.2 8.8L8.6 3.4M4.4 3.2h4.4v4.4" />
     </svg>
@@ -116,15 +116,17 @@ const url = 'https://wj.qq.com/s2/28779222/lblc/';
     box-shadow: inset 0 0 0 2px var(--focus);
     border-radius: 3px;
   }
-  /* text-orientation: upright 是关键：竖排下拉丁字母默认整体旋转 90°，
-     "Pop" 会变成躺倒的一串、和竖着的汉字凑在一起很难读；改成逐字直立后就整条竖读通了。 */
+  /* text-orientation: upright 是关键：竖排下拉丁字母默认整体旋转 90° 会躺倒，
+     与竖着的汉字凑在一起很难读；逐字直立后才整条竖读得通（文案里有「 · 」这类标点也得立着）。
+     2026-11-23 文案从「Pop 调查」改成「最喜爱歌曲 · 投票」，字数翻了两倍多，
+     字号收到 12.5px、字距 0.06em，条身高度才不至于冲到两百多像素。 */
   .vf-txt {
     writing-mode: vertical-rl;
     text-orientation: upright;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 500;
-    line-height: 1.1;
-    letter-spacing: 0.1em;
+    line-height: 1.15;
+    letter-spacing: 0.06em;
     white-space: nowrap;
   }
   .vf-ico {

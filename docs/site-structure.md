@@ -13,7 +13,7 @@ Beyond ↑ JUBEAT（https://wiki.byd-ub.top）
 │
 ├─ ✅ 首页 /
 │   ├─ Hero 主视觉（站标 / 4 张统计卡 / 15 宫格曲绘方块）
-│   ├─ Pop 调查浮标（左下角，仅首页；`components/VoteFloat.astro` + Base 的 showVote 开关，可关闭、按天记）
+│   ├─ 最喜爱歌曲·投票浮标（左下角，仅首页；`components/VoteFloat.astro` + Base 的 showVote 开关，可关闭、按天记）
 │   ├─ 世代主题切换（顶栏 #tswBtn → 主题弹层，套数取 THEMES.length，2026-11-04 为 17）
 │   └─ 施工中占位（index.astro:15-21）
 │
