@@ -6,6 +6,7 @@ import Header from '../components/Header.astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import BootScreen from '../components/BootScreen.astro';
 import BackTop from '../components/BackTop.astro';
+import VoteFloat from '../components/VoteFloat.astro';
 import data from '../data/data.json';
 import site from '../data/site.json';
 import { pageTitle, SITE_NAME } from '../lib/title';
@@ -25,6 +26,8 @@ interface Props {
   noindex?: boolean;
   /** main 的附加类名：目前只有 404 页用它把内容在页头页脚之间垂直居中 */
   mainClass?: string;
+  /** 挂 Pop 调查浮标：只有首页传 true（浮标是「首页来的人顺手投一票」，全站都挂反而成噪音） */
+  showVote?: boolean;
 }
 
 const SITE = 'https://wiki.byd-ub.top';
@@ -45,6 +48,7 @@ const {
   ogImage = SITE + '/assets/images/og/cover.png',
   noindex = false,
   mainClass = '',
+  showVote = false,
 } = Astro.props;
 
 const canonical = canonicalPath ? SITE + canonicalPath : null;
@@ -330,6 +334,12 @@ const BUILD_DATE = (buildStamp as { stamp: string }).stamp;
       });
     }
   </script>
+  {/* 固定浮层一律挂在 body 这一层（2026-11-23）：Astro 的 <slot> 是原地展开，
+      page 里写 <Fragment slot="float"> 看起来像换了位置，实际仍落在 <main> 里，
+      会被 .wrap 的 transform 变成**相对祖先定位**——bottom 算的是整页高度，
+      浮标跑到首屏视野之外（实测 y=1006 而视口只有 805）。
+      所以浮层不设插槽，由外壳直接按开关渲染，位置由外壳保证。 */}
+  {showVote && <VoteFloat />}
   <BackTop />
   <ThemeScript />
 </body>

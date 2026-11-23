@@ -26,6 +26,7 @@ export const prerender = false;
   title={pageTitle('首页')}
   canonicalPath="/"
   description={`jubeat 音乐魔方中文资料站：日服 ${GEN_JP.length} 个世代、国服 ${GEN_CN.length} 个世代，共 ${data.stat.songs} 首曲目、${data.stat.charts} 张谱面，其中 ${THEME_COUNT} 套世代主题可切换。`}
+  showVote
 >
   {/* 首屏 LCP 图 preload（2026-11-15 P0）。首页此前 0 条 preload，而首屏最大的图是字标
       字标图：它在 <Hero /> 里指向 #wordLogo，**HTML 根本不写 src**（要有 src 就会先下默认

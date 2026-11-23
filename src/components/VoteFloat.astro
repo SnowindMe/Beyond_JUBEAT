@@ -1,0 +1,239 @@
+---
+// 首页 · Pop 调查投票浮标（2026-11-23 主人给了腾讯问卷的嵌入代码，要求改成站点风格）
+//
+// 原代码是一块蓝底 #699ef5 的竖排小条，直接贴在页面左下。问题有三条：
+//   ① 蓝色是写死的，16 套世代主题切换时它一直是一块蓝，和主题打架；
+//   ② 经典写法靠行内 style，站点里所有交互态（hover / focus / 关闭）都没有；
+//   ③ 用 writing-mode 竖排中文是对的（横向字条在左侧边缘会吃掉正文宽度），但字号 16px、
+//      高度 100px 偏敦，且没有「点得动」的暗示。
+//
+// 改法（只换皮，链接与文案不动）：
+//   · 容器改成站内玻璃板 —— 背景取 --glass2、描边取 --edge，主题一切换自动跟随；
+//   · 强调只留一条 3px 的 --acc 竖线（装饰线不承担可读性，浅色世代也不怕对比度）；
+//   · 桌面保持竖排（横条在左侧边缘会吃掉正文宽度）：字号收到 13px、字距放宽、条身 38px；
+//     竖排用 text-orientation: upright，否则 "Pop" 会整体躺倒、与竖着的汉字凑在一起很难读；
+//   · 窄屏反倒该横过来（实测竖条 38×142 正好压住「相关站点」与第一行友链），
+//     改成贴左下角的短药丸，只压卡片下沿空白；
+//   · 补 hover（整体外滑 3px、描边提亮）/ focus-visible（内描边 --focus）/
+//     reduced-motion（全关过渡）三态；
+//   · 加一个关闭键，按天记（当天点掉，明天重新出现）——避免长期霸屏。
+// 只在首页引入：浮标要的是「首页来的人顺手投一票」，出现在每一页反而成噪音
+// （由 Base.astro 的 showVote 开关控制，且必须挂在 body 层，理由见那边注释）。
+const url = 'https://wj.qq.com/s2/28779222/lblc/';
+---
+
+{/* 关闭态要在元素出现在屏幕上之前就生效，否则点过的人每次进首页都会看到它闪一下。
+    这段紧贴在元素前面、同步执行，只往 <html> 上挂一个类，不碰 DOM 结构。 */}
+<script is:inline>
+  (function () {
+    try {
+      var d = new Date();
+      var k = 'voteFloatDismissed';
+      var today = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      if (localStorage.getItem(k) === today) document.documentElement.classList.add('vf-off');
+    } catch (e) {}
+  })();
+</script>
+
+<div class="vf" id="voteFloat">
+  <button type="button" class="vf-x" id="voteFloatX" aria-label="关闭调查浮标" title="关闭">
+    <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 3l6 6M9 3l-6 6" /></svg>
+  </button>
+
+  <a class="vf-a" href={url} target="_blank" rel="noopener noreferrer" title="参与 Pop 调查（新窗口打开）">
+    <span class="vf-txt">Pop 调查</span>
+    <svg class="vf-ico" viewBox="0 0 12 12" aria-hidden="true">
+      <path d="M3.2 8.8L8.6 3.4M4.4 3.2h4.4v4.4" />
+    </svg>
+  </a>
+</div>
+
+<style is:global>
+  /* 默认隐藏的开关：点过的人不进 DOM 层面（display:none 会连带跳出 Tab 顺序） */
+  .vf-off .vf {
+    display: none;
+  }
+
+  .vf {
+    position: fixed;
+    left: 0;
+    /* 压在下五分之一：避开首屏字标、导语与 CTA 那一带的正文，也不与右下角的回顶按钮争位置 */
+    bottom: clamp(56px, 12vh, 120px);
+    z-index: 55;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 38px;
+    min-height: 96px;
+    padding: 5px 0 9px;
+    border: 1px solid var(--edge);
+    border-left: none;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    background: var(--glass2);
+    backdrop-filter: blur(10px);
+    transition: transform 0.22s cubic-bezier(0.22, 0.7, 0.3, 1), border-color 0.22s,
+      box-shadow 0.22s;
+  }
+  /* 左侧强调线：用伪元素而不是 border-left，宽度才能只在 hover 时变化而不挤动内容 */
+  .vf::before {
+    content: "";
+    position: absolute;
+    inset: 7px auto 7px 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--acc);
+    opacity: 0.85;
+    transition: width 0.22s, opacity 0.22s;
+  }
+  .vf:hover {
+    transform: translateX(3px);
+    border-color: var(--edge2);
+    box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.65);
+  }
+  .vf:hover::before {
+    width: 5px;
+    opacity: 1;
+  }
+  .vf:focus-within {
+    border-color: var(--edge2);
+  }
+
+  .vf-a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 1px 0 2px;
+    color: var(--ink);
+    text-decoration: none;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+  .vf-a:focus-visible {
+    /* 浮标贴左边缘，外描边会被视口裁掉，改内描边 */
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--focus);
+    border-radius: 3px;
+  }
+  /* text-orientation: upright 是关键：竖排下拉丁字母默认整体旋转 90°，
+     "Pop" 会变成躺倒的一串、和竖着的汉字凑在一起很难读；改成逐字直立后就整条竖读通了。 */
+  .vf-txt {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .vf-ico {
+    width: 11px;
+    height: 11px;
+    fill: none;
+    stroke: var(--ink3);
+    stroke-width: 1.3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.22s;
+  }
+  .vf:hover .vf-ico {
+    stroke: var(--acc-ink);
+  }
+
+  /* 视觉只有 10px 的叉，但命中区要给到 24（手机上 32）：触点远小于图形是这类小关闭键
+     最容易踩的坑；用 width/height 撑开命中区、图形本身留在 10px。 */
+  .vf-x {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin-top: -1px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink3);
+    cursor: pointer;
+    transition: color 0.18s, background 0.18s;
+  }
+  .vf-x svg {
+    width: 10px;
+    height: 10px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+  }
+  .vf-x:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  .vf-x:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  /* 窄屏改成贴底横排药丸（2026-11-23 实测）：竖条只有 38px 宽却纵向占 142px，
+     手机上会正好压住「相关站点」标题与第一行友链；横排后只占左侧一小段底边，
+     压住的是卡片下沿的空白，读正文不再被挡。 */
+  @media (max-width: 560px) {
+    .vf {
+      flex-direction: row-reverse;
+      align-items: center;
+      gap: 2px;
+      width: auto;
+      min-height: 0;
+      padding: 0 6px 0 0;
+      /* 贴到贴底角：固定件在手机上必然压着内容，角落比中段更不碍读 */
+      bottom: 12px;
+      border-radius: 0 var(--pill) var(--pill) 0;
+    }
+    .vf::before {
+      inset: 6px auto 6px 0;
+    }
+    .vf-a {
+      flex-direction: row;
+      gap: 6px;
+      min-height: 44px;
+      padding: 0 4px 0 8px;
+    }
+    .vf-x {
+      width: 32px;
+      height: 32px;
+    }
+    .vf-txt {
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vf,
+    .vf::before,
+    .vf-ico,
+    .vf-x {
+      transition: none;
+    }
+    .vf:hover {
+      transform: none;
+    }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    var x = document.getElementById('voteFloatX');
+    if (!x) return;
+    x.addEventListener('click', function () {
+      var d = new Date();
+      var today = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+      try {
+        localStorage.setItem('voteFloatDismissed', today);
+      } catch (e) {}
+      document.documentElement.classList.add('vf-off');
+    });
+  })();
+</script>
