@@ -299,7 +299,8 @@ const MAX_LAYERS = 8;
  *
  * 关于流量分摊（主人要求）：/assets/* **不在 run_worker_first 里**，
  * 所以浏览器直接请求这些文件时由 CF 静态资源层返回，根本不进 Worker；
- * 加上 public/_headers 里 /assets/diff/* 配了 1 年 immutable，
+ * 加上 public/_headers 里 /assets/* 配了 1 年 immutable（/assets/diff/* 原本单列一条，
+ * 2026-11-03 d2147ce 因 CF 的同名头会累加成两条而并进 /assets/*，行为不变），
  * 边缘与浏览器都长缓存。而这份数据是**构建期快照**，
  * 运行时完全不碰 ub.thregren.world —— 上游不承担本站的读取流量。
  *
