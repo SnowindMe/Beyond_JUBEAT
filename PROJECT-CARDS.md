@@ -1,4 +1,4 @@
-<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T2 -->
+<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T3 -->
 # Project cards
 
 > Maintained by Deep PTC in DeepSeek Harness: edit in a Deep PTC conversation, view 特点卡片 / Project cards.
@@ -22,6 +22,7 @@
 
 
 ## Completed tasks / 已完成任务
-<!-- card id=tasks kind=tasks rev=1 updated=2026-11-25T03:03:32.298Z -->
+<!-- card id=tasks kind=tasks rev=2 updated=2026-11-25T18:34:21.381Z -->
 
 - **T1** [done] 相关站点共新增两个网站（G4 的 FaFuMemo 进友链、本条 JubeatLog 进 Jubeat相关），都按现有条 — 首页与导航八条改版已发 v1.71.0 并上线：三枚按钮、Star 大按钮、游客头像、Jubeat相关改名与新增站点、README 致谢迁移、安装按钮下线；九段自检与 CI 全过，线上八项逐条实测通过。 (11/25)
+- **T2** [done] 调整首页视觉排布：统一各主题世代 logo 的显示尺寸，同一行内大小一致、比例不变形 — 首页 logo 尺寸统一 + 模块留白统一已落地，三档验证通过，本地提交 7466626（未推送） (11/26)

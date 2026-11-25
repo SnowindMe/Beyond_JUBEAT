@@ -1012,7 +1012,7 @@ html[data-lum="light"] .wl-pre {
     transform: translateY(-50%);
     /* 宽度 = 字身带 1em × (ar / bh)：整图等比放大，字身带正好 1em 高；
        高度由各代主题块里的 aspect-ratio 反推（ar/bh × 1em ÷ ar = 1em/bh），比例不变形 */
-    width: calc(var(--wl-em, 22px) * var(--wl-ar, 1.5) / var(--bh, 0.5));
+    width: calc(var(--wl-em, 22px) * var(--wl-ar, 1.5) / var(--bh, 0.5) * var(--wl-s, 1));
     height: auto;
     max-width: none;
 }
@@ -1038,7 +1038,10 @@ html[data-g="ave"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; --wl-ar: 
 html[data-g="bta"][data-g] { --bh: 0.3619; --bc: 0.3290; --bt: 0.2952; --wl-ar: 1.3571; }
 /* U'nit 字标 570×214：主体 jubeat 字母带在 y=36..108（连续 73 行跨度≥85%），
    下方 y=150 那条是 U'nit 横条上缘，不属于字身带。 */
-html[data-g="unit"][data-g] { --bh: 0.3411; --bc: 0.3364; --bt: 0.1682; --wl-ar: 2.6636; }
+/* 【2026-11-26 主人「首页 jubeat u'nit 的 logo 可以缩放小一些」】本代图形顶满字身带上下、
+   视觉比其余世代重，单独按 0.65 缩一档（--wl-s 只在本代覆盖，其余世代默认 1）。
+   缩放只压整张图的尺寸，字身带随之变矮，但仍以整图中线压在行中线上，行高与对齐不变。 */
+html[data-g="unit"][data-g] { --bh: 0.3411; --bc: 0.3364; --bt: 0.1682; --wl-ar: 2.6636; --wl-s: 0.65; }
 html[data-g="yymf"][data-g] { --bh: 0.5177; --bc: 0.3297; --bt: 0.0708; --wl-ar: 1.9899; }
 html[data-g="clan_blue"],
 html[data-g="clan_green"],
