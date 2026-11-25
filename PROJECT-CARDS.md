@@ -1,4 +1,4 @@
-<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T10 -->
+<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T11 -->
 # Project cards
 
 > Maintained by Deep PTC in DeepSeek Harness: edit in a Deep PTC conversation, view 特点卡片 / Project cards.
@@ -22,10 +22,11 @@
 
 
 ## Completed tasks / 已完成任务
-<!-- card id=tasks kind=tasks rev=8 updated=2026-11-25T20:10:20.136Z -->
+<!-- card id=tasks kind=tasks rev=9 updated=2026-11-25T20:40:24.721Z -->
 
 - **T6** [done] 首页与导航八条改版已发 v1.71.0 并上线：三枚按钮、Star 大按钮、游客头像、Jubeat相关改名与新增站点、README 致谢迁移、安装按钮下线；九段自检与 CI 全过，线上八项逐条实测通过。
 - **T7** [done] 首页 logo 尺寸统一（槽高 1em、整图自居中、等比不裁）与模块留白统一（--sec-gap）已落地并推送 7466626；随后 U'nit 按 --wl-s 0.65 单独缩小推送 160e319。四档无溢出，自检全过。
 - **T8** [done] 只调 U'nit 这一代的缩放，其余世代与整行对齐不变 — U'nit 字标按 --wl-s 0.65 单独缩小并推送 160e319，线上实测 281→182.7px，四档无溢出，其余世代不变。 (11/26)
 - **T5** [done] 移动端标题行居中并放大字标（≤768px 档）：--wl-em 改 clamp(16px,4.6vw,24px)、.word-line min-width:0、.word-l 槽宽=图宽；390 档左右留白均 61.8px、字标 71.3→91.2、距简介 22px，桌面 1440 逐值不变。推送 3b701c3，线上实测通过。 (11/26)
 - **T9** [done] 改动只落在 ≤768px 档，桌面 1440 及各代对齐、行宽现状不变 — 移动端标题行已居中、字标放大且不影响桌面，推送 3b701c3 并线上实测通过。 (11/26)
+- **T10** [done] 修复 769–809px 档首页曲绘墙横向溢出：根因是 .word-line 的 min-width 把左栏钉死 473.4px（em×18.21），该段栏宽仅 396–436px。--wl-em 下限 26px→20px 后十三档与 14 世代全无溢出、1440 逐值不变。推送 bab51b1，线上五档实测通过。 (11/26)
