@@ -2760,11 +2760,26 @@ html[data-g="yymf"] {
     .word {
         justify-content: center;
     }
+    /* 【2026-11-26 主人「移动端视图下 logo 建议大一些，但不要同步放大桌面端的 logo」】
+       参考字号只在这一档抬高（3.6vw/20px → 4.6vw/24px，390 下实测 14.04 → 17.94px），
+       桌面那档的 26~44px 不动，所以桌面字标尺寸完全不受影响。 */
     .word-line {
-        --wl-em: clamp(14px, 3.6vw, 20px);
+        --wl-em: clamp(16px, 4.6vw, 24px);
         flex-wrap: wrap;
         justify-content: center;
         row-gap: 2px;
+        /* 【2026-11-26 主人「移动端视图下 WELCOME TO + logo 比较靠左，建议居中」】
+           居中不成立的真因不在 justify-content（两行早就是 center），而在槽位：
+           .word-l 的宽度固定成最宽那一代（--wl-w），图却贴槽左缘，右侧永远空一大片，
+           整组视觉重心因此左偏（390 实测左留白 70、右留白 120）。
+           窄屏这里把行宽下限交还给内容本身，槽宽另在 .word-l 里按各代图宽算（见下），
+           于是「前缀 + 图」是一个自身紧凑的整组，center 才能把它真正摆在正中。 */
+        min-width: 0;
+    }
+    /* 槽宽改成该代图片自己的宽度：槽与图等宽，图贴左缘也等于贴槽缘，
+       整组视觉范围就是真实墨迹范围，居中后左右留白相等。 */
+    .word-l {
+        width: calc(var(--wl-em, 22px) * var(--wl-ar, 1.5) / var(--bh, 0.5) * var(--wl-s, 1));
     }
     .wl-pre {
         letter-spacing: 0.18em;

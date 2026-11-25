@@ -1,4 +1,4 @@
-<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T3 -->
+<!-- deep-ptc:project-cards v1 next=R7,F2,Q1,T4 -->
 # Project cards
 
 > Maintained by Deep PTC in DeepSeek Harness: edit in a Deep PTC conversation, view 特点卡片 / Project cards.
@@ -22,7 +22,8 @@
 
 
 ## Completed tasks / 已完成任务
-<!-- card id=tasks kind=tasks rev=3 updated=2026-11-25T19:15:02.190Z -->
+<!-- card id=tasks kind=tasks rev=4 updated=2026-11-25T19:23:49.368Z -->
 
 - **T1** [done] 首页与导航八条改版已发 v1.71.0 并上线：三枚按钮、Star 大按钮、游客头像、Jubeat相关改名与新增站点、README 致谢迁移、安装按钮下线；九段自检与 CI 全过，线上八项逐条实测通过。
 - **T2** [done] 首页 logo 尺寸统一（槽高 1em、整图自居中、等比不裁）与模块留白统一（--sec-gap）已落地并推送 7466626；随后 U'nit 按 --wl-s 0.65 单独缩小推送 160e319。 四档无溢出，自检全过。
+- **T3** [done] 只调 U'nit 这一代的缩放，其余世代与整行对齐不变 — U'nit 字标按 --wl-s 0.65 单独缩小并推送 160e319，线上实测 281→182.7px，四档无溢出，其余世代不变。 (11/26)
