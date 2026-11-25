@@ -119,6 +119,19 @@ docs/                库表、架构、开发、数据管线、用户系统、�
 - 曲绘图床：[tc.mofashi.ltd](https://tc.mofashi.ltd)（公益图床，仅作源站，页面走同源反代）
 - 字体：各字体厂商/作者，站内自托管子集
 
+**设计参考**（版式与交互的取材地，本站与它们无隶属关系）：
+
+- [DXRating](https://dxrating.net/)
+- [落雪咖啡屋](https://maimai.lxns.net/)
+- [Union](https://union.godserver.cn/)
+- [Majdata.Net](https://cn.majdata.net/)
+- 音游街小程序（微信小程序，站内无链接）
+
+**大白饭中转站**（图生与抠图中转，感谢两位站长免费开放）：
+
+- [GINKA](https://api.ginka.cloud/)
+- [ChooseC](https://api.choosec.cn/)
+
 **技术**：[Astro](https://astro.build/)、[Cloudflare Workers](https://workers.cloudflare.com/)、[Cloudflare D1 / R2](https://developers.cloudflare.com/)。
 
 ---

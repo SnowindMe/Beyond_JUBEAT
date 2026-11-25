@@ -1,5 +1,6 @@
 ---
-// 首页 · 相关站点：友链 / Officials / 数据来源 / 设计参考 / 谱面确认 / 大白饭中转站
+// 首页 · 相关站点：友链 / Officials / Jubeat相关 / 谱面确认
+// 2026-11-25：去掉「设计参考」「大白饭中转站」两组（迁入根 README 致谢），「数据来源」改名「Jubeat相关」。
 // 2026-11-01 主人要求建立本区块，2026-11-02 改胶囊容器，同日再要求分组与图标规范化。
 // 主人原话：「在【友链】和【数据来源】中间加入【Officials】，把 jubeat_staff，Jubeat音乐魔方，
 //   jubeat beyond the Ave. 和 jubeat（ユビート）移过去」「在【设计参考】后面加入【大白饭中转站】」
@@ -47,10 +48,12 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
     title: '友链',
     gold: true,
     // 【2026-11-01 主人给定，原样照抄】· JUBEAT VIEWER · Jubeat2Malody · Jubeat LV.10 SSS难易度表
+    // 【2026-11-25 主人给定】· （网）FaFuMemo https://fafumemo.com/
     links: [
       { name: 'JUBEAT VIEWER', url: 'https://ub.thregren.world/' },
       { name: 'Jubeat2Malody', url: 'https://swan416.top/jubeat' },
       { name: 'Jubeat LV.10 SSS难易度表', url: 'https://sss-jubeat.pages.dev/' },
+      { name: 'FaFuMemo', url: 'https://fafumemo.com/' },
     ],
   },
   {
@@ -68,33 +71,20 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
   },
   {
     key: 'data',
-    title: '数据来源',
+    // 【2026-11-25 主人把标题由「数据来源」改成「Jubeat相关」——本组已不止是数据源】
+    title: 'Jubeat相关',
     // 【2026-11-01 主人给定，原样照抄】官方两条已移入 Officials
+    // 【2026-11-25 追加】（网）JubeatLog https://www.jubeatlog.com/
     links: [
       { name: 'Remywiki', url: 'https://remywiki.com' },
       { name: 'BEMANIWiki 2nd', url: 'https://bemaniwiki.com' },
       { name: 'jubeat@Wiki', url: 'https://w.atwiki.jp/jubeat' },
       { name: 'BaseForJubeaters', url: 'https://b4j-beyond.mono-logic.com/' },
       { name: 'arcade-songs', url: 'https://arcade-songs.zetaraku.dev' },
+      { name: 'JubeatLog', url: 'https://www.jubeatlog.com/' },
     ],
   },
-  {
-    key: 'design',
-    title: '设计参考',
-    // 【2026-11-01 主人给定，原样照抄】官方一条已移入 Officials
-    //   · DXRating https://dxrating.net/
-    //   · 落雪咖啡屋 https://maimai.lxns.net/
-    //   · Union https://union.godserver.cn/
-    //   · 音游街小程序（小程序，无 URL）
-    links: [
-      { name: 'DXRating', url: 'https://dxrating.net/' },
-      { name: '落雪咖啡屋', url: 'https://maimai.lxns.net/' },
-      { name: 'Union', url: 'https://union.godserver.cn/' },
-      // 【2026-11-13 主人要求放在【Union】后】
-      { name: 'Majdata.Net', url: 'https://cn.majdata.net/' },
-      { name: '音游街小程序', url: '' },
-    ],
-  },
+  // 【2026-11-25 主人要求去掉「设计参考」与「大白饭中转站」两组，内容移到根 README 的致谢里】
   {
     key: 'confirm',
     title: '谱面确认',
@@ -114,15 +104,6 @@ const GROUPS: { key: string; title: string; gold?: boolean; links: Link[] }[] = 
       { name: 'お', url: 'https://www.youtube.com/@o_jb' },
       { name: 'Cosmos_Memo', url: 'https://w.atwiki.jp/cosmos_memo/' },
       { name: 'Sonicy_Memo', url: 'https://w.atwiki.jp/sonicy_memo/' },
-    ],
-  },
-  {
-    key: 'rice',
-    title: '大白饭中转站',
-    // 【2026-11-02 主人给定，原样照抄】两个中转站点
-    links: [
-      { name: 'GINKA', url: 'https://api.ginka.cloud/' },
-      { name: 'ChooseC', url: 'https://api.choosec.cn/' },
     ],
   },
 ];

@@ -85,5 +85,27 @@ export const prerender = false;
         <span>Enjoy JUBEAT, Enjoy Life, Enjoy Friend, And Enjoy Yourself</span>
       </span>
     </span>
+
+    {/* 点 Star 大按钮（2026-11-25 主人要求）：顶栏那个 GitHub 图标撤掉后，入口挪到这里——
+        落在站点标识正下方、独占一行居中，比顶栏一枚 44px 图标显眼得多。
+        左边图标右边文案（主人指定的形态）。
+        【为什么外面还要一层 .brand-star-row】原先是直接给 <a> 写 flex-basis:100% 想让它换行，
+        但同一个盒子上又有 max-width:fit-content，宽度被 max-width 压回内容宽后 basis 就失效了，
+        按钮照样和字标挤在同一行（实测左 765.8）。整行容器独占一行、由它居中，
+        胶囊本身仍然贴合内容，悬停底色不会横贯整屏。 */}
+    <div class="brand-star-row">
+    <a
+      class="brand-star"
+      href="https://github.com/SnowindMe/Beyond_JUBEAT"
+      target="_blank"
+      rel="noopener"
+      aria-label="去 GitHub 给 Beyond JUBEAT 点个 Star（新标签页打开）"
+      title="去 GitHub 点个 Star"
+    >
+      {/* SVG 必须带 width/height 属性：只靠 CSS 定尺寸时，一旦样式还没到手（SW 缓存的旧样式、首帧），无尺寸的 svg 会按默认 300×150 撑满整行。 */}
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path d="M8 .3a7.7 7.7 0 0 0-2.44 15c.39.07.53-.17.53-.37v-1.3c-2.17.47-2.63-1.05-2.63-1.05-.35-.9-.86-1.14-.86-1.14-.7-.48.05-.47.05-.47.78.05 1.19.8 1.19.8.69 1.18 1.8.84 2.24.64.07-.5.27-.84.49-1.03-1.73-.2-3.55-.87-3.55-3.86 0-.85.3-1.55.8-2.1-.08-.2-.35-1 .08-2.08 0 0 .66-.21 2.15.8a7.4 7.4 0 0 1 3.92 0c1.49-1.01 2.15-.8 2.15-.8.43 1.08.16 1.88.08 2.08.5.55.8 1.25.8 2.1 0 3-1.83 3.66-3.57 3.85.28.24.53.72.53 1.45v2.15c0 .2.14.45.54.37A7.7 7.7 0 0 0 8 .3Z"/></svg>
+      <span>喜欢这里的话，去 GitHub 点个 Star</span>
+    </a>
+    </div>
   </div>
 </Layout>

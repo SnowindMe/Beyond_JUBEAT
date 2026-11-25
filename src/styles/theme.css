@@ -622,10 +622,8 @@ html[data-lum="light"] .mark b .til {
     background: color-mix(in srgb, var(--acc) 18%, transparent);
     border-color: var(--edge2);
 }
-/* 最近更改的图标入口只在窄屏出现（宽屏有 .nav-txt 的文字链接） */
-.top nav a.nav-i-recent {
-    display: none;
-}
+/* 【2026-11-25】最近更改与 GitHub 的图标已从顶栏撤掉（前者仍有导航文字链与抽屉，
+   后者改成首页大按钮），这两条 display 规则随之作废，别再往这里加显隐。 */
 .nav-i svg {
     display: block;
     width: 17px;
@@ -644,6 +642,52 @@ html[data-lum="light"] .mark b .til {
     position: relative;
     display: flex;
     align-items: center;
+}
+/* 用户按钮（2026-11-25 主人要求）：44×44 方块改成「左头像 + 右名字」的胶囊。
+   高度仍锁 44（与汉堡、主题同一条基线），宽度由内容决定并设上限——
+   display:inline-flex + width:auto 会退化成 44px 方块，必须靠这两条盖掉 a.nav-i 的定宽/定高。
+   名字超长就省略号，宁短不撑破顶栏。 */
+/* 特异性必须压过 .top nav a.nav-i 的 width:44px/height:44px——
+   光写 .acm .nav-i-user 是不够的（结果被压回 44 的方块），要凑到同层级再叠加一项。 */
+.top nav a.nav-i.nav-i-user {
+    width: auto;
+    min-width: 44px;
+    max-width: 148px;
+    height: 44px;
+    gap: 7px;
+    padding: 0 11px 0 7px;
+}
+.acm-av {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 50%;
+    color: var(--ink2, var(--ink));
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    /* 未登录/没设头像一律落在这张默认头像上（users 表还没有头像列），
+       所以这里只画一个通用人形，不做「有头像时换图」的分支。 */
+    overflow: hidden;
+}
+.acm-av svg {
+    width: 17px;
+    height: 17px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.acm-nm {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .acm-pop {
     position: absolute;
@@ -1206,6 +1250,42 @@ html[data-g="knit"] #wordLogo {
     font-size: 11px;
     letter-spacing: 0.14em;
     color: #0b3f4c;
+}
+/* 【2026-11-25】文案从「1269 曲」改成「From 2022.08.03 · 127 Songs」后多了三个零件：
+   前后两个英文标签、中间一个分隔点。标签再小半档且不加字距以外的修饰，
+   点用等距字体撑开一点，免得和两侧数字黏成「08.03·127」。 */
+.cube-sum .cube-sum-k {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    /* 深色半透明：压在渐变条上仍读得清，又不和日期抢 */
+    color: #0b3f4c;
+    opacity: 0.78;
+    white-space: nowrap;
+}
+.cube-sum .cube-sum-dot {
+    font-family: var(--font-data);
+    font-size: 12px;
+    letter-spacing: 0;
+    opacity: 0.7;
+    padding: 0 1px;
+}
+/* 日期是衬在曲数前面的副信息：同一个数据字体但小一档、浓度降一档，
+   让「127 Songs」仍是这条横条里最重的一眼。 */
+.cube-sum #cubeSumDate {
+    font-size: clamp(12px, 1.2vw, 14px);
+    font-weight: 700;
+    opacity: 0.85;
+}
+/* 五段文案在窄屏也别折行成两排——这条横条本身就是一行读数 */
+@media (max-width: 440px) {
+    .cube-sum {
+        gap: 3px;
+        padding: 6px 8px;
+    }
+    .cube-sum .cube-sum-k {
+        font-size: 9px;
+        letter-spacing: 0.06em;
+    }
 }
 /* 旧的格内总数样式保留但不再使用（若将来把总数放回网格可直接复用） */
 .cube i.sum {
@@ -1828,6 +1908,79 @@ html[data-g] .brandblock .mark-bk b .til {
 .brandblock .foot-slogan {
     font-size: 12px;
     letter-spacing: 0.2em;
+}
+
+/* 点 Star 大按钮（2026-11-25 主人要求，替代撤掉的顶栏 GitHub 图标）：
+   外层 .brand-star-row 用 width:100% 独占标识下方一整行并居中——
+   不能只给 <a> 写 basis:100%，它同时还要 max-width:fit-content（否则悬停底色横贯整屏），
+   宽度被 max-width 收回内容宽后 basis 会失效、按钮又挤回字标右边（实测过）。
+   形态是「左图标右文案」——图标在前是主人指定的顺序，别调换。
+   配色跟站点主调一致：平时淡描边，悬停才上主题色，不作为页面第二主角。 */
+.brandblock .brand-star-row {
+    /* 用 width:100% 而不是 flex-basis：basis 在 min-width:auto 下会被按钮的
+       nowrap 最小内容宽（286px）顶出去，行比父级还宽 17px（320 实测）。 */
+    flex: none;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    /* 两侧留出气口：不加的话胶囊会顶到屏边只剩 7px */
+    padding: 0 12px;
+}
+.brandblock .brand-star {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    /* 极窄屏（320 实测）：胶囊贴到屏边只剩 7px，所以不锁 nowrap、允许文案折行，
+       让最小内容宽降到「点个」这种两字各级，宽度才有让步空间。 */
+    max-width: 100%;
+    margin-top: 4px;
+    min-width: 0;
+    line-height: 1.35;
+    text-align: center;
+    padding: 11px 20px;
+    /* 圆角矩形而不是胶囊（2026-11-25 主人指定），取 --r-md 令牌 */
+    border-radius: var(--r-md);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--edge) 85%, transparent);
+    color: var(--ink2, var(--ink));
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+    transition: color 0.18s ease, box-shadow-color 0.18s ease, background-color 0.18s ease;
+}
+.brandblock .brand-star > span {
+    min-width: 0;
+}
+.brandblock .brand-star svg {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+    opacity: 0.85;
+}
+.brandblock .brand-star:hover {
+    color: var(--acc-ink);
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 55%, transparent);
+}
+/* 桌面端整档放大（2026-11-25 主人「桌面视图看 GitHub 按钮感觉比较小」）：
+   只加在 ≥769px，窄屏仍用 13px 以免更早折行。 */
+@media (min-width: 769px) {
+    .brandblock .brand-star {
+        gap: 11px;
+        padding: 15px 28px;
+        font-size: 15px;
+    }
+    .brandblock .brand-star svg {
+        width: 19px;
+        height: 19px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .brandblock .brand-star {
+        transition: none;
+    }
 }
 
 /* 顶栏那条 html[data-font] .mark b 的 nowrap + 14px 会连带压到首页这枚（选择器更具体），
@@ -2591,15 +2744,13 @@ html[data-g="yymf"] {
     }
 
     /* 移动端：文字链接收进汉堡抽屉（主人 2026-10-22）。
-       2026-10-28 主人明确「移动端导航栏只有登录/汉堡/主题三个图标」：
-       所以「添加到屏幕」这个 PWA 入口在窄屏隐藏（桌面仍保留），
-       顶栏正好剩 登录 → 主题 → 汉堡 三个同形状方块。 */
+       2026-10-28 主人明确「移动端导航栏只有登录/汉堡/主题三个图标」；
+       2026-11-25 连桌面那枚「添加到屏幕」也撤了（整块 InstallPrompt 组件下线，
+       所以顶栏不再有它的样式），右侧正好剩 用户 → 主题 → 汉堡 三个同形状方块。 */
     .nav-txt,
     .nav-sep {
         display: none;
     }
-    /* 「添加到屏幕」入口在 ≤768px 也隐藏——规则写在 InstallPrompt.astro 里，
-       因为它的 display 由组件作用域的 .top nav .pwa-b 控制，写在这里会被压过去。 */
     .nav-burger {
         display: inline-flex;
         flex: none;

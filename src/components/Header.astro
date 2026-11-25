@@ -9,7 +9,6 @@
 // 登录态（2026-10-23 加）：宽屏 .nav-txt 末尾显示「登录」或昵称，
 // 抽屉里同一条；图标组 .nav-ico 加一个人形图标（窄屏入口）。
 import { isStaff } from '../lib/auth';
-import InstallPrompt from './InstallPrompt.astro';
 
 const path = Astro.url.pathname;
 const user = Astro.locals.user;
@@ -36,28 +35,27 @@ const user = Astro.locals.user;
     </div>
     <i class="nav-sep" aria-hidden="true"></i>
     <div class="nav-ico">
-      {/* 添加到屏幕入口（主人 2026-10-26）：默认隐藏，由组件内脚本判断能否安装后再显形；
-          不能装的环境（iOS 走手动说明、已是独立窗口则完全不出现）不会出现死按钮。 */}
-      <InstallPrompt />
-      <a class="nav-i nav-i-github" href="https://github.com/SnowindMe/Beyond_JUBEAT" target="_blank" rel="noopener" aria-label="GitHub 仓库" title="GitHub 仓库">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.2 20.6v-1.9c-2.7.5-3.5-1.1-3.5-1.1-.3-.9-.9-1.3-.9-1.3-.8-.5 0-.5 0-.5.9.1 1.3.9 1.3.9.7 1.3 1.9 1 2.4.8.1-.6.3-1 .5-1.2-2.2-.3-4.4-1.1-4.4-4.8 0-1.1.4-1.9 1-2.6-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1 .8-.2 1.6-.3 2.5-.3s1.7.1 2.5.3c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.5 1 2.6 0 3.7-2.2 4.5-4.4 4.8.3.3.6.9.6 1.8v2.8"/></svg>
-      </a>
-      {/* 图标组同样只放真实页面。
-          窄屏 .nav-txt 会整体隐藏，账户/登录必须留这个图标入口，否则手机上没法登录 */}
-      <a class="nav-i nav-i-recent" href="/recent/" aria-label="最近更改" title="最近更改">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.1 2"/></svg>
-      </a>
+      {/* 顶栏右侧只留「用户 / 汉堡 / 主题」三个（主人 2026-11-25）。
+          原先这里还有「添加到屏幕」的 PWA 入口（2026-10-26 起，窄屏本就隐藏、仅桌面显示），
+          主人说「那个添加到屏幕按钮也去掉吧」——组件整块下线，桌面也不再出现。
+          PWA 本身没变：manifest 与 sw.js 都还在，用户仍可从浏览器菜单安装。 */}
+      {/* 【2026-11-25 主人要求】GitHub 图标从顶栏撤掉，改到首页标识区下面做成一个大按钮；
+          时钟图标也撤掉——顶栏右侧只留「用户 / 汉堡 / 主题」三个，任何窄屏都不再多挤一个。
+          两者的入口都还在：GitHub 在首页大按钮与抽屉文字链，最近更改在导航文字链与抽屉。 */}
       {/* 账户入口（2026-10-25 主人：「标记一可以不要，全部整合进标记二里」）：
           登录后不再在导航里摊开「管理 / 昵称」，全部收进这个人形图标的菜单，
           样式对齐图二那种下拉（顶部账号信息 → 菜单项 → 分隔线 → 红色退出登录）。
           游客仍是一个直达 /login/ 的普通链接，不需要 JS 也能用。 */}
+      {/* 【2026-11-25 主人要求】这个人形图标改成「左头像 + 右用户名」的胶囊：
+          未登录名字写「游客」，没有头像的也一律走默认头像（users 表还没有头像列，
+          所以头像永远是前端兜底的那张，见 .acm-av 的注释）。
+          名字由脚本在登录后改写（静态页是构建期渲染的，服务端拿不到会话）。 */}
       <div class="acm" id="acm">
         <a class="nav-i nav-i-user" id="acmBtn" href={user ? '/account/' : '/login/'} aria-label={user ? `账户：${user.name}` : '登录'} title={user ? '账户' : '登录'}>
-          {user ? (
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/></svg>
-          ) : (
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.6" r="3.6"/><path d="M4.8 20.2c0-3.6 3.2-6.4 7.2-6.4s7.2 2.8 7.2 6.4"/><path d="M17.4 3.4l3.2 3.2"/></svg>
-          )}
+          <span class="acm-av" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.8"/><path d="M4.6 20.4c0-3.7 3.3-6.2 7.4-6.2s7.4 2.5 7.4 6.2"/></svg>
+          </span>
+          <span class="acm-nm" id="acmName">{user ? user.name : '游客'}</span>
         </a>
         <div class="acm-pop" id="acmPop" data-open="0" role="menu" aria-label="账户菜单"></div>
       </div>
@@ -232,6 +230,9 @@ const user = Astro.locals.user;
           var u = d && d.user;
           if (!u) return; // 游客：保持直达 /login/ 的普通链接
           build(u);
+          // 按钮上的可见名字（静态 HTML 里写的是「游客」，必须在这里改写）
+          var nmSlot = document.getElementById('acmName');
+          if (nmSlot) nmSlot.textContent = u.name;
           btn.href = '/account/';
           btn.setAttribute('aria-label', '账户菜单：' + u.name);
           btn.setAttribute('aria-haspopup', 'true');

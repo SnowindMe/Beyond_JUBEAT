@@ -1,7 +1,14 @@
 ---
 // 首屏：标语 + 字标 + 数据统计 + 世代曲绘立方体
 import { jacketUrl } from '../lib/covers';
+import { GEN_ORDER } from '../lib/gens';
 import data from '../data/data.json';
+// 首屏方阵底部那条「From 上线日 · N Songs」（2026-11-25 主人要求）：
+// 日期取世代的正式上线日，口径与世代页一致（U'nit 官方未给，字面量 Soon）。
+// 格式转成 2022.08.03 的点号写法——这条是排版里的极小字，横线会被看成负号。
+const genDate = (k: string) => (GEN_ORDER.find((g) => g.k === k)?.date ?? '').replace(/-/g, '.');
+// 默认世代（服务端先渲染这一份，随后由脚本按保存的主题覆盖）。
+const sumGen = data.gen.find((g) => g.k === 'Ave.');
 const LOGOS = ['ave','bta','knit','copious','saucer','saucerfulfill','prop','qubell','clan','festo','ripples'];
 const jacket = (id: string, c: string | null | undefined) => jacketUrl(id, c);
 // 反代前缀：发数据时逐条剥掉它省体积，运行时（见下方 script 里的 CDN）再拼回去。
@@ -25,18 +32,29 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
     【必须手动转义 `</`】set:html 不转义，曲名里一旦出现 `</script>` 就会提前截断整块。
     当前 1248 首的曲名里恰好一个都没有（实测裸 `</` 计数 0），所以这条只是防御：曲名是外部数据，
     将来录入一首带斜杠标签的，没有它整页首屏就废了。 */}
-<script type="application/json" id="jbCubeData" set:html={JSON.stringify(
-  data.gen.reduce((m, g) => {
+{/* 【2026-11-25 结构改动】原先顶层就是「世代 → 16 首」的裸映射；方阵下方要显示
+    「From 上线日 · N Songs」后，日期与曲数也得跟着世代走，所以外面包一层：
+    cubes 仍放曲绘，meta 放 date/n 给那条文案取值。取不到 meta 时文案保持原样不动。 */}
+<script type="application/json" id="jbCubeData" set:html={JSON.stringify({
+  cubes: data.gen.reduce((m, g) => {
     if (g.top16?.length) m[g.k] = g.top16.map((s) => ({ c: jacketUrl(s.id, s.cover).replace(JACKET_CDN, ''), t: s.t, e: s.lv?.ext ?? null }));
     return m;
   }, {} as Record<string, unknown>),
-).replace(/<\//g, '<\\/')}></script>
+  meta: data.gen.reduce((m, g) => {
+    m[g.k] = { d: genDate(g.k), n: g.n };
+    return m;
+  }, {} as Record<string, { d: string; n: number }>),
+}).replace(/<\//g, '<\\/')}></script>
 <script is:inline>
   // 数据节点紧贴在脚本前面，此刻已经在 DOM 里，直接解析。
   // 【为什么还要这段同步脚本】主题是在 HTML 解析早期由 ThemeScript 设的 data-g；
   // 若等到 DOMContentLoaded 才换，会先闪一下 ave 那 16 张再跳成目标世代。
   // 但此时 #cubeGrid 还不存在，所以这里只做「解析+记录」，真正替换由 cube-apply 调用。
-  try { window.__cubeData = JSON.parse(document.getElementById('jbCubeData').textContent); } catch (e) {}
+  try {
+    var __d = JSON.parse(document.getElementById('jbCubeData').textContent) || {};
+    window.__cubeData = __d.cubes || {};
+    window.__cubeMeta = __d.meta || {};
+  } catch (e) {}
 </script>
 
 <section class="hero">
@@ -119,7 +137,17 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
     {/* 总数格移出 4×4 网格（2026-10-25）：16 张曲绘正好排满 4 行 4 列，
         原来的总数格是第 17 格，会孤零零占第 5 行第一列，看着像个坏格。
         改成网格下方独立一条横条，信息更清楚、也不破坏方阵。 */}
-    <div class="cube-sum"><b>{data.stat.songs}</b><span>曲</span></div>
+    {/* 【2026-11-25 主人要求】原来这里是「1269 曲」——一个脱离世代的裸总数，
+        而方阵显示的永远是当前世代，两个数对不上。改成「From 上线日 · N Songs」，
+        三处（日期、曲数、单位）都跟着方阵的世代走，由下方 applyCube 一并重写。
+        默认那份写 ave，首屏脚本会立刻按真实主题覆盖。 */}
+    <div class="cube-sum" id="cubeSum">
+      <span class="cube-sum-k">From</span>
+      <b id="cubeSumDate">{genDate('Ave.')}</b>
+      <span class="cube-sum-dot" aria-hidden="true">·</span>
+      <b id="cubeSumN">{sumGen?.n ?? data.stat.songs}</b>
+      <span class="cube-sum-k">Songs</span>
+    </div>
   </div>
 
   <script is:inline>
@@ -143,9 +171,26 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
       // 前缀必须与 SSR 侧同一串（/api/jacket/）。以 / 开头的整串是站内回退原图，原样用。
       var CDN = '/api/jacket/';
       function srcOf(s) { return s.c && s.c.charAt(0) === '/' ? s.c : CDN + s.c; }
+      // 方阵下方那条「From 上线日 · N Songs」：日期与曲数都跟着世代换，
+      // 不换就会显示上一个世代的上线日（比总数错得更离谱）。
+      function setSum(key) {
+        var meta = (window.__cubeMeta || {})[key];
+        if (!meta) return; // 取不到就保持现状，不动相邻世代的数字
+        var d = document.getElementById('cubeSumDate');
+        var n = document.getElementById('cubeSumN');
+        if (d && meta.d) d.textContent = meta.d;
+        if (n) n.textContent = String(meta.n);
+        var box = document.getElementById('cubeSum');
+        // 未定上线日（U'nit 目前是 Soon）：悬停补一句，免得只看到一串字母不明所以。
+        if (box) box.title = '该世代共有 ' + meta.n + ' 首曲目';
+      }
       // 兜底解析：上面那段同步脚本若被执行顺序打乱（如插件延迟脚本），这里还能自取一次。
       function safeParse() {
-        try { return JSON.parse(document.getElementById('jbCubeData').textContent) || {}; } catch (e) { return {}; }
+        try {
+          var d = JSON.parse(document.getElementById('jbCubeData').textContent) || {};
+          window.__cubeMeta = d.meta || {};
+          return d.cubes || {};
+        } catch (e) { return {}; }
       }
       var THEME2GEN = {
         jubeat: 'jubeat', ripples: 'ripples', knit: 'knit', copious: 'copious', saucer: 'saucer',
@@ -158,6 +203,8 @@ const heroRows = [hero16.slice(0, 8), hero16.slice(8, 16)];
         var data = window.__cubeData || (window.__cubeData = safeParse());
         if (!grid || !data) return;
         var key = THEME2GEN[themeKey] || themeKey;
+        // 文案先更新：本世代恰好没有曲绘时要 return，但日期与曲数没理由跟着停在上一代。
+        setSum(key);
         var list = data[key] || data['Ave.'];
         // 取不到就保持现状，**绝不清空**：清空会出现"一格都没有"的空方阵，
         // 比显示旧内容糟糕得多（本轮第一版就是这么踩的，cells:0）。
