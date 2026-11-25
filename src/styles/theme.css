@@ -34,6 +34,11 @@
     --r-xs: 7px;
     --r-hair: 3px;
     --pill: 999px;
+    /* 首页垂直分节留白（2026-11-26）。原来三处各写各的 clamp：hero 底 34~56、
+       links 上 14+12~24+18、brandblock 上 28~52，实测 1440 下依次是 24 / 42 / 52，
+       三段互不相等，越往下越松。统一收到一个令牌，取原三值的中位再收紧一档：
+       桌面 36px、平板与手机各 22px。 */
+    --sec-gap: clamp(22px, 2.6vw, 36px);
     --font-data: Bahnschrift, "Bahnschrift SemiCondensed", Consolas, monospace;
     --font-label: var(--font-data);
 }
@@ -829,7 +834,9 @@ html[data-lum="light"] .mark b .til {
     grid-template-columns: minmax(min-content, 1fr) minmax(268px, 384px);
     gap: clamp(30px, 5vw, 72px);
     align-items: center;
-    padding: clamp(30px, 4vw, 52px) 0 clamp(34px, 4.2vw, 56px);
+    /* 底部不再自带内边距：hero→友链的分节留白统一由 .links 的 margin-top 承担，
+       否则「hero 底 56」与「links 上 42」叠成 98px 的一处、其它处却只有几十。 */
+    padding: clamp(30px, 4vw, 52px) 0 0;
 }
 /* 左栏拉满到右栏高度：两栏上下边缘落在同一条水平线上（主人要求 v4 左右高度一致），
    字标阶段吃掉多余高度并垂直居中，副题与统计卡自然贴底。 */
@@ -853,13 +860,23 @@ html[data-lum="light"] .mark b .til {
    还各自带圆弧/菱形/色条/副标题）。要把它们和文字对成一句话，必须知道
    **每张图里「jubeat 字身带」上下界在图高的哪个比例**，于是按世代量了一组
    --bh（字身带高度占比）、--bc（字身带中心占比），见下方各代主题块。
-   对齐方式：把图按「字身带 = 1em」缩放，再整体上移，让字身带中心落在文字中线上。 */
+   对齐方式：把图按「字身带 = 1em」缩放，再让整图以自身中线压在文字中线上。 */
 .word-line {
     display: flex;
     align-items: center;
     gap: 0;
-    min-width: 0;
     max-width: 100%;
+    /* 字标整图以自身中线压在行中线上（见 #wordLogo），装饰向上下等量溢出。
+       最高的那张（festo）整图 2.96em，半幅溢出 0.98em，这里取 1.5em 对称内边距兜住，
+       避免压到上方导航、下方简介块。总内边距仍是 3em（与改前一致），行高不跳。
+       中线由 align-items:center 决定（= content box 中线），不受这两处 padding 影响。 */
+    padding-top: calc(var(--wl-em, 22px) * 1.5);
+    padding-bottom: calc(var(--wl-em, 22px) * 1.5);
+    /* 【2026-11-26 主人「上面和下面在桌面端视图中视觉会错位」】
+       定宽 + 右对齐会把窄字体（Oswald）的 WELCOME TO 顶到框右端，左侧空出 113px，
+       而下面的简介、按钮都压在左缘 —— 上下两栏对不齐。
+       改法：整行保一个最小宽度（见下面 min-width），但文字左对齐、紧跟着字标，
+       余量一律甩到字标右侧的空白里，整行左缘永远和简介对齐。 */
     /* 统一参考字号：字标「字身带」高度、WELCOME TO 字号、~ 字号都锚在这一个值上，
        所以三者天然同高，换世代不会一大一小 */
     /* 2026-10-26 主人反馈「桌面版还要大一些」，参考字号提到 26~44px。
@@ -867,19 +884,26 @@ html[data-lum="light"] .mark b .til {
     --wl-em: clamp(26px, 2.5vw, 44px);
     /* 【2026-11-22 主人「其他世代的首页 logo 宽度要和 unit logo 一致，进行缩放」】
        所有世代字标统一按这个宽度渲染：7.8086 = unit 那张（570/214，字身带 0.3411）
-       在「字身带 = 1em」下的宽高换算系数（ar / bh）。于是各代横向占位一致，
-       纵向高度按各自 aspect-ratio 反推，字身带仍对齐文字中线（见 .word-l 的 margin-top）。 */
+       在「字身带 = 1em」下的宽高换算系数（ar / bh）。于是各代字身带同高（1em）、槽宽一致，
+       整图靠 translateY(-50%) 自居中到行的中线上（见 .word-l 与 #wordLogo）。 */
     --wl-w: calc(var(--wl-em, 22px) * 7.8086);
+    /* 【2026-11-26】各世代字体不同，同一句 WELCOME TO 自然宽度能差 110px（jubeat 354、
+       prop 285、clan 246），切主题时整行宽度跟着跳。按最宽的 jubeat（9.83em + tail 0.5em 字距）
+      向上取 10.4em 定住整行下限，再 + 槽宽；
+      短字体的世代余量留在字标右侧，左缘与 TO 的字距都恒定。 */
+    min-width: calc(var(--wl-em, 22px) * 10.4 + var(--wl-w, 172px));
     animation: welcomeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 /* 前缀：「WELCOME TO」宽字距小标，字号跟字身带同高，读起来像「WELCOME TO jubeat」一句话 */
 .wl-pre {
     flex: none;
+    /* 左对齐到栏左缘（与下方简介、按钮同理），整行最小宽度由 .word-line 兜住。 */
+    text-align: left;
     /* 跟品牌字同源：--font-label 按世代切换（见下方字体映射），
        于是 WELCOME TO 和顶栏品牌字总是同一款字体。 */
     font-family: var(--font-label);
     /* 字号锚到 --wl-em（= 字标字身带高度），读起来就是一句话；
-       行高设为 1 并靠 flex 的 center 对齐，视觉中线正好落在字身带中线上。 */
+       行高设为 1 并靠 flex 的 center 对齐，前缀的中线正好压在行的中线上。 */
     font-size: calc(var(--wl-em, 22px) * var(--wl-ink, 1));
     font-weight: 700;
     letter-spacing: 0.24em;
@@ -943,27 +967,32 @@ html[data-lum="light"] .wl-pre {
 .sub {
     display: none;
 }
-/* 字标视框（2026-10-26 定稿：整图完整显示，字身带对上文字中线）。
+/* 字标视框（2026-11-26 定稿：整图完整显示，整图中线对上文字中线）。
    演进：最初锁 285px 宽 → 拼进标题行后各代大小不一；
    中途试过裁成只剩字身带，但主人要求「logo 图标要完整显示」，
    装饰（圆弧、菱形、色条、副标题）本来就是标识的一部分，不能裁。
    定稿口径：整图按 --bh 缩放到「jubeat 字身带 = 1em 高」，
-   再用 --bc 把字身带中心挪到文字中线上——
-   于是「jubeat」这几个字和 WELCOME TO 天然同高、同基线，
-   装饰按原比例完整保留，悬在字身上下。 */
+   再让**整张图**以自身中线压在文字中线上（2026-11-26 主人选定，替代原来的字身带中线）——
+   于是装饰框上下对称，字身带仍恒为 1em 高（各代字一样大），
+   代价是这个词本身会随各代构图上下小幅起落（实测 -2.7~-10px）。 */
 .word-l {
     display: flex;
     flex: 0 0 auto;
-    /* 宽度由内部 img 撑开：img 不定位、按比例缩放，视框自动跟随，
-       写死宽度会因四舍五入把最右一个字母裁掉（实测 jubeat 的 t、qubell 尾部都缺角）。 */
-    width: max-content;
+    /* 【2026-11-26 主人「统一各主题世代 logo 的显示尺寸，同一行内大小一致、比例不变形」】
+       槽位（视框）高度恒等于 1em —— 所有世代的「jubeat 字身带」都是 1em 高，字一样大；
+       宽度恒等于 --wl-w（最宽的 unit 那张），换世代时横向占位不抖动。
+       整张图（含圆弧/菱形/色条/副标题这些装饰）按 ar/bh 等比算宽、绝对定位画进槽里，
+       所以比例不变形、装饰完整保留，只是按各自构图向槽外溢出。
+       槽高固定 = 行高不再被最高的那张（ave/bta 整图近 3em）撑开，首屏标题行高度稳定。 */
+    position: relative;
+    /* 槽宽固定为 --wl-w（= 最宽的 unit 那张在字身带 1em 下的宽度）：换世代整行宽度不变，
+       右栏曲绘墙不会横向位移。图贴槽左缘（见下方 #wordLogo 的 left:0），右侧余量是空白。 */
+    width: var(--wl-w, 172px);
+    height: var(--wl-em, 22px);
     min-width: 0;
     max-width: none;
+    overflow: visible;
     line-height: 0;
-    /* 上移量：把字身带中心（图高 × --bc 处）挪到视框中线（50%）。
-       图高不再是「em / --bh」，而是「统一宽度 / 该代宽高比」——宽度被拉齐后
-       高度得按各自比例反推，字身带才仍然压在中线上（2026-11-22）。 */
-    margin-top: calc(var(--wl-em, 22px) * 0.5 - var(--wl-w, 172px) / var(--wl-ar, 1.5) * var(--bc, 0.5));
 }
 .word-l #wordLogo {
     display: block;
@@ -973,20 +1002,29 @@ html[data-lum="light"] .wl-pre {
        而动画在后台标签页会被冻结在起始帧 —— 冻结在 opacity 0 就等于整张 logo
        消失。字标是首屏识别物，宁可硬切也不能有「可能隐身」的状态。
        （原来的 animation: logoIn 0.4s ease both 就是这个隐患，本轮一并去掉。） */
-    /* 整图高度 = 字身带高（1em）× (1 / --bh)，宽度按原图比例自动撑开视框 */
-    /* 宽度由 --wl-w 统一定量（见 .word-line），高度交给上面的 aspect-ratio 反推 */
-    width: var(--wl-w, 172px);
+    /* 整图垂直自居中：top:50% + translateY(-50%) 让**图的自中线**落在槽中线上，
+       装饰向上下等量溢出。--bc 至此不再参与定位，只留档说明字身带原本在哪。 */
+    position: absolute;
+    /* 靠左不居中：槽宽固定而图宽各不同，居中会让图与前缀的间距随世代变（实测 0~73px）；
+       左对齐后间距恒等于前缀的 padding-right，整行左侧也稳定。右侧余量是空白，看不见。 */
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    /* 宽度 = 字身带 1em × (ar / bh)：整图等比放大，字身带正好 1em 高；
+       高度由各代主题块里的 aspect-ratio 反推（ar/bh × 1em ÷ ar = 1em/bh），比例不变形 */
+    width: calc(var(--wl-em, 22px) * var(--wl-ar, 1.5) / var(--bh, 0.5));
     height: auto;
     max-width: none;
 }
 /* ---------- 字标「jubeat 字身带」实测表（2026-10-26） ----------
    三个值都用「占整图高度的比例」表示，取自 13 张字标 PNG 的逐像素实测：
      --bh  字身带高度（把「jubeat」缩成统一 1em 高）
-     --bc  字身带中心的纵向位置（对齐到标题行中线）
+     --bc  字身带中心的纵向位置（2026-11-26 起整图自居中，本值不再参与定位，留档备查）
      --bt  字身带上缘的纵向位置（留档用，便于核对字身带范围）
    量法：逐行统计 alpha>40 的墨量 / 横向跨度 / 墨迹段数，取「段数≥4 且跨度≥85%」
    的连续带；带大装饰的世代（festo/ave/bta/yymf/qubell/clan）另放大标尺目测校正。
-   改字标图或换 logo 时必须同步这三个值，否则标题行会错位。 */
+   改字标图或换 logo 时必须同步这三个值：--bh 直接决定字标缩放，改了不改就会走形；
+    --bc / --bt 只用于核对字身带范围（对齐已改由整图自居中承担）。 */
 html[data-g="jubeat"][data-g] { --bh: 0.6765; --bc: 0.3676; --bt: 0.0294; --wl-ar: 3.5735; }
 html[data-g="ripples"][data-g] { --bh: 0.6784; --bc: 0.3509; --bt: 0.0117; --wl-ar: 3.3333; }
 html[data-g="knit"][data-g] { --bh: 0.6923; --bc: 0.3558; --bt: 0.0096; --wl-ar: 3.4615; }
@@ -1653,8 +1691,8 @@ html[data-g="knit"] #wordLogo {
        线上实测上方空白 = margin 58 + padding 30 = 88px，确实比 Hero 与 brandblock
        之间任何一段都宽。收到 24 + 18 ≈ 42px（约原来的一半）：
        区块之间靠留白分节，但这个块是「附属索引」，不该自带章节级气口。 */
-    margin: clamp(14px, 1.8vw, 24px) 0 0;
-    padding-top: clamp(12px, 1.5vw, 18px);
+    margin: var(--sec-gap) 0 0;
+    padding-top: 0;
 }
 /* 组标题：小号、宽字距、次级色。它只是「这一栏叫什么」的标签，不抢注意力。 */
 .links-title {
@@ -1855,7 +1893,7 @@ html[data-g="knit"] #wordLogo {
     align-items: center;
     justify-content: center;
     gap: clamp(14px, 2vw, 26px);
-    margin: clamp(28px, 4vw, 52px) 0 0;
+    margin: var(--sec-gap) 0 0;
     text-align: left;
     flex-wrap: wrap;
 }
@@ -2802,7 +2840,7 @@ html[data-g="yymf"] {
     .hero {
         grid-template-columns: 1fr;
         gap: 28px;
-        padding: 24px 0 22px;
+        padding: 24px 0 0;
         align-items: start;
     }
     /* —— 曲绘墙：4×4 方阵 → 上下双行缓慢滑动（主人 2026-10-27）——
