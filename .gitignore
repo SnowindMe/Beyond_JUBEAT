@@ -143,3 +143,12 @@ scripts/yyj/
 # 【2026-11-22】微信网站管理员认证校验文件：账号级凭据，仓库是 PUBLIC 的，
 # 改为 CI 构建前从 secret 写入，仓库不留副本。
 public/8c7bceecf5d6ebbe58a0e8482e448a50.txt
+
+# 【2026-11-26】短视频产物：成片、drawai 画布与回填的 clip、旧的 drawio 草稿。
+# 主人明确定「不用提交」，本地留档即可；生成它的场景源码在 archive/motion-src/（archive/ 整体也不入库）。
+jubeat-rank-15s.mp4
+jubeat.drawai
+jubeat.drawai.media/
+rank-video.drawio
+# 主人自己做的动画场景快照（2.7MB），2026-11-26 明确「不用推」
+jubeat.afx
