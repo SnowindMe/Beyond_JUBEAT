@@ -55,6 +55,12 @@ const GEN_DIRS = {
   '音乐魔方': ['音乐魔方', 'jubeat-china', 'jubeat-beyond-ave'],
 };
 
+// 上游还没有对应分片的世代：整代跳过。
+// U'nit 是 2026-09 才上线的国服世代，上游 versionIndexes 里没有它的分片；此时 GEN_DIRS 也挂不上
+// 目录，世代内唯一判据全失效，只能落到「全库标题唯一」那一档——unit-001「朧」就这样误命中了
+// saucer 的 arcade_50000071。与其让它蒙一条错音源，不如整代排除，等上游有了分片再加进来。
+const SKIP_GENS = new Set(["U'nit"]);
+
 const norm = (s) => String(s || '').normalize('NFKC').replace(/\s+/g, '').toLowerCase();
 const dirOf = (u) => String(u.id).split('/')[0];
 // 「首次收录」（0）优先于「谱面变化」（1），其它分类（视频抄谱等）最后。
@@ -111,8 +117,15 @@ async function main() {
   const out = {};
   const stat = { numGen: 0, num: 0, title: 0 };
   const miss = [];
+  let skipped = 0;
   for (const s of ours) {
     const id = String(s.id);
+    // 整代跳过的世代（SKIP_GENS）既不参与匹配，也不计入覆盖率分母——否则一整个世代必然全未命中，
+    // 会把覆盖率阈值 85% 挤下去，掩盖真正该报警的上游异常。
+    if (SKIP_GENS.has(s.gen)) {
+      skipped++;
+      continue;
+    }
     const byNumAll = byNum.get(id) || [];
     const numInGen = inGen(byNumAll, s.gen);
     if (numInGen.length) {
@@ -126,6 +139,16 @@ async function main() {
       continue;
     }
     const byTitleAll = byTitle.get(norm(s.t)) || [];
+    // 标题层的第一步只认「本站世代的主目录」（GEN_DIRS[gen][0]）：GEN_DIRS 里除主目录外还挂了
+    // jubeat-china / jubeat-beyond-ave 这类「同世代也会落进来」的旁支目录，跨目录比唯一性会把
+    // Big Daddy 这种「主目录一条、旁支一条」的曲目判成歧义。先在主目录内唯一命中，命中即采用。
+    const homeDir = (GEN_DIRS[s.gen] || [])[0];
+    const titleHome = homeDir ? byTitleAll.filter((u) => dirOf(u) === homeDir) : [];
+    if (titleHome.length === 1) {
+      out[id] = titleHome[0].assets.audio;
+      stat.title++;
+      continue;
+    }
     const titleInGen = inGen(byTitleAll, s.gen);
     if (titleInGen.length === 1) {
       out[id] = titleInGen[0].assets.audio;
@@ -150,25 +173,37 @@ async function main() {
   for (const [id, o] of Object.entries(overrides)) {
     if (id.startsWith('_')) continue;
     if (!ourIds.has(id)) throw new Error('覆盖层 songId ' + id + ' 不在本站曲库中');
-    if (!o || typeof o.path !== 'string' || !o.path) throw new Error('覆盖层 ' + id + ' 缺 path');
-    if (!ubPaths.has(o.path)) throw new Error('覆盖层 ' + id + ' 的 path 不在上游曲目中：' + o.path);
-    out[id] = o.path;
+    if (!o) throw new Error('覆盖层 ' + id + ' 缺内容');
+    // 上游自建目录的音频名是内容哈希（bgm.<hash>.ogg），路径写死的话每次换哈希构建都直接抛错、
+    // 得人工跟着改。所以覆盖层支持更稳的 dir：只写上游曲目目录，真实 path 每次现解析。
+    let path = o.path;
+    if (!path) {
+      if (!o.dir) throw new Error('覆盖层 ' + id + ' 缺 path 或 dir');
+      const hit = ubSongs.filter((u) => u.assets.audio.startsWith(o.dir));
+      if (hit.length !== 1) throw new Error('覆盖层 ' + id + ' 的 dir 应恰好命中 1 条上游曲目，实际 ' + hit.length + ' 条：' + o.dir);
+      path = hit[0].assets.audio;
+    }
+    if (!ubPaths.has(path)) throw new Error('覆盖层 ' + id + ' 的 path 不在上游曲目中：' + path);
+    out[id] = path;
     ovApplied++;
   }
   const stillMiss = miss.filter((id) => !out[id]);
 
   // 5) 自检：覆盖率不能莫名掉下去（上游改结构/分片丢失时立刻发现，而不是静默变空表）
   const covered = Object.keys(out).length;
-  const rate = covered / ours.length;
+  const total = ours.length - skipped;
+  const rate = covered / total;
   if (rate < 0.85) {
     throw new Error('覆盖率仅 ' + (rate * 100).toFixed(1) + '%，低于 85%，判定为上游异常，未写入');
   }
 
   fs.writeFileSync(DEST, JSON.stringify(out) + '\n');
   console.log(
-    '上游 ' + ubSongs.length + ' 首带音频｜本站 ' + ours.length + ' 首｜命中 ' + covered +
-    ' (' + (rate * 100).toFixed(1) + '%)｜id+世代 ' + stat.numGen + ' / id ' + stat.num +
-    ' / 标题 ' + stat.title + '｜覆盖层 ' + ovApplied + '｜未命中 ' + stillMiss.length
+    '上游 ' + ubSongs.length + ' 首带音频｜本站 ' + ours.length + ' 首' +
+    (skipped ? '（跳过 ' + skipped + ' 首整代排除）' : '') +
+    '｜参与 ' + total + ' 首｜命中 ' + covered + ' (' + (rate * 100).toFixed(1) + '%)｜id+世代 ' +
+    stat.numGen + ' / id ' + stat.num + ' / 标题 ' + stat.title + '｜覆盖层 ' + ovApplied +
+    '｜未命中 ' + stillMiss.length
   );
   if (stillMiss.length) {
     console.log('未命中（上游无对应曲目）：' + stillMiss.slice(0, 8).join(', ') + (stillMiss.length > 8 ? ' …' : ''));
